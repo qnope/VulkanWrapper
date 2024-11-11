@@ -2,6 +2,7 @@
 
 #include "VulkanWrapper/Core/fwd.h"
 #include "VulkanWrapper/Core/Vulkan/Image.h"
+#include "VulkanWrapper/Core/Vulkan/ImageView.h"
 #include "ObjectWithHandle.h"
 
 namespace vw {
@@ -12,6 +13,7 @@ class Swapchain : public ObjectWithUniqueHandle<vk::UniqueSwapchainKHR> {
   private:
     Device &m_device;
     std::vector<Image> m_images;
+    std::vector<ImageView> m_imageViews;
 };
 
 class SwapchainBuilder {

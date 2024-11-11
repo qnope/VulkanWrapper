@@ -11,4 +11,5 @@ target_sources(VulkanWrapper PRIVATE
     VulkanWrapper/Core/Vulkan/DeviceFinder.cpp
     VulkanWrapper/Core/Vulkan/PhysicalDevice.cpp
     VulkanWrapper/Core/Vulkan/Image.cpp
+    VulkanWrapper/Core/Vulkan/ImageView.cpp
 )

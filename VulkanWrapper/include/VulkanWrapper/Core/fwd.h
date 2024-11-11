@@ -11,6 +11,7 @@ class Device;
 class Queue;
 class PresentQueue;
 class Image;
+class ImageView;
 
 class SwapchainBuilder;
 class Swapchain;
