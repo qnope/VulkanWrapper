@@ -1,6 +1,6 @@
 #pragma once
 
-namespace r3d {
+namespace vw {
 class SDL_Initializer;
 class Window;
 
@@ -16,4 +16,4 @@ class SwapchainBuilder;
 class Swapchain;
 
 enum class QueueType;
-} // namespace r3d
+} // namespace vw

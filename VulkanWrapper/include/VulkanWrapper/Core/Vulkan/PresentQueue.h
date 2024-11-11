@@ -1,6 +1,6 @@
 #pragma once
 
-namespace r3d {
+namespace vw {
 class PresentQueue {
     friend class DeviceFinder;
 
@@ -10,4 +10,4 @@ class PresentQueue {
   private:
     vk::Queue m_queue;
 };
-} // namespace r3d
+} // namespace vw

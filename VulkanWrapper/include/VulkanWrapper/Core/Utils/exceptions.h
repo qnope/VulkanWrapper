@@ -2,7 +2,7 @@
 
 #include <source_location>
 
-namespace r3d {
+namespace vw {
 struct Exception {
     Exception(std::source_location location);
 
@@ -37,4 +37,4 @@ struct SurfaceCreationException : public Exception {
     using Exception::Exception;
 };
 
-} // namespace r3d
+} // namespace vw

@@ -2,7 +2,7 @@
 
 #include "ObjectWithHandle.h"
 
-namespace r3d {
+namespace vw {
 
 class Image : public ObjectWithUniqueHandle<vk::UniqueImage, vk::Image> {
   public:
@@ -10,4 +10,4 @@ class Image : public ObjectWithUniqueHandle<vk::UniqueImage, vk::Image> {
     Image(vk::UniqueImage image);
 };
 
-} // namespace r3d
+} // namespace vw

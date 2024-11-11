@@ -10,14 +10,14 @@
 
 int main() {
     try {
-        r3d::SDL_Initializer initializer;
-        r3d::Window window = r3d::WindowBuilder(initializer)
+        vw::SDL_Initializer initializer;
+        vw::Window window = vw::WindowBuilder(initializer)
                                  .withTitle("Coucou")
                                  .sized(800, 600)
                                  .build();
 
-        r3d::Instance instance =
-            r3d::InstanceBuilder()
+        vw::Instance instance =
+            vw::InstanceBuilder()
                 .addPortability()
                 .addExtensions(window.requiredInstanceExtensions())
                 .build();
@@ -36,7 +36,7 @@ int main() {
         while (!window.closeRequested()) {
             window.update();
         }
-    } catch (const r3d::Exception &exception) {
+    } catch (const vw::Exception &exception) {
         std::cout << exception.m_sourceLocation.function_name() << std::endl;
     }
 }

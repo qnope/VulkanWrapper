@@ -3,7 +3,7 @@
 #include "VulkanWrapper/Core/fwd.h"
 #include "VulkanWrapper/Core/Vulkan/PhysicalDevice.h"
 
-namespace r3d {
+namespace vw {
 class DeviceFinder {
   public:
     DeviceFinder(std::vector<PhysicalDevice> physicalDevices) noexcept;
@@ -31,4 +31,4 @@ class DeviceFinder {
     };
     std::vector<PhysicalDeviceInformation> m_physicalDevicesInformation;
 };
-} // namespace r3d
+} // namespace vw

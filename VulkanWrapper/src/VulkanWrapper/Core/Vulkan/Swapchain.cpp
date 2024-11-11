@@ -2,10 +2,10 @@
 
 #include "VulkanWrapper/Core/Vulkan/Device.h"
 
-namespace r3d {
+namespace vw {
 
 Swapchain::Swapchain(Device &device, vk::UniqueSwapchainKHR swapchain)
-    : r3d::ObjectWithUniqueHandle<vk::UniqueSwapchainKHR>{std::move(swapchain)}
+    : vw::ObjectWithUniqueHandle<vk::UniqueSwapchainKHR>{std::move(swapchain)}
     , m_device{device} {
     auto images = m_device.handle().getSwapchainImagesKHR(handle()).value;
 
@@ -42,4 +42,4 @@ Swapchain SwapchainBuilder::build() && {
     return Swapchain{m_device, std::move(result.value)};
 }
 
-} // namespace r3d
+} // namespace vw

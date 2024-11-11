@@ -3,7 +3,7 @@
 #include "VulkanWrapper/Core/Vulkan/DeviceFinder.h"
 #include "VulkanWrapper/Core/Vulkan/PhysicalDevice.h"
 
-namespace r3d {
+namespace vw {
 
 Instance::Instance(vk::UniqueInstance instance,
                    std::vector<const char *> extensions) noexcept
@@ -67,4 +67,4 @@ Instance InstanceBuilder::build() && {
     return {std::move(instance), std::move(m_extensions)};
 }
 
-} // namespace r3d
+} // namespace vw

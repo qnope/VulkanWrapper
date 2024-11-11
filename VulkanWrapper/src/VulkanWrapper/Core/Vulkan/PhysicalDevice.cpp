@@ -1,6 +1,6 @@
 #include "VulkanWrapper/Core/Vulkan/PhysicalDevice.h"
 
-namespace r3d {
+namespace vw {
 namespace {
 PhysicalDeviceType
 convertPhysicalDeviceType(vk::PhysicalDeviceType physicalDeviceType) {
@@ -39,4 +39,4 @@ vk::PhysicalDevice PhysicalDevice::device() const noexcept {
     return m_physicalDevice;
 }
 
-} // namespace r3d
+} // namespace vw

@@ -6,7 +6,7 @@
 #include "VulkanWrapper/Core/Vulkan/PresentQueue.h"
 #include "VulkanWrapper/Core/Vulkan/Queue.h"
 
-namespace r3d {
+namespace vw {
 
 DeviceFinder::DeviceFinder(
     std::vector<PhysicalDevice> physicalDevices) noexcept {
@@ -159,4 +159,4 @@ Device DeviceFinder::build() && {
                   std::move(presentQueue)};
 }
 
-} // namespace r3d
+} // namespace vw

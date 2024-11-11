@@ -2,7 +2,7 @@
 
 #include "VulkanWrapper/Core/Vulkan/Queue.h"
 
-namespace r3d {
+namespace vw {
 
 Device::Device(vk::UniqueDevice device, vk::PhysicalDevice physicalDevice,
                std::vector<Queue> queues,
@@ -12,4 +12,4 @@ Device::Device(vk::UniqueDevice device, vk::PhysicalDevice physicalDevice,
     , m_queues{std::move(queues)}
     , m_presentQueue{std::move(presentQueue)} {}
 
-} // namespace r3d
+} // namespace vw

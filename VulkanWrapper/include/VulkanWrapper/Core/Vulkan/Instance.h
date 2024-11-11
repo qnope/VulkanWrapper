@@ -3,7 +3,7 @@
 #include "VulkanWrapper/Core/fwd.h"
 #include "VulkanWrapper/Core/Vulkan/ObjectWithHandle.h"
 
-namespace r3d {
+namespace vw {
 class Instance : public ObjectWithUniqueHandle<vk::UniqueInstance> {
     friend class InstanceBuilder;
 
@@ -34,4 +34,4 @@ class InstanceBuilder {
     bool m_debug = true;
 };
 
-} // namespace r3d
+} // namespace vw

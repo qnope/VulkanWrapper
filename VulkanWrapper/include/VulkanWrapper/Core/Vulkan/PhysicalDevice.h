@@ -1,6 +1,6 @@
 #pragma once
 
-namespace r3d {
+namespace vw {
 
 enum class PhysicalDeviceType { Other, Cpu, IntegratedGpu, DiscreteGpu };
 
@@ -24,4 +24,4 @@ class PhysicalDevice {
     friend std::strong_ordering operator<=>(const PhysicalDevice &,
                                             const PhysicalDevice &) = default;
 };
-} // namespace r3d
+} // namespace vw

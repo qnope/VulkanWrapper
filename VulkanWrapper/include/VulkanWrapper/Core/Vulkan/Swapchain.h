@@ -4,7 +4,7 @@
 #include "VulkanWrapper/Core/Vulkan/Image.h"
 #include "ObjectWithHandle.h"
 
-namespace r3d {
+namespace vw {
 class Swapchain : public ObjectWithUniqueHandle<vk::UniqueSwapchainKHR> {
   public:
     Swapchain(Device &device, vk::UniqueSwapchainKHR swapchain);
@@ -29,4 +29,4 @@ class SwapchainBuilder {
     vk::PresentModeKHR m_presentMode = vk::PresentModeKHR::eMailbox;
 };
 
-} // namespace r3d
+} // namespace vw

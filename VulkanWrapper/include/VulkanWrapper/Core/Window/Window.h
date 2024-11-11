@@ -4,7 +4,7 @@
 
 struct SDL_Window;
 
-namespace r3d {
+namespace vw {
 class Window {
     struct WindowDeleter {
         void operator()(SDL_Window *window) const noexcept;
@@ -49,4 +49,4 @@ class WindowBuilder {
     int height = 0;
 };
 
-} // namespace r3d
+} // namespace vw

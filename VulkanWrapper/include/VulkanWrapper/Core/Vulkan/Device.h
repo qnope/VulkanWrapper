@@ -4,7 +4,7 @@
 #include "VulkanWrapper/Core/Vulkan/ObjectWithHandle.h"
 #include "VulkanWrapper/Core/Vulkan/PresentQueue.h"
 
-namespace r3d {
+namespace vw {
 class Device : public ObjectWithUniqueHandle<vk::UniqueDevice> {
     friend class DeviceFinder;
 
@@ -19,4 +19,4 @@ class Device : public ObjectWithUniqueHandle<vk::UniqueDevice> {
     std::optional<PresentQueue> m_presentQueue;
 };
 
-} // namespace r3d
+} // namespace vw

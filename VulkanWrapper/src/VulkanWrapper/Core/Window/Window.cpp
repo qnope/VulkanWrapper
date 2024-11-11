@@ -6,7 +6,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
 
-namespace r3d {
+namespace vw {
 void Window::WindowDeleter::operator()(SDL_Window *window) const noexcept {
     SDL_DestroyWindow(window);
 };
@@ -82,4 +82,4 @@ Window WindowBuilder::build() && {
     return Window{initializer, name, width, height};
 }
 
-} // namespace r3d
+} // namespace vw

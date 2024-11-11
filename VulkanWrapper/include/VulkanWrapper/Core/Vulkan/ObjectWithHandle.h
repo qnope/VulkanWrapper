@@ -1,6 +1,6 @@
 #pragma once
 
-namespace r3d {
+namespace vw {
 template <typename UniqueHandle, typename... Other>
 class ObjectWithUniqueHandle {
   protected:
@@ -35,4 +35,4 @@ class ObjectWithUniqueHandle<UniqueHandle, Handle> {
     std::variant<UniqueHandle, Handle> m_handle;
 };
 
-} // namespace r3d
+} // namespace vw
