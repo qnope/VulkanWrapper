@@ -1,12 +1,12 @@
-#include <3DRenderer/Core/Utils/exceptions.h>
-#include <3DRenderer/Core/Window/SDL_Initializer.h>
-#include <3DRenderer/Core/Window/Window.h>
-
-#include <3DRenderer/Core/Vulkan/Device.h>
-#include <3DRenderer/Core/Vulkan/DeviceFinder.h>
-#include <3DRenderer/Core/Vulkan/Instance.h>
-#include <3DRenderer/Core/Vulkan/PhysicalDevice.h>
-#include <3DRenderer/Core/Vulkan/Queue.h>
+#include <VulkanWrapper/Core/Utils/exceptions.h>
+#include <VulkanWrapper/Core/Vulkan/Device.h>
+#include <VulkanWrapper/Core/Vulkan/DeviceFinder.h>
+#include <VulkanWrapper/Core/Vulkan/Instance.h>
+#include <VulkanWrapper/Core/Vulkan/PhysicalDevice.h>
+#include <VulkanWrapper/Core/Vulkan/Queue.h>
+#include <VulkanWrapper/Core/Vulkan/Swapchain.h>
+#include <VulkanWrapper/Core/Window/SDL_Initializer.h>
+#include <VulkanWrapper/Core/Window/Window.h>
 
 int main() {
     try {
@@ -28,8 +28,10 @@ int main() {
                           .withQueue(vk::QueueFlagBits::eGraphics |
                                      vk::QueueFlagBits::eCompute |
                                      vk::QueueFlagBits::eTransfer)
-                          .withPresentQueue(surface)
+                          .withPresentQueue(*surface)
                           .build();
+
+        auto swapchain = window.createSwapchain(device, *surface).build();
 
         while (!window.closeRequested()) {
             window.update();

@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(3D_Renderer)
+project(VulkanWrapper)
 
-add_subdirectory(3DRenderer)
+add_subdirectory(VulkanWrapper)
 
 add_executable(Main main.cpp)
-target_link_libraries(Main PRIVATE 3DRenderer)
-target_precompile_headers(Main REUSE_FROM 3DRenderer)
+target_link_libraries(Main PRIVATE VulkanWrapper)
+target_precompile_headers(Main REUSE_FROM VulkanWrapper)
