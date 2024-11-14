@@ -1,17 +1,19 @@
 #pragma once
 
+#include "ObjectWithHandle.h"
 #include "VulkanWrapper/Core/fwd.h"
 #include "VulkanWrapper/Core/Vulkan/Image.h"
 #include "VulkanWrapper/Core/Vulkan/ImageView.h"
-#include "ObjectWithHandle.h"
 
 namespace vw {
 class Swapchain : public ObjectWithUniqueHandle<vk::UniqueSwapchainKHR> {
   public:
-    Swapchain(Device &device, vk::UniqueSwapchainKHR swapchain);
+    Swapchain(Device &device, vk::UniqueSwapchainKHR swapchain,
+              vk::Format format);
 
   private:
     Device &m_device;
+    vk::Format m_format;
     std::vector<Image> m_images;
     std::vector<ImageView> m_imageViews;
 };

@@ -12,9 +12,9 @@ int main() {
     try {
         vw::SDL_Initializer initializer;
         vw::Window window = vw::WindowBuilder(initializer)
-                                 .withTitle("Coucou")
-                                 .sized(800, 600)
-                                 .build();
+                                .withTitle("Coucou")
+                                .sized(800, 600)
+                                .build();
 
         vw::Instance instance =
             vw::InstanceBuilder()

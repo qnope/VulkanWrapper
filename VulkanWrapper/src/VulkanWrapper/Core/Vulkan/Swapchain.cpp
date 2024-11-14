@@ -1,16 +1,22 @@
 #include "VulkanWrapper/Core/Vulkan/Swapchain.h"
-#include "VulkanWrapper/Core/Vulkan/ImageView.h"
+
 #include "VulkanWrapper/Core/Vulkan/Device.h"
+#include "VulkanWrapper/Core/Vulkan/ImageView.h"
 
 namespace vw {
 
-Swapchain::Swapchain(Device &device, vk::UniqueSwapchainKHR swapchain)
+Swapchain::Swapchain(Device &device, vk::UniqueSwapchainKHR swapchain,
+                     vk::Format format)
     : vw::ObjectWithUniqueHandle<vk::UniqueSwapchainKHR>{std::move(swapchain)}
-    , m_device{device} {
-    auto images = m_device.handle().getSwapchainImagesKHR(handle()).value;
+    , m_device{device}
+    , m_format{format} {
+    auto vkImages = m_device.handle().getSwapchainImagesKHR(handle()).value;
 
-    for (auto &image : images) {
-        m_images.emplace_back(image);
+    for (auto &vkImage : vkImages) {
+        auto &image = m_images.emplace_back(vkImage, m_format);
+
+        auto imageView = ImageViewBuilder(device, image).build();
+        m_imageViews.push_back(std::move(imageView));
     }
 }
 
@@ -39,7 +45,7 @@ Swapchain SwapchainBuilder::build() && {
     if (result.result != vk::Result::eSuccess)
         throw 0;
 
-    return Swapchain{m_device, std::move(result.value)};
+    return Swapchain{m_device, std::move(result.value), m_info.imageFormat};
 }
 
 } // namespace vw

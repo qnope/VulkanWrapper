@@ -23,6 +23,7 @@ class ObjectWithUniqueHandle<UniqueHandle, Handle> {
     ObjectWithUniqueHandle(Handle handle) noexcept
         : m_handle{std::move(handle)} {}
 
+  public:
     auto handle() const noexcept {
         auto getter =
             overloaded{[](const Handle &handle) { return handle; },
