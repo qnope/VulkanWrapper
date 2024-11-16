@@ -9,32 +9,19 @@ struct Exception {
     std::source_location m_sourceLocation;
 };
 
-struct InitializationException : public Exception {
+template <typename Tag> struct TaggedException : Exception {
     using Exception::Exception;
 };
 
-struct WindowInitializationException : public Exception {
-    using Exception::Exception;
-};
+using InitializationException = TaggedException<struct InitializationTag>;
+using WindowInitializationException =
+    TaggedException<struct WindowInitializationTag>;
 
-struct InstanceCreationException : public Exception {
-    using Exception::Exception;
-};
-
-struct DeviceCreationException : public Exception {
-    using Exception::Exception;
-};
-
-struct DeviceNotFoundException : public Exception {
-    using Exception::Exception;
-};
-
-struct InvalidEnumException : public Exception {
-    using Exception::Exception;
-};
-
-struct SurfaceCreationException : public Exception {
-    using Exception::Exception;
-};
+using InstanceCreationException = TaggedException<struct InstanceCreationTag>;
+using DeviceCreationException = TaggedException<struct DeviceCreationTag>;
+using DeviceNotFoundException = TaggedException<struct DeviceNotFoundTag>;
+using InvalidEnumException = TaggedException<struct InvalidEnumTag>;
+using SurfaceCreationException = TaggedException<struct SurfaceCreationTag>;
+using ImageViewCreationException = TaggedException<struct ImageViewCreationTag>;
 
 } // namespace vw

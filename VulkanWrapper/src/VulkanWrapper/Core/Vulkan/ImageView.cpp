@@ -1,5 +1,6 @@
 #include "VulkanWrapper/Core/Vulkan/ImageView.h"
 
+#include "VulkanWrapper/Core/Utils/exceptions.h"
 #include "VulkanWrapper/Core/Vulkan/Device.h"
 #include "VulkanWrapper/Core/Vulkan/Image.h"
 
@@ -28,7 +29,7 @@ ImageView ImageViewBuilder::build() && {
 
     auto view = m_device.handle().createImageViewUnique(info);
     if (view.result != vk::Result::eSuccess)
-        throw 0;
+        throw ImageViewCreationException{std::source_location::current()};
     return ImageView(m_image, std::move(view.value));
 }
 
