@@ -1,18 +1,19 @@
 target_sources(VulkanWrapper PRIVATE
-    VulkanWrapper/Core/Utils/exceptions.cpp
-    VulkanWrapper/Core/Window/SDL_Initializer.cpp
-    VulkanWrapper/Core/Window/Window.cpp
+    VulkanWrapper/Utils/exceptions.cpp
+    VulkanWrapper/Window/SDL_Initializer.cpp
+    VulkanWrapper/Window/Window.cpp
 
-    VulkanWrapper/Core/Vulkan/Instance.cpp
-    VulkanWrapper/Core/Vulkan/Device.cpp
-    VulkanWrapper/Core/Vulkan/Queue.cpp
-    VulkanWrapper/Core/Vulkan/Swapchain.cpp
-    VulkanWrapper/Core/Vulkan/PresentQueue.cpp
-    VulkanWrapper/Core/Vulkan/DeviceFinder.cpp
-    VulkanWrapper/Core/Vulkan/PhysicalDevice.cpp
-    VulkanWrapper/Core/Vulkan/Image.cpp
-    VulkanWrapper/Core/Vulkan/ImageView.cpp
+    VulkanWrapper/Vulkan/Instance.cpp
+    VulkanWrapper/Vulkan/Device.cpp
+    VulkanWrapper/Vulkan/Queue.cpp
+    VulkanWrapper/Vulkan/Swapchain.cpp
+    VulkanWrapper/Vulkan/PresentQueue.cpp
+    VulkanWrapper/Vulkan/DeviceFinder.cpp
+    VulkanWrapper/Vulkan/PhysicalDevice.cpp
 
-    VulkanWrapper/Core/Pipeline/ShaderModule.cpp
-    VulkanWrapper/Core/Pipeline/Pipeline.cpp
+    VulkanWrapper/Image/Image.cpp
+    VulkanWrapper/Image/ImageView.cpp
+
+    VulkanWrapper/Pipeline/ShaderModule.cpp
+    VulkanWrapper/Pipeline/Pipeline.cpp
 )

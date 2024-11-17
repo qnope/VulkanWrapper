@@ -1,24 +1,25 @@
 target_sources(VulkanWrapper PRIVATE
     VulkanWrapper/3rd_party.h
 
-    VulkanWrapper/Core/fwd.h
-    VulkanWrapper/Core/Utils/Algos.h
-    VulkanWrapper/Core/Utils/exceptions.h
+    VulkanWrapper/fwd.h
+    VulkanWrapper/Utils/Algos.h
+    VulkanWrapper/Utils/exceptions.h
+    VulkanWrapper/Utils/ObjectWithHandle.h
 
-    VulkanWrapper/Core/Window/SDL_Initializer.h
-    VulkanWrapper/Core/Window/Window.h
+    VulkanWrapper/Window/SDL_Initializer.h
+    VulkanWrapper/Window/Window.h
 
-    VulkanWrapper/Core/Vulkan/ObjectWithHandle.h
-    VulkanWrapper/Core/Vulkan/Instance.h
-    VulkanWrapper/Core/Vulkan/Device.h
-    VulkanWrapper/Core/Vulkan/Queue.h
-    VulkanWrapper/Core/Vulkan/Swapchain.h
-    VulkanWrapper/Core/Vulkan/PresentQueue.h
-    VulkanWrapper/Core/Vulkan/DeviceFinder.h
-    VulkanWrapper/Core/Vulkan/PhysicalDevice.h
-    VulkanWrapper/Core/Vulkan/Image.h
-    VulkanWrapper/Core/Vulkan/ImageView.h
+    VulkanWrapper/Vulkan/Instance.h
+    VulkanWrapper/Vulkan/Device.h
+    VulkanWrapper/Vulkan/Queue.h
+    VulkanWrapper/Vulkan/Swapchain.h
+    VulkanWrapper/Vulkan/PresentQueue.h
+    VulkanWrapper/Vulkan/DeviceFinder.h
+    VulkanWrapper/Vulkan/PhysicalDevice.h
 
-    VulkanWrapper/Core/Pipeline/ShaderModule.h
-    VulkanWrapper/Core/Pipeline/Pipeline.h
+    VulkanWrapper/Image/Image.h
+    VulkanWrapper/Image/ImageView.h
+
+    VulkanWrapper/Pipeline/ShaderModule.h
+    VulkanWrapper/Pipeline/Pipeline.h
 )

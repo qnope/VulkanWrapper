@@ -1,13 +1,13 @@
-#include <VulkanWrapper/Core/Pipeline/ShaderModule.h>
-#include <VulkanWrapper/Core/Utils/exceptions.h>
-#include <VulkanWrapper/Core/Vulkan/Device.h>
-#include <VulkanWrapper/Core/Vulkan/DeviceFinder.h>
-#include <VulkanWrapper/Core/Vulkan/Instance.h>
-#include <VulkanWrapper/Core/Vulkan/PhysicalDevice.h>
-#include <VulkanWrapper/Core/Vulkan/Queue.h>
-#include <VulkanWrapper/Core/Vulkan/Swapchain.h>
-#include <VulkanWrapper/Core/Window/SDL_Initializer.h>
-#include <VulkanWrapper/Core/Window/Window.h>
+#include <VulkanWrapper/Pipeline/ShaderModule.h>
+#include <VulkanWrapper/Utils/exceptions.h>
+#include <VulkanWrapper/Vulkan/Device.h>
+#include <VulkanWrapper/Vulkan/DeviceFinder.h>
+#include <VulkanWrapper/Vulkan/Instance.h>
+#include <VulkanWrapper/Vulkan/PhysicalDevice.h>
+#include <VulkanWrapper/Vulkan/Queue.h>
+#include <VulkanWrapper/Vulkan/Swapchain.h>
+#include <VulkanWrapper/Window/SDL_Initializer.h>
+#include <VulkanWrapper/Window/Window.h>
 
 int main() {
     try {
