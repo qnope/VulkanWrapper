@@ -13,5 +13,6 @@ target_sources(VulkanWrapper PRIVATE
     VulkanWrapper/Core/Vulkan/Image.cpp
     VulkanWrapper/Core/Vulkan/ImageView.cpp
 
-    VulkanWrapper/Core/Shaders/ShaderModule.cpp
+    VulkanWrapper/Core/Pipeline/ShaderModule.cpp
+    VulkanWrapper/Core/Pipeline/Pipeline.cpp
 )

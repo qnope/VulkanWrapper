@@ -1,9 +1,12 @@
 #pragma once
 
 #include "VulkanWrapper/Core/fwd.h"
+#include "VulkanWrapper/Core/Utils/exceptions.h"
 #include "VulkanWrapper/Core/Vulkan/PhysicalDevice.h"
 
 namespace vw {
+using DeviceNotFoundException = TaggedException<struct DeviceNotFoundTag>;
+
 class DeviceFinder {
   public:
     DeviceFinder(std::vector<PhysicalDevice> physicalDevices) noexcept;

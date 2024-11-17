@@ -1,9 +1,12 @@
 #pragma once
 
 #include "VulkanWrapper/Core/fwd.h"
+#include "VulkanWrapper/Core/Utils/exceptions.h"
 #include "VulkanWrapper/Core/Vulkan/ObjectWithHandle.h"
 
 namespace vw {
+using InstanceCreationException = TaggedException<struct InstanceCreationTag>;
+
 class Instance : public ObjectWithUniqueHandle<vk::UniqueInstance> {
     friend class InstanceBuilder;
 

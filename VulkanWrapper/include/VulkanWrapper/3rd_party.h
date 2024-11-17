@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <assimp/Importer.hpp>
 #include <concepts>
+#include <filesystem>
 #include <glm/glm.hpp>
 #include <iostream>
 #include <map>

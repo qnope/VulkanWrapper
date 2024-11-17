@@ -19,5 +19,6 @@ target_sources(VulkanWrapper PRIVATE
     VulkanWrapper/Core/Vulkan/Image.h
     VulkanWrapper/Core/Vulkan/ImageView.h
 
-    VulkanWrapper/Core/Shaders/ShaderModule.h
+    VulkanWrapper/Core/Pipeline/ShaderModule.h
+    VulkanWrapper/Core/Pipeline/Pipeline.h
 )

@@ -1,10 +1,16 @@
 #pragma once
 
 #include "VulkanWrapper/Core/fwd.h"
+#include "VulkanWrapper/Core/Utils/exceptions.h"
 
 struct SDL_Window;
 
 namespace vw {
+using WindowInitializationException =
+    TaggedException<struct WindowInitializationTag>;
+
+using SurfaceCreationException = TaggedException<struct SurfaceCreationTag>;
+
 class Window {
     struct WindowDeleter {
         void operator()(SDL_Window *window) const noexcept;

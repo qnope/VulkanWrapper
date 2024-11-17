@@ -16,5 +16,7 @@ class ImageView;
 class SwapchainBuilder;
 class Swapchain;
 
+class ShaderModule;
+
 enum class QueueType;
 } // namespace vw
