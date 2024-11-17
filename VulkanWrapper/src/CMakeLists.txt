@@ -12,4 +12,6 @@ target_sources(VulkanWrapper PRIVATE
     VulkanWrapper/Core/Vulkan/PhysicalDevice.cpp
     VulkanWrapper/Core/Vulkan/Image.cpp
     VulkanWrapper/Core/Vulkan/ImageView.cpp
+
+    VulkanWrapper/Core/Shaders/ShaderModule.cpp
 )

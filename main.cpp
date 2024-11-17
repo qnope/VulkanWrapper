@@ -1,3 +1,4 @@
+#include <fstream>
 #include <VulkanWrapper/Core/Utils/exceptions.h>
 #include <VulkanWrapper/Core/Vulkan/Device.h>
 #include <VulkanWrapper/Core/Vulkan/DeviceFinder.h>
@@ -7,6 +8,25 @@
 #include <VulkanWrapper/Core/Vulkan/Swapchain.h>
 #include <VulkanWrapper/Core/Window/SDL_Initializer.h>
 #include <VulkanWrapper/Core/Window/Window.h>
+
+std::vector<std::byte> readShader(const std::string &path) {
+    constexpr auto flags =
+        std::ios_base::ate | std::ios_base::in | std::ios_base::binary;
+
+    std::ifstream in(path, flags);
+
+    if (!in)
+        throw 0;
+
+    const std::size_t size = in.tellg();
+    std::vector<std::byte> result(size);
+
+    in.seekg(0);
+
+    in.read(reinterpret_cast<char *>(result.data()), size);
+
+    return result;
+}
 
 int main() {
     try {
@@ -32,6 +52,8 @@ int main() {
                           .build();
 
         auto swapchain = window.createSwapchain(device, *surface).build();
+
+        auto shader1 = readShader("../../Shaders/bin/vert.spv");
 
         while (!window.closeRequested()) {
             window.update();
