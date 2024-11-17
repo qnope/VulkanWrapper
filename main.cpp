@@ -1,3 +1,4 @@
+#include <VulkanWrapper/Pipeline/Pipeline.h>
 #include <VulkanWrapper/Pipeline/ShaderModule.h>
 #include <VulkanWrapper/Utils/exceptions.h>
 #include <VulkanWrapper/Vulkan/Device.h>
@@ -39,6 +40,13 @@ int main() {
 
         auto fragmentShader = vw::ShaderModule::createFromSpirVFile(
             device, "../../Shaders/bin/frag.spv");
+
+        auto pipeline = vw::GraphicsPipelineBuilder()
+                            .addShaderModule(vk::ShaderStageFlagBits::eVertex,
+                                             std::move(vertexShader))
+                            .addShaderModule(vk::ShaderStageFlagBits::eFragment,
+                                             std::move(fragmentShader))
+                            .build(device);
 
         while (!window.closeRequested()) {
             window.update();
