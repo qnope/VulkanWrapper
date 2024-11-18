@@ -17,6 +17,8 @@ class SwapchainBuilder;
 class Swapchain;
 
 class ShaderModule;
+class Pipeline;
+class PipelineLayout;
 
 enum class QueueType;
 } // namespace vw

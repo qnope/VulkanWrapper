@@ -22,4 +22,5 @@ target_sources(VulkanWrapper PRIVATE
 
     VulkanWrapper/Pipeline/ShaderModule.h
     VulkanWrapper/Pipeline/Pipeline.h
+    VulkanWrapper/Pipeline/PipelineLayout.h
 )

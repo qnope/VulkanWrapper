@@ -6,10 +6,12 @@
 namespace vw {
 
 Swapchain::Swapchain(Device &device, vk::UniqueSwapchainKHR swapchain,
-                     vk::Format format)
+                     vk::Format format, int width, int height)
     : vw::ObjectWithUniqueHandle<vk::UniqueSwapchainKHR>{std::move(swapchain)}
     , m_device{device}
-    , m_format{format} {
+    , m_format{format}
+    , m_width{width}
+    , m_height{height} {
     auto vkImages = m_device.handle().getSwapchainImagesKHR(handle()).value;
 
     for (auto &vkImage : vkImages) {
@@ -19,6 +21,10 @@ Swapchain::Swapchain(Device &device, vk::UniqueSwapchainKHR swapchain,
         m_imageViews.push_back(std::move(imageView));
     }
 }
+
+int Swapchain::width() const noexcept { return m_width; }
+
+int Swapchain::height() const noexcept { return m_height; }
 
 SwapchainBuilder::SwapchainBuilder(Device &device, vk::SurfaceKHR surface,
                                    int width, int height) noexcept
@@ -45,7 +51,8 @@ Swapchain SwapchainBuilder::build() && {
     if (result.result != vk::Result::eSuccess)
         throw 0;
 
-    return Swapchain{m_device, std::move(result.value), m_info.imageFormat};
+    return Swapchain{m_device, std::move(result.value), m_info.imageFormat,
+                     m_width, m_height};
 }
 
 } // namespace vw

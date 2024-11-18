@@ -16,4 +16,5 @@ target_sources(VulkanWrapper PRIVATE
 
     VulkanWrapper/Pipeline/ShaderModule.cpp
     VulkanWrapper/Pipeline/Pipeline.cpp
+    VulkanWrapper/Pipeline/PipelineLayout.cpp
 )
