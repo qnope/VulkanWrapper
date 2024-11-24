@@ -19,8 +19,13 @@ target_sources(VulkanWrapper PRIVATE
 
     VulkanWrapper/Image/Image.h
     VulkanWrapper/Image/ImageView.h
+    VulkanWrapper/Image/Framebuffer.h
 
     VulkanWrapper/Pipeline/ShaderModule.h
     VulkanWrapper/Pipeline/Pipeline.h
     VulkanWrapper/Pipeline/PipelineLayout.h
+
+    VulkanWrapper/RenderPass/Attachment.h
+    VulkanWrapper/RenderPass/RenderPass.h
+    VulkanWrapper/RenderPass/Subpass.h
 )

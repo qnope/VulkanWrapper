@@ -13,6 +13,9 @@ class Swapchain : public ObjectWithUniqueHandle<vk::UniqueSwapchainKHR> {
 
     int width() const noexcept;
     int height() const noexcept;
+    vk::Format format() const noexcept;
+
+    const std::vector<ImageView> &imageViews() const noexcept;
 
   private:
     Device &m_device;

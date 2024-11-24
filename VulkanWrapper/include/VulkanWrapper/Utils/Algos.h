@@ -17,4 +17,15 @@ std::optional<int> index_if(const auto &range, const auto &predicate) {
         return std::nullopt;
     return std::distance(std::begin(range), it);
 }
+
+template <template <typename... Ts> typename Container> struct to_t {};
+
+template <template <typename... Ts> typename Container>
+constexpr to_t<Container> to{};
+
+template <typename Range, template <typename... Ts> typename Container>
+auto operator|(Range &&range, to_t<Container>) {
+    return Container(std::ranges::begin(range), std::ranges::end(range));
+}
+
 } // namespace vw

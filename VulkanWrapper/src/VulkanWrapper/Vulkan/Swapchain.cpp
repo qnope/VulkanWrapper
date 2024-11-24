@@ -26,6 +26,12 @@ int Swapchain::width() const noexcept { return m_width; }
 
 int Swapchain::height() const noexcept { return m_height; }
 
+vk::Format Swapchain::format() const noexcept { return m_format; }
+
+const std::vector<ImageView> &Swapchain::imageViews() const noexcept {
+    return m_imageViews;
+}
+
 SwapchainBuilder::SwapchainBuilder(Device &device, vk::SurfaceKHR surface,
                                    int width, int height) noexcept
     : m_device{device}

@@ -102,6 +102,7 @@ Device DeviceFinder::build() && {
                                   &PhysicalDeviceInformation::device);
 
     information.extensions.push_back("VK_KHR_portability_subset");
+    information.extensions.push_back("VK_KHR_synchronization2");
     vk::DeviceCreateInfo info;
     std::vector<vk::DeviceQueueCreateInfo> queueInfos;
 
@@ -130,6 +131,10 @@ Device DeviceFinder::build() && {
 
     info.setQueueCreateInfos(queueInfos);
     info.setPEnabledExtensionNames(information.extensions);
+
+    vk::PhysicalDeviceSynchronization2Features synchronisationEnabled(true);
+    vk::PhysicalDeviceFeatures2 features({}, &synchronisationEnabled);
+    info.setPNext(&features);
 
     auto [result, device] =
         information.device.device().createDeviceUnique(info);

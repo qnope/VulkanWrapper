@@ -18,6 +18,8 @@ class Pipeline : public ObjectWithUniqueHandle<vk::UniquePipeline> {
 
 class GraphicsPipelineBuilder {
   public:
+    GraphicsPipelineBuilder(const RenderPass &renderPass);
+
     GraphicsPipelineBuilder addShaderModule(vk::ShaderStageFlagBits flags,
                                             ShaderModule module) &&;
 
@@ -58,6 +60,7 @@ class GraphicsPipelineBuilder {
     createColorBlendStateInfo() const noexcept;
 
   private:
+    const RenderPass &m_renderPass;
     std::map<vk::ShaderStageFlagBits, ShaderModule> m_shaderModules;
     std::vector<vk::DynamicState> m_dynamicStates;
 

@@ -13,8 +13,13 @@ target_sources(VulkanWrapper PRIVATE
 
     VulkanWrapper/Image/Image.cpp
     VulkanWrapper/Image/ImageView.cpp
+    VulkanWrapper/Image/Framebuffer.cpp
 
     VulkanWrapper/Pipeline/ShaderModule.cpp
     VulkanWrapper/Pipeline/Pipeline.cpp
     VulkanWrapper/Pipeline/PipelineLayout.cpp
+
+    VulkanWrapper/RenderPass/Attachment.cpp
+    VulkanWrapper/RenderPass/RenderPass.cpp
+    VulkanWrapper/RenderPass/Subpass.cpp
 )

@@ -7,6 +7,7 @@
 #include <assimp/Importer.hpp>
 #include <concepts>
 #include <filesystem>
+#include <functional>
 #include <glm/glm.hpp>
 #include <iostream>
 #include <map>

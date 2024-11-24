@@ -2,9 +2,13 @@
 
 #include "VulkanWrapper/Pipeline/PipelineLayout.h"
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
+#include "VulkanWrapper/RenderPass/RenderPass.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 
 namespace vw {
+GraphicsPipelineBuilder::GraphicsPipelineBuilder(const RenderPass &renderPass)
+    : m_renderPass{renderPass} {}
+
 GraphicsPipelineBuilder
 GraphicsPipelineBuilder::addShaderModule(vk::ShaderStageFlagBits flags,
                                          ShaderModule module) && {
@@ -56,6 +60,7 @@ Pipeline GraphicsPipelineBuilder::build(Device &device) && {
     const auto info =
         vk::GraphicsPipelineCreateInfo()
             .setStages(shaderStageInfos)
+            .setRenderPass(m_renderPass.handle())
             .setPDynamicState(&dynamicStateInfo)
             .setPViewportState(&viewportStateInfo)
             .setPColorBlendState(&colorBlendStateInfo)
