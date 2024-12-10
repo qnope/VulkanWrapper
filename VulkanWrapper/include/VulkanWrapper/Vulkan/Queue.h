@@ -1,11 +1,16 @@
 #pragma once
 
+#include "VulkanWrapper/Synchronization/Fence.h"
+
 namespace vw {
 
 class Queue {
     friend class DeviceFinder;
 
   public:
+    void submit(const std::vector<vk::SubmitInfo> &infos,
+                const Fence *fence) const;
+
   private:
     Queue(vk::Queue queue, vk::QueueFlags type) noexcept;
 

@@ -18,8 +18,9 @@ class RenderPass : public ObjectWithUniqueHandle<vk::UniqueRenderPass> {
 
 class RenderPassBuilder {
   public:
-      RenderPassBuilder addSubpass(vk::PipelineBindPoint bindingPoint, Subpass subpass) &&;
-      RenderPass build(Device &device) &&;
+    RenderPassBuilder addSubpass(vk::PipelineBindPoint bindingPoint,
+                                 Subpass subpass) &&;
+    RenderPass build(Device &device) &&;
 
   private:
     std::vector<Attachment> createAttachments() const noexcept;

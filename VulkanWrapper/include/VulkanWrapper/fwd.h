@@ -24,5 +24,7 @@ class Attachment;
 class Subpass;
 class RenderPass;
 
+class Semaphore;
+
 enum class QueueType;
 } // namespace vw

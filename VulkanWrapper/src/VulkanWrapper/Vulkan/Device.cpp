@@ -12,4 +12,8 @@ Device::Device(vk::UniqueDevice device, vk::PhysicalDevice physicalDevice,
     , m_queues{std::move(queues)}
     , m_presentQueue{std::move(presentQueue)} {}
 
+const Queue &Device::graphicsQueue() const { return m_queues[0]; }
+
+const PresentQueue &Device::presentQueue() const { return *m_presentQueue; }
+
 } // namespace vw

@@ -11,6 +11,10 @@ using DeviceCreationException = TaggedException<struct DeviceCreationTag>;
 class Device : public ObjectWithUniqueHandle<vk::UniqueDevice> {
     friend class DeviceFinder;
 
+  public:
+    const Queue &graphicsQueue() const;
+    const PresentQueue &presentQueue() const;
+
   private:
     Device(vk::UniqueDevice device, vk::PhysicalDevice physicalDevice,
            std::vector<Queue> queues,

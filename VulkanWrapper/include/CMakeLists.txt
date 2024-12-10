@@ -28,4 +28,9 @@ target_sources(VulkanWrapper PRIVATE
     VulkanWrapper/RenderPass/Attachment.h
     VulkanWrapper/RenderPass/RenderPass.h
     VulkanWrapper/RenderPass/Subpass.h
+
+    VulkanWrapper/Command/CommandPool.h
+
+    VulkanWrapper/Synchronization/Fence.h
+    VulkanWrapper/Synchronization/Semaphore.h
 )

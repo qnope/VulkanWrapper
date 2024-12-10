@@ -22,4 +22,9 @@ target_sources(VulkanWrapper PRIVATE
     VulkanWrapper/RenderPass/Attachment.cpp
     VulkanWrapper/RenderPass/RenderPass.cpp
     VulkanWrapper/RenderPass/Subpass.cpp
+
+    VulkanWrapper/Command/CommandPool.cpp
+
+    VulkanWrapper/Synchronization/Fence.cpp
+    VulkanWrapper/Synchronization/Semaphore.cpp
 )
