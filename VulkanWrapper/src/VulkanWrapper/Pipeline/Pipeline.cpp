@@ -36,7 +36,12 @@ GraphicsPipelineBuilder::withFixedScissor(int width, int height) && {
 
 GraphicsPipelineBuilder GraphicsPipelineBuilder::addColorAttachment() && {
     const auto colorBlendAttachment =
-        vk::PipelineColorBlendAttachmentState().setBlendEnable(false);
+        vk::PipelineColorBlendAttachmentState()
+            .setBlendEnable(false)
+            .setColorWriteMask(vk::ColorComponentFlagBits::eA |
+                               vk::ColorComponentFlagBits::eB |
+                               vk::ColorComponentFlagBits::eG |
+                               vk::ColorComponentFlagBits::eR);
     m_colorAttachmentStates.push_back(colorBlendAttachment);
     return std::move(*this);
 }

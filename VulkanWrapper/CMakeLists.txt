@@ -5,7 +5,7 @@ include(FetchContent)
 FetchContent_Declare(
   SDL
   GIT_REPOSITORY https://github.com/libsdl-org/SDL
-  GIT_TAG        release-2.30.3 # release-1.10.0
+  GIT_TAG        release-3.2.0 # release-1.10.0
 )
 
 FetchContent_Declare(
@@ -32,7 +32,7 @@ add_subdirectory(src)
 target_include_directories(VulkanWrapper PUBLIC include)
 target_compile_features(VulkanWrapper PUBLIC cxx_std_23)
 
-target_link_libraries(VulkanWrapper PUBLIC SDL2::SDL2 Vulkan::Vulkan assimp glm)
+target_link_libraries(VulkanWrapper PUBLIC SDL3::SDL3 Vulkan::Vulkan assimp glm)
 
 target_compile_options(VulkanWrapper PUBLIC -fsanitize=address)
 target_link_options(VulkanWrapper PUBLIC -fsanitize=address)
