@@ -1,0 +1,11 @@
+[package]
+name = "vulkan_wrapper"
+version = "0.1.0"
+edition = "2021"
+build="build.rs"
+
+[dependencies]
+libc = "0.2.169"
+
+[build-dependencies]
+cmake = "0.1"

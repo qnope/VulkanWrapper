@@ -29,10 +29,11 @@ class Window {
     SwapchainBuilder createSwapchain(Device &device, vk::SurfaceKHR surface);
 
   private:
-    Window(SDL_Initializer &initializer, std::string_view name, int width,
+    Window(const SDL_Initializer &initializer, std::string_view name, int width,
            int height);
 
   private:
+    const SDL_Initializer &m_initializer;
     std::unique_ptr<SDL_Window, WindowDeleter> m_window;
     bool m_closeRequested = false;
     int m_width;
@@ -41,7 +42,8 @@ class Window {
 
 class WindowBuilder {
   public:
-    WindowBuilder(SDL_Initializer &initializer);
+    WindowBuilder(const SDL_Initializer &initializer);
+    WindowBuilder(SDL_Initializer &&initializer) = delete;
 
     WindowBuilder &&withTitle(std::string_view name) &&;
     WindowBuilder &&sized(int width, int height) &&;
@@ -49,7 +51,7 @@ class WindowBuilder {
     Window build() &&;
 
   private:
-    SDL_Initializer &initializer;
+    const SDL_Initializer &initializer;
     std::string_view name = "3D Renderer";
     int width = 0;
     int height = 0;

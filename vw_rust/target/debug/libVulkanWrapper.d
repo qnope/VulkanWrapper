@@ -1,0 +1,1 @@
+/Users/amorrier/Programmation/VulkanWrapper/vw_rust/target/debug/libVulkanWrapper.rlib: /Users/amorrier/Programmation/VulkanWrapper/vw_rust/build.rs /Users/amorrier/Programmation/VulkanWrapper/vw_rust/src/lib.rs

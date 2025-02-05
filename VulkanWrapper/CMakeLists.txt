@@ -34,6 +34,11 @@ target_compile_features(VulkanWrapper PUBLIC cxx_std_23)
 
 target_link_libraries(VulkanWrapper PUBLIC SDL3::SDL3 Vulkan::Vulkan assimp glm)
 
-target_compile_options(VulkanWrapper PUBLIC -fsanitize=address)
-target_link_options(VulkanWrapper PUBLIC -fsanitize=address)
+#target_compile_options(VulkanWrapper PUBLIC -fsanitize=address)
+#target_link_options(VulkanWrapper PUBLIC -fsanitize=address)
 target_precompile_headers(VulkanWrapper PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/VulkanWrapper/3rd_party.h)
+
+install(TARGETS VulkanWrapper DESTINATION .)
+install(TARGETS SDL3-shared DESTINATION .)
+install(TARGETS assimp DESTINATION .)
+install(TARGETS glm DESTINATION .)

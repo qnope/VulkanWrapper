@@ -11,9 +11,10 @@ void Window::WindowDeleter::operator()(SDL_Window *window) const noexcept {
     SDL_DestroyWindow(window);
 };
 
-Window::Window(SDL_Initializer &initializer, std::string_view name, int width,
-               int height)
-    : m_width{width}
+Window::Window(const SDL_Initializer &initializer, std::string_view name,
+               int width, int height)
+    : m_initializer{initializer}
+    , m_width{width}
     , m_height{height} {
     auto window =
         SDL_CreateWindow(name.begin(), width, height, SDL_WINDOW_VULKAN);
@@ -61,7 +62,7 @@ void Window::update() noexcept {
     }
 }
 
-WindowBuilder::WindowBuilder(SDL_Initializer &initializer)
+WindowBuilder::WindowBuilder(const SDL_Initializer &initializer)
     : initializer{initializer} {}
 
 WindowBuilder &&WindowBuilder::withTitle(std::string_view name) && {
