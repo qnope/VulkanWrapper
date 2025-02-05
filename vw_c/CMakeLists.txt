@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.14)
 
 add_library(VulkanWrapper_c SHARED
     include/array.h
-    src/array.cpp)
+    src/array.cpp
+    include/bindings.h)
 
 add_subdirectory(src)
 add_subdirectory(include)

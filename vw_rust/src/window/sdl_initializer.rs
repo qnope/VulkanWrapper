@@ -1,6 +1,5 @@
 pub enum VwSDLInitializer{}
 
-#[link(name="VulkanWrapper_cd", kind="dylib")]
 unsafe extern {
     fn vw_create_SDL_Initializer() -> *mut VwSDLInitializer;
     fn vw_destroy_SDL_Initializer(initializer: *mut VwSDLInitializer);

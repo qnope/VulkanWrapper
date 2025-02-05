@@ -1,5 +1,7 @@
 #include "Window.h"
 
+#include <VulkanWrapper/Window/Window.h>
+
 vw::Window *vw_create_Window(const vw::SDL_Initializer *initializer) {
     auto window = vw::WindowBuilder(*initializer)
                       .withTitle("Test FFI")

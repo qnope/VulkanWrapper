@@ -3,7 +3,6 @@ use super::sdl_initializer::*;
 
 enum VwWindow{}
 
-    #[link(name="VulkanWrapper_cd", kind="dylib")]
 unsafe extern {
     fn vw_create_Window(initializer: *mut VwSDLInitializer) -> *mut VwWindow;
 

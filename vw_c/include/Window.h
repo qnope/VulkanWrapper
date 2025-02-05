@@ -2,7 +2,10 @@
 
 #include "array.h"
 #include "SDL_Initializer.h"
-#include <VulkanWrapper/Window/Window.h>
+
+namespace vw {
+class Window;
+}
 
 extern "C" {
 
