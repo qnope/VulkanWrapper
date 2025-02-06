@@ -1,12 +1,7 @@
-pub enum VwSDLInitializer{}
-
-unsafe extern {
-    fn vw_create_SDL_Initializer() -> *mut VwSDLInitializer;
-    fn vw_destroy_SDL_Initializer(initializer: *mut VwSDLInitializer);
-}
+use crate::sys::bindings;
 
 pub struct SdlInitializer {
-    pub ptr: *mut VwSDLInitializer
+    pub ptr: *mut bindings::vw_SDL_Initializer
 }
 
 impl SdlInitializer {
@@ -14,7 +9,7 @@ impl SdlInitializer {
     {
         unsafe {
             SdlInitializer {
-                ptr: vw_create_SDL_Initializer()
+                ptr: bindings::vw_create_SDL_Initializer()
             }
         }
     }
@@ -23,7 +18,7 @@ impl SdlInitializer {
 impl Drop for SdlInitializer {
     fn drop(&mut self) {
         unsafe {
-            vw_destroy_SDL_Initializer(self.ptr);
+            bindings::vw_destroy_SDL_Initializer(self.ptr);
         }
     }
 }
