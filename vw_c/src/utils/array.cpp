@@ -1,6 +1,6 @@
-#include "array.h"
+#include "utils/array.h"
 
-ArrayConstString vw_create_array_const_string(const char **input_array,
+ArrayConstString vw_create_array_const_string(char const *const *input_array,
                                               int size) {
     const char **array =
         static_cast<const char **>(malloc(size * sizeof(const char *)));

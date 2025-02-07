@@ -2,6 +2,7 @@
 
 #include "VulkanWrapper/Utils/exceptions.h"
 #include "VulkanWrapper/Vulkan/Instance.h"
+#include "VulkanWrapper/Vulkan/Surface.h"
 #include "VulkanWrapper/Vulkan/Swapchain.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
@@ -26,7 +27,7 @@ Window::Window(const SDL_Initializer &initializer, std::string_view name,
     m_window.reset(window);
 }
 
-vk::UniqueSurfaceKHR Window::createSurface(const Instance &instance) const {
+Surface Window::createSurface(const Instance &instance) const {
     VkSurfaceKHR surface;
     auto x = SDL_Vulkan_CreateSurface(m_window.get(), instance.handle(),
                                       nullptr, &surface);
@@ -34,7 +35,7 @@ vk::UniqueSurfaceKHR Window::createSurface(const Instance &instance) const {
     if (x == false)
         throw SurfaceCreationException{std::source_location::current()};
 
-    return vk::UniqueSurfaceKHR(surface, instance.handle());
+    return Surface{vk::UniqueSurfaceKHR(surface, instance.handle())};
 }
 
 SwapchainBuilder Window::createSwapchain(Device &device,
@@ -42,9 +43,10 @@ SwapchainBuilder Window::createSwapchain(Device &device,
     return SwapchainBuilder(device, surface, m_width, m_height);
 }
 
-bool Window::closeRequested() const noexcept { return m_closeRequested; }
+bool Window::is_close_requested() const noexcept { return m_closeRequested; }
 
-std::vector<const char *> Window::requiredInstanceExtensions() const noexcept {
+std::vector<const char *>
+Window::get_required_instance_extensions() const noexcept {
     unsigned count;
     auto array = SDL_Vulkan_GetInstanceExtensions(&count);
     std::vector<const char *> extensions(array, array + count);
@@ -65,7 +67,7 @@ void Window::update() noexcept {
 WindowBuilder::WindowBuilder(const SDL_Initializer &initializer)
     : initializer{initializer} {}
 
-WindowBuilder &&WindowBuilder::withTitle(std::string_view name) && {
+WindowBuilder &&WindowBuilder::with_title(std::string_view name) && {
     this->name = name;
     return std::move(*this);
 }

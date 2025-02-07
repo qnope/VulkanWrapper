@@ -1,6 +1,8 @@
 use super::sdl_initializer::*;
 use crate::sys::array_const_string::ArrayConstString;
 use crate::sys::bindings;
+use crate::vulkan::instance::Instance;
+use crate::vulkan::surface::Surface;
 use std::ffi::CString;
 
 pub struct Window<'a> {
@@ -42,7 +44,7 @@ impl<'a> WindowBuilder<'a> {
         unsafe {
             Window {
                 _initializer: &self._initializer,
-                ptr: bindings::vw_create_Window(
+                ptr: bindings::vw_create_window(
                     self._initializer.ptr,
                     self.width,
                     self.height,
@@ -53,25 +55,31 @@ impl<'a> WindowBuilder<'a> {
     }
 }
 
-impl<'a> Window<'a> {
+impl<'a, 'b, 'c> Window<'a> {
     pub fn get_required_extensions(&self) -> Vec<String> {
         unsafe {
             let required_extensions = ArrayConstString {
-                c_array: bindings::vw_required_extensions_from_window(self.ptr),
+                c_array: bindings::vw_get_required_extensions_from_window(self.ptr),
             };
             return required_extensions.to_vec();
         }
     }
 
-    pub fn is_close_requested(&self) -> bool {
+    pub fn create_surface(&'b self, instance: &'c Instance) -> Surface<'a, 'b, 'c> {
         unsafe {
-            return bindings::vw_close_Window_requested(self.ptr);
+            Surface::new(self, instance, bindings::vw_create_surface_from_window(self.ptr, instance.ptr))
         }
     }
 
-    pub fn update(&mut self) {
+    pub fn is_close_requested(&self) -> bool {
         unsafe {
-            bindings::vw_update_Window(self.ptr);
+            return bindings::vw_is_close_window_requested(self.ptr);
+        }
+    }
+
+    pub fn update(&self) {
+        unsafe {
+            bindings::vw_update_window(self.ptr);
         }
     }
 }
@@ -79,7 +87,7 @@ impl<'a> Window<'a> {
 impl<'a> Drop for Window<'_> {
     fn drop(&mut self) {
         unsafe {
-            bindings::vw_destroy_Window(self.ptr);
+            bindings::vw_destroy_window(self.ptr);
         }
     }
 }

@@ -10,6 +10,7 @@ target_sources(VulkanWrapper PRIVATE
     VulkanWrapper/Vulkan/PresentQueue.cpp
     VulkanWrapper/Vulkan/DeviceFinder.cpp
     VulkanWrapper/Vulkan/PhysicalDevice.cpp
+    VulkanWrapper/Vulkan/Surface.cpp
 
     VulkanWrapper/Image/Image.cpp
     VulkanWrapper/Image/ImageView.cpp

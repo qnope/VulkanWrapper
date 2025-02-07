@@ -1,5 +1,7 @@
 #pragma once
 
-#include "array.h"
-#include "SDL_Initializer.h"
-#include "Window.h"
+#include "utils/array.h"
+#include "Vulkan/Instance.h"
+#include "Window/SDL_Initializer.h"
+#include "Window/Window.h"
+#include <vulkan/vulkan.h>

@@ -13,6 +13,7 @@
 #include <VulkanWrapper/Vulkan/Instance.h>
 #include <VulkanWrapper/Vulkan/PhysicalDevice.h>
 #include <VulkanWrapper/Vulkan/Queue.h>
+#include <VulkanWrapper/Vulkan/Surface.h>
 #include <VulkanWrapper/Vulkan/Swapchain.h>
 #include <VulkanWrapper/Window/SDL_Initializer.h>
 #include <VulkanWrapper/Window/Window.h>
@@ -72,14 +73,14 @@ int main() {
     try {
         vw::SDL_Initializer initializer;
         vw::Window window = vw::WindowBuilder(initializer)
-                                .withTitle("Coucou")
+                                .with_title("Coucou")
                                 .sized(800, 600)
                                 .build();
 
         vw::Instance instance =
             vw::InstanceBuilder()
                 .addPortability()
-                .addExtensions(window.requiredInstanceExtensions())
+                .addExtensions(window.get_required_instance_extensions())
                 .build();
 
         auto surface = window.createSurface(instance);
@@ -88,10 +89,11 @@ int main() {
                           .withQueue(vk::QueueFlagBits::eGraphics |
                                      vk::QueueFlagBits::eCompute |
                                      vk::QueueFlagBits::eTransfer)
-                          .withPresentQueue(*surface)
+                          .withPresentQueue(surface.handle())
                           .build();
 
-        auto swapchain = window.createSwapchain(device, *surface).build();
+        auto swapchain =
+            window.createSwapchain(device, surface.handle()).build();
 
         auto vertexShader = vw::ShaderModule::createFromSpirVFile(
             device, "../../Shaders/bin/vert.spv");
@@ -146,7 +148,7 @@ int main() {
         auto imageAvailableSemaphore = vw::SemaphoreBuilder().build(device);
         auto renderFinishedSemaphore = vw::SemaphoreBuilder().build(device);
 
-        while (!window.closeRequested()) {
+        while (!window.is_close_requested()) {
             window.update();
             fence.wait();
             fence.reset();

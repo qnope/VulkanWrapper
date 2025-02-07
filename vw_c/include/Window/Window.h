@@ -1,0 +1,28 @@
+#pragma once
+
+#include "../utils/array.h"
+#include "../Vulkan/Instance.h"
+#include "SDL_Initializer.h"
+
+namespace vw {
+class Window;
+class Surface;
+} // namespace vw
+
+extern "C" {
+
+vw::Window *vw_create_window(const vw::SDL_Initializer *initializer, int width,
+                             int height, const char *title);
+
+bool vw_is_close_window_requested(const vw::Window *);
+void vw_update_window(vw::Window *);
+
+ArrayConstString
+vw_get_required_extensions_from_window(const vw::Window *window);
+
+vw::Surface *vw_create_surface_from_window(const vw::Window *window,
+                                           const vw::Instance *instance);
+void vw_destroy_surface(vw::Surface *surface);
+
+void vw_destroy_window(vw::Window *);
+}

@@ -15,7 +15,7 @@ class Instance : public ObjectWithUniqueHandle<vk::UniqueInstance> {
 
   private:
     Instance(vk::UniqueInstance instance,
-             std::vector<const char *> extensions) noexcept;
+             std::span<const char *> extensions) noexcept;
 
   private:
     std::vector<const char *> m_extensions;
@@ -26,6 +26,7 @@ class InstanceBuilder {
     InstanceBuilder &&addPortability() &&;
     InstanceBuilder &&addExtension(const char *extension) &&;
     InstanceBuilder &&addExtensions(std::vector<const char *> extensions) &&;
+    InstanceBuilder &&addExtensions(std::span<const char *> extensions) &&;
     InstanceBuilder &&setDebug() &&;
 
     Instance build() &&;

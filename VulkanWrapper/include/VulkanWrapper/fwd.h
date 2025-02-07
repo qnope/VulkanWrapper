@@ -15,6 +15,7 @@ class ImageView;
 
 class SwapchainBuilder;
 class Swapchain;
+class Surface;
 
 class ShaderModule;
 class Pipeline;

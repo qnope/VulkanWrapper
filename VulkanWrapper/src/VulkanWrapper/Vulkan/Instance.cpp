@@ -7,9 +7,9 @@
 namespace vw {
 
 Instance::Instance(vk::UniqueInstance instance,
-                   std::vector<const char *> extensions) noexcept
+                   std::span<const char *> extensions) noexcept
     : ObjectWithUniqueHandle<vk::UniqueInstance>{std::move(instance)}
-    , m_extensions{std::move(extensions)} {}
+    , m_extensions{extensions.begin(), extensions.end()} {}
 
 DeviceFinder Instance::findGpu() const noexcept {
     auto physicalDevices = [&] {
@@ -32,6 +32,12 @@ InstanceBuilder &&InstanceBuilder::addExtension(const char *extension) && {
 
 InstanceBuilder &&
 InstanceBuilder::addExtensions(std::vector<const char *> extensions) && {
+    m_extensions.append_range(extensions);
+    return std::move(*this);
+}
+
+InstanceBuilder &&
+InstanceBuilder::addExtensions(std::span<const char *> extensions) && {
     m_extensions.append_range(extensions);
     return std::move(*this);
 }
@@ -65,7 +71,7 @@ Instance InstanceBuilder::build() && {
     if (result != vk::Result::eSuccess)
         throw InstanceCreationException{std::source_location::current()};
 
-    return {std::move(instance), std::move(m_extensions)};
+    return {std::move(instance), m_extensions};
 }
 
 } // namespace vw

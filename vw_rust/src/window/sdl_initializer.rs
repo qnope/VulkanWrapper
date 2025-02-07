@@ -8,7 +8,7 @@ impl SdlInitializer {
     pub fn new() -> SdlInitializer {
         unsafe {
             SdlInitializer {
-                ptr: bindings::vw_create_SDL_Initializer(),
+                ptr: bindings::vw_create_sdl_initializer(),
             }
         }
     }
@@ -17,7 +17,7 @@ impl SdlInitializer {
 impl Drop for SdlInitializer {
     fn drop(&mut self) {
         unsafe {
-            bindings::vw_destroy_SDL_Initializer(self.ptr);
+            bindings::vw_destroy_sdl_initializer(self.ptr);
         }
     }
 }

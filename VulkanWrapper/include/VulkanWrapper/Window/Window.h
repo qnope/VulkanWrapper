@@ -21,10 +21,10 @@ class Window {
   public:
     void update() noexcept;
 
-    bool closeRequested() const noexcept;
+    bool is_close_requested() const noexcept;
 
-    std::vector<const char *> requiredInstanceExtensions() const noexcept;
-    vk::UniqueSurfaceKHR createSurface(const Instance &instance) const;
+    std::vector<const char *> get_required_instance_extensions() const noexcept;
+    Surface createSurface(const Instance &instance) const;
 
     SwapchainBuilder createSwapchain(Device &device, vk::SurfaceKHR surface);
 
@@ -45,7 +45,7 @@ class WindowBuilder {
     WindowBuilder(const SDL_Initializer &initializer);
     WindowBuilder(SDL_Initializer &&initializer) = delete;
 
-    WindowBuilder &&withTitle(std::string_view name) &&;
+    WindowBuilder &&with_title(std::string_view name) &&;
     WindowBuilder &&sized(int width, int height) &&;
 
     Window build() &&;

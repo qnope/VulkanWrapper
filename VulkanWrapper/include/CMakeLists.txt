@@ -16,6 +16,7 @@ target_sources(VulkanWrapper PRIVATE
     VulkanWrapper/Vulkan/PresentQueue.h
     VulkanWrapper/Vulkan/DeviceFinder.h
     VulkanWrapper/Vulkan/PhysicalDevice.h
+    VulkanWrapper/Vulkan/Surface.h
 
     VulkanWrapper/Image/Image.h
     VulkanWrapper/Image/ImageView.h
