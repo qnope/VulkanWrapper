@@ -1,2 +1,2 @@
-pub mod window;
 pub mod sdl_initializer;
+pub mod window;

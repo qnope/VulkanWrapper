@@ -2,10 +2,11 @@
 
 #include <VulkanWrapper/Window/Window.h>
 
-vw::Window *vw_create_Window(const vw::SDL_Initializer *initializer) {
+vw::Window *vw_create_Window(const vw::SDL_Initializer *initializer, int width,
+                             int height, const char *title) {
     auto window = vw::WindowBuilder(*initializer)
-                      .withTitle("Test FFI")
-                      .sized(800, 600)
+                      .withTitle(title)
+                      .sized(width, height)
                       .build();
     return new vw::Window(std::move(window));
 }

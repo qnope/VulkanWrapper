@@ -1,13 +1,12 @@
-use std::os::raw::c_void;
-use std::ffi::CStr;
 use libc::free;
+use std::ffi::CStr;
+use std::os::raw::c_void;
 
 pub struct ArrayConstString {
-    pub c_array: super::bindings::ArrayConstString
+    pub c_array: super::bindings::ArrayConstString,
 }
 
-impl ArrayConstString
-{
+impl ArrayConstString {
     pub fn to_vec(&self) -> Vec<String> {
         let mut result = vec![];
         for i in 0..self.c_array.size {
@@ -22,8 +21,7 @@ impl ArrayConstString
     }
 }
 
-impl Drop for ArrayConstString
-{
+impl Drop for ArrayConstString {
     fn drop(&mut self) {
         unsafe {
             free(self.c_array.array as *mut c_void);

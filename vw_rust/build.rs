@@ -1,13 +1,12 @@
 use std::env;
 use std::path::PathBuf;
 
-fn main()
-{
-    let dst = cmake::Config::new("..").build();       
+fn main() {
+    let dst = cmake::Config::new("..").build();
 
     println!("cargo:rustc-link-search=native={}", dst.display());
     println!("cargo:rustc-link-lib=dylib=VulkanWrapper_cd");
-    println!("cargo::rerun-if-changed=../vw_c"); 
+    println!("cargo::rerun-if-changed=../vw_c");
 
     let bindings = bindgen::Builder::default()
         .header("../vw_c/include/bindings.h")

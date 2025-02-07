@@ -9,7 +9,8 @@ class Window;
 
 extern "C" {
 
-vw::Window *vw_create_Window(const vw::SDL_Initializer *initializer);
+vw::Window *vw_create_Window(const vw::SDL_Initializer *initializer, int width,
+                             int height, const char *title);
 
 bool vw_close_Window_requested(const vw::Window *);
 void vw_update_Window(vw::Window *);
