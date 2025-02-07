@@ -55,7 +55,7 @@ impl<'a> WindowBuilder<'a> {
     }
 }
 
-impl<'a, 'b, 'c> Window<'a> {
+impl<'a> Window<'a> {
     pub fn get_required_extensions(&self) -> Vec<String> {
         unsafe {
             let required_extensions = ArrayConstString {
@@ -65,7 +65,7 @@ impl<'a, 'b, 'c> Window<'a> {
         }
     }
 
-    pub fn create_surface(&'b self, instance: &'c Instance) -> Surface<'a, 'b, 'c> {
+    pub fn create_surface(&'a self, instance: &'a Instance) -> Surface<'a> {
         unsafe {
             Surface::new(self, instance, bindings::vw_create_surface_from_window(self.ptr, instance.ptr))
         }

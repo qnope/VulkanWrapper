@@ -2,18 +2,18 @@ use crate::sys::bindings;
 use crate::vulkan::instance::Instance;
 use crate::window::window::Window;
 
-pub struct Surface<'a, 'b, 'c> {
-    _window: &'b Window<'a>,
-    _instance: &'c Instance,
+pub struct Surface<'a> {
+    _window: &'a Window<'a>,
+    _instance: &'a Instance,
     ptr: *mut bindings::vw_Surface,
 }
 
-impl<'a, 'b, 'c> Surface<'a, 'b, 'c> {
+impl<'a> Surface<'a> {
     pub fn new(
-        window: &'b Window<'a>,
-        instance: &'c Instance,
+        window: &'a Window<'a>,
+        instance: &'a Instance,
         ptr: *mut bindings::vw_Surface,
-    ) -> Surface<'a, 'b, 'c> {
+    ) -> Surface<'a> {
         Surface {
             _window: window,
             _instance: instance,
@@ -22,7 +22,7 @@ impl<'a, 'b, 'c> Surface<'a, 'b, 'c> {
     }
 }
 
-impl<'a, 'b, 'c> Drop for Surface<'_, '_, '_> {
+impl<'a, 'b, 'c> Drop for Surface<'a> {
     fn drop(&mut self) {
         unsafe {
             bindings::vw_destroy_surface(self.ptr);
