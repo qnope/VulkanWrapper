@@ -12,14 +12,18 @@ class Fence : public ObjectWithUniqueHandle<vk::UniqueFence> {
     void reset() const;
 
   private:
-    Fence(Device &device, vk::UniqueFence fence);
+    Fence(const Device &device, vk::UniqueFence fence);
 
   private:
-    Device &m_device;
+    const Device &m_device;
 };
 
 class FenceBuilder {
   public:
-    Fence build(Device &device) &&;
+    FenceBuilder(const Device &device);
+    Fence build() &&;
+
+  private:
+    const Device &m_device;
 };
 } // namespace vw

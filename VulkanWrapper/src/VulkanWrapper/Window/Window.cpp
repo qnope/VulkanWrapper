@@ -27,7 +27,7 @@ Window::Window(const SDL_Initializer &initializer, std::string_view name,
     m_window.reset(window);
 }
 
-Surface Window::createSurface(const Instance &instance) const {
+Surface Window::create_surface(const Instance &instance) const {
     VkSurfaceKHR surface;
     auto x = SDL_Vulkan_CreateSurface(m_window.get(), instance.handle(),
                                       nullptr, &surface);
@@ -38,9 +38,9 @@ Surface Window::createSurface(const Instance &instance) const {
     return Surface{vk::UniqueSurfaceKHR(surface, instance.handle())};
 }
 
-SwapchainBuilder Window::createSwapchain(Device &device,
-                                         vk::SurfaceKHR surface) {
-    return SwapchainBuilder(device, surface, m_width, m_height);
+Swapchain Window::create_swapchain(const Device &device, vk::SurfaceKHR surface) const
+{
+    return SwapchainBuilder(device, surface, m_width, m_height).build();
 }
 
 bool Window::is_close_requested() const noexcept { return m_closeRequested; }

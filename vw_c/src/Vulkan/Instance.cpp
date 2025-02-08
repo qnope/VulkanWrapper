@@ -1,8 +1,10 @@
 #include "Vulkan/Instance.h"
 
+#include <VulkanWrapper/Vulkan/DeviceFinder.h>
 #include <VulkanWrapper/Vulkan/Instance.h>
 
-vw::Instance *vw_create_instance(bool debugMode, ArrayConstString extensions) {
+vw::Instance *vw_create_instance(bool debugMode,
+                                 vw_ArrayConstString extensions) {
     std::span extensions_as_span(extensions.array, extensions.size);
 
     if (debugMode)
@@ -16,4 +18,12 @@ vw::Instance *vw_create_instance(bool debugMode, ArrayConstString extensions) {
                                 .build()};
 }
 
+vw::DeviceFinder *vw_find_gpu_from_instance(const vw::Instance *instance) {
+    return new vw::DeviceFinder{instance->findGpu()};
+}
+
 void vw_destroy_instance(vw::Instance *instance) { delete instance; }
+
+void vw_destroy_device_finder(vw::DeviceFinder *deviceFinder) {
+    delete deviceFinder;
+}

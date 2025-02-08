@@ -11,8 +11,8 @@ class DeviceFinder {
   public:
     DeviceFinder(std::vector<PhysicalDevice> physicalDevices) noexcept;
 
-    DeviceFinder &&withQueue(vk::QueueFlags queueFlags) && noexcept;
-    DeviceFinder &&withPresentQueue(vk::SurfaceKHR surface) && noexcept;
+    DeviceFinder &&with_queue(vk::QueueFlags queueFlags) && noexcept;
+    DeviceFinder &&with_presentation(vk::SurfaceKHR surface) && noexcept;
 
     Device build() &&;
     std::optional<PhysicalDevice> get() && noexcept;

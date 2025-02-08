@@ -6,35 +6,37 @@
 #include "VulkanWrapper/Vulkan/Device.h"
 
 namespace vw {
-GraphicsPipelineBuilder::GraphicsPipelineBuilder(const RenderPass &renderPass)
-    : m_renderPass{renderPass} {}
+GraphicsPipelineBuilder::GraphicsPipelineBuilder(const Device &device,
+                                                 const RenderPass &renderPass)
+    : m_device{device}
+    , m_renderPass{renderPass} {}
 
-GraphicsPipelineBuilder
+GraphicsPipelineBuilder &&
 GraphicsPipelineBuilder::addShaderModule(vk::ShaderStageFlagBits flags,
                                          ShaderModule module) && {
     m_shaderModules.emplace(flags, std::move(module));
     return std::move(*this);
 }
 
-GraphicsPipelineBuilder
+GraphicsPipelineBuilder &&
 GraphicsPipelineBuilder::addDynamicState(vk::DynamicState state) && {
     m_dynamicStates.push_back(state);
     return std::move(*this);
 }
 
-GraphicsPipelineBuilder
+GraphicsPipelineBuilder &&
 GraphicsPipelineBuilder::withFixedViewport(int width, int height) && {
     m_viewport = vk::Viewport(0.0f, 0.0f, width, height, 0.0f, 1.0f);
     return std::move(*this);
 }
 
-GraphicsPipelineBuilder
+GraphicsPipelineBuilder &&
 GraphicsPipelineBuilder::withFixedScissor(int width, int height) && {
     m_scissor = vk::Rect2D(vk::Offset2D(), vk::Extent2D(width, height));
     return std::move(*this);
 }
 
-GraphicsPipelineBuilder GraphicsPipelineBuilder::addColorAttachment() && {
+GraphicsPipelineBuilder &&GraphicsPipelineBuilder::addColorAttachment() && {
     const auto colorBlendAttachment =
         vk::PipelineColorBlendAttachmentState()
             .setBlendEnable(false)
@@ -46,13 +48,13 @@ GraphicsPipelineBuilder GraphicsPipelineBuilder::addColorAttachment() && {
     return std::move(*this);
 }
 
-GraphicsPipelineBuilder GraphicsPipelineBuilder::withPipelineLayout(
+GraphicsPipelineBuilder &&GraphicsPipelineBuilder::withPipelineLayout(
     const PipelineLayout &pipelineLayout) && {
     m_pipelineLayout = &pipelineLayout;
     return std::move(*this);
 }
 
-Pipeline GraphicsPipelineBuilder::build(Device &device) && {
+Pipeline GraphicsPipelineBuilder::build() && {
     const auto shaderStageInfos = createShaderStageInfos();
     const auto dynamicStateInfo = createDynamicStateInfo();
     const auto viewportStateInfo = createViewportStateInfo();
@@ -75,8 +77,8 @@ Pipeline GraphicsPipelineBuilder::build(Device &device) && {
             .setPRasterizationState(&rasterizationStateInfo)
             .setLayout(m_pipelineLayout ? m_pipelineLayout->handle() : nullptr);
 
-    auto [result, pipeline] =
-        device.handle().createGraphicsPipelineUnique(vk::PipelineCache(), info);
+    auto [result, pipeline] = m_device.handle().createGraphicsPipelineUnique(
+        vk::PipelineCache(), info);
 
     if (result != vk::Result::eSuccess)
         throw GraphicsPipelineCreationException{

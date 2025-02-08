@@ -20,14 +20,14 @@ class ImageView : public ObjectWithUniqueHandle<vk::UniqueImageView> {
 
 class ImageViewBuilder {
   public:
-    ImageViewBuilder(Device &device, const Image &image);
+    ImageViewBuilder(const Device &device, const Image &image);
 
     ImageViewBuilder setImageType(vk::ImageViewType imageViewType) &&;
 
     ImageView build() &&;
 
   private:
-    Device &m_device;
+    const Device &m_device;
     const Image &m_image;
 
     vk::ImageViewType m_type = vk::ImageViewType::e2D;

@@ -5,9 +5,11 @@
 #include "VulkanWrapper/Vulkan/Device.h"
 
 namespace vw {
-FramebufferBuilder::FramebufferBuilder(const RenderPass &renderPass,
+FramebufferBuilder::FramebufferBuilder(const Device &device,
+                                       const RenderPass &renderPass,
                                        uint32_t width, uint32_t height)
-    : m_renderPass{renderPass.handle()}
+    : m_device{device}
+    , m_renderPass{renderPass.handle()}
     , m_width{width}
     , m_height{height} {}
 
@@ -17,7 +19,7 @@ FramebufferBuilder::addAttachment(const ImageView &imageView) && {
     return std::move(*this);
 }
 
-Framebuffer FramebufferBuilder::build(Device &device) && {
+Framebuffer FramebufferBuilder::build() && {
     const auto info = vk::FramebufferCreateInfo()
                           .setWidth(m_width)
                           .setHeight(m_height)
@@ -25,7 +27,8 @@ Framebuffer FramebufferBuilder::build(Device &device) && {
                           .setRenderPass(m_renderPass)
                           .setAttachments(m_attachments);
 
-    auto [result, framebuffer] = device.handle().createFramebufferUnique(info);
+    auto [result, framebuffer] =
+        m_device.handle().createFramebufferUnique(info);
     if (result != vk::Result::eSuccess)
         throw FramebufferCreationException{std::source_location::current()};
     return Framebuffer{std::move(framebuffer)};

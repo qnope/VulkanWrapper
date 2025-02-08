@@ -5,13 +5,17 @@
 
 namespace vw {
 
-Swapchain::Swapchain(Device &device, vk::UniqueSwapchainKHR swapchain,
-                     vk::Format format, int width, int height)
+Swapchain::Swapchain(const Device &device,
+                     vk::UniqueSwapchainKHR swapchain,
+                     vk::Format format,
+                     int width,
+                     int height)
     : vw::ObjectWithUniqueHandle<vk::UniqueSwapchainKHR>{std::move(swapchain)}
     , m_device{device}
     , m_format{format}
     , m_width{width}
-    , m_height{height} {
+    , m_height{height}
+{
     auto vkImages = m_device.handle().getSwapchainImagesKHR(handle()).value;
 
     for (auto &vkImage : vkImages) {
@@ -32,11 +36,14 @@ const std::vector<ImageView> &Swapchain::imageViews() const noexcept {
     return m_imageViews;
 }
 
-SwapchainBuilder::SwapchainBuilder(Device &device, vk::SurfaceKHR surface,
-                                   int width, int height) noexcept
+SwapchainBuilder::SwapchainBuilder(const Device &device,
+                                   vk::SurfaceKHR surface,
+                                   int width,
+                                   int height) noexcept
     : m_device{device}
     , m_width{width}
-    , m_height{height} {
+    , m_height{height}
+{
     m_info.setSurface(surface)
         .setImageExtent(vk::Extent2D(width, height))
         .setImageColorSpace(vk::ColorSpaceKHR::eSrgbNonlinear)

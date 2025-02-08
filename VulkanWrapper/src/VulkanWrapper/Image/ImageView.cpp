@@ -9,7 +9,7 @@ ImageView::ImageView(const Image &image, vk::UniqueImageView imageView)
     : ObjectWithUniqueHandle<vk::UniqueImageView>{std::move(imageView)}
     , m_image{image} {}
 
-ImageViewBuilder::ImageViewBuilder(Device &device, const Image &image)
+ImageViewBuilder::ImageViewBuilder(const Device &device, const Image &image)
     : m_device{device}
     , m_image{image} {}
 

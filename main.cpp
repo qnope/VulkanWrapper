@@ -26,10 +26,11 @@ createFramebuffers(vw::Device &device, const vw::RenderPass &renderPass,
     std::vector<vw::Framebuffer> framebuffers;
 
     for (const auto &imageView : swapchain.imageViews()) {
-        auto framebuffer = vw::FramebufferBuilder(renderPass, swapchain.width(),
-                                                  swapchain.height())
-                               .addAttachment(imageView)
-                               .build(device);
+        auto framebuffer =
+            vw::FramebufferBuilder(device, renderPass, swapchain.width(),
+                                   swapchain.height())
+                .addAttachment(imageView)
+                .build();
         framebuffers.push_back(std::move(framebuffer));
     }
 
@@ -83,25 +84,24 @@ int main() {
                 .addExtensions(window.get_required_instance_extensions())
                 .build();
 
-        auto surface = window.createSurface(instance);
+        auto surface = window.create_surface(instance);
 
         auto device = instance.findGpu()
-                          .withQueue(vk::QueueFlagBits::eGraphics |
-                                     vk::QueueFlagBits::eCompute |
-                                     vk::QueueFlagBits::eTransfer)
-                          .withPresentQueue(surface.handle())
+                          .with_queue(vk::QueueFlagBits::eGraphics |
+                                      vk::QueueFlagBits::eCompute |
+                                      vk::QueueFlagBits::eTransfer)
+                          .with_presentation(surface.handle())
                           .build();
 
-        auto swapchain =
-            window.createSwapchain(device, surface.handle()).build();
+        auto swapchain = window.create_swapchain(device, surface.handle());
 
-        auto vertexShader = vw::ShaderModule::createFromSpirVFile(
+        auto vertexShader = vw::ShaderModule::create_from_spirv_file(
             device, "../../Shaders/bin/vert.spv");
 
-        auto fragmentShader = vw::ShaderModule::createFromSpirVFile(
+        auto fragmentShader = vw::ShaderModule::create_from_spirv_file(
             device, "../../Shaders/bin/frag.spv");
 
-        auto pipelineLayout = vw::PipelineLayoutBuilder().build(device);
+        auto pipelineLayout = vw::PipelineLayoutBuilder(device).build();
 
         const auto attachment =
             vw::AttachmentBuilder(COLOR)
@@ -114,13 +114,13 @@ int main() {
                                attachment, vk::ImageLayout::eAttachmentOptimal)
                            .build();
 
-        auto renderPass = vw::RenderPassBuilder()
+        auto renderPass = vw::RenderPassBuilder(device)
                               .addSubpass(vk::PipelineBindPoint::eGraphics,
                                           std::move(subpass))
-                              .build(device);
+                              .build();
 
         auto pipeline =
-            vw::GraphicsPipelineBuilder(renderPass)
+            vw::GraphicsPipelineBuilder(device, renderPass)
                 .addShaderModule(vk::ShaderStageFlagBits::eVertex,
                                  std::move(vertexShader))
                 .addShaderModule(vk::ShaderStageFlagBits::eFragment,
@@ -129,9 +129,9 @@ int main() {
                 .withFixedScissor(swapchain.width(), swapchain.height())
                 .withPipelineLayout(pipelineLayout)
                 .addColorAttachment()
-                .build(device);
+                .build();
 
-        auto commandPool = vw::CommandPoolBuilder().build(device);
+        auto commandPool = vw::CommandPoolBuilder(device).build();
         auto commandBuffers =
             commandPool.allocate(swapchain.imageViews().size());
 
@@ -144,9 +144,9 @@ int main() {
              std::views::zip(framebuffers, commandBuffers))
             record(commandBuffer, extent, framebuffer, pipeline, renderPass);
 
-        auto fence = vw::FenceBuilder().build(device);
-        auto imageAvailableSemaphore = vw::SemaphoreBuilder().build(device);
-        auto renderFinishedSemaphore = vw::SemaphoreBuilder().build(device);
+        auto fence = vw::FenceBuilder(device).build();
+        auto renderFinishedSemaphore = vw::SemaphoreBuilder(device).build();
+        auto imageAvailableSemaphore = vw::SemaphoreBuilder(device).build();
 
         while (!window.is_close_requested()) {
             window.update();

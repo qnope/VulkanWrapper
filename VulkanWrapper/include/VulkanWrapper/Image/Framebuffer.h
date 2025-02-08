@@ -15,14 +15,15 @@ class Framebuffer : public ObjectWithUniqueHandle<vk::UniqueFramebuffer> {
 
 class FramebufferBuilder {
   public:
-    FramebufferBuilder(const RenderPass &renderPass, uint32_t width,
-                       uint32_t height);
+    FramebufferBuilder(const Device &device, const RenderPass &renderPass,
+                       uint32_t width, uint32_t height);
 
     FramebufferBuilder addAttachment(const ImageView &imageView) &&;
 
-    Framebuffer build(Device &device) &&;
+    Framebuffer build() &&;
 
   private:
+    const Device &m_device;
     vk::RenderPass m_renderPass;
     uint32_t m_width;
     uint32_t m_height;

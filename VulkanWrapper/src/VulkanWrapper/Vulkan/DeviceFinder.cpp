@@ -25,7 +25,7 @@ DeviceFinder::DeviceFinder(
     }
 }
 
-DeviceFinder &&DeviceFinder::withQueue(vk::QueueFlags queueFlags) && noexcept {
+DeviceFinder &&DeviceFinder::with_queue(vk::QueueFlags queueFlags) && noexcept {
     auto queueFamilyHandled = [queueFlags](const QueueFamilyInformation &info) {
         return info.numberAsked < info.numberAvailable &&
                (queueFlags & info.flags) == queueFlags;
@@ -49,7 +49,7 @@ DeviceFinder &&DeviceFinder::withQueue(vk::QueueFlags queueFlags) && noexcept {
 }
 
 DeviceFinder &&
-DeviceFinder::withPresentQueue(vk::SurfaceKHR surface) && noexcept {
+DeviceFinder::with_presentation(vk::SurfaceKHR surface) && noexcept {
     using namespace std::ranges;
 
     constexpr auto swapchainExtension = VK_KHR_SWAPCHAIN_EXTENSION_NAME;

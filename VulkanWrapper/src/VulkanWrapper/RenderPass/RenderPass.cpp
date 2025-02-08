@@ -51,6 +51,9 @@ static SubpassDescription subpassToDescription(
     return {bindingPointAndSubpass.first, std::move(colorAttachments)};
 }
 
+RenderPassBuilder::RenderPassBuilder(const Device &device)
+    : m_device{device} {}
+
 RenderPassBuilder
 RenderPassBuilder::addSubpass(vk::PipelineBindPoint bindingPoint,
                               Subpass subpass) && {
@@ -58,7 +61,7 @@ RenderPassBuilder::addSubpass(vk::PipelineBindPoint bindingPoint,
     return std::move(*this);
 }
 
-RenderPass RenderPassBuilder::build(Device &device) && {
+RenderPass RenderPassBuilder::build() && {
 
     const auto attachments = createAttachments();
     const auto attachmentDescriptions =
@@ -78,7 +81,7 @@ RenderPass RenderPassBuilder::build(Device &device) && {
                           .setAttachments(attachmentDescriptions)
                           .setSubpasses(vkSubpassDescriptions);
 
-    auto [result, renderPass] = device.handle().createRenderPass2Unique(info);
+    auto [result, renderPass] = m_device.handle().createRenderPass2Unique(info);
 
     if (result != vk::Result::eSuccess)
         throw RenderPassCreationException{std::source_location::current()};

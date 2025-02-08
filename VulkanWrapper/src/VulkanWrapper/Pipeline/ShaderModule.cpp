@@ -11,8 +11,10 @@ static std::vector<uint32_t> readSpirVFile(const std::filesystem::path &path) {
 
     std::ifstream in(path, flags);
 
-    if (!in)
+    if (!in) {
+        std::cout << path << " not found";
         throw SpirVFileNotFoundException{std::source_location::current()};
+    }
 
     const std::size_t size = in.tellg();
 
@@ -29,8 +31,8 @@ static std::vector<uint32_t> readSpirVFile(const std::filesystem::path &path) {
 }
 
 ShaderModule
-ShaderModule::createFromSpirV(Device &device,
-                              const std::vector<std::uint32_t> &spirV) {
+ShaderModule::create_from_spirv(const Device &device,
+                                const std::vector<std::uint32_t> &spirV) {
     auto info = vk::ShaderModuleCreateInfo()
                     .setCodeSize(spirV.size() * sizeof(std::uint32_t))
                     .setCode(spirV);
@@ -43,10 +45,10 @@ ShaderModule::createFromSpirV(Device &device,
 }
 
 ShaderModule
-ShaderModule::createFromSpirVFile(Device &device,
-                                  const std::filesystem::path &path) {
+ShaderModule::create_from_spirv_file(const Device &device,
+                                     const std::filesystem::path &path) {
     const auto spirV = readSpirVFile(path);
-    return createFromSpirV(device, spirV);
+    return create_from_spirv(device, spirV);
 }
 
 } // namespace vw

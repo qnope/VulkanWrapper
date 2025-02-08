@@ -1,3 +1,4 @@
+use vulkan_wrapper::pipeline::shader_module::*;
 use vulkan_wrapper::vulkan::device::QueueFlags;
 use vulkan_wrapper::vulkan::instance::*;
 use vulkan_wrapper::window::sdl_initializer::*;
@@ -8,7 +9,7 @@ fn main() {
 
     let window = WindowBuilder::new(&initializer)
         .sized(800, 600)
-        .with_title(String::from("Test from Rust"))
+        .with_title("Test from Rust")
         .build();
 
     let extensions = window.get_required_extensions();
@@ -23,6 +24,10 @@ fn main() {
         .build();
 
     let _swapchain = window.create_swapchain(&device, &surface);
+
+    let _vertex_shader = ShaderModule::create_from_spirv_file(&device, "../Shaders/bin/vert.spv");
+
+    let _fragment_shader = ShaderModule::create_from_spirv_file(&device, "../Shaders/bin/frag.spv");
 
     while !window.is_close_requested() {
         window.update();

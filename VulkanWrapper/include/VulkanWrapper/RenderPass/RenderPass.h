@@ -18,14 +18,16 @@ class RenderPass : public ObjectWithUniqueHandle<vk::UniqueRenderPass> {
 
 class RenderPassBuilder {
   public:
+    RenderPassBuilder(const Device &device);
     RenderPassBuilder addSubpass(vk::PipelineBindPoint bindingPoint,
                                  Subpass subpass) &&;
-    RenderPass build(Device &device) &&;
+    RenderPass build() &&;
 
   private:
     std::vector<Attachment> createAttachments() const noexcept;
 
   private:
+    const Device &m_device;
     std::vector<std::pair<vk::PipelineBindPoint, vw::Subpass>> m_subpasses;
 };
 } // namespace vw

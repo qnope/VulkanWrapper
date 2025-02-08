@@ -19,17 +19,19 @@ class CommandPool : public ObjectWithUniqueHandle<vk::UniqueCommandPool> {
     std::vector<vk::CommandBuffer> allocate(std::size_t number);
 
   private:
-    CommandPool(Device &device, vk::UniqueCommandPool commandPool);
+    CommandPool(const Device &device, vk::UniqueCommandPool commandPool);
 
   private:
-    Device &m_device;
+    const Device &m_device;
 };
 
 class CommandPoolBuilder {
   public:
-    CommandPool build(Device &device) &&;
+    CommandPoolBuilder(const Device &device);
+    CommandPool build() &&;
 
   private:
+    const Device &m_device;
 };
 
 } // namespace vw

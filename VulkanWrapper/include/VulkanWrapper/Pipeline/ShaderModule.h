@@ -16,9 +16,11 @@ using SpirVInvalidException = vw::TaggedException<struct SpirVInvalidTag>;
 class ShaderModule : public ObjectWithUniqueHandle<vk::UniqueShaderModule> {
   public:
     static ShaderModule
-    createFromSpirV(Device &device, const std::vector<std::uint32_t> &spirV);
-    static ShaderModule createFromSpirVFile(Device &device,
-                                            const std::filesystem::path &path);
+    create_from_spirv(const Device &device, const std::vector<std::uint32_t> &spirv);
+
+    static ShaderModule
+    create_from_spirv_file(const Device &device,
+                           const std::filesystem::path &path);
 
   private:
     using ObjectWithUniqueHandle<

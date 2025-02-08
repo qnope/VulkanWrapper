@@ -4,6 +4,7 @@
 #include "VulkanWrapper/Utils/exceptions.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
 #include "VulkanWrapper/Vulkan/PresentQueue.h"
+#include "VulkanWrapper/Vulkan/Queue.h"
 
 namespace vw {
 using DeviceCreationException = TaggedException<struct DeviceCreationTag>;

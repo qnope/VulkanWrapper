@@ -16,7 +16,7 @@ AttachmentBuilder::withFinalLayout(vk::ImageLayout finalLayout) && {
 }
 
 Attachment AttachmentBuilder::build() && {
-    return Attachment{.id = m_id,
+    return Attachment{.id = std::string(m_id),
                       .format = m_format,
                       .sampleCount = m_sampleCount,
                       .loadOp = m_loadOp,

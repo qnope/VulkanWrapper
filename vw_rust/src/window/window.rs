@@ -29,8 +29,8 @@ impl<'a> WindowBuilder<'a> {
         }
     }
 
-    pub fn with_title(mut self, title: String) -> WindowBuilder<'a> {
-        self.title = title;
+    pub fn with_title(mut self, title: &str) -> WindowBuilder<'a> {
+        self.title = String::from(title);
         self
     }
 
@@ -79,8 +79,11 @@ impl<'a> Window<'a> {
 
     pub fn create_swapchain(&'a self, device: &'a Device, surface: &'a Surface) -> Swapchain<'a> {
         unsafe {
-            let ptr =
-                bindings::vw_create_swapchain_from_window(self.ptr, device.as_ptr(), surface.as_ptr());
+            let ptr = bindings::vw_create_swapchain_from_window(
+                self.ptr,
+                device.as_ptr(),
+                surface.as_ptr(),
+            );
             return Swapchain::new(device, surface, ptr);
         }
     }

@@ -1,12 +1,17 @@
 #pragma once
 
 extern "C" {
-struct ArrayConstString {
+struct vw_ArrayConstString {
     const char **array;
     int size;
 };
 
-ArrayConstString vw_create_array_const_string(const char *const *input_array,
-                                              int size);
-void vw_destroy_array_const_string(ArrayConstString array);
+struct vw_Array {
+    void *array;
+    int size;
+};
+
+vw_ArrayConstString vw_create_array_const_string(const char *const *input_array,
+                                                 int size);
+void vw_destroy_array_const_string(vw_ArrayConstString array);
 }

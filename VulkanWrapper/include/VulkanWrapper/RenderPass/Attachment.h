@@ -2,7 +2,7 @@
 
 namespace vw {
 struct Attachment {
-    std::string_view id;
+    std::string id;
     vk::Format format;
     vk::SampleCountFlagBits sampleCount;
     vk::AttachmentLoadOp loadOp;

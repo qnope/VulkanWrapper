@@ -4,7 +4,7 @@
 
 namespace vw {
 
-Fence::Fence(Device &device, vk::UniqueFence fence)
+Fence::Fence(const Device &device, vk::UniqueFence fence)
     : ObjectWithUniqueHandle<vk::UniqueFence>{std::move(fence)}
     , m_device{device} {}
 
@@ -15,12 +15,15 @@ void Fence::wait() const {
 
 void Fence::reset() const { m_device.handle().resetFences(handle()); }
 
-Fence FenceBuilder::build(Device &device) && {
+FenceBuilder::FenceBuilder(const Device &device)
+    : m_device{device} {}
+
+Fence FenceBuilder::build() && {
     const auto info =
         vk::FenceCreateInfo().setFlags(vk::FenceCreateFlagBits::eSignaled);
 
-    auto [result, fence] = device.handle().createFenceUnique(info);
+    auto [result, fence] = m_device.handle().createFenceUnique(info);
 
-    return Fence{device, std::move(fence)};
+    return Fence{m_device, std::move(fence)};
 }
 } // namespace vw

@@ -18,6 +18,10 @@ class Semaphore : public ObjectWithUniqueHandle<vk::UniqueSemaphore> {
 
 class SemaphoreBuilder {
   public:
-    Semaphore build(Device &device) &&;
+    SemaphoreBuilder(const Device &device);
+    Semaphore build() &&;
+
+  private:
+    const Device &m_device;
 };
 } // namespace vw

@@ -18,22 +18,22 @@ class Pipeline : public ObjectWithUniqueHandle<vk::UniquePipeline> {
 
 class GraphicsPipelineBuilder {
   public:
-    GraphicsPipelineBuilder(const RenderPass &renderPass);
+    GraphicsPipelineBuilder(const Device &device, const RenderPass &renderPass);
 
-    GraphicsPipelineBuilder addShaderModule(vk::ShaderStageFlagBits flags,
-                                            ShaderModule module) &&;
+    GraphicsPipelineBuilder &&addShaderModule(vk::ShaderStageFlagBits flags,
+                                              ShaderModule module) &&;
 
-    GraphicsPipelineBuilder addDynamicState(vk::DynamicState state) &&;
+    GraphicsPipelineBuilder &&addDynamicState(vk::DynamicState state) &&;
 
-    GraphicsPipelineBuilder withFixedViewport(int width, int height) &&;
-    GraphicsPipelineBuilder withFixedScissor(int width, int height) &&;
+    GraphicsPipelineBuilder &&withFixedViewport(int width, int height) &&;
+    GraphicsPipelineBuilder &&withFixedScissor(int width, int height) &&;
 
-    GraphicsPipelineBuilder addColorAttachment() &&;
+    GraphicsPipelineBuilder &&addColorAttachment() &&;
 
-    GraphicsPipelineBuilder
+    GraphicsPipelineBuilder &&
     withPipelineLayout(const PipelineLayout &pipelineLayout) &&;
 
-    Pipeline build(Device &device) &&;
+    Pipeline build() &&;
 
   private:
     std::vector<vk::PipelineShaderStageCreateInfo>
@@ -60,6 +60,7 @@ class GraphicsPipelineBuilder {
     createColorBlendStateInfo() const noexcept;
 
   private:
+    const Device &m_device;
     const RenderPass &m_renderPass;
     std::map<vk::ShaderStageFlagBits, ShaderModule> m_shaderModules;
     std::vector<vk::DynamicState> m_dynamicStates;

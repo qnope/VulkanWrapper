@@ -19,8 +19,10 @@ class PipelineLayout : public ObjectWithUniqueHandle<vk::UniquePipelineLayout> {
 
 class PipelineLayoutBuilder {
   public:
-    PipelineLayout build(Device &device) &&;
+    PipelineLayoutBuilder(const Device &device);
+    PipelineLayout build() &&;
 
   private:
+    const Device &m_device;
 };
 } // namespace vw

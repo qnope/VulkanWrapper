@@ -24,9 +24,10 @@ class Window {
     bool is_close_requested() const noexcept;
 
     std::vector<const char *> get_required_instance_extensions() const noexcept;
-    Surface createSurface(const Instance &instance) const;
+    Surface create_surface(const Instance &instance) const;
 
-    SwapchainBuilder createSwapchain(Device &device, vk::SurfaceKHR surface);
+    Swapchain create_swapchain(const Device &device,
+                               vk::SurfaceKHR surface) const;
 
   private:
     Window(const SDL_Initializer &initializer, std::string_view name, int width,
