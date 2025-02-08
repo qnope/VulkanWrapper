@@ -3,7 +3,7 @@ use std::ffi::CStr;
 use std::os::raw::c_void;
 
 pub struct ArrayConstString {
-    pub c_array: super::bindings::ArrayConstString,
+    pub c_array: super::bindings::vw_ArrayConstString,
 }
 
 impl ArrayConstString {

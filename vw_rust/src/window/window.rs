@@ -1,8 +1,10 @@
 use super::sdl_initializer::*;
 use crate::sys::array_const_string::ArrayConstString;
 use crate::sys::bindings;
+use crate::vulkan::device::Device;
 use crate::vulkan::instance::Instance;
 use crate::vulkan::surface::Surface;
+use crate::vulkan::swapchain::Swapchain;
 use std::ffi::CString;
 
 pub struct Window<'a> {
@@ -67,7 +69,19 @@ impl<'a> Window<'a> {
 
     pub fn create_surface(&'a self, instance: &'a Instance) -> Surface<'a> {
         unsafe {
-            Surface::new(self, instance, bindings::vw_create_surface_from_window(self.ptr, instance.ptr))
+            Surface::new(
+                self,
+                instance,
+                bindings::vw_create_surface_from_window(self.ptr, instance.as_ptr()),
+            )
+        }
+    }
+
+    pub fn create_swapchain(&'a self, device: &'a Device, surface: &'a Surface) -> Swapchain<'a> {
+        unsafe {
+            let ptr =
+                bindings::vw_create_swapchain_from_window(self.ptr, device.as_ptr(), surface.as_ptr());
+            return Swapchain::new(device, surface, ptr);
         }
     }
 

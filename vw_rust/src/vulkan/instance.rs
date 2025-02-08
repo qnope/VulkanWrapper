@@ -1,8 +1,9 @@
-use crate::sys::bindings;
+use super::device::DeviceFinder;
+use crate::sys::bindings::{self, vw_Instance};
 use std::ffi::CString;
 
 pub struct Instance {
-    pub ptr: *mut bindings::vw_Instance,
+    ptr: *mut vw_Instance,
 }
 
 pub struct InstanceBuilder {
@@ -37,7 +38,7 @@ impl InstanceBuilder {
 
         let mut data: Vec<_> = vec_c_string.iter().map(|x| x.as_ptr()).collect();
 
-        let extensions = bindings::ArrayConstString {
+        let extensions = bindings::vw_ArrayConstString {
             array: data.as_mut_ptr(),
             size: data.len() as i32,
         };
@@ -47,6 +48,16 @@ impl InstanceBuilder {
                 ptr: bindings::vw_create_instance(self.debug_mode, extensions),
             }
         }
+    }
+}
+
+impl Instance {
+    pub fn find_gpu(&self) -> DeviceFinder {
+        return DeviceFinder::new(self);
+    }
+
+    pub fn as_ptr(&self) -> *const vw_Instance {
+        self.ptr
     }
 }
 

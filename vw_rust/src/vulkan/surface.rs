@@ -1,24 +1,28 @@
-use crate::sys::bindings;
+use crate::sys::bindings::{self, vw_Surface};
 use crate::vulkan::instance::Instance;
 use crate::window::window::Window;
 
 pub struct Surface<'a> {
     _window: &'a Window<'a>,
     _instance: &'a Instance,
-    ptr: *mut bindings::vw_Surface,
+    ptr: *mut vw_Surface,
 }
 
 impl<'a> Surface<'a> {
     pub fn new(
         window: &'a Window<'a>,
         instance: &'a Instance,
-        ptr: *mut bindings::vw_Surface,
+        ptr: *mut vw_Surface,
     ) -> Surface<'a> {
         Surface {
             _window: window,
             _instance: instance,
             ptr: ptr,
         }
+    }
+
+    pub fn as_ptr(&self) -> *const vw_Surface {
+        self.ptr
     }
 }
 
