@@ -1,20 +1,11 @@
 use crate::sys::bindings::{self, vw_Device, vw_DeviceFinder};
 use crate::vulkan::instance::Instance;
 use crate::vulkan::surface::Surface;
-use bitflags::bitflags;
 
-bitflags! {
-    #[derive(Clone, Copy)]
-    pub struct QueueFlags : u32 {
-        const Compute = bindings::VkQueueFlagBits_VK_QUEUE_COMPUTE_BIT;
-        const Transfer = bindings::VkQueueFlagBits_VK_QUEUE_TRANSFER_BIT;
-        const Graphics = bindings::VkQueueFlagBits_VK_QUEUE_GRAPHICS_BIT;
-}
-}
 pub struct DeviceFinder<'a> {
     _instance: &'a Instance,
     ptr: *mut vw_DeviceFinder,
-    queue: QueueFlags,
+    queue: bindings::VkQueueFlagBits,
     surface: Option<&'a Surface<'a>>,
 }
 
@@ -30,13 +21,13 @@ impl<'a> DeviceFinder<'a> {
             DeviceFinder {
                 _instance: &instance,
                 ptr: bindings::vw_find_gpu_from_instance(instance.as_ptr()),
-                queue: QueueFlags::empty(),
+                queue: bindings::VkQueueFlagBits(0),
                 surface: None,
             }
         }
     }
 
-    pub fn with_queue(mut self, queues: QueueFlags) -> DeviceFinder<'a> {
+    pub fn with_queue(mut self, queues: bindings::VkQueueFlagBits) -> DeviceFinder<'a> {
         self.queue = self.queue | queues;
         self
     }
@@ -52,7 +43,7 @@ impl<'a> DeviceFinder<'a> {
             None => 0 as *const bindings::vw_Surface,
         };
         unsafe {
-            let ptr = bindings::vw_create_device(self.ptr, self.queue.bits(), ptr_surface);
+            let ptr = bindings::vw_create_device(self.ptr, self.queue, ptr_surface);
             Device {
                 _instance: self._instance,
                 _surface: self.surface,

@@ -20,18 +20,18 @@ class GraphicsPipelineBuilder {
   public:
     GraphicsPipelineBuilder(const Device &device, const RenderPass &renderPass);
 
-    GraphicsPipelineBuilder &&addShaderModule(vk::ShaderStageFlagBits flags,
-                                              ShaderModule module) &&;
+    GraphicsPipelineBuilder &&add_shader(vk::ShaderStageFlagBits flags,
+                                         ShaderModule module) &&;
 
-    GraphicsPipelineBuilder &&addDynamicState(vk::DynamicState state) &&;
+    GraphicsPipelineBuilder &&add_dynamic_state(vk::DynamicState state) &&;
 
-    GraphicsPipelineBuilder &&withFixedViewport(int width, int height) &&;
-    GraphicsPipelineBuilder &&withFixedScissor(int width, int height) &&;
+    GraphicsPipelineBuilder &&with_fixed_viewport(int width, int height) &&;
+    GraphicsPipelineBuilder &&with_fixed_scissor(int width, int height) &&;
 
-    GraphicsPipelineBuilder &&addColorAttachment() &&;
+    GraphicsPipelineBuilder &&add_color_attachment() &&;
 
     GraphicsPipelineBuilder &&
-    withPipelineLayout(const PipelineLayout &pipelineLayout) &&;
+    with_pipeline_layout(const PipelineLayout &pipelineLayout) &&;
 
     Pipeline build() &&;
 

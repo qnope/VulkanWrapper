@@ -20,12 +20,25 @@
 
 constexpr std::string_view COLOR = "COLOR";
 
+std::vector<vw::ImageView> create_image_views(const vw::Device &device,
+                                              const vw::Swapchain &swapchain) {
+    std::vector<vw::ImageView> result;
+    for (auto &&image : swapchain.images()) {
+        auto imageView = vw::ImageViewBuilder(device, image)
+                             .setImageType(vk::ImageViewType::e2D)
+                             .build();
+        result.push_back(std::move(imageView));
+    }
+    return result;
+}
+
 std::vector<vw::Framebuffer>
 createFramebuffers(vw::Device &device, const vw::RenderPass &renderPass,
-                   const vw::Swapchain &swapchain) {
+                   const vw::Swapchain &swapchain,
+                   const std::vector<vw::ImageView> &images) {
     std::vector<vw::Framebuffer> framebuffers;
 
-    for (const auto &imageView : swapchain.imageViews()) {
+    for (const auto &imageView : images) {
         auto framebuffer =
             vw::FramebufferBuilder(device, renderPass, swapchain.width(),
                                    swapchain.height())
@@ -57,11 +70,7 @@ void record(vk::CommandBuffer commandBuffer, vk::Extent2D extent,
 
     commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
                                pipeline.handle());
-    // const vk::Rect2D scissor{vk::Offset2D(), extent};
-    // const vk::Viewport viewport(0.0, 0.0, extent.width, extent.height, 0.0,
-    //                             1.0);
-    // commandBuffer.setScissor(0, scissor);
-    // commandBuffer.setViewport(0, viewport);
+
     commandBuffer.draw(3, 1, 0, 0);
 
     auto subpassEnd = vk::SubpassEndInfo();
@@ -105,38 +114,37 @@ int main() {
 
         const auto attachment =
             vw::AttachmentBuilder(COLOR)
-                .withFormat(swapchain.format())
-                .withFinalLayout(vk::ImageLayout::ePresentSrcKHR)
+                .with_format(swapchain.format())
+                .with_final_layout(vk::ImageLayout::ePresentSrcKHR)
                 .build();
 
         auto subpass = vw::SubpassBuilder()
-                           .addColorAttachment(
+                           .add_color_attachment(
                                attachment, vk::ImageLayout::eAttachmentOptimal)
                            .build();
 
         auto renderPass = vw::RenderPassBuilder(device)
-                              .addSubpass(vk::PipelineBindPoint::eGraphics,
-                                          std::move(subpass))
+                              .add_subpass(std::move(subpass))
                               .build();
 
         auto pipeline =
             vw::GraphicsPipelineBuilder(device, renderPass)
-                .addShaderModule(vk::ShaderStageFlagBits::eVertex,
-                                 std::move(vertexShader))
-                .addShaderModule(vk::ShaderStageFlagBits::eFragment,
-                                 std::move(fragmentShader))
-                .withFixedViewport(swapchain.width(), swapchain.height())
-                .withFixedScissor(swapchain.width(), swapchain.height())
-                .withPipelineLayout(pipelineLayout)
-                .addColorAttachment()
+                .add_shader(vk::ShaderStageFlagBits::eVertex,
+                            std::move(vertexShader))
+                .add_shader(vk::ShaderStageFlagBits::eFragment,
+                            std::move(fragmentShader))
+                .with_fixed_scissor(swapchain.width(), swapchain.height())
+                .with_fixed_viewport(swapchain.width(), swapchain.height())
+                .with_pipeline_layout(pipelineLayout)
+                .add_color_attachment()
                 .build();
 
         auto commandPool = vw::CommandPoolBuilder(device).build();
-        auto commandBuffers =
-            commandPool.allocate(swapchain.imageViews().size());
+        auto image_views = create_image_views(device, swapchain);
+        auto commandBuffers = commandPool.allocate(image_views.size());
 
         const auto framebuffers =
-            createFramebuffers(device, renderPass, swapchain);
+            createFramebuffers(device, renderPass, swapchain, image_views);
 
         const vk::Extent2D extent(swapchain.width(), swapchain.height());
 
@@ -153,16 +161,7 @@ int main() {
             fence.wait();
             fence.reset();
 
-            const auto acquireInfo =
-                vk::AcquireNextImageInfoKHR()
-                    .setSwapchain(swapchain.handle())
-                    .setSemaphore(imageAvailableSemaphore.handle())
-                    .setTimeout(UINT64_MAX);
-            auto index =
-                device.handle()
-                    .acquireNextImageKHR(swapchain.handle(), UINT64_MAX,
-                                         imageAvailableSemaphore.handle())
-                    .value;
+            auto index = swapchain.acquire_next_image(imageAvailableSemaphore);
 
             const vk::PipelineStageFlags waitStage =
                 vk::PipelineStageFlagBits::eTopOfPipe;

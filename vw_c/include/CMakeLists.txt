@@ -9,6 +9,22 @@ target_sources(VulkanWrapper_c PRIVATE
 
     Vulkan/Device.h
     Vulkan/Instance.h
+    Vulkan/Swapchain.h
 
     Pipeline/ShaderModule.h
+    Pipeline/PipelineLayout.h
+    Pipeline/Pipeline.h
+
+    RenderPass/Attachment.h
+    RenderPass/RenderPass.h
+    RenderPass/Subpass.h
+
+    Synchronization/Semaphore.h
+    Synchronization/Fence.h
+
+    Command/CommandPool.h
+
+    Image/Framebuffer.h
+    Image/ImageView.h
+    Image/Image.h
 )

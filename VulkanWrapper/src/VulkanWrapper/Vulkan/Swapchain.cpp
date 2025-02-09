@@ -1,28 +1,22 @@
 #include "VulkanWrapper/Vulkan/Swapchain.h"
 
 #include "VulkanWrapper/Image/ImageView.h"
+#include "VulkanWrapper/Synchronization/Semaphore.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 
 namespace vw {
 
-Swapchain::Swapchain(const Device &device,
-                     vk::UniqueSwapchainKHR swapchain,
-                     vk::Format format,
-                     int width,
-                     int height)
+Swapchain::Swapchain(const Device &device, vk::UniqueSwapchainKHR swapchain,
+                     vk::Format format, int width, int height)
     : vw::ObjectWithUniqueHandle<vk::UniqueSwapchainKHR>{std::move(swapchain)}
     , m_device{device}
     , m_format{format}
     , m_width{width}
-    , m_height{height}
-{
+    , m_height{height} {
     auto vkImages = m_device.handle().getSwapchainImagesKHR(handle()).value;
 
     for (auto &vkImage : vkImages) {
         auto &image = m_images.emplace_back(vkImage, m_format);
-
-        auto imageView = ImageViewBuilder(device, image).build();
-        m_imageViews.push_back(std::move(imageView));
     }
 }
 
@@ -32,18 +26,25 @@ int Swapchain::height() const noexcept { return m_height; }
 
 vk::Format Swapchain::format() const noexcept { return m_format; }
 
-const std::vector<ImageView> &Swapchain::imageViews() const noexcept {
-    return m_imageViews;
+std::vector<Image> Swapchain::images() const noexcept {
+    std::vector<Image> result;
+    for (auto &image : m_images)
+        result.emplace_back(image.handle(), image.format());
+    return result;
 }
 
-SwapchainBuilder::SwapchainBuilder(const Device &device,
-                                   vk::SurfaceKHR surface,
-                                   int width,
-                                   int height) noexcept
+uint64_t
+Swapchain::acquire_next_image(const Semaphore &semaphore) const noexcept {
+    return m_device.handle()
+        .acquireNextImageKHR(handle(), UINT64_MAX, semaphore.handle())
+        .value;
+}
+
+SwapchainBuilder::SwapchainBuilder(const Device &device, vk::SurfaceKHR surface,
+                                   int width, int height) noexcept
     : m_device{device}
     , m_width{width}
-    , m_height{height}
-{
+    , m_height{height} {
     m_info.setSurface(surface)
         .setImageExtent(vk::Extent2D(width, height))
         .setImageColorSpace(vk::ColorSpaceKHR::eSrgbNonlinear)

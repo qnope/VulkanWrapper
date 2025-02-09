@@ -22,7 +22,7 @@ class ImageViewBuilder {
   public:
     ImageViewBuilder(const Device &device, const Image &image);
 
-    ImageViewBuilder setImageType(vk::ImageViewType imageViewType) &&;
+    ImageViewBuilder &&setImageType(vk::ImageViewType imageViewType) &&;
 
     ImageView build() &&;
 

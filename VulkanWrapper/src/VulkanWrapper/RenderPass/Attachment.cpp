@@ -4,13 +4,13 @@ namespace vw {
 AttachmentBuilder::AttachmentBuilder(std::string_view id)
     : m_id{id} {}
 
-AttachmentBuilder AttachmentBuilder::withFormat(vk::Format format) && {
+AttachmentBuilder AttachmentBuilder::with_format(vk::Format format) && {
     m_format = format;
     return std::move(*this);
 }
 
 AttachmentBuilder
-AttachmentBuilder::withFinalLayout(vk::ImageLayout finalLayout) && {
+AttachmentBuilder::with_final_layout(vk::ImageLayout finalLayout) && {
     m_finalLayout = finalLayout;
     return std::move(*this);
 }

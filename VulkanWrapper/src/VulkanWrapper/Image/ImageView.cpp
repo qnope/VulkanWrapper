@@ -13,7 +13,7 @@ ImageViewBuilder::ImageViewBuilder(const Device &device, const Image &image)
     : m_device{device}
     , m_image{image} {}
 
-ImageViewBuilder ImageViewBuilder::setImageType(vk::ImageViewType type) && {
+ImageViewBuilder &&ImageViewBuilder::setImageType(vk::ImageViewType type) && {
     m_type = type;
     return std::move(*this);
 }

@@ -15,13 +15,14 @@ class Swapchain : public ObjectWithUniqueHandle<vk::UniqueSwapchainKHR> {
     int height() const noexcept;
     vk::Format format() const noexcept;
 
-    const std::vector<ImageView> &imageViews() const noexcept;
+    std::vector<Image> images() const noexcept;
+
+    uint64_t acquire_next_image(const Semaphore &semaphore) const noexcept;
 
   private:
     const Device &m_device;
     vk::Format m_format;
     std::vector<Image> m_images;
-    std::vector<ImageView> m_imageViews;
     int m_width;
     int m_height;
 };

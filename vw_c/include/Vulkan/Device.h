@@ -9,7 +9,8 @@ class Surface;
 } // namespace vw
 
 extern "C" {
-vw::Device *vw_create_device(vw::DeviceFinder *finder, VkQueueFlags queueFlags,
+vw::Device *vw_create_device(vw::DeviceFinder *finder,
+                             VkQueueFlagBits queueFlags,
                              const vw::Surface *surfaceToPresent);
 
 void vw_destroy_device(vw::Device *device);

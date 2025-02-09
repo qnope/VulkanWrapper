@@ -40,5 +40,3 @@ vw::Swapchain *vw_create_swapchain_from_window(const vw::Window *window,
     return new vw::Swapchain{
         window->create_swapchain(*device, surface->handle())};
 }
-
-void vw_destroy_swapchain(vw::Swapchain *swapchain) { delete swapchain; }

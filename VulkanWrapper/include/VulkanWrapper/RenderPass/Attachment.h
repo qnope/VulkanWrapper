@@ -17,8 +17,8 @@ class AttachmentBuilder {
   public:
     AttachmentBuilder(std::string_view id);
 
-    AttachmentBuilder withFormat(vk::Format format) &&;
-    AttachmentBuilder withFinalLayout(vk::ImageLayout layout) &&;
+    AttachmentBuilder with_format(vk::Format format) &&;
+    AttachmentBuilder with_final_layout(vk::ImageLayout layout) &&;
     Attachment build() &&;
 
   private:

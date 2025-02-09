@@ -10,8 +10,8 @@ struct Subpass {
 
 class SubpassBuilder {
   public:
-    SubpassBuilder addColorAttachment(Attachment attachment,
-                                      vk::ImageLayout layout) &&;
+    SubpassBuilder &&add_color_attachment(Attachment attachment,
+                                          vk::ImageLayout layout) &&;
     Subpass build() &&;
 
   private:

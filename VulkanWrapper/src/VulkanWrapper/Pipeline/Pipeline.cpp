@@ -12,31 +12,31 @@ GraphicsPipelineBuilder::GraphicsPipelineBuilder(const Device &device,
     , m_renderPass{renderPass} {}
 
 GraphicsPipelineBuilder &&
-GraphicsPipelineBuilder::addShaderModule(vk::ShaderStageFlagBits flags,
-                                         ShaderModule module) && {
+GraphicsPipelineBuilder::add_shader(vk::ShaderStageFlagBits flags,
+                                    ShaderModule module) && {
     m_shaderModules.emplace(flags, std::move(module));
     return std::move(*this);
 }
 
 GraphicsPipelineBuilder &&
-GraphicsPipelineBuilder::addDynamicState(vk::DynamicState state) && {
+GraphicsPipelineBuilder::add_dynamic_state(vk::DynamicState state) && {
     m_dynamicStates.push_back(state);
     return std::move(*this);
 }
 
 GraphicsPipelineBuilder &&
-GraphicsPipelineBuilder::withFixedViewport(int width, int height) && {
+GraphicsPipelineBuilder::with_fixed_viewport(int width, int height) && {
     m_viewport = vk::Viewport(0.0f, 0.0f, width, height, 0.0f, 1.0f);
     return std::move(*this);
 }
 
 GraphicsPipelineBuilder &&
-GraphicsPipelineBuilder::withFixedScissor(int width, int height) && {
+GraphicsPipelineBuilder::with_fixed_scissor(int width, int height) && {
     m_scissor = vk::Rect2D(vk::Offset2D(), vk::Extent2D(width, height));
     return std::move(*this);
 }
 
-GraphicsPipelineBuilder &&GraphicsPipelineBuilder::addColorAttachment() && {
+GraphicsPipelineBuilder &&GraphicsPipelineBuilder::add_color_attachment() && {
     const auto colorBlendAttachment =
         vk::PipelineColorBlendAttachmentState()
             .setBlendEnable(false)
@@ -48,7 +48,7 @@ GraphicsPipelineBuilder &&GraphicsPipelineBuilder::addColorAttachment() && {
     return std::move(*this);
 }
 
-GraphicsPipelineBuilder &&GraphicsPipelineBuilder::withPipelineLayout(
+GraphicsPipelineBuilder &&GraphicsPipelineBuilder::with_pipeline_layout(
     const PipelineLayout &pipelineLayout) && {
     m_pipelineLayout = &pipelineLayout;
     return std::move(*this);

@@ -7,9 +7,8 @@
 #include <VulkanWrapper/Vulkan/Surface.h>
 
 vw::Device *vw_create_device(vw::DeviceFinder *finder,
-                             VkQueueFlags queueFlags,
-                             const vw::Surface *surfaceToPresent)
-{
+                             VkQueueFlagBits queueFlags,
+                             const vw::Surface *surfaceToPresent) {
     if (surfaceToPresent)
         return new vw::Device(std::move(*finder)
                                   .with_queue(vk::QueueFlags(queueFlags))

@@ -1,8 +1,9 @@
 #include "VulkanWrapper/RenderPass/Subpass.h"
 
 namespace vw {
-SubpassBuilder SubpassBuilder::addColorAttachment(Attachment attachment,
-                                                  vk::ImageLayout layout) && {
+SubpassBuilder &&
+SubpassBuilder::add_color_attachment(Attachment attachment,
+                                     vk::ImageLayout layout) && {
     m_colorReferences.emplace(attachment, layout);
     return std::move(*this);
 }

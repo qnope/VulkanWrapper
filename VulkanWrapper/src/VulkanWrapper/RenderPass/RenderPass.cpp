@@ -54,10 +54,9 @@ static SubpassDescription subpassToDescription(
 RenderPassBuilder::RenderPassBuilder(const Device &device)
     : m_device{device} {}
 
-RenderPassBuilder
-RenderPassBuilder::addSubpass(vk::PipelineBindPoint bindingPoint,
-                              Subpass subpass) && {
-    m_subpasses.emplace_back(bindingPoint, std::move(subpass));
+RenderPassBuilder &&RenderPassBuilder::add_subpass(Subpass subpass) && {
+    m_subpasses.emplace_back(vk::PipelineBindPoint::eGraphics,
+                             std::move(subpass));
     return std::move(*this);
 }
 

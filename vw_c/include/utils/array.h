@@ -6,11 +6,6 @@ struct vw_ArrayConstString {
     int size;
 };
 
-struct vw_Array {
-    void *array;
-    int size;
-};
-
 vw_ArrayConstString vw_create_array_const_string(const char *const *input_array,
                                                  int size);
 void vw_destroy_array_const_string(vw_ArrayConstString array);

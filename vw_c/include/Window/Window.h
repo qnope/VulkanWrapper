@@ -29,8 +29,6 @@ vw::Swapchain *vw_create_swapchain_from_window(const vw::Window *window,
                                                const vw::Device *device,
                                                const vw::Surface *surface);
 
-void vw_destroy_swapchain(vw::Swapchain *swapchain);
-
 void vw_destroy_surface(vw::Surface *surface);
 
 void vw_destroy_window(vw::Window *window);

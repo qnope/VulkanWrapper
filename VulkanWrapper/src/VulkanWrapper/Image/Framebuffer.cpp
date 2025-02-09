@@ -13,8 +13,7 @@ FramebufferBuilder::FramebufferBuilder(const Device &device,
     , m_width{width}
     , m_height{height} {}
 
-FramebufferBuilder
-FramebufferBuilder::addAttachment(const ImageView &imageView) && {
+FramebufferBuilder &&FramebufferBuilder::addAttachment(const ImageView &imageView) && {
     m_attachments.push_back(imageView.handle());
     return std::move(*this);
 }

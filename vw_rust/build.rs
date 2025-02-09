@@ -12,6 +12,10 @@ fn main() {
         .header("../vw_c/include/bindings.h")
         .clang_args(["-x", "c++"])
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
+        .default_enum_style(bindgen::EnumVariation::Rust {
+            non_exhaustive: false,
+        })
+        .bitfield_enum(".*Bits")
         .generate()
         .expect("Unable to generate bindings");
 

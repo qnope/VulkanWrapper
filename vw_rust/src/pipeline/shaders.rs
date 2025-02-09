@@ -21,6 +21,10 @@ impl<'a> ShaderModule<'a> {
             }
         }
     }
+
+    pub fn as_mut_ptr(&self) -> *mut vw_ShaderModule {
+        self.ptr
+    }
 }
 
 impl<'a> Drop for ShaderModule<'a> {

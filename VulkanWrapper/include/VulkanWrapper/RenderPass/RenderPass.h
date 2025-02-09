@@ -19,8 +19,7 @@ class RenderPass : public ObjectWithUniqueHandle<vk::UniqueRenderPass> {
 class RenderPassBuilder {
   public:
     RenderPassBuilder(const Device &device);
-    RenderPassBuilder addSubpass(vk::PipelineBindPoint bindingPoint,
-                                 Subpass subpass) &&;
+    RenderPassBuilder &&add_subpass(Subpass subpass) &&;
     RenderPass build() &&;
 
   private:

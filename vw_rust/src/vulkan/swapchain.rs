@@ -1,22 +1,62 @@
-use crate::sys::bindings;
+use crate::synchronization::semaphore::Semaphore;
+use crate::sys::bindings::{self, vw_Swapchain};
 use crate::vulkan::{device::Device, surface::Surface};
+use crate::image::image::Image;
+use libc::c_void;
 
 pub struct Swapchain<'a> {
-    _device: &'a Device<'a>,
+    device: &'a Device<'a>,
     _surface: &'a Surface<'a>,
-    ptr: *mut bindings::vw_Swapchain,
+    ptr: *mut vw_Swapchain,
 }
 
 impl<'a> Swapchain<'a> {
     pub fn new(
         device: &'a Device,
         surface: &'a Surface,
-        ptr: *mut bindings::vw_Swapchain,
+        ptr: *mut vw_Swapchain,
     ) -> Swapchain<'a> {
         Swapchain {
             _surface: surface,
-            _device: device,
+            device: device,
             ptr: ptr,
+        }
+    }
+
+    pub fn width(&self) -> i32 {
+        unsafe {
+            return bindings::vw_get_swapchain_width(self.ptr);
+        }
+    }
+
+    pub fn height(&self) -> i32 {
+        unsafe {
+            return bindings::vw_get_swapchain_height(self.ptr);
+        }
+    }
+
+    pub fn format(&self) -> bindings::VkFormat {
+        unsafe {
+            return bindings::vw_get_swapchain_format(self.ptr);
+        }
+    }
+
+    pub fn acquire_next_image(&self, semaphore: &Semaphore) -> u64 {
+        unsafe {
+            return bindings::vw_swapchain_acquire_next_image(self.ptr, semaphore.as_ptr());
+        }
+    }
+
+    pub fn images(&'a self) -> Vec<Image<'a>> {
+        unsafe {
+            let image_array = bindings::vw_swapchain_get_images(self.ptr);
+            let mut result = vec![];
+            for i in 0..image_array.size {
+                result.push(Image::new(self.device, *image_array.images.add(i.try_into().unwrap())));
+            }
+
+            libc::free(image_array.images as *mut c_void);
+            result
         }
     }
 }
