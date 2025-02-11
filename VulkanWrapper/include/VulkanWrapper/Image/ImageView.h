@@ -1,6 +1,7 @@
 #pragma once
 
 #include "VulkanWrapper/fwd.h"
+#include "VulkanWrapper/Image/Image.h"
 #include "VulkanWrapper/Utils/exceptions.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
 
@@ -8,14 +9,18 @@ namespace vw {
 
 using ImageViewCreationException = TaggedException<struct ImageViewCreationTag>;
 
-class ImageView : public ObjectWithUniqueHandle<vk::UniqueImageView> {
+class ImageView {
     friend class ImageViewBuilder;
+
+  public:
+    vk::ImageView handle() const noexcept;
 
   private:
     ImageView(const Image &image, vk::UniqueImageView imageView);
 
   private:
-    const Image &m_image;
+    std::shared_ptr<ObjectWithUniqueHandle<vk::UniqueImageView>> m_object;
+    Image m_image;
 };
 
 class ImageViewBuilder {

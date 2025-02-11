@@ -1,8 +1,9 @@
+use crate::image::image::Image;
 use crate::synchronization::semaphore::Semaphore;
 use crate::sys::bindings::{self, vw_Swapchain};
 use crate::vulkan::{device::Device, surface::Surface};
-use crate::image::image::Image;
 use libc::c_void;
+use std::rc::Rc;
 
 pub struct Swapchain<'a> {
     device: &'a Device<'a>,
@@ -11,11 +12,7 @@ pub struct Swapchain<'a> {
 }
 
 impl<'a> Swapchain<'a> {
-    pub fn new(
-        device: &'a Device,
-        surface: &'a Surface,
-        ptr: *mut vw_Swapchain,
-    ) -> Swapchain<'a> {
+    pub fn new(device: &'a Device, surface: &'a Surface, ptr: *mut vw_Swapchain) -> Swapchain<'a> {
         Swapchain {
             _surface: surface,
             device: device,
@@ -47,12 +44,13 @@ impl<'a> Swapchain<'a> {
         }
     }
 
-    pub fn images(&'a self) -> Vec<Image<'a>> {
+    pub fn images(&'a self) -> Vec<Rc<Image<'a>>> {
         unsafe {
             let image_array = bindings::vw_swapchain_get_images(self.ptr);
             let mut result = vec![];
             for i in 0..image_array.size {
-                result.push(Image::new(self.device, *image_array.images.add(i.try_into().unwrap())));
+                let image = Image::new(self.device, *image_array.images.add(i.try_into().unwrap()));
+                result.push(Rc::new(image));
             }
 
             libc::free(image_array.images as *mut c_void);

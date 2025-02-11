@@ -3,11 +3,10 @@
 namespace vw {
 template <typename UniqueHandle, typename... Other>
 class ObjectWithUniqueHandle {
-  protected:
+  public:
     ObjectWithUniqueHandle(UniqueHandle handle) noexcept
         : m_handle{std::move(handle)} {}
 
-  public:
     auto handle() const noexcept { return *m_handle; }
 
   private:
@@ -16,14 +15,13 @@ class ObjectWithUniqueHandle {
 
 template <typename UniqueHandle, typename Handle>
 class ObjectWithUniqueHandle<UniqueHandle, Handle> {
-  protected:
+  public:
     ObjectWithUniqueHandle(UniqueHandle handle) noexcept
         : m_handle{std::move(handle)} {}
 
     ObjectWithUniqueHandle(Handle handle) noexcept
         : m_handle{std::move(handle)} {}
 
-  public:
     auto handle() const noexcept {
         auto getter =
             overloaded{[](const Handle &handle) { return handle; },

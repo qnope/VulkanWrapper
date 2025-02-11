@@ -2,6 +2,7 @@
 
 #include "VulkanWrapper/Image/ImageView.h"
 #include "VulkanWrapper/RenderPass/RenderPass.h"
+#include "VulkanWrapper/Utils/Algos.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 
 namespace vw {
@@ -13,18 +14,24 @@ FramebufferBuilder::FramebufferBuilder(const Device &device,
     , m_width{width}
     , m_height{height} {}
 
-FramebufferBuilder &&FramebufferBuilder::addAttachment(const ImageView &imageView) && {
-    m_attachments.push_back(imageView.handle());
+FramebufferBuilder &&
+FramebufferBuilder::add_attachment(const ImageView &imageView) && {
+    m_attachments.push_back(imageView);
     return std::move(*this);
 }
 
 Framebuffer FramebufferBuilder::build() && {
+    const auto attachments =
+        m_attachments |
+        std::views::transform([](auto &&x) { return x.handle(); }) |
+        to<std::vector>;
+
     const auto info = vk::FramebufferCreateInfo()
                           .setWidth(m_width)
                           .setHeight(m_height)
                           .setLayers(1)
                           .setRenderPass(m_renderPass)
-                          .setAttachments(m_attachments);
+                          .setAttachments(attachments);
 
     auto [result, framebuffer] =
         m_device.handle().createFramebufferUnique(info);

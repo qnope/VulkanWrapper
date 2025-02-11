@@ -1,16 +1,63 @@
+use std::rc::Rc;
 use vulkan_wrapper::command::command_pool::CommandPoolBuilder;
+use vulkan_wrapper::image::framebuffer::Framebuffer;
+use vulkan_wrapper::image::framebuffer::FramebufferBuilder;
+use vulkan_wrapper::image::image_view::ImageView;
+use vulkan_wrapper::image::image_view::ImageViewBuilder;
 use vulkan_wrapper::pipeline::pipeline::GraphicsPipelineBuilder;
 use vulkan_wrapper::pipeline::pipeline_layout::PipelineLayoutBuilder;
 use vulkan_wrapper::pipeline::shaders::*;
 use vulkan_wrapper::render_pass::attachment::*;
+use vulkan_wrapper::render_pass::render_pass::RenderPass;
 use vulkan_wrapper::render_pass::render_pass::RenderPassBuilder;
 use vulkan_wrapper::render_pass::subpass::SubpassBuilder;
 use vulkan_wrapper::synchronization::fence::FenceBuilder;
 use vulkan_wrapper::synchronization::semaphore::SemaphoreBuilder;
 use vulkan_wrapper::sys::bindings::{VkImageLayout, VkQueueFlagBits, VkShaderStageFlagBits};
+use vulkan_wrapper::vulkan::device::Device;
 use vulkan_wrapper::vulkan::instance::*;
+use vulkan_wrapper::vulkan::swapchain::Swapchain;
 use vulkan_wrapper::window::sdl_initializer::*;
 use vulkan_wrapper::window::window::*;
+
+fn create_image_views<'a>(
+    device: &'a Device<'a>,
+    swapchain: &'a Swapchain<'a>,
+) -> Vec<Rc<ImageView<'a>>> {
+    let images = swapchain.images();
+    images
+        .iter()
+        .map(|image| {
+            let image_view = ImageViewBuilder::new(device, image.clone())
+                .with_image_type(
+                    vulkan_wrapper::sys::bindings::VkImageViewType::VK_IMAGE_VIEW_TYPE_2D,
+                )
+                .build();
+            image_view
+        })
+        .collect()
+}
+
+fn create_frame_buffers<'a>(
+    device: &'a Device,
+    render_pass: &'a RenderPass<'a>,
+    swapchain: &'a Swapchain<'a>,
+    images: Vec<Rc<ImageView<'a>>>,
+) -> Vec<Framebuffer<'a>> {
+    images
+        .into_iter()
+        .map(|image_view| {
+            FramebufferBuilder::new(
+                device,
+                render_pass,
+                swapchain.width() as u32,
+                swapchain.height() as u32,
+            )
+            .with_attachment(image_view)
+            .build()
+        })
+        .collect()
+}
 
 fn main() {
     let initializer = SdlInitializer::new();
@@ -79,7 +126,9 @@ fn main() {
 
     let _command_pool = CommandPoolBuilder::new(&device).build();
 
-    let _images = swapchain.images();
+    let image_views = create_image_views(&device, &swapchain);
+
+    let _framebuffers = create_frame_buffers(&device, &render_pass, &swapchain, image_views);
 
     while !window.is_close_requested() {
         window.update();

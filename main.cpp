@@ -42,7 +42,7 @@ createFramebuffers(vw::Device &device, const vw::RenderPass &renderPass,
         auto framebuffer =
             vw::FramebufferBuilder(device, renderPass, swapchain.width(),
                                    swapchain.height())
-                .addAttachment(imageView)
+                .add_attachment(imageView)
                 .build();
         framebuffers.push_back(std::move(framebuffer));
     }

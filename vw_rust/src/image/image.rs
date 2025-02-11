@@ -3,14 +3,14 @@ use crate::vulkan::device::Device;
 
 pub struct Image<'a> {
     _device: &'a Device<'a>,
-    ptr: *mut vw_Image
+    ptr: *mut vw_Image,
 }
 
 impl<'a> Image<'a> {
     pub fn new(device: &'a Device<'a>, ptr: *mut vw_Image) -> Image<'a> {
         Image {
             _device: device,
-            ptr
+            ptr,
         }
     }
 

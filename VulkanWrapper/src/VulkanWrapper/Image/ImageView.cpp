@@ -6,8 +6,11 @@
 namespace vw {
 
 ImageView::ImageView(const Image &image, vk::UniqueImageView imageView)
-    : ObjectWithUniqueHandle<vk::UniqueImageView>{std::move(imageView)}
+    : m_object{std::make_shared<ObjectWithUniqueHandle<vk::UniqueImageView>>(
+          std::move(imageView))}
     , m_image{image} {}
+
+vk::ImageView ImageView::handle() const noexcept { return m_object->handle(); }
 
 ImageViewBuilder::ImageViewBuilder(const Device &device, const Image &image)
     : m_device{device}

@@ -18,7 +18,7 @@ class FramebufferBuilder {
     FramebufferBuilder(const Device &device, const RenderPass &renderPass,
                        uint32_t width, uint32_t height);
 
-    FramebufferBuilder &&addAttachment(const ImageView &imageView) &&;
+    FramebufferBuilder &&add_attachment(const ImageView &imageView) &&;
 
     Framebuffer build() &&;
 
@@ -27,7 +27,7 @@ class FramebufferBuilder {
     vk::RenderPass m_renderPass;
     uint32_t m_width;
     uint32_t m_height;
-    std::vector<vk::ImageView> m_attachments;
+    std::vector<ImageView> m_attachments;
 };
 
 } // namespace vw
