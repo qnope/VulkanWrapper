@@ -12,4 +12,8 @@ vw::RenderPass *vw_create_render_pass(const vw::Device *device,
     return new vw::RenderPass(std::move(builder).build());
 }
 
+VkRenderPass vw_render_pass_handle(const vw::RenderPass *render_pass) {
+    return render_pass->handle();
+}
+
 void vw_destroy_render_pass(vw::RenderPass *renderPass) { delete renderPass; }

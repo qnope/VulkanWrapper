@@ -1,6 +1,6 @@
 use crate::image::image_view::ImageView;
 use crate::render_pass::render_pass::RenderPass;
-use crate::sys::bindings::{self, vw_Framebuffer, vw_FramebufferArguments};
+use crate::sys::bindings::{self, vw_Framebuffer, vw_FramebufferArguments, VkFramebuffer};
 use crate::vulkan::device::Device;
 use std::rc::Rc;
 
@@ -53,6 +53,20 @@ impl<'a> FramebufferBuilder<'a> {
             _image_view: self.attachments,
             ptr: unsafe { bindings::vw_create_framebuffer(arguments) },
         }
+    }
+}
+
+impl<'a> Framebuffer<'a> {
+    pub fn width(&self) -> u32 {
+        unsafe { bindings::vw_framebuffer_width(self.ptr) }
+    }
+
+    pub fn height(&self) -> u32 {
+        unsafe { bindings::vw_framebuffer_height(self.ptr) }
+    }
+
+    pub fn handle(&self) -> VkFramebuffer {
+        unsafe { bindings::vw_framebuffer_handle(self.ptr) }
     }
 }
 

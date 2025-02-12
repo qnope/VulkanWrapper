@@ -33,5 +33,7 @@ struct vw_GraphicsPipelineArguments {
 vw::Pipeline *
 vw_create_graphics_pipeline(vw_GraphicsPipelineArguments arguments);
 
+VkPipeline vw_pipeline_handle(const vw::Pipeline *pipeline);
+
 void vw_destroy_pipeline(vw::Pipeline *pipeline);
 }

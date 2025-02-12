@@ -30,4 +30,8 @@ vw::Pipeline *vw_create_graphics_pipeline(vw_GraphicsPipelineArguments args) {
     return new vw::Pipeline{std::move(builder).build()};
 }
 
+VkPipeline vw_pipeline_handle(const vw::Pipeline *pipeline) {
+    return pipeline->handle();
+}
+
 void vw_destroy_pipeline(vw::Pipeline *pipeline) { delete pipeline; }

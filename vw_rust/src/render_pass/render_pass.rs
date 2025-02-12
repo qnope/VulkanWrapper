@@ -1,5 +1,5 @@
 use super::subpass::Subpass;
-use crate::sys::bindings::{self, vw_RenderPass};
+use crate::sys::bindings::{self, vw_RenderPass, vw_render_pass_handle, VkRenderPass};
 use crate::vulkan::device::Device;
 
 pub struct RenderPass<'a> {
@@ -43,6 +43,10 @@ impl<'a> RenderPassBuilder<'a> {
 impl<'a> RenderPass<'a> {
     pub fn as_ptr(&self) -> *const vw_RenderPass {
         self.ptr
+    }
+
+    pub fn handle(&self) -> VkRenderPass {
+        unsafe { vw_render_pass_handle(self.ptr) }
     }
 }
 

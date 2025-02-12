@@ -14,6 +14,18 @@ vw::Framebuffer *vw_create_framebuffer(vw_FramebufferArguments arguments) {
     return new vw::Framebuffer{std::move(builder).build()};
 }
 
+uint32_t vw_framebuffer_width(const vw::Framebuffer *framebuffer) {
+    return framebuffer->width();
+}
+
+uint32_t vw_framebuffer_height(const vw::Framebuffer *framebuffer) {
+    return framebuffer->height();
+}
+
+VkFramebuffer vw_framebuffer_handle(const vw::Framebuffer *framebuffer) {
+    return framebuffer->handle();
+}
+
 void vw_destroy_framebuffer(vw::Framebuffer *framebuffer) {
     delete framebuffer;
 }

@@ -4,7 +4,8 @@ use super::pipeline_layout::PipelineLayout;
 use super::shaders::ShaderModule;
 use crate::render_pass::render_pass::RenderPass;
 use crate::sys::bindings::{
-    self, vw_GraphicsPipelineArguments, vw_Pipeline, vw_StageAndShader, VkShaderStageFlagBits,
+    self, vw_GraphicsPipelineArguments, vw_Pipeline, vw_StageAndShader, vw_pipeline_handle,
+    VkPipeline, VkShaderStageFlagBits,
 };
 use crate::vulkan::device::Device;
 
@@ -115,6 +116,10 @@ impl<'a> GraphicsPipelineBuilder<'a> {
 impl<'a> Pipeline<'a> {
     pub fn as_ptr(&self) -> *const vw_Pipeline {
         self.ptr
+    }
+
+    pub fn handle(&self) -> VkPipeline {
+        unsafe { vw_pipeline_handle(self.ptr) }
     }
 }
 

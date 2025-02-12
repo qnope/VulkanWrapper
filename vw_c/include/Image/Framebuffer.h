@@ -21,5 +21,9 @@ struct vw_FramebufferArguments {
 
 vw::Framebuffer *vw_create_framebuffer(vw_FramebufferArguments arguments);
 
+uint32_t vw_framebuffer_width(const vw::Framebuffer *framebuffer);
+uint32_t vw_framebuffer_height(const vw::Framebuffer *framebuffer);
+VkFramebuffer vw_framebuffer_handle(const vw::Framebuffer *framebuffer);
+
 void vw_destroy_framebuffer(vw::Framebuffer *framebuffer);
 }
