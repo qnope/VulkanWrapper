@@ -1,3 +1,4 @@
+#include <VulkanWrapper/Command/CommandBuffer.h>
 #include <VulkanWrapper/Command/CommandPool.h>
 #include <VulkanWrapper/Image/Framebuffer.h>
 #include <VulkanWrapper/Pipeline/Pipeline.h>
@@ -53,30 +54,10 @@ createFramebuffers(vw::Device &device, const vw::RenderPass &renderPass,
 void record(vk::CommandBuffer commandBuffer, vk::Extent2D extent,
             const vw::Framebuffer &framebuffer, const vw::Pipeline &pipeline,
             const vw::RenderPass &renderPass) {
-    commandBuffer.begin(vk::CommandBufferBeginInfo());
-    vk::ClearValue color;
-
-    auto renderPassBeginInfo =
-        vk::RenderPassBeginInfo()
-            .setRenderPass(renderPass.handle())
-            .setFramebuffer(framebuffer.handle())
-            .setRenderArea(vk::Rect2D(vk::Offset2D(), extent))
-            .setClearValues(color);
-
-    auto subpassBegin =
-        vk::SubpassBeginInfo().setContents(vk::SubpassContents::eInline);
-
-    commandBuffer.beginRenderPass2(renderPassBeginInfo, subpassBegin);
-
-    commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
-                               pipeline.handle());
-
-    commandBuffer.draw(3, 1, 0, 0);
-
-    auto subpassEnd = vk::SubpassEndInfo();
-    commandBuffer.endRenderPass2(subpassEnd);
-
-    commandBuffer.end();
+    vw::CommandBufferRecorder(commandBuffer)
+        .begin_render_pass(renderPass, framebuffer)
+        .bind_graphics_pipeline(pipeline)
+        .draw(3, 1, 0, 0);
 }
 
 int main() {
@@ -166,16 +147,12 @@ int main() {
             const vk::PipelineStageFlags waitStage =
                 vk::PipelineStageFlagBits::eTopOfPipe;
 
-            auto imageAvailableHandle = imageAvailableSemaphore.handle();
-            auto renderFinishedHandle = renderFinishedSemaphore.handle();
-            const auto submitInfo =
-                vk::SubmitInfo()
-                    .setCommandBuffers(commandBuffers[index])
-                    .setWaitDstStageMask(waitStage)
-                    .setWaitSemaphores(imageAvailableHandle)
-                    .setSignalSemaphores(renderFinishedHandle);
+            const auto imageAvailableHandle = imageAvailableSemaphore.handle();
+            const auto renderFinishedHandle = renderFinishedSemaphore.handle();
 
-            device.graphicsQueue().submit({submitInfo}, &fence);
+            device.graphicsQueue().submit(
+                {&commandBuffers[index], 1}, {&waitStage, 1},
+                {&imageAvailableHandle, 1}, {&renderFinishedHandle, 1}, &fence);
 
             device.presentQueue().present(swapchain, index,
                                           renderFinishedSemaphore);

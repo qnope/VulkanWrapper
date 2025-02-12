@@ -1,6 +1,6 @@
 #pragma once
 
-#include "VulkanWrapper/Synchronization/Fence.h"
+#include "VulkanWrapper/fwd.h"
 
 namespace vw {
 
@@ -8,8 +8,11 @@ class Queue {
     friend class DeviceFinder;
 
   public:
-    void submit(const std::vector<vk::SubmitInfo> &infos,
-                const Fence *fence) const;
+      void submit(const std::span<const vk::CommandBuffer> &commandBuffers,
+                  const std::span<const vk::PipelineStageFlags> waitStage,
+                  const std::span<const vk::Semaphore> &waitSemaphores,
+                  const std::span<const vk::Semaphore> &signalSemaphores,
+                  const Fence *fence) const;
 
   private:
     Queue(vk::Queue queue, vk::QueueFlags type) noexcept;

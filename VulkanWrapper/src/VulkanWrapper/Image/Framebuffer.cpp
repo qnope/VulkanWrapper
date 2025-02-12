@@ -6,6 +6,16 @@
 #include "VulkanWrapper/Vulkan/Device.h"
 
 namespace vw {
+Framebuffer::Framebuffer(vk::UniqueFramebuffer framebuffer, uint32_t width,
+                         uint32_t height) noexcept
+    : ObjectWithUniqueHandle<vk::UniqueFramebuffer>{std::move(framebuffer)}
+    , m_width{width}
+    , m_height{height} {}
+
+uint32_t Framebuffer::width() const noexcept { return m_width; }
+
+uint32_t Framebuffer::height() const noexcept { return m_height; }
+
 FramebufferBuilder::FramebufferBuilder(const Device &device,
                                        const RenderPass &renderPass,
                                        uint32_t width, uint32_t height)
@@ -37,6 +47,7 @@ Framebuffer FramebufferBuilder::build() && {
         m_device.handle().createFramebufferUnique(info);
     if (result != vk::Result::eSuccess)
         throw FramebufferCreationException{std::source_location::current()};
-    return Framebuffer{std::move(framebuffer)};
+    return Framebuffer{std::move(framebuffer), m_width, m_height};
 }
+
 } // namespace vw

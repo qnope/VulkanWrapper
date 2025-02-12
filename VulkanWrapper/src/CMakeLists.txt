@@ -25,6 +25,7 @@ target_sources(VulkanWrapper PRIVATE
     VulkanWrapper/RenderPass/Subpass.cpp
 
     VulkanWrapper/Command/CommandPool.cpp
+    VulkanWrapper/Command/CommandBuffer.cpp
 
     VulkanWrapper/Synchronization/Fence.cpp
     VulkanWrapper/Synchronization/Semaphore.cpp

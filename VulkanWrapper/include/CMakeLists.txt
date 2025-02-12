@@ -31,6 +31,7 @@ target_sources(VulkanWrapper PRIVATE
     VulkanWrapper/RenderPass/Subpass.h
 
     VulkanWrapper/Command/CommandPool.h
+    VulkanWrapper/Command/CommandBuffer.h
 
     VulkanWrapper/Synchronization/Fence.h
     VulkanWrapper/Synchronization/Semaphore.h

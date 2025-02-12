@@ -9,8 +9,17 @@ using FramebufferCreationException =
     TaggedException<struct FramebufferCreationTag>;
 
 class Framebuffer : public ObjectWithUniqueHandle<vk::UniqueFramebuffer> {
-    using ObjectWithUniqueHandle<vk::UniqueFramebuffer>::ObjectWithUniqueHandle;
     friend class FramebufferBuilder;
+    Framebuffer(vk::UniqueFramebuffer framebuffer, uint32_t width,
+                uint32_t height) noexcept;
+
+  public:
+    uint32_t width() const noexcept;
+    uint32_t height() const noexcept;
+
+  private:
+    uint32_t m_width;
+    uint32_t m_height;
 };
 
 class FramebufferBuilder {

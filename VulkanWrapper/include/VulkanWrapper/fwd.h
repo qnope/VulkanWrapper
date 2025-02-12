@@ -26,6 +26,7 @@ class Subpass;
 class RenderPass;
 
 class Semaphore;
+class Fence;
 
 enum class QueueType;
 } // namespace vw
