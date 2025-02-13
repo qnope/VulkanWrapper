@@ -5,7 +5,9 @@ fn main() {
     let dst = cmake::Config::new("..").build();
 
     println!("cargo:rustc-link-search=native={}", dst.display());
+    println!("cargo:rustc-link-search=native={}", env::var("DYLD_LIBRARY_PATH").unwrap());
     println!("cargo:rustc-link-lib=dylib=VulkanWrapper_cd");
+    println!("cargo:rustc-link-lib=dylib=vulkan");
     println!("cargo::rerun-if-changed=../vw_c");
 
     let bindings = bindgen::Builder::default()

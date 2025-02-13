@@ -1,10 +1,13 @@
 use std::rc::Rc;
+use vulkan_wrapper::command::command_buffer::CommandBuffer;
+use vulkan_wrapper::command::command_buffer::CommandBufferRecorder;
 use vulkan_wrapper::command::command_pool::CommandPoolBuilder;
 use vulkan_wrapper::image::framebuffer::Framebuffer;
 use vulkan_wrapper::image::framebuffer::FramebufferBuilder;
 use vulkan_wrapper::image::image_view::ImageView;
 use vulkan_wrapper::image::image_view::ImageViewBuilder;
 use vulkan_wrapper::pipeline::pipeline::GraphicsPipelineBuilder;
+use vulkan_wrapper::pipeline::pipeline::Pipeline;
 use vulkan_wrapper::pipeline::pipeline_layout::PipelineLayoutBuilder;
 use vulkan_wrapper::pipeline::shaders::*;
 use vulkan_wrapper::render_pass::attachment::*;
@@ -19,6 +22,7 @@ use vulkan_wrapper::vulkan::instance::*;
 use vulkan_wrapper::vulkan::swapchain::Swapchain;
 use vulkan_wrapper::window::sdl_initializer::*;
 use vulkan_wrapper::window::window::*;
+use std::iter::zip;
 
 fn create_image_views<'a>(
     device: &'a Device<'a>,
@@ -57,6 +61,18 @@ fn create_frame_buffers<'a>(
             .build()
         })
         .collect()
+}
+
+fn record<'a>(
+    cmd_buffer: &CommandBuffer<'a>,
+    framebuffer: &Framebuffer<'a>,
+    pipeline: &Pipeline<'a>,
+    render_pass: &RenderPass<'a>,
+) {
+    CommandBufferRecorder::new(cmd_buffer)
+        .begin_render_pass(render_pass, framebuffer)
+        .bind_graphics_pipeline(pipeline)
+        .draw(3, 1, 0, 0);
 }
 
 fn main() {
@@ -104,7 +120,7 @@ fn main() {
 
     let render_pass = RenderPassBuilder::new(&device).add_subpass(subpass).build();
 
-    let _pipeline = GraphicsPipelineBuilder::new(&device, &render_pass)
+    let pipeline = GraphicsPipelineBuilder::new(&device, &render_pass)
         .add_shader(
             VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT,
             vertex_shader,
@@ -124,11 +140,17 @@ fn main() {
     let _render_finished_semaphore = SemaphoreBuilder::new(&device).build();
     let _image_available_semaphore = SemaphoreBuilder::new(&device).build();
 
-    let _command_pool = CommandPoolBuilder::new(&device).build();
+    let command_pool = CommandPoolBuilder::new(&device).build();
 
     let image_views = create_image_views(&device, &swapchain);
 
-    let _framebuffers = create_frame_buffers(&device, &render_pass, &swapchain, image_views);
+    let framebuffers = create_frame_buffers(&device, &render_pass, &swapchain, image_views);
+
+    let command_buffers = command_pool.allocate(framebuffers.len() as i32);
+
+    for (framebuffer, cmd_buffer) in zip(framebuffers, command_buffers) {
+        record(&cmd_buffer, &framebuffer, &pipeline, &render_pass);
+    }
 
     while !window.is_close_requested() {
         window.update();
