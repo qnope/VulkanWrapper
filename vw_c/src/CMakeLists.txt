@@ -9,6 +9,8 @@ target_sources(VulkanWrapper_c PRIVATE
     Vulkan/Device.cpp
     Vulkan/Instance.cpp
     Vulkan/Swapchain.cpp
+    Vulkan/PresentQueue.cpp
+    Vulkan/Queue.cpp
 
     Pipeline/ShaderModule.cpp
     Pipeline/PipelineLayout.cpp

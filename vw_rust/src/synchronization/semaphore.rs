@@ -1,9 +1,12 @@
-use crate::sys::bindings::{self, vw_Semaphore};
+use std::marker::PhantomData;
+
+use crate::sys::bindings::{self, vw_Semaphore, vw_semaphore_handle, VkSemaphore};
 use crate::vulkan::device::Device;
 
+#[repr(transparent)]
 pub struct Semaphore<'a> {
-    _device: &'a Device<'a>,
     ptr: *mut vw_Semaphore,
+    _marker: PhantomData<&'a Device<'a>>,
 }
 
 pub struct SemaphoreBuilder<'a> {
@@ -18,8 +21,8 @@ impl<'a> SemaphoreBuilder<'a> {
     pub fn build(self) -> Semaphore<'a> {
         unsafe {
             Semaphore {
-                _device: self.device,
                 ptr: bindings::vw_create_semaphore(self.device.as_ptr()),
+                _marker: PhantomData,
             }
         }
     }
@@ -28,6 +31,10 @@ impl<'a> SemaphoreBuilder<'a> {
 impl<'a> Semaphore<'a> {
     pub fn as_ptr(&self) -> *const vw_Semaphore {
         self.ptr
+    }
+
+    pub fn handle(&self) -> VkSemaphore {
+        unsafe { vw_semaphore_handle(self.ptr) }
     }
 }
 

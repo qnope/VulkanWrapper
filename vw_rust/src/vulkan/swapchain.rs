@@ -20,6 +20,10 @@ impl<'a> Swapchain<'a> {
         }
     }
 
+    pub fn as_ptr(&self) -> *const vw_Swapchain {
+        self.ptr
+    }
+
     pub fn width(&self) -> i32 {
         unsafe {
             return bindings::vw_get_swapchain_width(self.ptr);

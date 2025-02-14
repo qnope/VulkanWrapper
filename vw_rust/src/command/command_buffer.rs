@@ -7,8 +7,8 @@ use std::ptr;
 
 #[repr(transparent)]
 pub struct CommandBuffer<'a> {
-    _marker: std::marker::PhantomData<&'a CommandPool<'a>>,
     cmd_buffer: VkCommandBuffer,
+    _marker: std::marker::PhantomData<&'a CommandPool<'a>>,
 }
 
 pub struct PipelineBoundCommandBufferRecorder<'a> {
@@ -142,8 +142,8 @@ impl<'a> Drop for CommandBufferRecorder<'a> {
 impl<'a> CommandBuffer<'a> {
     pub fn new(_pool: &'a CommandPool<'a>, cmd_buffer: VkCommandBuffer) -> Self {
         CommandBuffer {
-            _marker: std::marker::PhantomData,
             cmd_buffer: cmd_buffer,
+            _marker: std::marker::PhantomData,
         }
     }
 }

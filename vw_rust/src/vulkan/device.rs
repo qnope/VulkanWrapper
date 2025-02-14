@@ -1,6 +1,11 @@
-use crate::sys::bindings::{self, vw_Device, vw_DeviceFinder};
+use crate::sys::bindings::{
+    self, vw_Device, vw_DeviceFinder, vw_device_graphics_queue, vw_device_present_queue,
+};
 use crate::vulkan::instance::Instance;
 use crate::vulkan::surface::Surface;
+
+use super::present_queue::PresentQueue;
+use super::queue::Queue;
 
 pub struct DeviceFinder<'a> {
     _instance: &'a Instance,
@@ -56,6 +61,20 @@ impl<'a> DeviceFinder<'a> {
 impl<'a> Device<'a> {
     pub fn as_ptr(&self) -> *const vw_Device {
         self.ptr
+    }
+
+    pub fn graphics_queue(&'a self) -> Queue<'a> {
+        Queue::new(self, unsafe { vw_device_graphics_queue(self.ptr) })
+    }
+
+    pub fn present_queue(&'a self) -> PresentQueue<'a> {
+        PresentQueue::new(self, unsafe { vw_device_present_queue(self.ptr) })
+    }
+
+    pub fn wait_idle(&self) {
+        unsafe {
+            bindings::vw_device_wait_idle(self.ptr);
+        }
     }
 }
 

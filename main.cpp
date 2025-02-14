@@ -147,18 +147,21 @@ int main() {
             const vk::PipelineStageFlags waitStage =
                 vk::PipelineStageFlagBits::eTopOfPipe;
 
-            const auto imageAvailableHandle = imageAvailableSemaphore.handle();
-            const auto renderFinishedHandle = renderFinishedSemaphore.handle();
+            const auto image_available_handle =
+                imageAvailableSemaphore.handle();
+            const auto render_finished_handle =
+                renderFinishedSemaphore.handle();
 
-            device.graphicsQueue().submit(
-                {&commandBuffers[index], 1}, {&waitStage, 1},
-                {&imageAvailableHandle, 1}, {&renderFinishedHandle, 1}, &fence);
+            device.graphicsQueue().submit({&commandBuffers[index], 1},
+                                          {&waitStage, 1},
+                                          {&image_available_handle, 1},
+                                          {&render_finished_handle, 1}, &fence);
 
             device.presentQueue().present(swapchain, index,
                                           renderFinishedSemaphore);
         }
 
-        device.handle().waitIdle();
+        device.wait_idle();
     } catch (const vw::Exception &exception) {
         std::cout << exception.m_sourceLocation.function_name() << std::endl;
     }

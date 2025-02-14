@@ -1,9 +1,12 @@
+use std::marker::PhantomData;
+
 use crate::sys::bindings::{self, vw_Fence};
 use crate::vulkan::device::Device;
 
+#[repr(transparent)]
 pub struct Fence<'a> {
-    _device: &'a Device<'a>,
     ptr: *mut vw_Fence,
+    _marker: PhantomData<&'a Device<'a>>,
 }
 
 pub struct FenceBuilder<'a> {
@@ -18,8 +21,8 @@ impl<'a> FenceBuilder<'a> {
     pub fn build(self) -> Fence<'a> {
         unsafe {
             Fence {
-                _device: self.device,
                 ptr: bindings::vw_create_fence(self.device.as_ptr()),
+                _marker: PhantomData,
             }
         }
     }
@@ -30,6 +33,10 @@ impl<'a> Fence<'a> {
         unsafe {
             bindings::vw_wait_fence(self.ptr);
         }
+    }
+
+    pub fn as_ptr(&self) -> *const vw_Fence {
+        self.ptr
     }
 
     pub fn reset(&self) {

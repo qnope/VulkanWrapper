@@ -10,6 +10,8 @@ target_sources(VulkanWrapper_c PRIVATE
     Vulkan/Device.h
     Vulkan/Instance.h
     Vulkan/Swapchain.h
+    Vulkan/PresentQueue.h
+    Vulkan/Queue.h
 
     Pipeline/ShaderModule.h
     Pipeline/PipelineLayout.h

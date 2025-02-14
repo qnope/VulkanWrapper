@@ -8,10 +8,10 @@ class Queue {
     friend class DeviceFinder;
 
   public:
-      void submit(const std::span<const vk::CommandBuffer> &commandBuffers,
-                  const std::span<const vk::PipelineStageFlags> waitStage,
-                  const std::span<const vk::Semaphore> &waitSemaphores,
-                  const std::span<const vk::Semaphore> &signalSemaphores,
+      void submit(std::span<const vk::CommandBuffer> commandBuffers,
+                  std::span<const vk::PipelineStageFlags> waitStage,
+                  std::span<const vk::Semaphore> waitSemaphores,
+                  std::span<const vk::Semaphore> signalSemaphores,
                   const Fence *fence) const;
 
   private:

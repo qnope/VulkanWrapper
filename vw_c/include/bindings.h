@@ -15,6 +15,8 @@
 #include "utils/array.h"
 #include "Vulkan/Device.h"
 #include "Vulkan/Instance.h"
+#include "Vulkan/PresentQueue.h"
+#include "Vulkan/Queue.h"
 #include "Vulkan/Swapchain.h"
 #include "Window/SDL_Initializer.h"
 #include "Window/Window.h"

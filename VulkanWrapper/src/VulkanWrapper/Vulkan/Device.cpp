@@ -16,4 +16,6 @@ const Queue &Device::graphicsQueue() const { return m_queues[0]; }
 
 const PresentQueue &Device::presentQueue() const { return *m_presentQueue; }
 
+void Device::wait_idle() const { handle().waitIdle(); }
+
 } // namespace vw

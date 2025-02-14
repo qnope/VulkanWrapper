@@ -1,4 +1,6 @@
+use std::iter::zip;
 use std::rc::Rc;
+use std::slice;
 use vulkan_wrapper::command::command_buffer::CommandBuffer;
 use vulkan_wrapper::command::command_buffer::CommandBufferRecorder;
 use vulkan_wrapper::command::command_pool::CommandPoolBuilder;
@@ -16,13 +18,13 @@ use vulkan_wrapper::render_pass::render_pass::RenderPassBuilder;
 use vulkan_wrapper::render_pass::subpass::SubpassBuilder;
 use vulkan_wrapper::synchronization::fence::FenceBuilder;
 use vulkan_wrapper::synchronization::semaphore::SemaphoreBuilder;
+use vulkan_wrapper::sys::bindings::VkPipelineStageFlagBits;
 use vulkan_wrapper::sys::bindings::{VkImageLayout, VkQueueFlagBits, VkShaderStageFlagBits};
 use vulkan_wrapper::vulkan::device::Device;
 use vulkan_wrapper::vulkan::instance::*;
 use vulkan_wrapper::vulkan::swapchain::Swapchain;
 use vulkan_wrapper::window::sdl_initializer::*;
 use vulkan_wrapper::window::window::*;
-use std::iter::zip;
 
 fn create_image_views<'a>(
     device: &'a Device<'a>,
@@ -135,10 +137,10 @@ fn main() {
         .add_color_attachment()
         .build();
 
-    let _fence = FenceBuilder::new(&device).build();
+    let fence = FenceBuilder::new(&device).build();
 
-    let _render_finished_semaphore = SemaphoreBuilder::new(&device).build();
-    let _image_available_semaphore = SemaphoreBuilder::new(&device).build();
+    let render_finished_semaphore = SemaphoreBuilder::new(&device).build();
+    let image_available_semaphore = SemaphoreBuilder::new(&device).build();
 
     let command_pool = CommandPoolBuilder::new(&device).build();
 
@@ -148,11 +150,34 @@ fn main() {
 
     let command_buffers = command_pool.allocate(framebuffers.len() as i32);
 
-    for (framebuffer, cmd_buffer) in zip(framebuffers, command_buffers) {
+    for (framebuffer, cmd_buffer) in zip(&framebuffers, &command_buffers) {
         record(&cmd_buffer, &framebuffer, &pipeline, &render_pass);
     }
 
     while !window.is_close_requested() {
         window.update();
+
+        fence.wait();
+        fence.reset();
+
+        let index = swapchain.acquire_next_image(&image_available_semaphore);
+
+        let wait_stage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
+        let image_available_handle = image_available_semaphore.handle();
+        let render_finished_handle = render_finished_semaphore.handle();
+        device.graphics_queue().submit(
+            slice::from_ref(&command_buffers[index as usize]),
+            slice::from_ref(&wait_stage),
+            slice::from_ref(&image_available_handle),
+            slice::from_ref(&render_finished_handle),
+            Some(&fence),
+        );
+
+        device
+            .present_queue()
+            .present(&swapchain, index, &render_finished_semaphore);
     }
+
+    device.wait_idle();
 }

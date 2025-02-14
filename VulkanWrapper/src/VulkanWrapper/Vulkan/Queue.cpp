@@ -10,10 +10,10 @@ Queue::Queue(vk::Queue queue, vk::QueueFlags type) noexcept
     : m_queue{queue}
     , m_queueFlags{type} {}
 
-void Queue::submit(const std::span<const vk::CommandBuffer> &commandBuffers,
-                   const std::span<const vk::PipelineStageFlags> waitStages,
-                   const std::span<const vk::Semaphore> &waitSemaphores,
-                   const std::span<const vk::Semaphore> &signalSemaphores,
+void Queue::submit(std::span<const vk::CommandBuffer> commandBuffers,
+                   std::span<const vk::PipelineStageFlags> waitStages,
+                   std::span<const vk::Semaphore> waitSemaphores,
+                   std::span<const vk::Semaphore> signalSemaphores,
                    const Fence *fence) const {
     const auto infos = vk::SubmitInfo()
                            .setCommandBuffers(commandBuffers)

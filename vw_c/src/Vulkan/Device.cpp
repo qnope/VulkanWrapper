@@ -18,4 +18,14 @@ vw::Device *vw_create_device(vw::DeviceFinder *finder,
         std::move(*finder).with_queue(vk::QueueFlags(queueFlags)).build()};
 }
 
+const vw::Queue *vw_device_graphics_queue(const vw::Device *device) {
+    return &device->graphicsQueue();
+}
+
+const vw::PresentQueue *vw_device_present_queue(const vw::Device *device) {
+    return &device->presentQueue();
+}
+
+void vw_device_wait_idle(const vw::Device *device) { device->wait_idle(); }
+
 void vw_destroy_device(vw::Device *device) { delete device; }
