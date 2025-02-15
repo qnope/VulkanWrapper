@@ -23,7 +23,7 @@ class Window {
 
     bool is_close_requested() const noexcept;
 
-    std::vector<const char *> get_required_instance_extensions() const noexcept;
+    std::span<const char * const> get_required_instance_extensions() const noexcept;
     Surface create_surface(const Instance &instance) const;
 
     Swapchain create_swapchain(const Device &device,

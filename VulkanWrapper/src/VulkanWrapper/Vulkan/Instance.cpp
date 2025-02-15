@@ -16,7 +16,7 @@ DeviceFinder Instance::findGpu() const noexcept {
         auto devices = handle().enumeratePhysicalDevices().value;
         return std::vector<PhysicalDevice>(devices.begin(), devices.end());
     }();
-    return DeviceFinder{std::move(physicalDevices)};
+    return DeviceFinder{physicalDevices};
 }
 
 InstanceBuilder &&InstanceBuilder::addPortability() && {
@@ -31,13 +31,7 @@ InstanceBuilder &&InstanceBuilder::addExtension(const char *extension) && {
 }
 
 InstanceBuilder &&
-InstanceBuilder::addExtensions(std::vector<const char *> extensions) && {
-    m_extensions.append_range(extensions);
-    return std::move(*this);
-}
-
-InstanceBuilder &&
-InstanceBuilder::addExtensions(std::span<const char *> extensions) && {
+InstanceBuilder::addExtensions(std::span<char const *const> extensions) && {
     m_extensions.append_range(extensions);
     return std::move(*this);
 }

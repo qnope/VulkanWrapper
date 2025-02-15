@@ -9,7 +9,7 @@ using DeviceNotFoundException = TaggedException<struct DeviceNotFoundTag>;
 
 class DeviceFinder {
   public:
-    DeviceFinder(std::vector<PhysicalDevice> physicalDevices) noexcept;
+    DeviceFinder(std::span<PhysicalDevice> physicalDevices) noexcept;
 
     DeviceFinder &&with_queue(vk::QueueFlags queueFlags) && noexcept;
     DeviceFinder &&with_presentation(vk::SurfaceKHR surface) && noexcept;

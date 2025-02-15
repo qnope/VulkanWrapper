@@ -25,8 +25,7 @@ class InstanceBuilder {
   public:
     InstanceBuilder &&addPortability() &&;
     InstanceBuilder &&addExtension(const char *extension) &&;
-    InstanceBuilder &&addExtensions(std::vector<const char *> extensions) &&;
-    InstanceBuilder &&addExtensions(std::span<const char *> extensions) &&;
+    InstanceBuilder &&addExtensions(std::span<const char * const> extensions) &&;
     InstanceBuilder &&setDebug() &&;
 
     Instance build() &&;

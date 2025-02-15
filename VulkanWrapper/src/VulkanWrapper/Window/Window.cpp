@@ -38,19 +38,18 @@ Surface Window::create_surface(const Instance &instance) const {
     return Surface{vk::UniqueSurfaceKHR(surface, instance.handle())};
 }
 
-Swapchain Window::create_swapchain(const Device &device, vk::SurfaceKHR surface) const
-{
+Swapchain Window::create_swapchain(const Device &device,
+                                   vk::SurfaceKHR surface) const {
     return SwapchainBuilder(device, surface, m_width, m_height).build();
 }
 
 bool Window::is_close_requested() const noexcept { return m_closeRequested; }
 
-std::vector<const char *>
+std::span<char const *const>
 Window::get_required_instance_extensions() const noexcept {
     unsigned count;
     auto array = SDL_Vulkan_GetInstanceExtensions(&count);
-    std::vector<const char *> extensions(array, array + count);
-    return extensions;
+    return {array, count};
 }
 
 void Window::update() noexcept {

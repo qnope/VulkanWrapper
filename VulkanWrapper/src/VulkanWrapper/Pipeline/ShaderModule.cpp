@@ -32,7 +32,7 @@ static std::vector<uint32_t> readSpirVFile(const std::filesystem::path &path) {
 
 ShaderModule
 ShaderModule::create_from_spirv(const Device &device,
-                                const std::vector<std::uint32_t> &spirV) {
+                                std::span<const std::uint32_t> spirV) {
     auto info = vk::ShaderModuleCreateInfo()
                     .setCodeSize(spirV.size() * sizeof(std::uint32_t))
                     .setCode(spirV);

@@ -9,8 +9,7 @@
 
 namespace vw {
 
-DeviceFinder::DeviceFinder(
-    std::vector<PhysicalDevice> physicalDevices) noexcept {
+DeviceFinder::DeviceFinder(std::span<PhysicalDevice> physicalDevices) noexcept {
     for (auto &device : physicalDevices) {
         PhysicalDeviceInformation information{device};
         auto properties = device.queueFamilyProperties();
