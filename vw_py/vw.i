@@ -25,3 +25,17 @@
 %include "Vulkan/Swapchain.h"
 %include "Window/SDL_Initializer.h"
 %include "Window/Window.h"
+
+%extend VwWindowCreateArguments {
+    ~VwWindowCreateArguments() {
+        delete [] self->title;
+        delete self;
+    }
+}
+
+%extend VwAttachment {
+    ~VwAttachment() {
+        delete[] self->id;
+        delete self;
+    }
+}

@@ -22,7 +22,7 @@ class AttachmentBuilder {
     Attachment build() &&;
 
   private:
-    std::string_view m_id;
+    std::string m_id;
     vk::Format m_format;
     vk::SampleCountFlagBits m_sampleCount = vk::SampleCountFlagBits::e1;
 

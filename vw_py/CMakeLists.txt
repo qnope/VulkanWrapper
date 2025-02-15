@@ -8,7 +8,10 @@ include(UseSWIG)
 set_property(SOURCE vw.i PROPERTY CPLUSPLUS ON)
 swig_add_library(bindings_vw_py TYPE SHARED LANGUAGE Python SOURCES vw.i)
 
-set_property(TARGET bindings_vw_py PROPERTY SUFFIX ".so")
+if(${APPLE})
+    set_property(TARGET bindings_vw_py PROPERTY SUFFIX ".so")
+endif()
+
 set_property(TARGET bindings_vw_py PROPERTY SWIG_USE_TARGET_INCLUDE_DIRECTORIES TRUE)
 
 target_link_libraries(bindings_vw_py PRIVATE Python3::Python VulkanWrapper_c)
