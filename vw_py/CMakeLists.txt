@@ -1,0 +1,14 @@
+cmake_minimum_required(VERSION 3.25)
+
+find_package(Python3 COMPONENTS Development)
+find_package(SWIG 4.3 COMPONENTS python)
+
+include(UseSWIG)
+
+set_property(SOURCE vw.i PROPERTY CPLUSPLUS ON)
+swig_add_library(bindings_vw_py TYPE SHARED LANGUAGE Python SOURCES vw.i)
+
+set_property(TARGET bindings_vw_py PROPERTY SUFFIX ".so")
+set_property(TARGET bindings_vw_py PROPERTY SWIG_USE_TARGET_INCLUDE_DIRECTORIES TRUE)
+
+target_link_libraries(bindings_vw_py PRIVATE Python3::Python VulkanWrapper_c)

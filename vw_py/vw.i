@@ -1,0 +1,27 @@
+/* example.i */
+%module bindings_vw_py
+%{
+/* Put header files here or function declarations like below */
+#include "bindings.h"
+%}
+
+%include "Command/CommandPool.h"
+%include "Image/Framebuffer.h"
+%include "Image/Image.h"
+%include "Image/ImageView.h"
+%include "Pipeline/Pipeline.h"
+%include "Pipeline/PipelineLayout.h"
+%include "Pipeline/ShaderModule.h"
+%include "RenderPass/Attachment.h"
+%include "RenderPass/RenderPass.h"
+%include "RenderPass/Subpass.h"
+%include "Synchronization/Fence.h"
+%include "Synchronization/Semaphore.h"
+%include "utils/array.h"
+%include "Vulkan/Device.h"
+%include "Vulkan/Instance.h"
+%include "Vulkan/PresentQueue.h"
+%include "Vulkan/Queue.h"
+%include "Vulkan/Swapchain.h"
+%include "Window/SDL_Initializer.h"
+%include "Window/Window.h"
