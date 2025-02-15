@@ -10,6 +10,7 @@ vw::Instance *vw_create_instance(const VwInstanceCreateArguments *arguments) {
     if (arguments->debug_mode)
         return new vw::Instance{vw::InstanceBuilder()
                                     .addExtensions(extensions_as_span)
+                                    .addPortability()
                                     .setDebug()
                                     .build()};
     return new vw::Instance{vw::InstanceBuilder()

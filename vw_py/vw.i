@@ -5,6 +5,8 @@
 #include "bindings.h"
 %}
 
+%apply int* OUTPUT {int *}
+
 %include "Command/CommandPool.h"
 %include "Image/Framebuffer.h"
 %include "Image/Image.h"
@@ -17,7 +19,6 @@
 %include "RenderPass/Subpass.h"
 %include "Synchronization/Fence.h"
 %include "Synchronization/Semaphore.h"
-%include "utils/array.h"
 %include "Vulkan/Device.h"
 %include "Vulkan/Instance.h"
 %include "Vulkan/PresentQueue.h"

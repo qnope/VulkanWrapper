@@ -16,10 +16,11 @@ bool vw_is_close_window_requested(const vw::Window *window) {
     return window->is_close_requested();
 }
 
-VwArrayConstString
-vw_get_required_extensions_from_window(const vw::Window *window) {
+const char *const *
+vw_get_required_extensions_from_window(const vw::Window *window, int *number) {
     auto required = window->get_required_instance_extensions();
-    return vw_create_array_const_string(required.data(), required.size());
+    *number = required.size();
+    return required.data();
 }
 
 void vw_update_window(vw::Window *window) { window->update(); }

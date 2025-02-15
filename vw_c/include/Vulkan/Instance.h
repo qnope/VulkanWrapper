@@ -1,7 +1,5 @@
 #pragma once
 
-#include "../utils/array.h"
-
 namespace vw {
 class Instance;
 class DeviceFinder;

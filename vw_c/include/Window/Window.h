@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../utils/array.h"
 #include "../Vulkan/Instance.h"
 #include "SDL_Initializer.h"
 
@@ -25,8 +24,8 @@ vw::Window *vw_create_window(const VwWindowCreateArguments *arguments);
 bool vw_is_close_window_requested(const vw::Window *);
 void vw_update_window(vw::Window *);
 
-VwArrayConstString
-vw_get_required_extensions_from_window(const vw::Window *window);
+char const *const *
+vw_get_required_extensions_from_window(const vw::Window *window, int *number);
 
 vw::Surface *vw_create_surface_from_window(const vw::Window *window,
                                            const vw::Instance *instance);

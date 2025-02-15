@@ -1,11 +1,10 @@
 use super::sdl_initializer::*;
-use crate::sys::array_const_string::ArrayConstString;
 use crate::sys::bindings::{self, VwWindowCreateArguments};
 use crate::vulkan::device::Device;
 use crate::vulkan::instance::Instance;
 use crate::vulkan::surface::Surface;
 use crate::vulkan::swapchain::Swapchain;
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 
 pub struct Window<'a> {
     _initializer: &'a SdlInitializer,
@@ -60,10 +59,20 @@ impl<'a> WindowBuilder<'a> {
 impl<'a> Window<'a> {
     pub fn get_required_extensions(&self) -> Vec<String> {
         unsafe {
-            let required_extensions = ArrayConstString {
-                c_array: bindings::vw_get_required_extensions_from_window(self.ptr),
-            };
-            return required_extensions.to_vec();
+            let mut number = 0;
+            let required_extensions =
+                bindings::vw_get_required_extensions_from_window(self.ptr, &mut number);
+
+            let mut result = vec![];
+
+            for i in 0..number {
+                let string_pointer = required_extensions.add(i.try_into().unwrap());
+                let cstr = CStr::from_ptr(*string_pointer);
+                let string = String::from_utf8_lossy(cstr.to_bytes()).to_string();
+                result.push(string);
+            }
+
+            result
         }
     }
 
