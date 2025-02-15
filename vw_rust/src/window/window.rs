@@ -42,11 +42,11 @@ impl<'a> WindowBuilder<'a> {
 
     pub fn build(self) -> Window<'a> {
         let title = CString::new(self.title).unwrap();
-        let arguments= VwWindowCreateArguments {
+        let arguments = VwWindowCreateArguments {
             initializer: self.initializer.ptr,
             width: self.width,
             height: self.height,
-            title: title.as_ptr()
+            title: title.as_ptr(),
         };
         unsafe {
             Window {

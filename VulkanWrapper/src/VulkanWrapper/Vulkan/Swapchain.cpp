@@ -26,12 +26,7 @@ int Swapchain::height() const noexcept { return m_height; }
 
 vk::Format Swapchain::format() const noexcept { return m_format; }
 
-std::vector<Image> Swapchain::images() const noexcept {
-    std::vector<Image> result;
-    for (auto &image : m_images)
-        result.emplace_back(image.handle(), image.format());
-    return result;
-}
+std::span<const Image> Swapchain::images() const noexcept { return m_images; }
 
 uint64_t
 Swapchain::acquire_next_image(const Semaphore &semaphore) const noexcept {

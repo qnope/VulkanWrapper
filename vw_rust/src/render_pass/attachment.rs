@@ -1,4 +1,4 @@
-use crate::sys::bindings::{VwAttachment, VkFormat, VkImageLayout};
+use crate::sys::bindings::{VkFormat, VkImageLayout, VwAttachment};
 use std::ffi::CString;
 
 pub struct Attachment {

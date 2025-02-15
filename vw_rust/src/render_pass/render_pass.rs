@@ -30,13 +30,13 @@ impl<'a> RenderPassBuilder<'a> {
 
         let arguments = VwRenderPassCreateArguments {
             subpasses: c_subpasses.as_mut_ptr(),
-            size: c_subpasses.len() as i32
+            size: c_subpasses.len() as i32,
         };
 
         unsafe {
             RenderPass {
                 _device: self.device,
-                ptr: bindings::vw_create_render_pass(self.device.as_ptr(), &arguments)
+                ptr: bindings::vw_create_render_pass(self.device.as_ptr(), &arguments),
             }
         }
     }

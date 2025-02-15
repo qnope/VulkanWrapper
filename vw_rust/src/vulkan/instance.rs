@@ -41,7 +41,7 @@ impl InstanceBuilder {
         let arguments = VwInstanceCreateArguments {
             extensions: data.as_mut_ptr(),
             extensions_count: data.len() as i32,
-            debug_mode: self.debug_mode
+            debug_mode: self.debug_mode,
         };
 
         unsafe {

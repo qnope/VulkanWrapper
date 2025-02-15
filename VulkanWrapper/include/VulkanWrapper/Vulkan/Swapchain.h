@@ -15,7 +15,7 @@ class Swapchain : public ObjectWithUniqueHandle<vk::UniqueSwapchainKHR> {
     int height() const noexcept;
     vk::Format format() const noexcept;
 
-    std::vector<Image> images() const noexcept;
+    std::span<const Image> images() const noexcept;
 
     uint64_t acquire_next_image(const Semaphore &semaphore) const noexcept;
 

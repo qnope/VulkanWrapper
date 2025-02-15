@@ -4,8 +4,8 @@ use super::pipeline_layout::PipelineLayout;
 use super::shaders::ShaderModule;
 use crate::render_pass::render_pass::RenderPass;
 use crate::sys::bindings::{
-    self, VwGraphicsPipelineCreateArguments, vw_Pipeline, VwStageAndShader, VkPipeline,
-    VkShaderStageFlagBits,
+    self, vw_Pipeline, VkPipeline, VkShaderStageFlagBits, VwGraphicsPipelineCreateArguments,
+    VwStageAndShader,
 };
 use crate::vulkan::device::Device;
 
