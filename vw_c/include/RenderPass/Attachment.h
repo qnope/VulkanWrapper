@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.h>
 
 extern "C" {
-struct vw_Attachment {
+struct VwAttachment {
     const char *id;
     VkFormat format;
     VkImageLayout finalLayout;

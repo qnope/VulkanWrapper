@@ -7,12 +7,17 @@ class Subpass;
 }
 
 extern "C" {
-struct vw_AttachmentSubpass {
-    vw_Attachment attachment;
+struct VwAttachmentSubpass {
+    VwAttachment attachment;
     VkImageLayout currentLayout;
 };
-vw::Subpass *vw_create_subpass(const vw_AttachmentSubpass *attachments,
-                               int size);
+
+struct VwSubpassCreateArguments {
+    const VwAttachmentSubpass *attachments;
+    int attachment_count;
+};
+
+vw::Subpass *vw_create_subpass(const VwSubpassCreateArguments *arguments);
 
 void vw_destroy_subpass(vw::Subpass *subpass);
 }

@@ -9,16 +9,16 @@ class Pipeline;
 }
 
 extern "C" {
-struct vw_StageAndShader {
+struct VwStageAndShader {
     VkShaderStageFlagBits stage;
     vw::ShaderModule *module;
 };
 
-struct vw_GraphicsPipelineArguments {
+struct VwGraphicsPipelineCreateArguments {
     const vw::Device *device;
     const vw::RenderPass *renderPass;
 
-    const vw_StageAndShader *stageAndShaders;
+    const VwStageAndShader *stageAndShaders;
     int size;
     bool withViewport;
     bool withScissor;
@@ -31,7 +31,7 @@ struct vw_GraphicsPipelineArguments {
 };
 
 vw::Pipeline *
-vw_create_graphics_pipeline(vw_GraphicsPipelineArguments arguments);
+vw_create_graphics_pipeline(const VwGraphicsPipelineCreateArguments *arguments);
 
 VkPipeline vw_pipeline_handle(const vw::Pipeline *pipeline);
 

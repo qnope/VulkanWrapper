@@ -7,8 +7,14 @@ class RenderPass;
 }
 
 extern "C" {
-vw::RenderPass *vw_create_render_pass(const vw::Device *device,
-                                      vw::Subpass **subpasses, int size);
+struct VwRenderPassCreateArguments {
+    vw::Subpass **subpasses;
+    int size;
+};
+
+vw::RenderPass *
+vw_create_render_pass(const vw::Device *device,
+                      const VwRenderPassCreateArguments *arguments);
 
 VkRenderPass vw_render_pass_handle(const vw::RenderPass *render_pass);
 

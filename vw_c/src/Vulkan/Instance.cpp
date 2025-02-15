@@ -3,11 +3,11 @@
 #include <VulkanWrapper/Vulkan/DeviceFinder.h>
 #include <VulkanWrapper/Vulkan/Instance.h>
 
-vw::Instance *vw_create_instance(bool debugMode,
-                                 vw_ArrayConstString extensions) {
-    std::span extensions_as_span(extensions.array, extensions.size);
+vw::Instance *vw_create_instance(const VwInstanceCreateArguments *arguments) {
+    std::span extensions_as_span(arguments->extensions,
+                                 arguments->extensions_count);
 
-    if (debugMode)
+    if (arguments->debug_mode)
         return new vw::Instance{vw::InstanceBuilder()
                                     .addExtensions(extensions_as_span)
                                     .setDebug()

@@ -7,11 +7,18 @@ class Instance;
 class DeviceFinder;
 } // namespace vw
 
-vw::Instance *vw_create_instance(bool debugMode,
-                                 vw_ArrayConstString extensions);
+extern "C" {
+struct VwInstanceCreateArguments {
+    const char **extensions;
+    int extensions_count;
+    bool debug_mode;
+};
+
+vw::Instance *vw_create_instance(const VwInstanceCreateArguments *arguments);
 
 vw::DeviceFinder *vw_find_gpu_from_instance(const vw::Instance *instance);
 
 void vw_destroy_device_finder(vw::DeviceFinder *deviceFinder);
 
 void vw_destroy_instance(vw::Instance *instance);
+}

@@ -1,6 +1,6 @@
 use super::sdl_initializer::*;
 use crate::sys::array_const_string::ArrayConstString;
-use crate::sys::bindings;
+use crate::sys::bindings::{self, VwWindowCreateArguments};
 use crate::vulkan::device::Device;
 use crate::vulkan::instance::Instance;
 use crate::vulkan::surface::Surface;
@@ -13,7 +13,7 @@ pub struct Window<'a> {
 }
 
 pub struct WindowBuilder<'a> {
-    _initializer: &'a SdlInitializer,
+    initializer: &'a SdlInitializer,
     title: String,
     width: i32,
     height: i32,
@@ -22,7 +22,7 @@ pub struct WindowBuilder<'a> {
 impl<'a> WindowBuilder<'a> {
     pub fn new(initializer: &'a SdlInitializer) -> WindowBuilder<'a> {
         WindowBuilder {
-            _initializer: &initializer,
+            initializer: &initializer,
             title: String::new(),
             width: 0,
             height: 0,
@@ -42,16 +42,16 @@ impl<'a> WindowBuilder<'a> {
 
     pub fn build(self) -> Window<'a> {
         let title = CString::new(self.title).unwrap();
-
+        let arguments= VwWindowCreateArguments {
+            initializer: self.initializer.ptr,
+            width: self.width,
+            height: self.height,
+            title: title.as_ptr()
+        };
         unsafe {
             Window {
-                _initializer: &self._initializer,
-                ptr: bindings::vw_create_window(
-                    self._initializer.ptr,
-                    self.width,
-                    self.height,
-                    title.as_ptr(),
-                ),
+                _initializer: &self.initializer,
+                ptr: bindings::vw_create_window(&arguments),
             }
         }
     }

@@ -10,7 +10,7 @@ class Framebuffer;
 } // namespace vw
 
 extern "C" {
-struct vw_FramebufferArguments {
+struct VwFramebufferCreateArguments {
     const vw::Device *device;
     const vw::RenderPass *render_pass;
     const vw::ImageView **image_views;
@@ -19,7 +19,8 @@ struct vw_FramebufferArguments {
     uint32_t height;
 };
 
-vw::Framebuffer *vw_create_framebuffer(vw_FramebufferArguments arguments);
+vw::Framebuffer *
+vw_create_framebuffer(const VwFramebufferCreateArguments *arguments);
 
 uint32_t vw_framebuffer_width(const vw::Framebuffer *framebuffer);
 uint32_t vw_framebuffer_height(const vw::Framebuffer *framebuffer);

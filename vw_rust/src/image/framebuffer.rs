@@ -1,6 +1,6 @@
 use crate::image::image_view::ImageView;
 use crate::render_pass::render_pass::RenderPass;
-use crate::sys::bindings::{self, vw_Framebuffer, vw_FramebufferArguments, VkFramebuffer};
+use crate::sys::bindings::{self, vw_Framebuffer, VkFramebuffer, VwFramebufferCreateArguments};
 use crate::vulkan::device::Device;
 use std::rc::Rc;
 
@@ -40,7 +40,7 @@ impl<'a> FramebufferBuilder<'a> {
 
     pub fn build(self) -> Framebuffer<'a> {
         let mut attachments: Vec<_> = self.attachments.iter().map(|x| x.as_ptr()).collect();
-        let arguments = vw_FramebufferArguments {
+        let arguments = VwFramebufferCreateArguments {
             device: self.device.as_ptr(),
             render_pass: self.render_pass.as_ptr(),
             image_views: attachments.as_mut_ptr(),
@@ -51,7 +51,7 @@ impl<'a> FramebufferBuilder<'a> {
 
         Framebuffer {
             _image_view: self.attachments,
-            ptr: unsafe { bindings::vw_create_framebuffer(arguments) },
+            ptr: unsafe { bindings::vw_create_framebuffer(&arguments) },
         }
     }
 }

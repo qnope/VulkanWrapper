@@ -1,5 +1,5 @@
 use crate::image::image::Image;
-use crate::sys::bindings::{self, vw_ImageView, vw_ImageViewArguments, VkImageViewType};
+use crate::sys::bindings::{self, vw_ImageView, VkImageViewType, VwImageViewCreateArguments};
 use crate::vulkan::device::Device;
 use std::rc::Rc;
 
@@ -30,7 +30,7 @@ impl<'a> ImageViewBuilder<'a> {
     }
 
     pub fn build(self) -> Rc<ImageView<'a>> {
-        let arguments = vw_ImageViewArguments {
+        let arguments = VwImageViewCreateArguments {
             device: self.device.as_ptr(),
             image: self.image.as_ptr(),
             image_type: self.image_type,
@@ -39,7 +39,7 @@ impl<'a> ImageViewBuilder<'a> {
         let image_view = ImageView {
             _device: self.device,
             _image: self.image,
-            ptr: unsafe { bindings::vw_create_image_view(arguments) },
+            ptr: unsafe { bindings::vw_create_image_view(&arguments) },
         };
 
         Rc::new(image_view)

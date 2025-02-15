@@ -1,5 +1,5 @@
 use super::attachment::Attachment;
-use crate::sys::bindings::{self, vw_AttachmentSubpass, vw_Subpass, VkImageLayout};
+use crate::sys::bindings::{self, vw_Subpass, VkImageLayout, VwAttachmentSubpass, VwSubpassCreateArguments};
 
 pub struct Subpass {
     ptr: *mut vw_Subpass,
@@ -29,17 +29,20 @@ impl SubpassBuilder {
         let c_attachments: Vec<_> = self
             .attachments
             .iter()
-            .map(|(attachment, layout)| vw_AttachmentSubpass {
+            .map(|(attachment, layout)| VwAttachmentSubpass {
                 attachment: attachment.to_raw(),
                 currentLayout: *layout,
             })
             .collect();
+
+        let arguments = VwSubpassCreateArguments {
+            attachments: c_attachments.as_ptr(),
+            attachment_count: c_attachments.len() as i32
+        };
+
         unsafe {
             Subpass {
-                ptr: bindings::vw_create_subpass(
-                    c_attachments.as_ptr(),
-                    c_attachments.len() as i32,
-                ),
+                ptr: bindings::vw_create_subpass(&arguments),
             }
         }
     }

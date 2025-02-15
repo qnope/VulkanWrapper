@@ -2,9 +2,10 @@
 
 #include <VulkanWrapper/Image/ImageView.h>
 
-vw::ImageView *vw_create_image_view(vw_ImageViewArguments arguments) {
-    auto imageView = vw::ImageViewBuilder(*arguments.device, *arguments.image)
-                         .setImageType(vk::ImageViewType(arguments.image_type))
+vw::ImageView *
+vw_create_image_view(const VwImageViewCreateArguments *arguments) {
+    auto imageView = vw::ImageViewBuilder(*arguments->device, *arguments->image)
+                         .setImageType(vk::ImageViewType(arguments->image_type))
                          .build();
     return new vw::ImageView{std::move(imageView)};
 }

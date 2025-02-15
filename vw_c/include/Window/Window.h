@@ -13,13 +13,19 @@ class Device;
 
 extern "C" {
 
-vw::Window *vw_create_window(const vw::SDL_Initializer *initializer, int width,
-                             int height, const char *title);
+struct VwWindowCreateArguments {
+    const vw::SDL_Initializer *initializer;
+    int width;
+    int height;
+    const char *title;
+};
+
+vw::Window *vw_create_window(const VwWindowCreateArguments *arguments);
 
 bool vw_is_close_window_requested(const vw::Window *);
 void vw_update_window(vw::Window *);
 
-vw_ArrayConstString
+VwArrayConstString
 vw_get_required_extensions_from_window(const vw::Window *window);
 
 vw::Surface *vw_create_surface_from_window(const vw::Window *window,

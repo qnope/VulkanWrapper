@@ -3,11 +3,12 @@
 #include <VulkanWrapper/RenderPass/RenderPass.h>
 #include <VulkanWrapper/RenderPass/Subpass.h>
 
-vw::RenderPass *vw_create_render_pass(const vw::Device *device,
-                                      vw::Subpass **subpasses, int size) {
+vw::RenderPass *
+vw_create_render_pass(const vw::Device *device,
+                      const VwRenderPassCreateArguments *arguments) {
     vw::RenderPassBuilder builder(*device);
-    for (int i = 0; i < size; ++i) {
-        std::move(builder).add_subpass(std::move(*subpasses[i]));
+    for (int i = 0; i < arguments->size; ++i) {
+        std::move(builder).add_subpass(std::move(*arguments->subpasses[i]));
     }
     return new vw::RenderPass(std::move(builder).build());
 }

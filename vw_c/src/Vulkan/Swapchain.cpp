@@ -16,9 +16,9 @@ VkFormat vw_get_swapchain_format(const vw::Swapchain *swapchain) {
 
 void vw_destroy_swapchain(vw::Swapchain *swapchain) { delete swapchain; }
 
-vw_SwapchainImageArray vw_swapchain_get_images(const vw::Swapchain *swapchain) {
+VwSwapchainImageArray vw_swapchain_get_images(const vw::Swapchain *swapchain) {
     auto images = swapchain->images();
-    vw_SwapchainImageArray array;
+    VwSwapchainImageArray array;
     array.size = images.size();
     array.images =
         static_cast<vw::Image **>(malloc(sizeof(vw::Image *) * images.size()));

@@ -4,7 +4,7 @@ use super::pipeline_layout::PipelineLayout;
 use super::shaders::ShaderModule;
 use crate::render_pass::render_pass::RenderPass;
 use crate::sys::bindings::{
-    self, vw_GraphicsPipelineArguments, vw_Pipeline, vw_StageAndShader, VkPipeline,
+    self, VwGraphicsPipelineCreateArguments, vw_Pipeline, VwStageAndShader, VkPipeline,
     VkShaderStageFlagBits,
 };
 use crate::vulkan::device::Device;
@@ -79,13 +79,13 @@ impl<'a> GraphicsPipelineBuilder<'a> {
         let stage_and_shaders: Vec<_> = self
             .stage_and_shaders
             .iter()
-            .map(|(stage, shader)| vw_StageAndShader {
+            .map(|(stage, shader)| VwStageAndShader {
                 stage: *stage,
                 module: shader.as_mut_ptr(),
             })
             .collect();
 
-        let x = vw_GraphicsPipelineArguments {
+        let arguments = VwGraphicsPipelineCreateArguments {
             device: self.device.as_ptr(),
             renderPass: self.render_pass.as_ptr(),
             stageAndShaders: stage_and_shaders.as_ptr(),
@@ -107,7 +107,7 @@ impl<'a> GraphicsPipelineBuilder<'a> {
             Pipeline {
                 _device: self.device,
                 _render_pass: self.render_pass,
-                ptr: bindings::vw_create_graphics_pipeline(x),
+                ptr: bindings::vw_create_graphics_pipeline(&arguments),
             }
         }
     }

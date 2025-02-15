@@ -3,12 +3,10 @@
 #include <VulkanWrapper/RenderPass/Attachment.h>
 #include <VulkanWrapper/RenderPass/Subpass.h>
 
-vw::Subpass *vw_create_subpass(const vw_AttachmentSubpass *attachments,
-                               int size) {
-
+vw::Subpass *vw_create_subpass(const VwSubpassCreateArguments *arguments) {
     vw::SubpassBuilder builder;
-    for (int i = 0; i < size; ++i) {
-        auto [cAttachment, currentLayout] = attachments[i];
+    for (int i = 0; i < arguments->attachment_count; ++i) {
+        auto [cAttachment, currentLayout] = arguments->attachments[i];
         auto attachment =
             vw::AttachmentBuilder(cAttachment.id)
                 .with_final_layout(vk::ImageLayout(cAttachment.finalLayout))

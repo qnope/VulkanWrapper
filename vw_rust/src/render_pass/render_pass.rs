@@ -1,5 +1,5 @@
 use super::subpass::Subpass;
-use crate::sys::bindings::{self, vw_RenderPass, vw_render_pass_handle, VkRenderPass};
+use crate::sys::bindings::{self, vw_RenderPass, VkRenderPass, VwRenderPassCreateArguments};
 use crate::vulkan::device::Device;
 
 pub struct RenderPass<'a> {
@@ -27,14 +27,16 @@ impl<'a> RenderPassBuilder<'a> {
 
     pub fn build(self) -> RenderPass<'a> {
         let mut c_subpasses: Vec<_> = self.subpasses.iter().map(|x| x.as_mut_ptr()).collect();
+
+        let arguments = VwRenderPassCreateArguments {
+            subpasses: c_subpasses.as_mut_ptr(),
+            size: c_subpasses.len() as i32
+        };
+
         unsafe {
             RenderPass {
                 _device: self.device,
-                ptr: bindings::vw_create_render_pass(
-                    self.device.as_ptr(),
-                    c_subpasses.as_mut_ptr(),
-                    c_subpasses.len() as i32,
-                ),
+                ptr: bindings::vw_create_render_pass(self.device.as_ptr(), &arguments)
             }
         }
     }
@@ -46,7 +48,7 @@ impl<'a> RenderPass<'a> {
     }
 
     pub fn handle(&self) -> VkRenderPass {
-        unsafe { vw_render_pass_handle(self.ptr) }
+        unsafe { bindings::vw_render_pass_handle(self.ptr) }
     }
 }
 

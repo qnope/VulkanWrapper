@@ -1,4 +1,4 @@
-use crate::sys::bindings::{vw_Attachment, VkFormat, VkImageLayout};
+use crate::sys::bindings::{VwAttachment, VkFormat, VkImageLayout};
 use std::ffi::CString;
 
 pub struct Attachment {
@@ -42,8 +42,8 @@ impl AttachmentBuilder {
 }
 
 impl Attachment {
-    pub fn to_raw(&self) -> vw_Attachment {
-        vw_Attachment {
+    pub fn to_raw(&self) -> VwAttachment {
+        VwAttachment {
             id: self.id.as_ptr(),
             format: self.format,
             finalLayout: self.final_layout,
