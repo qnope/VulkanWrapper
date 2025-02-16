@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../utils/utils.h"
 #include "../Vulkan/Instance.h"
 #include "SDL_Initializer.h"
 
@@ -16,7 +17,7 @@ struct VwWindowCreateArguments {
     const vw::SDL_Initializer *initializer;
     int width;
     int height;
-    const char *title;
+    String title;
 };
 
 vw::Window *vw_create_window(const VwWindowCreateArguments *arguments);

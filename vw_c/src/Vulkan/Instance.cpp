@@ -4,8 +4,10 @@
 #include <VulkanWrapper/Vulkan/Instance.h>
 
 vw::Instance *vw_create_instance(const VwInstanceCreateArguments *arguments) {
-    std::span extensions_as_span(arguments->extensions,
-                                 arguments->extensions_count);
+    static_assert(std::is_standard_layout_v<StringArray>);
+    std::span extensions_as_span(
+        reinterpret_cast<char const *const *>(&arguments->extensions.array),
+        arguments->extensions.number);
 
     if (arguments->debug_mode)
         return new vw::Instance{vw::InstanceBuilder()

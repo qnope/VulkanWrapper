@@ -1,11 +1,78 @@
 /* example.i */
 %module bindings_vw_py
 %{
-/* Put header files here or function declarations like below */
+#include <iostream>
 #include "bindings.h"
+
+template<typename T>
+PyObject *create_object(T *object) = delete;
+
+template<>
+PyObject *create_object<char>(char *object) {
+    return PyUnicode_FromString(object);
+}
+
+template<typename T>
+PyObject *create_pylist_from_ptr(char **list, int size) {
+    auto *result = PyList_New(size);
+
+    for(int i = 0; i < size; ++i) {
+        auto *object = create_object(list[i]);
+        PyList_SetItem(result, i, object);
+    }
+
+    return result;
+}
+
+/*
+VwString *create_vw_string_from_pystring(PyObject *object) {
+    std::cout << "Create vw_string" << std::endl;
+    Py_ssize_t size = 0;
+    const char *string = PyUnicode_AsUTF8AndSize(object, &size);
+    char *result = new char[size + 1];
+    std::memcpy(result, string, size + 1);
+    return new VwString{result};
+}
+
+PyObject *pystring_from_vw_string(const VwString *string) {
+    return PyUnicode_FromString(string->string);
+}*/
+
 %}
 
-%apply int* OUTPUT {int *}
+template<typename T>
+PyObject *create_pylist_from_ptr(char **list, int size);
+
+%template(create_pylist_string) create_pylist_from_ptr<char>;
+
+%typemap(in) String {
+    $1.string = PyUnicode_AsUTF8($input);
+}
+
+%typemap(out) String {
+    $result = PyUnicode_FromString($1.string);
+}
+
+%extend String {
+    ~String() {
+        std::cout << "Remove: " << $self->title.string << std::endl;
+    }
+}
+
+%feature("autodestroy") String;
+%feature("autodestroy") VwWindowCreateArguments;
+
+%typemap(in) char ** {
+    const auto size = PyList_Size($input);
+    std::cout << "Construction to give to C" << Py_REFCNT($input) << std::endl;
+    $1 = new char*[size];
+    for(int i = 0; i < size; ++i) {
+        const auto current_string = PyList_GetItem($input, i);
+        $1[i] = (char*)PyUnicode_AsUTF8(current_string);
+    }
+}
+
+%apply int* OUTPUT {int *output_number}
 
 %include "Command/CommandPool.h"
 %include "Image/Framebuffer.h"
@@ -26,13 +93,6 @@
 %include "Vulkan/Swapchain.h"
 %include "Window/SDL_Initializer.h"
 %include "Window/Window.h"
-
-%extend VwWindowCreateArguments {
-    ~VwWindowCreateArguments() {
-        delete [] self->title;
-        delete self;
-    }
-}
 
 %extend VwAttachment {
     ~VwAttachment() {

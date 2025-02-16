@@ -6,7 +6,7 @@
 
 vw::Window *vw_create_window(const VwWindowCreateArguments *arguments) {
     auto window = vw::WindowBuilder(*arguments->initializer)
-                      .with_title(arguments->title)
+                      .with_title(arguments->title.string)
                       .sized(arguments->width, arguments->height)
                       .build();
     return new vw::Window(std::move(window));

@@ -28,4 +28,6 @@ target_sources(VulkanWrapper_c PRIVATE
     Image/Framebuffer.h
     Image/ImageView.h
     Image/Image.h
+
+    utils/utils.h
 )

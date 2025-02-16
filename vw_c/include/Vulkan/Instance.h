@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../utils/utils.h"
+
 namespace vw {
 class Instance;
 class DeviceFinder;
@@ -7,8 +9,7 @@ class DeviceFinder;
 
 extern "C" {
 struct VwInstanceCreateArguments {
-    const char **extensions;
-    int extensions_count;
+    StringArray extensions;
     bool debug_mode;
 };
 
