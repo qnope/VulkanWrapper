@@ -1,12 +1,12 @@
 #pragma once
 
 extern "C" {
-struct String {
+struct VwString {
     const char *string;
 };
 
-struct StringArray {
-    String *array;
+struct VwStringArray {
+    VwString *array;
     int number;
 };
 }

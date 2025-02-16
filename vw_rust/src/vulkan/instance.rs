@@ -1,5 +1,5 @@
 use super::device::DeviceFinder;
-use crate::sys::bindings::{self, vw_Instance, VwInstanceCreateArguments};
+use crate::sys::bindings::{self, vw_Instance, VwInstanceCreateArguments, VwStringArray};
 use std::ffi::CString;
 
 pub struct Instance {
@@ -39,8 +39,10 @@ impl InstanceBuilder {
         let mut data: Vec<_> = vec_c_string.iter().map(|x| x.as_ptr()).collect();
 
         let arguments = VwInstanceCreateArguments {
-            extensions: data.as_mut_ptr(),
-            extensions_count: data.len() as i32,
+            extensions: VwStringArray {
+                array: data.as_mut_ptr() as *mut _,
+                number: data.len() as i32,
+            },
             debug_mode: self.debug_mode,
         };
 

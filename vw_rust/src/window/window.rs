@@ -1,5 +1,5 @@
 use super::sdl_initializer::*;
-use crate::sys::bindings::{self, VwWindowCreateArguments};
+use crate::sys::bindings::{self, VwString, VwWindowCreateArguments};
 use crate::vulkan::device::Device;
 use crate::vulkan::instance::Instance;
 use crate::vulkan::surface::Surface;
@@ -45,7 +45,9 @@ impl<'a> WindowBuilder<'a> {
             initializer: self.initializer.ptr,
             width: self.width,
             height: self.height,
-            title: title.as_ptr(),
+            title: VwString {
+                string: title.as_ptr(),
+            },
         };
         unsafe {
             Window {

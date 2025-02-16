@@ -9,7 +9,7 @@ class DeviceFinder;
 
 extern "C" {
 struct VwInstanceCreateArguments {
-    StringArray extensions;
+    VwStringArray extensions;
     bool debug_mode;
 };
 

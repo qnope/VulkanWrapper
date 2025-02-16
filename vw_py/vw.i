@@ -45,22 +45,13 @@ PyObject *create_pylist_from_ptr(char **list, int size);
 
 %template(create_pylist_string) create_pylist_from_ptr<char>;
 
-%typemap(in) String {
+%typemap(in) VwString {
     $1.string = PyUnicode_AsUTF8($input);
 }
 
-%typemap(out) String {
+%typemap(out) VwString {
     $result = PyUnicode_FromString($1.string);
 }
-
-%extend String {
-    ~String() {
-        std::cout << "Remove: " << $self->title.string << std::endl;
-    }
-}
-
-%feature("autodestroy") String;
-%feature("autodestroy") VwWindowCreateArguments;
 
 %typemap(in) char ** {
     const auto size = PyList_Size($input);

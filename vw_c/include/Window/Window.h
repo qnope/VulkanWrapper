@@ -17,7 +17,7 @@ struct VwWindowCreateArguments {
     const vw::SDL_Initializer *initializer;
     int width;
     int height;
-    String title;
+    VwString title;
 };
 
 vw::Window *vw_create_window(const VwWindowCreateArguments *arguments);
