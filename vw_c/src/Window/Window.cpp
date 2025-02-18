@@ -16,11 +16,11 @@ bool vw_is_close_window_requested(const vw::Window *window) {
     return window->is_close_requested();
 }
 
-const char *const *
-vw_get_required_extensions_from_window(const vw::Window *window, int *number) {
+VwStringArray vw_get_required_extensions_from_window(const vw::Window *window) {
+    static_assert(std::is_standard_layout_v<VwString>);
     auto required = window->get_required_instance_extensions();
-    *number = required.size();
-    return required.data();
+    return {reinterpret_cast<const VwString *>(required.data()),
+            static_cast<int>(required.size())};
 }
 
 void vw_update_window(vw::Window *window) { window->update(); }

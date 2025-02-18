@@ -3,63 +3,59 @@
 %{
 #include <iostream>
 #include "bindings.h"
-
-template<typename T>
-PyObject *create_object(T *object) = delete;
-
-template<>
-PyObject *create_object<char>(char *object) {
-    return PyUnicode_FromString(object);
-}
-
-template<typename T>
-PyObject *create_pylist_from_ptr(char **list, int size) {
-    auto *result = PyList_New(size);
-
-    for(int i = 0; i < size; ++i) {
-        auto *object = create_object(list[i]);
-        PyList_SetItem(result, i, object);
-    }
-
-    return result;
-}
-
-/*
-VwString *create_vw_string_from_pystring(PyObject *object) {
-    std::cout << "Create vw_string" << std::endl;
-    Py_ssize_t size = 0;
-    const char *string = PyUnicode_AsUTF8AndSize(object, &size);
-    char *result = new char[size + 1];
-    std::memcpy(result, string, size + 1);
-    return new VwString{result};
-}
-
-PyObject *pystring_from_vw_string(const VwString *string) {
-    return PyUnicode_FromString(string->string);
-}*/
-
 %}
 
-template<typename T>
-PyObject *create_pylist_from_ptr(char **list, int size);
+%include "std_string.i"
+%include "std_vector.i"
 
-%template(create_pylist_string) create_pylist_from_ptr<char>;
-
-%typemap(in) VwString {
-    $1.string = PyUnicode_AsUTF8($input);
+namespace std {
+    %template(vector_string) std::vector<std::string>;
 }
 
-%typemap(out) VwString {
-    $result = PyUnicode_FromString($1.string);
+%inline {
+    struct CString {
+        CString(const std::string &x) : string{x} {}
+        std::string string;
+    };
+
+    struct CStringArray {
+        CStringArray(const std::vector<std::string> &x) : array{x}{
+            build_c_array();
+        }
+
+        CStringArray(const VwStringArray &x) {
+            for(int i = 0; i < x.number; ++i)
+                array.push_back(x.array[i].string);
+            build_c_array();
+        }
+
+        void push(const std::string &x) {
+            array.push_back(x);
+            c_array.emplace_back(array.back().c_str());
+        }
+
+        void build_c_array() {
+            c_array.clear();
+            for(const auto &x: array)
+                c_array.emplace_back(x.c_str());
+        }
+
+        std::vector<std::string> array;
+        std::vector<VwString> c_array;
+    };
 }
 
-%typemap(in) char ** {
-    const auto size = PyList_Size($input);
-    std::cout << "Construction to give to C" << Py_REFCNT($input) << std::endl;
-    $1 = new char*[size];
-    for(int i = 0; i < size; ++i) {
-        const auto current_string = PyList_GetItem($input, i);
-        $1[i] = (char*)PyUnicode_AsUTF8(current_string);
+%include "utils/utils.h"
+
+%extend VwString {
+    VwString(const CString &x) {
+        return new VwString{x.string.c_str()};
+    }
+}
+
+%extend VwStringArray {
+    VwStringArray(const CStringArray &x) {
+        return new VwStringArray {x.c_array.data(), static_cast<int>(x.array.size())}; 
     }
 }
 

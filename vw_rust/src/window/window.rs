@@ -61,15 +61,13 @@ impl<'a> WindowBuilder<'a> {
 impl<'a> Window<'a> {
     pub fn get_required_extensions(&self) -> Vec<String> {
         unsafe {
-            let mut number = 0;
-            let required_extensions =
-                bindings::vw_get_required_extensions_from_window(self.ptr, &mut number);
+            let required_extensions = bindings::vw_get_required_extensions_from_window(self.ptr);
 
             let mut result = vec![];
 
-            for i in 0..number {
-                let string_pointer = required_extensions.add(i.try_into().unwrap());
-                let cstr = CStr::from_ptr(*string_pointer);
+            for i in 0..required_extensions.number {
+                let string_pointer = (*required_extensions.array.add(i.try_into().unwrap())).string;
+                let cstr = CStr::from_ptr(string_pointer);
                 let string = String::from_utf8_lossy(cstr.to_bytes()).to_string();
                 result.push(string);
             }

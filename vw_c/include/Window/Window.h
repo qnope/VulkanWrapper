@@ -25,8 +25,7 @@ vw::Window *vw_create_window(const VwWindowCreateArguments *arguments);
 bool vw_is_close_window_requested(const vw::Window *);
 void vw_update_window(vw::Window *);
 
-char const *const *
-vw_get_required_extensions_from_window(const vw::Window *window, int *number);
+VwStringArray vw_get_required_extensions_from_window(const vw::Window *window);
 
 vw::Surface *vw_create_surface_from_window(const vw::Window *window,
                                            const vw::Instance *instance);

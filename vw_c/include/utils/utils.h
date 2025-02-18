@@ -6,7 +6,7 @@ struct VwString {
 };
 
 struct VwStringArray {
-    VwString *array;
+    const VwString *array;
     int number;
 };
 }
