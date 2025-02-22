@@ -50,7 +50,7 @@ impl<'a> DeviceFinder<'a> {
         let arguments = VwDeviceCreateArguments{
             finder: self.ptr,
             queue_flags: self.queue,
-            surfaceToPresent: ptr_surface
+            surface_to_present: ptr_surface
         };
         unsafe {
             let ptr = bindings::vw_create_device(&arguments);
