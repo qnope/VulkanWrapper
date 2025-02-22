@@ -13,7 +13,9 @@ impl<'a> ShaderModule<'a> {
         unsafe {
             let ptr = bindings::vw_create_shader_module_from_spirv_file(
                 device.as_ptr(),
-                VwString{string: path_string.as_ptr()},
+                VwString {
+                    string: path_string.as_ptr(),
+                },
             );
             ShaderModule {
                 _device: device,

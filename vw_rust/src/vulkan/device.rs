@@ -1,5 +1,6 @@
 use crate::sys::bindings::{
-    self, vw_Device, vw_DeviceFinder, vw_device_graphics_queue, vw_device_present_queue, VwDeviceCreateArguments, VwQueueFlagBits
+    self, vw_Device, vw_DeviceFinder, vw_device_graphics_queue, vw_device_present_queue,
+    VwDeviceCreateArguments, VwQueueFlagBits,
 };
 use crate::vulkan::instance::Instance;
 use crate::vulkan::surface::Surface;
@@ -47,10 +48,10 @@ impl<'a> DeviceFinder<'a> {
             Some(surface) => surface.as_ptr(),
             None => 0 as *const bindings::vw_Surface,
         };
-        let arguments = VwDeviceCreateArguments{
+        let arguments = VwDeviceCreateArguments {
             finder: self.ptr,
             queue_flags: self.queue,
-            surface_to_present: ptr_surface
+            surface_to_present: ptr_surface,
         };
         unsafe {
             let ptr = bindings::vw_create_device(&arguments);

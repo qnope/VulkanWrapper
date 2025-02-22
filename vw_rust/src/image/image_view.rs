@@ -1,5 +1,5 @@
 use crate::image::image::Image;
-use crate::sys::bindings::{self, vw_ImageView, VkImageViewType, VwImageViewCreateArguments};
+use crate::sys::bindings::{self, vw_ImageView, VwImageViewCreateArguments, VwImageViewType};
 use crate::vulkan::device::Device;
 use std::rc::Rc;
 
@@ -12,7 +12,7 @@ pub struct ImageView<'a> {
 pub struct ImageViewBuilder<'a> {
     device: &'a Device<'a>,
     image: Rc<Image<'a>>,
-    image_type: VkImageViewType,
+    image_type: VwImageViewType,
 }
 
 impl<'a> ImageViewBuilder<'a> {
@@ -20,11 +20,11 @@ impl<'a> ImageViewBuilder<'a> {
         ImageViewBuilder {
             device: device,
             image: image,
-            image_type: VkImageViewType::VK_IMAGE_VIEW_TYPE_2D,
+            image_type: VwImageViewType::Type2D,
         }
     }
 
-    pub fn with_image_type(mut self, image_type: VkImageViewType) -> ImageViewBuilder<'a> {
+    pub fn with_image_type(mut self, image_type: VwImageViewType) -> ImageViewBuilder<'a> {
         self.image_type = image_type;
         self
     }

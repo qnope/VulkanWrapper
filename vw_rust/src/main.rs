@@ -20,7 +20,7 @@ use vulkan_wrapper::synchronization::fence::FenceBuilder;
 use vulkan_wrapper::synchronization::semaphore::SemaphoreBuilder;
 use vulkan_wrapper::sys::bindings::VkPipelineStageFlagBits;
 use vulkan_wrapper::sys::bindings::VwImageLayout;
-use vulkan_wrapper::sys::bindings::{VwQueueFlagBits, VwShaderStageFlagBits};
+use vulkan_wrapper::sys::bindings::{VwImageViewType, VwQueueFlagBits, VwShaderStageFlagBits};
 use vulkan_wrapper::vulkan::device::Device;
 use vulkan_wrapper::vulkan::instance::*;
 use vulkan_wrapper::vulkan::swapchain::Swapchain;
@@ -36,9 +36,7 @@ fn create_image_views<'a>(
         .iter()
         .map(|image| {
             let image_view = ImageViewBuilder::new(device, image.clone())
-                .with_image_type(
-                    vulkan_wrapper::sys::bindings::VkImageViewType::VK_IMAGE_VIEW_TYPE_2D,
-                )
+                .with_image_type(VwImageViewType::Type2D)
                 .build();
             image_view
         })
@@ -94,9 +92,7 @@ fn main() {
     let device = instance
         .find_gpu()
         .with_queue(
-            VwQueueFlagBits::Compute
-                | VwQueueFlagBits::Graphics
-                | VwQueueFlagBits::Transfer,
+            VwQueueFlagBits::Compute | VwQueueFlagBits::Graphics | VwQueueFlagBits::Transfer,
         )
         .with_presentation(&surface)
         .build();
@@ -115,23 +111,14 @@ fn main() {
         .build();
 
     let subpass = SubpassBuilder::new()
-        .add_color_attachment(
-            attachment,
-            VwImageLayout::AttachmentOptimal,
-        )
+        .add_color_attachment(attachment, VwImageLayout::AttachmentOptimal)
         .build();
 
     let render_pass = RenderPassBuilder::new(&device).add_subpass(subpass).build();
 
     let pipeline = GraphicsPipelineBuilder::new(&device, &render_pass)
-        .add_shader(
-            VwShaderStageFlagBits::Vertex,
-            vertex_shader,
-        )
-        .add_shader(
-            VwShaderStageFlagBits::Fragment,
-            fragment_shader,
-        )
+        .add_shader(VwShaderStageFlagBits::Vertex, vertex_shader)
+        .add_shader(VwShaderStageFlagBits::Fragment, fragment_shader)
         .with_fixed_viewport((swapchain.width(), swapchain.height()))
         .with_fixed_scissor((swapchain.width(), swapchain.height()))
         .with_pipeline_layout(&pipeline_layout)

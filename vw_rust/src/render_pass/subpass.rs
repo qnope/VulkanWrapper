@@ -1,6 +1,6 @@
 use super::attachment::Attachment;
 use crate::sys::bindings::{
-    self, vw_Subpass, VwAttachmentSubpass, VwImageLayout, VwSubpassCreateArguments
+    self, vw_Subpass, VwAttachmentSubpass, VwImageLayout, VwSubpassCreateArguments,
 };
 
 pub struct Subpass {
