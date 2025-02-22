@@ -9,11 +9,10 @@ class Attachment:
         self.attachment.id = bindings.VwString(self.id)
 
 class AttachmentBuilder:
-    format = 0
-    final_layout = 0
-
     def __init__(self, id):
         self.id = id
+        self.format = 0
+        self.final_layout = 0
 
     def with_final_layout(self, layout):
         self.final_layout = layout

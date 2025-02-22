@@ -16,6 +16,10 @@ class InstanceBuilder:
     extensions = bindings.CStringArray()
     debug_mode = False
 
+    def __init__(self):
+        self.extensions = bindings.CStringArray()
+        self.debug_mode = True
+
     def add_extensions(self, extensions):
         self.extensions.push(extensions)
         return self

@@ -12,8 +12,8 @@ pub struct Framebuffer<'a> {
 pub struct FramebufferBuilder<'a> {
     device: &'a Device<'a>,
     render_pass: &'a RenderPass<'a>,
-    width: u32,
-    height: u32,
+    width: i32,
+    height: i32,
     attachments: Vec<Rc<ImageView<'a>>>,
 }
 
@@ -21,8 +21,8 @@ impl<'a> FramebufferBuilder<'a> {
     pub fn new(
         device: &'a Device,
         render_pass: &'a RenderPass,
-        width: u32,
-        height: u32,
+        width: i32,
+        height: i32,
     ) -> FramebufferBuilder<'a> {
         FramebufferBuilder {
             device: device,

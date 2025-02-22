@@ -10,11 +10,10 @@ class RenderPass:
         bindings.vw_destroy_render_pass(self.render_pass)
 
 class RenderPassBuilder:
-    subpasses = []
-    c_subpasses = bindings.SubpassVector()
-
     def __init__(self, device):
         self.device = device
+        self.subpasses = []
+        self.c_subpasses = bindings.SubpassVector()
 
     def add_subpass(self, subpass):
         self.subpasses.append(subpass)

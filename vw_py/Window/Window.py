@@ -28,12 +28,11 @@ class Window:
         print("Remove Window")
 
 class WindowBuilder:
-    width = 0
-    height = 0
-    title = bindings.CString("")
-
     def __init__(self, initializer):
         self.initializer = initializer
+        self.width = 0
+        self.height = 0
+        self.title = bindings.CString("")
 
     def sized(self, width, height):
         self.width = width

@@ -55,8 +55,8 @@ fn create_frame_buffers<'a>(
             FramebufferBuilder::new(
                 device,
                 render_pass,
-                swapchain.width() as u32,
-                swapchain.height() as u32,
+                swapchain.width(),
+                swapchain.height(),
             )
             .with_attachment(image_view)
             .build()

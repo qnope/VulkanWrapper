@@ -3,17 +3,9 @@ from Vulkan import Device, Instance
 from Pipeline import ShaderModule, PipelineLayout, Pipeline
 from RenderPass import Attachment, Subpass, RenderPass
 from Command import CommandPool
-from Image import Image, ImageView
+from Image import Image, ImageView, Framebuffer
 import bindings_vw_py as bindings
 
-def create_image_views(device, swapchain):
-    result = []
-    for image in swapchain.images():
-        image_view = ImageView.ImageViewBuilder(device, image).\
-            with_type(bindings.VwImageViewType_Type2D).\
-            build()
-        result.append(image_view)
-    return result
 
 class ScopedGuard:
     __resource = []
@@ -31,6 +23,26 @@ class ScopedGuard:
             (name, elem) = self.__resource.pop()
             self.__setattr__(name, None)
             del elem
+
+
+def create_image_views(device, swapchain):
+    result = []
+    for image in swapchain.images():
+        image_view = ImageView.ImageViewBuilder(device, image).\
+            with_type(bindings.VwImageViewType_Type2D).\
+            build()
+        result.append(image_view)
+    return result
+
+def create_framebuffers(device, render_pass, swapchain, image_views):
+    result = []
+
+    for image_view in image_views:
+        framebuffer = Framebuffer.FramebufferBuilder(device, render_pass, swapchain.width(), swapchain.height()).\
+            add_attachment(image_view).\
+            build()
+        result.append(framebuffer)
+    return result
 
 with ScopedGuard() as app:
     app.initializer = SDL_Initializer.SDL_Initializer()
@@ -87,7 +99,7 @@ with ScopedGuard() as app:
     app.image_views = create_image_views(app.device, app.swapchain)
     app.command_buffers = app.command_pool.allocate(len(app.image_views))
 
-    print(app.command_buffers)
+    app.framebuffers = create_framebuffers(app.device, app.render_pass, app.swapchain, app.image_views)
 
     while not app.window.is_close_requested():
         app.window.update()

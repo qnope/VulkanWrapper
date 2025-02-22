@@ -15,8 +15,8 @@ struct VwFramebufferCreateArguments {
     const vw::RenderPass *render_pass;
     const vw::ImageView **image_views;
     int number_image_views;
-    uint32_t width;
-    uint32_t height;
+    int width;
+    int height;
 };
 
 vw::Framebuffer *

@@ -9,7 +9,8 @@ class Subpass:
         bindings.vw_destroy_subpass(self.subpass)
 
 class SubpassBuilder:
-    attachment_subpasses = bindings.AttachmentSubpassVector()
+    def __init__(self):
+        self.attachment_subpasses = bindings.AttachmentSubpassVector()
 
     def add_color_attachment(self, attachment, layout):
         attachment_subpass = bindings.VwAttachmentSubpass()

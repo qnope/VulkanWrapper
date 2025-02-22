@@ -12,15 +12,14 @@ class Pipeline:
         bindings.vw_destroy_pipeline(self.pipeline)
 
 class GraphicsPipelineBuilder:
-    viewport = None
-    scissor = None
-    pipeline_layout = None
-    number_color_attachment = 0
-    shader_and_stage_vector = bindings.StageAndShaderVector()
-
     def __init__(self, device, render_pass):
         self.device = device
         self.render_pass = render_pass
+        self.viewport = None
+        self.scissor = None
+        self.pipeline_layout = None
+        self.number_color_attachment = 0
+        self.shader_and_stage_vector = bindings.StageAndShaderVector()
     
     def add_shader(self, stage, module):
         new = bindings.VwStageAndShader()

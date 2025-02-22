@@ -10,10 +10,10 @@ class ImageView:
         bindings.vw_destroy_image_view(self.image_view)
 
 class ImageViewBuilder:
-    image_type = 0
     def __init__(self, device, image):
         self.device = device
         self.image = image
+        self.image_type = 0
 
     def with_type(self, image_type):
         self.image_type = image_type
