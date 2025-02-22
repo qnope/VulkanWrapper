@@ -20,7 +20,7 @@ use vulkan_wrapper::synchronization::fence::FenceBuilder;
 use vulkan_wrapper::synchronization::semaphore::SemaphoreBuilder;
 use vulkan_wrapper::sys::bindings::VkPipelineStageFlagBits;
 use vulkan_wrapper::sys::bindings::VwImageLayout;
-use vulkan_wrapper::sys::bindings::{VwQueueFlagBits, VkShaderStageFlagBits};
+use vulkan_wrapper::sys::bindings::{VwQueueFlagBits, VwShaderStageFlagBits};
 use vulkan_wrapper::vulkan::device::Device;
 use vulkan_wrapper::vulkan::instance::*;
 use vulkan_wrapper::vulkan::swapchain::Swapchain;
@@ -125,11 +125,11 @@ fn main() {
 
     let pipeline = GraphicsPipelineBuilder::new(&device, &render_pass)
         .add_shader(
-            VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT,
+            VwShaderStageFlagBits::Vertex,
             vertex_shader,
         )
         .add_shader(
-            VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT,
+            VwShaderStageFlagBits::Fragment,
             fragment_shader,
         )
         .with_fixed_viewport((swapchain.width(), swapchain.height()))

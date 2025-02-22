@@ -4,7 +4,7 @@ use super::pipeline_layout::PipelineLayout;
 use super::shaders::ShaderModule;
 use crate::render_pass::render_pass::RenderPass;
 use crate::sys::bindings::{
-    self, vw_Pipeline, VkPipeline, VkShaderStageFlagBits, VwGraphicsPipelineCreateArguments,
+    self, vw_Pipeline, VkPipeline, VwShaderStageFlagBits, VwGraphicsPipelineCreateArguments,
     VwStageAndShader,
 };
 use crate::vulkan::device::Device;
@@ -18,7 +18,7 @@ pub struct Pipeline<'a> {
 pub struct GraphicsPipelineBuilder<'a> {
     device: &'a Device<'a>,
     render_pass: &'a RenderPass<'a>,
-    stage_and_shaders: Vec<(VkShaderStageFlagBits, ShaderModule<'a>)>,
+    stage_and_shaders: Vec<(VwShaderStageFlagBits, ShaderModule<'a>)>,
 
     viewport: Option<(i32, i32)>,
     scissor: Option<(i32, i32)>,
@@ -45,7 +45,7 @@ impl<'a> GraphicsPipelineBuilder<'a> {
 
     pub fn add_shader(
         mut self,
-        stage: VkShaderStageFlagBits,
+        stage: VwShaderStageFlagBits,
         shader: ShaderModule<'a>,
     ) -> GraphicsPipelineBuilder<'a> {
         self.stage_and_shaders.push((stage, shader));
