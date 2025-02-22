@@ -1,5 +1,7 @@
 import bindings_vw_py as bindings
 
+from Image import Image
+
 class Swapchain:
     def __init__(self, device, surface, swapchain): 
         self.device = device
@@ -18,3 +20,9 @@ class Swapchain:
 
     def format(self):
         return bindings.vw_get_swapchain_format(self.swapchain)
+    
+    def images(self):
+        images = bindings.vw_swapchain_get_images(self.swapchain)
+        vector = bindings.swapchain_image_array_to_vector(images.images, images.size)
+        return [Image.Image(self, img) for img in vector]
+        

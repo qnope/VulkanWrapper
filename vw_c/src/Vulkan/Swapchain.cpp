@@ -24,7 +24,7 @@ VwSwapchainImageArray vw_swapchain_get_images(const vw::Swapchain *swapchain) {
         static_cast<vw::Image **>(malloc(sizeof(vw::Image *) * images.size()));
 
     for (int i = 0; i < images.size(); ++i) {
-        array.images[i] = new vw::Image{std::move(images[i])};
+        array.images[i] = new vw::Image{images[i]};
     }
 
     return array;

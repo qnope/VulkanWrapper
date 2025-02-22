@@ -25,4 +25,6 @@ enum class VwShaderStageFlagBits {
     Fragment = VK_SHADER_STAGE_FRAGMENT_BIT,
     Compute = VK_SHADER_STAGE_COMPUTE_BIT
 };
+
+enum class VwImageViewType { Type2D = VK_IMAGE_VIEW_TYPE_2D };
 }

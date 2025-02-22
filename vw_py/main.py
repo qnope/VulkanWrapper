@@ -3,35 +3,36 @@ from Vulkan import Device, Instance
 from Pipeline import ShaderModule, PipelineLayout, Pipeline
 from RenderPass import Attachment, Subpass, RenderPass
 from Command import CommandPool
+from Image import Image, ImageView
 import bindings_vw_py as bindings
 
 def create_image_views(device, swapchain):
     result = []
     for image in swapchain.images():
         image_view = ImageView.ImageViewBuilder(device, image).\
-            set_image_type(e2D).\
+            with_type(bindings.VwImageViewType_Type2D).\
             build()
         result.append(image_view)
     return result
 
-class App:
-    resource = []
+class ScopedGuard:
+    __resource = []
 
     def __setattr__(self, name, value):
         super().__setattr__(name, value)
         if value is not None:
-            self.resource.append((name, value))
+            self.__resource.append((name, value))
 
     def __enter__(self):
         return self
     
     def __exit__(self, a, b, c):
-        while self.resource:
-            (name, elem) = self.resource.pop()
+        while self.__resource:
+            (name, elem) = self.__resource.pop()
             self.__setattr__(name, None)
             del elem
 
-with App() as app:
+with ScopedGuard() as app:
     app.initializer = SDL_Initializer.SDL_Initializer()
 
     app.window = Window.WindowBuilder(app.initializer)\
@@ -83,7 +84,8 @@ with App() as app:
         build()
 
     app.command_pool = CommandPool.CommandPoolBuilder(app.device).build()
-    app.command_buffers = app.command_pool.allocate(3)
+    app.image_views = create_image_views(app.device, app.swapchain)
+    app.command_buffers = app.command_pool.allocate(len(app.image_views))
 
     print(app.command_buffers)
 

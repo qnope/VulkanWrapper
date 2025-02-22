@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../Vulkan/enums.h"
 #include <vulkan/vulkan.h>
 
 namespace vw {
@@ -12,7 +13,7 @@ extern "C" {
 struct VwImageViewCreateArguments {
     const vw::Device *device;
     const vw::Image *image;
-    VkImageViewType image_type;
+    VwImageViewType image_type;
 };
 
 vw::ImageView *

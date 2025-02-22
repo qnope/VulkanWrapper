@@ -119,9 +119,11 @@ std::vector<T> data_to_vector(T *x, int number);
 %template(SubpassVector) std::vector<vw::Subpass*>;
 %template(StageAndShaderVector) std::vector<VwStageAndShader>;
 %template(CommandBufferVector) std::vector<VkCommandBuffer>;
+%template(ImageVector) std::vector<vw::Image*>;
 
 %template(attachment_subpass_vector_data) data_from_vector<VwAttachmentSubpass>;
 %template(subpass_vector_data) data_from_vector<vw::Subpass*>;
 %template(stage_and_shader_vector_data) data_from_vector<VwStageAndShader>;
 
 %template(command_buffer_array_to_vector) data_to_vector<VkCommandBuffer>;
+%template(swapchain_image_array_to_vector) data_to_vector<vw::Image*>;
