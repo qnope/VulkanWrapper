@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../Vulkan/enums.h"
 #include <vulkan/vulkan.h>
 
 namespace vw {
@@ -17,7 +18,7 @@ struct VwSwapchainImageArray {
 
 int vw_get_swapchain_width(const vw::Swapchain *swapchain);
 int vw_get_swapchain_height(const vw::Swapchain *swapchain);
-VkFormat vw_get_swapchain_format(const vw::Swapchain *swapchain);
+VwFormat vw_get_swapchain_format(const vw::Swapchain *swapchain);
 uint64_t vw_swapchain_acquire_next_image(const vw::Swapchain *swapchain,
                                          const vw::Semaphore *semaphore);
 VwSwapchainImageArray vw_swapchain_get_images(const vw::Swapchain *swapchain);

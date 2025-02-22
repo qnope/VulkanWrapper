@@ -36,7 +36,7 @@ impl<'a> Swapchain<'a> {
         }
     }
 
-    pub fn format(&self) -> bindings::VkFormat {
+    pub fn format(&self) -> bindings::VwFormat {
         unsafe {
             return bindings::vw_get_swapchain_format(self.ptr);
         }

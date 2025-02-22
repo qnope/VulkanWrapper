@@ -10,8 +10,8 @@ int vw_get_swapchain_height(const vw::Swapchain *swapchain) {
     return swapchain->height();
 }
 
-VkFormat vw_get_swapchain_format(const vw::Swapchain *swapchain) {
-    return static_cast<VkFormat>(swapchain->format());
+VwFormat vw_get_swapchain_format(const vw::Swapchain *swapchain) {
+    return static_cast<VwFormat>(swapchain->format());
 }
 
 void vw_destroy_swapchain(vw::Swapchain *swapchain) { delete swapchain; }

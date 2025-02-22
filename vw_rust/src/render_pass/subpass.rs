@@ -1,6 +1,6 @@
 use super::attachment::Attachment;
 use crate::sys::bindings::{
-    self, vw_Subpass, VkImageLayout, VwAttachmentSubpass, VwSubpassCreateArguments,
+    self, vw_Subpass, VwAttachmentSubpass, VwImageLayout, VwSubpassCreateArguments
 };
 
 pub struct Subpass {
@@ -8,7 +8,7 @@ pub struct Subpass {
 }
 
 pub struct SubpassBuilder {
-    attachments: Vec<(Attachment, VkImageLayout)>,
+    attachments: Vec<(Attachment, VwImageLayout)>,
 }
 
 impl SubpassBuilder {
@@ -21,7 +21,7 @@ impl SubpassBuilder {
     pub fn add_color_attachment(
         mut self,
         attachment: Attachment,
-        layout: VkImageLayout,
+        layout: VwImageLayout,
     ) -> SubpassBuilder {
         self.attachments.push((attachment, layout));
         self

@@ -1,11 +1,13 @@
 #pragma once
 
+#include "../utils/utils.h"
+#include "../Vulkan/enums.h"
 #include <vulkan/vulkan.h>
 
 extern "C" {
 struct VwAttachment {
-    const char *id;
-    VkFormat format;
-    VkImageLayout finalLayout;
+    VwString id;
+    VwFormat format;
+    VwImageLayout finalLayout;
 };
 }

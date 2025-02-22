@@ -9,3 +9,12 @@ class Swapchain:
     def __del__(self):
         print("Remove Swapchain")
         bindings.vw_destroy_swapchain(self.swapchain)
+
+    def width(self):
+        return bindings.vw_get_swapchain_width(self.swapchain)
+    
+    def height(self):
+        return bindings.vw_get_swapchain_height(self.swapchain)
+
+    def format(self):
+        return bindings.vw_get_swapchain_format(self.swapchain)

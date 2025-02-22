@@ -6,6 +6,7 @@ target_sources(VulkanWrapper_c PRIVATE
 
     bindings.h
 
+    Vulkan/enums.h
     Vulkan/Device.h
     Vulkan/Instance.h
     Vulkan/Swapchain.h

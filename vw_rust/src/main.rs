@@ -19,7 +19,8 @@ use vulkan_wrapper::render_pass::subpass::SubpassBuilder;
 use vulkan_wrapper::synchronization::fence::FenceBuilder;
 use vulkan_wrapper::synchronization::semaphore::SemaphoreBuilder;
 use vulkan_wrapper::sys::bindings::VkPipelineStageFlagBits;
-use vulkan_wrapper::sys::bindings::{VkImageLayout, VwQueueFlagBits, VkShaderStageFlagBits};
+use vulkan_wrapper::sys::bindings::VwImageLayout;
+use vulkan_wrapper::sys::bindings::{VwQueueFlagBits, VkShaderStageFlagBits};
 use vulkan_wrapper::vulkan::device::Device;
 use vulkan_wrapper::vulkan::instance::*;
 use vulkan_wrapper::vulkan::swapchain::Swapchain;
@@ -110,13 +111,13 @@ fn main() {
 
     let attachment = AttachmentBuilder::new("COLOR")
         .with_format(swapchain.format())
-        .with_final_layout(VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+        .with_final_layout(VwImageLayout::PresentSrcKHR)
         .build();
 
     let subpass = SubpassBuilder::new()
         .add_color_attachment(
             attachment,
-            VkImageLayout::VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+            VwImageLayout::AttachmentOptimal,
         )
         .build();
 

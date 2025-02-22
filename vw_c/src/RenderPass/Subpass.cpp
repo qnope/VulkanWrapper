@@ -8,7 +8,7 @@ vw::Subpass *vw_create_subpass(const VwSubpassCreateArguments *arguments) {
     for (int i = 0; i < arguments->attachment_count; ++i) {
         auto [cAttachment, currentLayout] = arguments->attachments[i];
         auto attachment =
-            vw::AttachmentBuilder(cAttachment.id)
+            vw::AttachmentBuilder(cAttachment.id.string)
                 .with_final_layout(vk::ImageLayout(cAttachment.finalLayout))
                 .with_format(vk::Format(cAttachment.format))
                 .build();

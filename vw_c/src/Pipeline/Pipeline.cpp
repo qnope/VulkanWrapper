@@ -18,7 +18,8 @@ vw_create_graphics_pipeline(const VwGraphicsPipelineCreateArguments *args) {
 
     for (int i = 0; i < args->size; ++i) {
         std::move(builder).add_shader(
-            vk::ShaderStageFlagBits{args->stageAndShaders[i].stage},
+            vk::ShaderStageFlagBits{static_cast<VkShaderStageFlagBits>(
+                args->stageAndShaders[i].stage)},
             std::move(*args->stageAndShaders[i].module));
     }
 

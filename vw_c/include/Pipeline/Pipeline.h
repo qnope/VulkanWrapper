@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../RenderPass/RenderPass.h"
+#include "../Vulkan/enums.h"
 #include "PipelineLayout.h"
 #include "ShaderModule.h"
 
@@ -10,7 +11,7 @@ class Pipeline;
 
 extern "C" {
 struct VwStageAndShader {
-    VkShaderStageFlagBits stage;
+    VwShaderStageFlagBits stage;
     vw::ShaderModule *module;
 };
 

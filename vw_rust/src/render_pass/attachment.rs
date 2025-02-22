@@ -1,33 +1,33 @@
-use crate::sys::bindings::{VkFormat, VkImageLayout, VwAttachment};
+use crate::sys::bindings::{VwAttachment, VwString, VwFormat, VwImageLayout};
 use std::ffi::CString;
 
 pub struct Attachment {
     id: CString,
-    format: VkFormat,
-    final_layout: VkImageLayout,
+    format: VwFormat,
+    final_layout: VwImageLayout,
 }
 
 pub struct AttachmentBuilder {
     id: CString,
-    format: VkFormat,
-    final_layout: VkImageLayout,
+    format: VwFormat,
+    final_layout: VwImageLayout,
 }
 
 impl AttachmentBuilder {
     pub fn new(id: &str) -> AttachmentBuilder {
         AttachmentBuilder {
             id: CString::new(id).unwrap(),
-            format: VkFormat::VK_FORMAT_B8G8R8A8_SRGB,
-            final_layout: VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED,
+            format: VwFormat::B8G8R8A8_SRGB,
+            final_layout: VwImageLayout::Undefined,
         }
     }
 
-    pub fn with_format(mut self, format: VkFormat) -> AttachmentBuilder {
+    pub fn with_format(mut self, format: VwFormat) -> AttachmentBuilder {
         self.format = format;
         self
     }
 
-    pub fn with_final_layout(mut self, layout: VkImageLayout) -> AttachmentBuilder {
+    pub fn with_final_layout(mut self, layout: VwImageLayout) -> AttachmentBuilder {
         self.final_layout = layout;
         self
     }
@@ -44,7 +44,7 @@ impl AttachmentBuilder {
 impl Attachment {
     pub fn to_raw(&self) -> VwAttachment {
         VwAttachment {
-            id: self.id.as_ptr(),
+            id: VwString{string: self.id.as_ptr()},
             format: self.format,
             finalLayout: self.final_layout,
         }

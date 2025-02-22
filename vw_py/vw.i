@@ -3,6 +3,17 @@
 %{
 #include <iostream>
 #include "bindings.h"
+
+template<typename T>
+auto *data_from_vector(std::vector<T> *x) {
+    return x->data();
+}
+
+template<typename T>
+std::vector<T> data_to_vector(const T *array, int number) {
+    return std::vector(array, array + number);
+}
+
 %}
 
 %include "std_string.i"
@@ -35,7 +46,7 @@ namespace std {
             array.push_back(x);
             build_c_array();
         }
-        
+
         void push(const std::vector<std::string> &array) {
             for(auto &x: array)
                 push(x);
@@ -73,6 +84,7 @@ namespace std {
 
 %apply int* OUTPUT {int *output_number}
 
+%include "Vulkan/enums.h"
 %include "Command/CommandPool.h"
 %include "Image/Framebuffer.h"
 %include "Image/Image.h"
@@ -93,9 +105,23 @@ namespace std {
 %include "Window/SDL_Initializer.h"
 %include "Window/Window.h"
 
-%extend VwAttachment {
-    ~VwAttachment() {
-        delete[] self->id;
-        delete self;
-    }
-}
+void free(void*);
+
+template<typename T>
+T *data_from_vector(std::vector<T> *x);
+
+typedef void* VkCommandBuffer;
+
+template<typename T>
+std::vector<T> data_to_vector(T *x, int number);
+
+%template(AttachmentSubpassVector) std::vector<VwAttachmentSubpass>;
+%template(SubpassVector) std::vector<vw::Subpass*>;
+%template(StageAndShaderVector) std::vector<VwStageAndShader>;
+%template(CommandBufferVector) std::vector<VkCommandBuffer>;
+
+%template(attachment_subpass_vector_data) data_from_vector<VwAttachmentSubpass>;
+%template(subpass_vector_data) data_from_vector<vw::Subpass*>;
+%template(stage_and_shader_vector_data) data_from_vector<VwStageAndShader>;
+
+%template(command_buffer_array_to_vector) data_to_vector<VkCommandBuffer>;

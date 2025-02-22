@@ -14,6 +14,7 @@
 #include "Synchronization/Semaphore.h"
 #include "utils/utils.h"
 #include "Vulkan/Device.h"
+#include "Vulkan/enums.h"
 #include "Vulkan/Instance.h"
 #include "Vulkan/PresentQueue.h"
 #include "Vulkan/Queue.h"

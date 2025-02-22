@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../Vulkan/enums.h"
 #include "Attachment.h"
 
 namespace vw {
@@ -9,7 +10,7 @@ class Subpass;
 extern "C" {
 struct VwAttachmentSubpass {
     VwAttachment attachment;
-    VkImageLayout currentLayout;
+    VwImageLayout currentLayout;
 };
 
 struct VwSubpassCreateArguments {
