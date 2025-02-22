@@ -6,16 +6,18 @@
 #include <VulkanWrapper/Vulkan/Instance.h>
 #include <VulkanWrapper/Vulkan/Surface.h>
 
-vw::Device *vw_create_device(vw::DeviceFinder *finder,
-                             VkQueueFlagBits queueFlags,
-                             const vw::Surface *surfaceToPresent) {
-    if (surfaceToPresent)
-        return new vw::Device(std::move(*finder)
-                                  .with_queue(vk::QueueFlags(queueFlags))
-                                  .with_presentation(surfaceToPresent->handle())
-                                  .build());
+vw::Device *vw_create_device(const VwDeviceCreateArguments *arguments) {
+    if (arguments->surface_to_present)
+        return new vw::Device(
+            std::move(*arguments->finder)
+                .with_queue(
+                    vk::QueueFlags(VkQueueFlags(arguments->queue_flags)))
+                .with_presentation(arguments->surface_to_present->handle())
+                .build());
     return new vw::Device{
-        std::move(*finder).with_queue(vk::QueueFlags(queueFlags)).build()};
+        std::move(*arguments->finder)
+            .with_queue(vk::QueueFlags(VkQueueFlags(arguments->queue_flags)))
+            .build()};
 }
 
 const vw::Queue *vw_device_graphics_queue(const vw::Device *device) {

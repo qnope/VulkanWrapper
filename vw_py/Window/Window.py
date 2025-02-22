@@ -1,5 +1,5 @@
-
 import bindings_vw_py as bindings
+from Vulkan import Surface, Swapchain
 
 class Window:
     def __init__(self, initializer, window):
@@ -12,7 +12,19 @@ class Window:
     def update(self):
         bindings.vw_update_window(self.window)
 
+    def get_required_extensions(self):
+        return bindings.vw_get_required_extensions_from_window(self.window)
+    
+    def create_surface(self, instance):
+        surface = bindings.vw_create_surface_from_window(self.window, instance.instance)
+        return Surface.Surface(instance, self, surface)
+    
+    def create_swapchain(self, device, surface):
+        swapchain = bindings.vw_create_swapchain_from_window(self.window, device.device, surface.surface)
+        return Swapchain.Swapchain(device, surface, swapchain)
+
     def __del__(self):
+        bindings.vw_destroy_window(self.window)
         print("Remove Window")
 
 class WindowBuilder:

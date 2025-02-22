@@ -19,6 +19,8 @@ namespace std {
     };
 
     struct CStringArray {
+        CStringArray() {}
+
         CStringArray(const std::vector<std::string> &x) : array{x}{
             build_c_array();
         }
@@ -31,7 +33,17 @@ namespace std {
 
         void push(const std::string &x) {
             array.push_back(x);
-            c_array.emplace_back(array.back().c_str());
+            build_c_array();
+        }
+        
+        void push(const std::vector<std::string> &array) {
+            for(auto &x: array)
+                push(x);
+        }
+
+        void push(const VwStringArray &array) {
+            for(int i = 0; i < array.number; ++i)
+                push(array.array[i].string);
         }
 
         void build_c_array() {

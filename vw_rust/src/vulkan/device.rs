@@ -1,5 +1,5 @@
 use crate::sys::bindings::{
-    self, vw_Device, vw_DeviceFinder, vw_device_graphics_queue, vw_device_present_queue,
+    self, vw_Device, vw_DeviceFinder, vw_device_graphics_queue, vw_device_present_queue, VwDeviceCreateArguments, VwQueueFlagBits
 };
 use crate::vulkan::instance::Instance;
 use crate::vulkan::surface::Surface;
@@ -10,7 +10,7 @@ use super::queue::Queue;
 pub struct DeviceFinder<'a> {
     _instance: &'a Instance,
     ptr: *mut vw_DeviceFinder,
-    queue: bindings::VkQueueFlagBits,
+    queue: VwQueueFlagBits,
     surface: Option<&'a Surface<'a>>,
 }
 
@@ -26,14 +26,14 @@ impl<'a> DeviceFinder<'a> {
             DeviceFinder {
                 _instance: &instance,
                 ptr: bindings::vw_find_gpu_from_instance(instance.as_ptr()),
-                queue: bindings::VkQueueFlagBits(0),
+                queue: VwQueueFlagBits(0),
                 surface: None,
             }
         }
     }
 
-    pub fn with_queue(mut self, queues: bindings::VkQueueFlagBits) -> DeviceFinder<'a> {
-        self.queue = self.queue | queues;
+    pub fn with_queue(mut self, queues: bindings::VwQueueFlagBits) -> DeviceFinder<'a> {
+        self.queue |= queues;
         self
     }
 
@@ -47,8 +47,13 @@ impl<'a> DeviceFinder<'a> {
             Some(surface) => surface.as_ptr(),
             None => 0 as *const bindings::vw_Surface,
         };
+        let arguments = VwDeviceCreateArguments{
+            finder: self.ptr,
+            queue_flags: self.queue,
+            surfaceToPresent: ptr_surface
+        };
         unsafe {
-            let ptr = bindings::vw_create_device(self.ptr, self.queue, ptr_surface);
+            let ptr = bindings::vw_create_device(&arguments);
             Device {
                 _instance: self._instance,
                 _surface: self.surface,

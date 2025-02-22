@@ -19,7 +19,7 @@ use vulkan_wrapper::render_pass::subpass::SubpassBuilder;
 use vulkan_wrapper::synchronization::fence::FenceBuilder;
 use vulkan_wrapper::synchronization::semaphore::SemaphoreBuilder;
 use vulkan_wrapper::sys::bindings::VkPipelineStageFlagBits;
-use vulkan_wrapper::sys::bindings::{VkImageLayout, VkQueueFlagBits, VkShaderStageFlagBits};
+use vulkan_wrapper::sys::bindings::{VkImageLayout, VwQueueFlagBits, VkShaderStageFlagBits};
 use vulkan_wrapper::vulkan::device::Device;
 use vulkan_wrapper::vulkan::instance::*;
 use vulkan_wrapper::vulkan::swapchain::Swapchain;
@@ -93,9 +93,9 @@ fn main() {
     let device = instance
         .find_gpu()
         .with_queue(
-            VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT
-                | VkQueueFlagBits::VK_QUEUE_COMPUTE_BIT
-                | VkQueueFlagBits::VK_QUEUE_TRANSFER_BIT,
+            VwQueueFlagBits::Compute
+                | VwQueueFlagBits::Graphics
+                | VwQueueFlagBits::Transfer,
         )
         .with_presentation(&surface)
         .build();
