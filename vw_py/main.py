@@ -1,6 +1,6 @@
 from Window import SDL_Initializer, Window
 from Vulkan import Device, Instance
-from Pipeline import ShaderModule
+from Pipeline import ShaderModule, PipelineLayout
 import bindings_vw_py as bindings
 
 initializer = SDL_Initializer.SDL_Initializer()
@@ -28,6 +28,8 @@ swapchain = window.create_swapchain(device, surface)
 
 vertex_shader = ShaderModule.from_spirv_file(device, "../Shaders/bin/vert.spv")
 fragment_shader = ShaderModule.from_spirv_file(device, "../Shaders/bin/frag.spv")
+
+pipeline_layout = PipelineLayout.PipelineLayoutBuilder(device).build()
 
 while not window.is_close_requested():
     window.update()
