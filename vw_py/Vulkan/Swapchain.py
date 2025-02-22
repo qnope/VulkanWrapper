@@ -24,5 +24,6 @@ class Swapchain:
     def images(self):
         images = bindings.vw_swapchain_get_images(self.swapchain)
         vector = bindings.swapchain_image_array_to_vector(images.images, images.size)
+        bindings.free(images.images)
         return [Image.Image(self, img) for img in vector]
         
