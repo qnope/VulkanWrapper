@@ -27,4 +27,8 @@ enum class VwShaderStageFlagBits {
 };
 
 enum class VwImageViewType { Type2D = VK_IMAGE_VIEW_TYPE_2D };
+
+enum class VwPipelineStageFlagBits {
+    TopOfPipe = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT
+};
 }

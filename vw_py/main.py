@@ -2,28 +2,10 @@ from Window import SDL_Initializer, Window
 from Vulkan import Device, Instance
 from Pipeline import ShaderModule, PipelineLayout, Pipeline
 from RenderPass import Attachment, Subpass, RenderPass
-from Command import CommandPool
+from Command import CommandPool, CommandBuffer
 from Image import Image, ImageView, Framebuffer
+from Synchronization import Fence, Semaphore
 import bindings_vw_py as bindings
-
-
-class ScopedGuard:
-    __resource = []
-
-    def __setattr__(self, name, value):
-        super().__setattr__(name, value)
-        if value is not None:
-            self.__resource.append((name, value))
-
-    def __enter__(self):
-        return self
-    
-    def __exit__(self, a, b, c):
-        while self.__resource:
-            (name, elem) = self.__resource.pop()
-            self.__setattr__(name, None)
-            del elem
-
 
 def create_image_views(device, swapchain):
     result = []
@@ -44,62 +26,88 @@ def create_framebuffers(device, render_pass, swapchain, image_views):
         result.append(framebuffer)
     return result
 
-with ScopedGuard() as app:
-    app.initializer = SDL_Initializer.SDL_Initializer()
+def record(cmd_buffer, framebuffer, pipeline, render_pass):
+    with CommandBuffer.CommandBufferRecorder(cmd_buffer) as recorder:
+        with recorder.begin_render_pass(render_pass, framebuffer) as render_pass_recorder:
+            with render_pass_recorder.bind_graphics_pipeline(pipeline) as pipeline_recorder:
+                pipeline_recorder.draw(3, 1, 0, 0)
 
-    app.window = Window.WindowBuilder(app.initializer)\
+def main():
+    initializer = SDL_Initializer.SDL_Initializer()
+
+    window = Window.WindowBuilder(initializer)\
         .sized(800, 600)\
         .with_title("From Python")\
         .build()
 
-    app.instance = Instance.InstanceBuilder().\
-        add_extensions(app.window.get_required_extensions()).\
+    instance = Instance.InstanceBuilder().\
+        add_extensions(window.get_required_extensions()).\
         set_debug_mode().\
         build()
 
-    app.surface = app.window.create_surface(app.instance)
+    surface = window.create_surface(instance)
 
-    app.device = app.instance.find_gpu().\
-        with_presentation(app.surface).\
+    device = instance.find_gpu().\
+        with_presentation(surface).\
         with_queue(bindings.VwQueueFlagBits_Graphics | \
                    bindings.VwQueueFlagBits_Compute | \
                    bindings.VwQueueFlagBits_Transfer).\
         build()
 
-    app.swapchain = app.window.create_swapchain(app.device, app.surface)
+    swapchain = window.create_swapchain(device, surface)
 
-    app.vertex_shader = ShaderModule.from_spirv_file(app.device, "../Shaders/bin/vert.spv")
-    app.fragment_shader = ShaderModule.from_spirv_file(app.device, "../Shaders/bin/frag.spv")
+    vertex_shader = ShaderModule.from_spirv_file(device, "../Shaders/bin/vert.spv")
+    fragment_shader = ShaderModule.from_spirv_file(device, "../Shaders/bin/frag.spv")
 
-    app.pipeline_layout = PipelineLayout.PipelineLayoutBuilder(app.device).build()
+    pipeline_layout = PipelineLayout.PipelineLayoutBuilder(device).build()
 
-    app.attachment = Attachment.AttachmentBuilder("COLOR").\
-        with_format(app.swapchain.format()).\
+    attachment = Attachment.AttachmentBuilder("COLOR").\
+        with_format(swapchain.format()).\
         with_final_layout(bindings.VwImageLayout_PresentSrcKHR).\
         build()
 
-    app.subpass = Subpass.SubpassBuilder().\
-        add_color_attachment(app.attachment, bindings.VwImageLayout_AttachmentOptimal).\
+    subpass = Subpass.SubpassBuilder().\
+        add_color_attachment(attachment, bindings.VwImageLayout_AttachmentOptimal).\
         build()
 
-    app.render_pass = RenderPass.RenderPassBuilder(app.device).\
-        add_subpass(app.subpass).\
+    render_pass = RenderPass.RenderPassBuilder(device).\
+        add_subpass(subpass).\
         build()
 
-    app.pipeline = Pipeline.GraphicsPipelineBuilder(app.device, app.render_pass).\
-        add_shader(bindings.VwShaderStageFlagBits_Vertex, app.vertex_shader).\
-        add_shader(bindings.VwShaderStageFlagBits_Fragment, app.fragment_shader).\
-        with_fixed_scissor(app.swapchain.width(), app.swapchain.height()).\
-        with_fixed_viewport(app.swapchain.width(), app.swapchain.height()).\
-        with_pipeline_layout(app.pipeline_layout).\
+    pipeline = Pipeline.GraphicsPipelineBuilder(device, render_pass).\
+        add_shader(bindings.VwShaderStageFlagBits_Vertex, vertex_shader).\
+        add_shader(bindings.VwShaderStageFlagBits_Fragment, fragment_shader).\
+        with_fixed_scissor(swapchain.width(), swapchain.height()).\
+        with_fixed_viewport(swapchain.width(), swapchain.height()).\
+        with_pipeline_layout(pipeline_layout).\
         add_color_attachment().\
         build()
 
-    app.command_pool = CommandPool.CommandPoolBuilder(app.device).build()
-    app.image_views = create_image_views(app.device, app.swapchain)
-    app.command_buffers = app.command_pool.allocate(len(app.image_views))
+    command_pool = CommandPool.CommandPoolBuilder(device).build()
+    image_views = create_image_views(device, swapchain)
+    command_buffers = command_pool.allocate(len(image_views))
 
-    app.framebuffers = create_framebuffers(app.device, app.render_pass, app.swapchain, app.image_views)
+    framebuffers = create_framebuffers(device, render_pass, swapchain, image_views)
+    
+    fence = Fence.FenceBuilder(device).build()
+    render_finished_semaphore = Semaphore.SemaphoreBuilder(device).build()
+    image_available_semaphore = Semaphore.SemaphoreBuilder(device).build()
+    
+    for (command_buffer, framebuffer) in zip(command_buffers, framebuffers):
+        record(command_buffer, framebuffer, pipeline, render_pass)
 
-    while not app.window.is_close_requested():
-        app.window.update()
+    while not window.is_close_requested():
+        window.update()
+        fence.wait()
+        fence.reset()
+
+        index = swapchain.acquire_next_image(image_available_semaphore)
+        wait_stage = bindings.VwPipelineStageFlagBits_TopOfPipe
+
+        device.graphics_queue().submit([command_buffers[index]], [wait_stage], [image_available_semaphore], [render_finished_semaphore], fence)
+        device.present_queue().present(swapchain, index, render_finished_semaphore)
+    
+    device.wait_idle()
+
+main()
+print("Finished")

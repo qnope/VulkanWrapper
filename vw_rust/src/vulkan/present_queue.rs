@@ -25,7 +25,7 @@ impl<'a> PresentQueue<'a> {
     ) {
         let arguments = VwPresentQueueArguments {
             swapchain: swapchain.as_ptr(),
-            image_index: image_index as u32,
+            image_index: image_index as i32,
             wait_semaphore: wait_semaphore.as_ptr(),
         };
         unsafe {

@@ -2,11 +2,17 @@
 %module bindings_vw_py
 %{
 #include <iostream>
+#include <vector>
 #include "bindings.h"
 
 template<typename T>
 auto *data_from_vector(std::vector<T> *x) {
     return x->data();
+}
+
+template<typename T>
+const T *data_from_vector_enum(std::vector<int> *x) {
+    return reinterpret_cast<T*>(x->data());
 }
 
 template<typename T>
@@ -86,6 +92,7 @@ namespace std {
 
 %include "Vulkan/enums.h"
 %include "Command/CommandPool.h"
+%include "Command/CommandBuffer.h"
 %include "Image/Framebuffer.h"
 %include "Image/Image.h"
 %include "Image/ImageView.h"
@@ -111,14 +118,22 @@ template<typename T>
 T *data_from_vector(std::vector<T> *x);
 
 typedef void* VkCommandBuffer;
+typedef void* VkSemaphore;
 
 template<typename T>
 std::vector<T> data_to_vector(T *x, int number);
 
+template<typename T>
+const T *data_from_vector_enum(std::vector<int> *x);
+
+%template(EnumVector) std::vector<int>;
+
+%template(VkHandleVector) std::vector<void*>;
+%template(vk_handle_vector_data) data_from_vector<void*>;
+
 %template(AttachmentSubpassVector) std::vector<VwAttachmentSubpass>;
 %template(SubpassVector) std::vector<vw::Subpass*>;
 %template(StageAndShaderVector) std::vector<VwStageAndShader>;
-%template(CommandBufferVector) std::vector<VkCommandBuffer>;
 %template(ImageVector) std::vector<vw::Image*>;
 %template(ImageViewVector) std::vector<vw::ImageView*>;
 
@@ -129,3 +144,5 @@ std::vector<T> data_to_vector(T *x, int number);
 
 %template(command_buffer_array_to_vector) data_to_vector<VkCommandBuffer>;
 %template(swapchain_image_array_to_vector) data_to_vector<vw::Image*>;
+
+%template(vw_pipeline_stage_flag_bits_vector_data) data_from_vector_enum<VwPipelineStageFlagBits>;

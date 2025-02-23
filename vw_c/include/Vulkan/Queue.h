@@ -1,5 +1,6 @@
 #pragma once
 
+#include "enums.h"
 #include <vulkan/vulkan.h>
 
 namespace vw {
@@ -11,13 +12,13 @@ class Semaphore;
 extern "C" {
 struct VwQueueSubmitArguments {
     const VkCommandBuffer *command_buffers;
-    uint32_t command_buffer_count;
-    const VkPipelineStageFlags *wait_stages;
-    uint32_t wait_stage_count;
+    unsigned command_buffer_count;
+    const VwPipelineStageFlagBits *wait_stages;
+    unsigned wait_stage_count;
     const VkSemaphore *wait_semaphores;
-    uint32_t wait_semaphore_count;
+    unsigned wait_semaphore_count;
     const VkSemaphore *signal_semaphores;
-    uint32_t signal_semaphores_count;
+    unsigned signal_semaphores_count;
     const vw::Fence *fence;
 };
 

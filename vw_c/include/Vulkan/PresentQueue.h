@@ -12,7 +12,7 @@ extern "C" {
 
 struct VwPresentQueueArguments {
     const vw::Swapchain *swapchain;
-    uint32_t image_index;
+    int image_index;
     const vw::Semaphore *wait_semaphore;
 };
 

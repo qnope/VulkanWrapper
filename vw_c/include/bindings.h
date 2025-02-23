@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Command/CommandBuffer.h"
 #include "Command/CommandPool.h"
 #include "Image/Framebuffer.h"
 #include "Image/Image.h"

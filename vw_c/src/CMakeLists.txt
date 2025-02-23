@@ -22,6 +22,7 @@ target_sources(VulkanWrapper_c PRIVATE
     Synchronization/Semaphore.cpp
 
     Command/CommandPool.cpp
+    Command/CommandBuffer.cpp
 
     Image/Framebuffer.cpp
     Image/ImageView.cpp

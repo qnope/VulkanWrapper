@@ -25,6 +25,7 @@ target_sources(VulkanWrapper_c PRIVATE
     Synchronization/Fence.h
 
     Command/CommandPool.h
+    Command/CommandBuffer.h
 
     Image/Framebuffer.h
     Image/ImageView.h

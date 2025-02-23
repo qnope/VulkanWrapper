@@ -21,6 +21,9 @@ class Swapchain:
     def format(self):
         return bindings.vw_get_swapchain_format(self.swapchain)
     
+    def acquire_next_image(self, semaphore):
+        return bindings.vw_swapchain_acquire_next_image(self.swapchain, semaphore.semaphore)
+    
     def images(self):
         images = bindings.vw_swapchain_get_images(self.swapchain)
         vector = bindings.swapchain_image_array_to_vector(images.images, images.size)

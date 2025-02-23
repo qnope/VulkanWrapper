@@ -30,7 +30,7 @@ VwSwapchainImageArray vw_swapchain_get_images(const vw::Swapchain *swapchain) {
     return array;
 }
 
-uint64_t vw_swapchain_acquire_next_image(const vw::Swapchain *swapchain,
+unsigned long long vw_swapchain_acquire_next_image(const vw::Swapchain *swapchain,
                                          const vw::Semaphore *semaphore) {
     return swapchain->acquire_next_image(*semaphore);
 }
