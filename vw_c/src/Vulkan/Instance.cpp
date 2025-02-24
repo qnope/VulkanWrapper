@@ -6,9 +6,8 @@
 vw::Instance *vw_create_instance(const VwInstanceCreateArguments *arguments) {
     static_assert(std::is_standard_layout_v<VwStringArray>);
 
-    std::span extensions_as_span(
-        reinterpret_cast<char const *const *>(arguments->extensions.array),
-        arguments->extensions.number);
+    std::span extensions_as_span(&arguments->extensions.array->string,
+                                 arguments->extensions.number);
 
     if (arguments->debug_mode)
         return new vw::Instance{vw::InstanceBuilder()
