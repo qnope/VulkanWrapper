@@ -1,12 +1,10 @@
 import bindings_vw_py as bindings
+from weakref import finalize
 
 class Subpass:
     def __init__(self, subpass):
         self.subpass = subpass
-
-    def __del__(self):
-        print("Remove Subpass")
-        bindings.vw_destroy_subpass(self.subpass)
+        finalize(self, bindings.vw_destroy_subpass, subpass)
 
 class SubpassBuilder:
     def __init__(self):

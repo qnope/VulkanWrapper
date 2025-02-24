@@ -1,14 +1,12 @@
 import bindings_vw_py as bindings
+from weakref import finalize
 
 class Framebuffer:
     def __init__(self, render_pass, image_views, framebuffer):
         self.render_pass = render_pass
         self.image_views = image_views
         self.framebuffer = framebuffer
-
-    def __del__(self):
-        print("Remove framebuffer")
-        bindings.vw_destroy_framebuffer(self.framebuffer)
+        finalize(self, bindings.vw_destroy_framebuffer, framebuffer)
 
 class FramebufferBuilder:
     def __init__(self, device, render_pass, width, height):

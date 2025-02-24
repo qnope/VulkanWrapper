@@ -1,13 +1,11 @@
 import bindings_vw_py as bindings
+from weakref import finalize
 
 class RenderPass:
     def __init__(self, device, render_pass):
         self.device = device
         self.render_pass = render_pass
-    
-    def __del__(self):
-        print("Destroy Render Pass")
-        bindings.vw_destroy_render_pass(self.render_pass)
+        finalize(self, bindings.vw_destroy_render_pass, render_pass)
 
 class RenderPassBuilder:
     def __init__(self, device):

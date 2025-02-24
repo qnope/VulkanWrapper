@@ -1,5 +1,5 @@
 import bindings_vw_py as bindings
-
+from weakref import finalize
 from Image import Image
 
 class Swapchain:
@@ -7,10 +7,7 @@ class Swapchain:
         self.device = device
         self.surface = surface
         self.swapchain = swapchain
-
-    def __del__(self):
-        print("Remove Swapchain")
-        bindings.vw_destroy_swapchain(self.swapchain)
+        finalize(self, bindings.vw_destroy_swapchain, swapchain)
 
     def width(self):
         return bindings.vw_get_swapchain_width(self.swapchain)

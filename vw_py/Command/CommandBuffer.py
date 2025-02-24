@@ -1,4 +1,5 @@
 import bindings_vw_py as bindings
+from weakref import finalize
 
 class PipelineBoundCommandBufferRecorder:
     def __init__(self, recorder):

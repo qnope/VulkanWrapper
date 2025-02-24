@@ -1,13 +1,11 @@
 import bindings_vw_py as bindings
+from weakref import finalize
 
 class ImageView:
     def __init__(self, image, image_view):
         self.image = image
         self.image_view = image_view
-
-    def __del__(self):
-        print("Remove Image View")
-        bindings.vw_destroy_image_view(self.image_view)
+        finalize(self, bindings.vw_destroy_image_view, image_view)
 
 class ImageViewBuilder:
     def __init__(self, device, image):

@@ -1,13 +1,11 @@
 import bindings_vw_py as bindings
+from weakref import finalize
 
 class Semaphore:
     def __init__(self, device, semaphore):
         self.device = device
         self.semaphore = semaphore
-
-    def __del__(self):
-        print("Remove Semaphore")
-        bindings.vw_destroy_semaphore(self.semaphore)
+        finalize(self, bindings.vw_destroy_semaphore, semaphore)
 
     def handle(self):
         return bindings.vw_semaphore_handle(self.semaphore)

@@ -1,10 +1,12 @@
 import bindings_vw_py as bindings
 from Vulkan import Surface, Swapchain
+from weakref import finalize
 
 class Window:
     def __init__(self, initializer, window):
         self.initializer = initializer
         self.window = window
+        finalize(self, bindings.vw_destroy_window, window)
 
     def is_close_requested(self):
         return bindings.vw_is_close_window_requested(self.window)
@@ -22,10 +24,6 @@ class Window:
     def create_swapchain(self, device, surface):
         swapchain = bindings.vw_create_swapchain_from_window(self.window, device.device, surface.surface)
         return Swapchain.Swapchain(device, surface, swapchain)
-
-    def __del__(self):
-        bindings.vw_destroy_window(self.window)
-        print("Remove Window")
 
 class WindowBuilder:
     def __init__(self, initializer):

@@ -1,13 +1,11 @@
 import bindings_vw_py as bindings
+from weakref import finalize
 
 class PipelineLayout:
     def __init__(self, device, pipeline_layout):
         self.device = device
         self.pipeline_layout = pipeline_layout
-
-    def __del__(self):
-        print("Remove Pipeline Layout")
-        bindings.vw_destroy_pipeline_layout(self.pipeline_layout)
+        finalize(self, bindings.vw_destroy_pipeline_layout, pipeline_layout)
 
 class PipelineLayoutBuilder:
     def __init__(self, device):

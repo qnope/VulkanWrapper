@@ -1,16 +1,14 @@
 import bindings_vw_py as bindings
 from Vulkan import DeviceFinder
+from weakref import finalize
 
 class Instance:
     def __init__(self, instance):
         self.instance = instance
+        finalize(self, bindings.vw_destroy_instance, instance)
 
     def find_gpu(self):
         return DeviceFinder.DeviceFinder(self, bindings.vw_find_gpu_from_instance(self.instance))
-
-    def __del__(self):
-        print("remove instance")
-        bindings.vw_destroy_instance(self.instance)
 
 class InstanceBuilder:
     extensions = bindings.CStringArray()

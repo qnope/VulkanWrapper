@@ -1,4 +1,5 @@
 import bindings_vw_py as bindings
+from weakref import finalize
 
 class Pipeline:
     def __init__(self, device, render_pass, pipeline_layout, pipeline):
@@ -6,10 +7,7 @@ class Pipeline:
         self.render_pass = render_pass
         self.pipeline_layout = pipeline_layout
         self.pipeline = pipeline
-
-    def __del__(self):
-        print("Destroy Pipeline")
-        bindings.vw_destroy_pipeline(self.pipeline)
+        finalize(self, bindings.vw_destroy_pipeline, pipeline)
 
 class GraphicsPipelineBuilder:
     def __init__(self, device, render_pass):
