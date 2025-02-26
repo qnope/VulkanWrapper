@@ -7,5 +7,5 @@ add_subdirectory(vw_c)
 add_subdirectory(vw_py)
 
 add_executable(Main main.cpp)
-target_link_libraries(Main PRIVATE VulkanWrapper)
-target_precompile_headers(Main REUSE_FROM VulkanWrapper)
+target_link_libraries(Main PRIVATE VulkanWrapper::VW)
+target_precompile_headers(Main REUSE_FROM VulkanWrapper::VW)

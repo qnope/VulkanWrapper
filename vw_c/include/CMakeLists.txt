@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
 
-target_sources(VulkanWrapper_c PRIVATE
+target_sources(VulkanWrapperWrapperLibrary PRIVATE
     Window/SDL_Initializer.h
     Window/Window.h
 

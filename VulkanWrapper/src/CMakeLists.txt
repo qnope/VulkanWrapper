@@ -1,4 +1,4 @@
-target_sources(VulkanWrapper PRIVATE
+target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Utils/exceptions.cpp
     VulkanWrapper/Window/SDL_Initializer.cpp
     VulkanWrapper/Window/Window.cpp

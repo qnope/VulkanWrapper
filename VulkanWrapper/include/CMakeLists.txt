@@ -1,4 +1,4 @@
-target_sources(VulkanWrapper PRIVATE
+target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/3rd_party.h
 
     VulkanWrapper/fwd.h

@@ -13,7 +13,7 @@ if(${APPLE})
 endif()
 
 set_property(TARGET bindings_vw_py PROPERTY SWIG_USE_TARGET_INCLUDE_DIRECTORIES TRUE)
-set_property(TARGET bindings_vw_py PROPERTY SWIG_DEPENDS VulkanWrapper_c)
+set_property(TARGET bindings_vw_py PROPERTY SWIG_DEPENDS VulkanWrapper::Wrapper)
 
-target_link_libraries(bindings_vw_py PRIVATE Python3::Python VulkanWrapper_c)
+target_link_libraries(bindings_vw_py PRIVATE Python3::Python VulkanWrapper::Wrapper)
 

@@ -1,12 +1,12 @@
-cmake_minimum_required(VERSION 3.25)
-
-add_library(VulkanWrapper_c SHARED)
+add_library(VulkanWrapperWrapperLibrary SHARED)
 
 add_subdirectory(src)
 add_subdirectory(include)
 
-target_include_directories(VulkanWrapper_c PUBLIC include)
-target_link_libraries(VulkanWrapper_c PUBLIC VulkanWrapper)
-target_precompile_headers(VulkanWrapper_c REUSE_FROM VulkanWrapper)
+target_include_directories(VulkanWrapperWrapperLibrary PUBLIC include)
+target_link_libraries(VulkanWrapperWrapperLibrary PUBLIC VulkanWrapper::VW)
+target_precompile_headers(VulkanWrapperWrapperLibrary REUSE_FROM VulkanWrapper::VW)
 
-install(TARGETS VulkanWrapper_c DESTINATION .)
+install(TARGETS VulkanWrapperWrapperLibrary DESTINATION .)
+
+add_library(VulkanWrapper::Wrapper ALIAS VulkanWrapperWrapperLibrary)
