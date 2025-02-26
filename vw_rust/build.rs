@@ -1,10 +1,20 @@
 use std::env;
 use std::path::PathBuf;
+use std::fs::copy;
 
 fn main() {
-    let dst = cmake::Config::new("..").build();
+    let out_dir = env::var("OUT_DIR").unwrap();
 
-    println!("cargo:rustc-link-search=native={}", dst.display());
+    let core_library = String::from("libVulkanWrapperCoreLibrary.dylib");
+    let wrapper_library = String::from("libVulkanWrapperWrapperLibrary.dylib");
+
+    let deps_core = format!("{}/../../../deps/{}", out_dir, core_library);
+    let deps_wrapper = format!("{}/../../../deps/{}", out_dir, wrapper_library);
+
+    copy(core_library, deps_core).unwrap();
+    copy(wrapper_library, deps_wrapper).unwrap();
+
+    println!("cargo:rustc-link-search=native={}", ".");
     println!(
         "cargo:rustc-link-search=native={}",
         env::var("DYLD_LIBRARY_PATH").unwrap()
@@ -25,7 +35,7 @@ fn main() {
         .expect("Unable to generate bindings");
 
     // Write the bindings to the $OUT_DIR/bindings.rs file.
-    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let out_path = PathBuf::from(out_dir);
     bindings
         .write_to_file(out_path.join("bindings.rs"))
         .expect("Couldn't write bindings!");

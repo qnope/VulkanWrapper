@@ -17,6 +17,7 @@ target_link_libraries(VulkanWrapperCoreLibrary PUBLIC SDL3::SDL3 Vulkan::Vulkan 
 
 target_precompile_headers(VulkanWrapperCoreLibrary PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/VulkanWrapper/3rd_party.h)
 
-install(TARGETS VulkanWrapperCoreLibrary DESTINATION .)
-
 add_library(VulkanWrapper::VW ALIAS VulkanWrapperCoreLibrary)
+
+add_custom_command(TARGET VulkanWrapper::VW POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:VulkanWrapper::VW> ${CMAKE_SOURCE_DIR}/vw_rust/)
