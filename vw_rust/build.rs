@@ -9,7 +9,7 @@ fn main() {
         "cargo:rustc-link-search=native={}",
         env::var("DYLD_LIBRARY_PATH").unwrap()
     );
-    println!("cargo:rustc-link-lib=dylib=VulkanWrapper_cd");
+    println!("cargo:rustc-link-lib=dylib=VulkanWrapper_c");
     println!("cargo:rustc-link-lib=dylib=vulkan");
     println!("cargo::rerun-if-changed=../vw_c");
 
