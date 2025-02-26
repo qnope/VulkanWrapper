@@ -11,8 +11,8 @@ fn main() {
     let deps_core = format!("{}/../../../deps/{}", out_dir, core_library);
     let deps_wrapper = format!("{}/../../../deps/{}", out_dir, wrapper_library);
 
-    copy(core_library, deps_core).unwrap();
-    copy(wrapper_library, deps_wrapper).unwrap();
+    copy(core_library.clone(), deps_core).unwrap();
+    copy(wrapper_library.clone(), deps_wrapper).unwrap();
 
     println!("cargo:rustc-link-search=native={}", ".");
     println!(
@@ -21,7 +21,8 @@ fn main() {
     );
     println!("cargo:rustc-link-lib=dylib=VulkanWrapperWrapperLibrary");
     println!("cargo:rustc-link-lib=dylib=vulkan");
-    println!("cargo::rerun-if-changed=../vw_c");
+    println!("cargo::rerun-if-changed={}", core_library);
+    println!("cargo::rerun-if-changed={}", wrapper_library);
 
     let bindings = bindgen::Builder::default()
         .header("../vw_c/include/bindings.h")
