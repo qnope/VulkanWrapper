@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.25)
 
-find_package(Python3 COMPONENTS Development)
-find_package(SWIG 4.3 COMPONENTS python)
+find_package(Python3 REQUIRED COMPONENTS Development)
+find_package(SWIG 4.3 REQUIRED COMPONENTS python)
 
 include(UseSWIG)
 

@@ -90,8 +90,10 @@ RenderPass RenderPassBuilder::build() && {
 std::vector<Attachment> RenderPassBuilder::createAttachments() const noexcept {
     std::set<Attachment> attachments;
 
-    for (const auto &subpass : m_subpasses | std::views::values)
-        attachments.insert_range(subpass.colorReferences | std::views::keys);
+    for (const auto &subpass : m_subpasses | std::views::values) {
+        for (auto attachment : subpass.colorReferences | std::views::keys)
+            attachments.insert(attachment);
+    }
 
     return attachments | to<std::vector>;
 }

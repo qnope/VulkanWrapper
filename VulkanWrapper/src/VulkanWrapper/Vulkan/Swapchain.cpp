@@ -44,7 +44,7 @@ SwapchainBuilder::SwapchainBuilder(const Device &device, vk::SurfaceKHR surface,
         .setImageExtent(vk::Extent2D(width, height))
         .setImageColorSpace(vk::ColorSpaceKHR::eSrgbNonlinear)
         .setImageFormat(vk::Format::eB8G8R8A8Srgb)
-        .setPresentMode(vk::PresentModeKHR::eMailbox)
+        .setPresentMode(vk::PresentModeKHR::eFifo)
         .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
         .setImageArrayLayers(1)
         .setImageSharingMode(vk::SharingMode::eExclusive)

@@ -10,7 +10,10 @@
 namespace vw {
 
 DeviceFinder::DeviceFinder(std::span<PhysicalDevice> physicalDevices) noexcept {
+    std::cout << physicalDevices.size() << std::endl;
     for (auto &device : physicalDevices) {
+        std::cout << "Found: " << device.device().getProperties().deviceName
+                  << std::endl;
         PhysicalDeviceInformation information{device};
         auto properties = device.queueFamilyProperties();
         for (const auto &property : properties) {
@@ -100,7 +103,11 @@ Device DeviceFinder::build() && {
         *std::ranges::max_element(m_physicalDevicesInformation, std::less<>{},
                                   &PhysicalDeviceInformation::device);
 
-    information.extensions.push_back("VK_KHR_portability_subset");
+    if (std::ranges::find(information.availableExtensions,
+                          "VK_KHR_portability_subset") !=
+        information.availableExtensions.end())
+        information.extensions.push_back("VK_KHR_portability_subset");
+
     information.extensions.push_back("VK_KHR_synchronization2");
     vk::DeviceCreateInfo info;
     std::vector<vk::DeviceQueueCreateInfo> queueInfos;
@@ -142,8 +149,6 @@ Device DeviceFinder::build() && {
         throw DeviceCreationException{std::source_location::current()};
 
     std::vector<Queue> queues;
-
-    std::map<uint32_t, int> indicesQueue;
 
     for (auto [familyIndex, queueCount] : information.numberOfQueuesToCreate) {
         for (int i = 0; i < queueCount; ++i) {

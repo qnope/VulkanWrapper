@@ -32,7 +32,8 @@ InstanceBuilder &&InstanceBuilder::addExtension(const char *extension) && {
 
 InstanceBuilder &&
 InstanceBuilder::addExtensions(std::span<char const *const> extensions) && {
-    m_extensions.append_range(extensions);
+    for (auto extension : extensions)
+        m_extensions.push_back(extension);
     return std::move(*this);
 }
 
