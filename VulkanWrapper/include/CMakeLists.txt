@@ -37,4 +37,7 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Synchronization/Semaphore.h
 
     VulkanWrapper/Descriptors/Vertex.h
+
+    VulkanWrapper/Memory/Allocator.h
+    VulkanWrapper/Memory/Buffer.h
 )

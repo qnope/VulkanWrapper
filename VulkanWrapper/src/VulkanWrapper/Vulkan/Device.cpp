@@ -18,4 +18,6 @@ const PresentQueue &Device::presentQueue() const { return *m_presentQueue; }
 
 void Device::wait_idle() const { handle().waitIdle(); }
 
+vk::PhysicalDevice Device::physical_device() const { return m_physicalDevice; }
+
 } // namespace vw

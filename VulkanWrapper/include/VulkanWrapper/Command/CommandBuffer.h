@@ -1,6 +1,7 @@
 #pragma once
 
 #include "VulkanWrapper/Image/Framebuffer.h"
+#include "VulkanWrapper/Memory/Buffer.h"
 #include "VulkanWrapper/RenderPass/RenderPass.h"
 
 namespace vw {
@@ -9,6 +10,15 @@ class PipelineBoundCommandBufferRecorder {
     friend class RenderPassCommandBufferRecorder;
 
   public:
+    template <typename T, bool HV>
+    PipelineBoundCommandBufferRecorder &
+    bind_vertex_buffer(int binding, const Buffer<T, HV> &buffer) {
+        auto handle = buffer.handle();
+        vk::DeviceSize offset = 0;
+        m_commandBuffer.bindVertexBuffers(binding, handle, offset);
+        return *this;
+    }
+
     void draw(uint32_t numberVertex, uint32_t numberInstance,
               uint32_t firstVertex, uint32_t firstInstance);
 

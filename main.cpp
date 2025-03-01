@@ -1,6 +1,7 @@
 #include <VulkanWrapper/Command/CommandBuffer.h>
 #include <VulkanWrapper/Command/CommandPool.h>
 #include <VulkanWrapper/Image/Framebuffer.h>
+#include <VulkanWrapper/Memory/Allocator.h>
 #include <VulkanWrapper/Pipeline/Pipeline.h>
 #include <VulkanWrapper/Pipeline/PipelineLayout.h>
 #include <VulkanWrapper/Pipeline/ShaderModule.h>
@@ -53,15 +54,22 @@ createFramebuffers(vw::Device &device, const vw::RenderPass &renderPass,
 
 void record(vk::CommandBuffer commandBuffer, vk::Extent2D extent,
             const vw::Framebuffer &framebuffer, const vw::Pipeline &pipeline,
-            const vw::RenderPass &renderPass) {
+            const vw::RenderPass &renderPass,
+            const vw::Buffer<vw::ColoredVertex2D, true> &buffer) {
     vw::CommandBufferRecorder(commandBuffer)
         .begin_render_pass(renderPass, framebuffer)
         .bind_graphics_pipeline(pipeline)
+        .bind_vertex_buffer(0, buffer)
         .draw(3, 1, 0, 0);
 }
 
 int main() {
     try {
+        const std::vector<vw::ColoredVertex2D> vertices = {
+            {{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
+            {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+            {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}};
+
         vw::SDL_Initializer initializer;
         vw::Window window = vw::WindowBuilder(initializer)
                                 .with_title("Coucou")
@@ -83,6 +91,14 @@ int main() {
                           .with_presentation(surface.handle())
                           .with_synchronization_2()
                           .build();
+
+        auto allocator = vw::AllocatorBuilder(instance, device).build();
+
+        auto vertex_buffer =
+            allocator.allocate_vertex_buffer<vw::ColoredVertex2D, true>(
+                vertices.size());
+
+        vertex_buffer.copy(vertices);
 
         auto swapchain = window.create_swapchain(device, surface.handle());
 
@@ -133,7 +149,8 @@ int main() {
 
         for (auto [framebuffer, commandBuffer] :
              std::views::zip(framebuffers, commandBuffers))
-            record(commandBuffer, extent, framebuffer, pipeline, renderPass);
+            record(commandBuffer, extent, framebuffer, pipeline, renderPass,
+                   vertex_buffer);
 
         auto fence = vw::FenceBuilder(device).build();
         auto renderFinishedSemaphore = vw::SemaphoreBuilder(device).build();

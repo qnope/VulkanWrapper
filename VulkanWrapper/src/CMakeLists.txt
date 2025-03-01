@@ -29,4 +29,8 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
 
     VulkanWrapper/Synchronization/Fence.cpp
     VulkanWrapper/Synchronization/Semaphore.cpp
+
+    VulkanWrapper/Memory/vma.cpp
+    VulkanWrapper/Memory/Allocator.cpp
+    VulkanWrapper/Memory/Buffer.cpp
 )

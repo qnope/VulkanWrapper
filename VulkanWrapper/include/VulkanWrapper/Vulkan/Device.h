@@ -16,6 +16,7 @@ class Device : public ObjectWithUniqueHandle<vk::UniqueDevice> {
     const Queue &graphicsQueue() const;
     const PresentQueue &presentQueue() const;
     void wait_idle() const;
+    vk::PhysicalDevice physical_device() const;
 
   private:
     Device(vk::UniqueDevice device, vk::PhysicalDevice physicalDevice,

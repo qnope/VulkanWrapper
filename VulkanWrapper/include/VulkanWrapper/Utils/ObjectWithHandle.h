@@ -1,8 +1,7 @@
 #pragma once
 
 namespace vw {
-template <typename UniqueHandle, typename... Other>
-class ObjectWithUniqueHandle {
+template <typename UniqueHandle> class ObjectWithUniqueHandle {
   public:
     ObjectWithUniqueHandle(UniqueHandle handle) noexcept
         : m_handle{std::move(handle)} {}
@@ -13,25 +12,15 @@ class ObjectWithUniqueHandle {
     UniqueHandle m_handle;
 };
 
-template <typename UniqueHandle, typename Handle>
-class ObjectWithUniqueHandle<UniqueHandle, Handle> {
+template <typename Handle> class ObjectWithHandle {
   public:
-    ObjectWithUniqueHandle(UniqueHandle handle) noexcept
-        : m_handle{std::move(handle)} {}
+    ObjectWithHandle(Handle handle)
+        : m_handle{handle} {}
 
-    ObjectWithUniqueHandle(Handle handle) noexcept
-        : m_handle{std::move(handle)} {}
-
-    auto handle() const noexcept {
-        auto getter =
-            overloaded{[](const Handle &handle) { return handle; },
-                       [](const UniqueHandle &handle) { return *handle; }};
-
-        return std::visit(getter, m_handle);
-    }
+    auto handle() const noexcept { return m_handle; }
 
   private:
-    std::variant<UniqueHandle, Handle> m_handle;
+    Handle m_handle;
 };
 
 } // namespace vw

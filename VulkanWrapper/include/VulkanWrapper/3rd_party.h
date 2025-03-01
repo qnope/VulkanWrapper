@@ -17,7 +17,6 @@
 #include <set>
 #include <variant>
 #include <vector>
-#include <vk_mem_alloc.h>
 #include <vulkan/vulkan.hpp>
 
 template <typename... Fs> struct overloaded : Fs... {
