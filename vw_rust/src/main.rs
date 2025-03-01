@@ -95,6 +95,7 @@ fn main() {
             VwQueueFlagBits::Compute | VwQueueFlagBits::Graphics | VwQueueFlagBits::Transfer,
         )
         .with_presentation(&surface)
+        .with_synchronization_2()
         .build();
 
     let swapchain = window.create_swapchain(&device, &surface);
