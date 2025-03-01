@@ -81,6 +81,7 @@ int main() {
                                       vk::QueueFlagBits::eCompute |
                                       vk::QueueFlagBits::eTransfer)
                           .with_presentation(surface.handle())
+                          .with_synchronization_2()
                           .build();
 
         auto swapchain = window.create_swapchain(device, surface.handle());

@@ -51,6 +51,7 @@ device = instance.find_gpu().\
     with_queue(bindings.VwQueueFlagBits_Graphics | \
                bindings.VwQueueFlagBits_Compute | \
                bindings.VwQueueFlagBits_Transfer).\
+    with_synchronization_2().\
     build()
 
 swapchain = window.create_swapchain(device, surface)

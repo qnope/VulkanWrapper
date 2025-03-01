@@ -8,12 +8,12 @@
 
 vw::Device *vw_create_device(const VwDeviceCreateArguments *arguments) {
     if (arguments->surface_to_present)
-        return new vw::Device(
-            std::move(*arguments->finder)
-                .with_queue(
-                    vk::QueueFlags(VkQueueFlags(arguments->queue_flags)))
-                .with_presentation(arguments->surface_to_present->handle())
-                .build());
+        std::move(*arguments->finder)
+            .with_presentation(arguments->surface_to_present->handle());
+
+    if (arguments->with_synchronization_2)
+        std::move(*arguments->finder).with_synchronization_2();
+
     return new vw::Device{
         std::move(*arguments->finder)
             .with_queue(vk::QueueFlags(VkQueueFlags(arguments->queue_flags)))

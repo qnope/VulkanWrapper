@@ -87,12 +87,35 @@ DeviceFinder::with_presentation(vk::SurfaceKHR surface) && noexcept {
     return std::move(*this);
 }
 
+DeviceFinder &&DeviceFinder::with_synchronization_2() && noexcept {
+    remove_device_not_supporting_extension(
+        VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
+
+    for (auto &information : m_physicalDevicesInformation)
+        information.extensions.push_back(
+            VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
+
+    m_synchronisation_2_enabled.setSynchronization2(true);
+    m_features.setPNext(&m_synchronisation_2_enabled);
+    return std::move(*this);
+}
+
 std::optional<PhysicalDevice> DeviceFinder::get() && noexcept {
     if (m_physicalDevicesInformation.empty())
         return {};
     return std::ranges::max_element(m_physicalDevicesInformation, std::less<>{},
                                     &PhysicalDeviceInformation::device)
         ->device;
+}
+
+void DeviceFinder::remove_device_not_supporting_extension(
+    const char *extension) {
+    auto need_to_remove =
+        [extension](const PhysicalDeviceInformation &information) {
+            return information.availableExtensions.find(extension) ==
+                   information.availableExtensions.end();
+        };
+    std::erase_if(m_physicalDevicesInformation, need_to_remove);
 }
 
 Device DeviceFinder::build() && {
@@ -108,7 +131,6 @@ Device DeviceFinder::build() && {
         information.availableExtensions.end())
         information.extensions.push_back("VK_KHR_portability_subset");
 
-    information.extensions.push_back("VK_KHR_synchronization2");
     vk::DeviceCreateInfo info;
     std::vector<vk::DeviceQueueCreateInfo> queueInfos;
 
@@ -138,9 +160,7 @@ Device DeviceFinder::build() && {
     info.setQueueCreateInfos(queueInfos);
     info.setPEnabledExtensionNames(information.extensions);
 
-    vk::PhysicalDeviceSynchronization2Features synchronisationEnabled(true);
-    vk::PhysicalDeviceFeatures2 features({}, &synchronisationEnabled);
-    info.setPNext(&features);
+    info.setPNext(&m_features);
 
     auto [result, device] =
         information.device.device().createDeviceUnique(info);

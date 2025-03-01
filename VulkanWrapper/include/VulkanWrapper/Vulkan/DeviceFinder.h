@@ -13,9 +13,13 @@ class DeviceFinder {
 
     DeviceFinder &&with_queue(vk::QueueFlags queueFlags) && noexcept;
     DeviceFinder &&with_presentation(vk::SurfaceKHR surface) && noexcept;
+    DeviceFinder &&with_synchronization_2() && noexcept;
 
     Device build() &&;
     std::optional<PhysicalDevice> get() && noexcept;
+
+  private:
+    void remove_device_not_supporting_extension(const char *extension);
 
   private:
     struct QueueFamilyInformation {
@@ -33,5 +37,8 @@ class DeviceFinder {
         std::vector<const char *> extensions;
     };
     std::vector<PhysicalDeviceInformation> m_physicalDevicesInformation;
+
+    vk::PhysicalDeviceFeatures2 m_features;
+    vk::PhysicalDeviceSynchronization2Features m_synchronisation_2_enabled;
 };
 } // namespace vw

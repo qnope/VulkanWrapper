@@ -16,6 +16,7 @@ struct VwDeviceCreateArguments {
     vw::DeviceFinder *finder;
     VwQueueFlagBits queue_flags;
     const vw::Surface *surface_to_present;
+    bool with_synchronization_2;
 };
 
 vw::Device *vw_create_device(const VwDeviceCreateArguments *arguments);
