@@ -1,5 +1,6 @@
 #pragma once
 
+#include "VulkanWrapper/Descriptors/Vertex.h"
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Utils/exceptions.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
@@ -29,6 +30,22 @@ class GraphicsPipelineBuilder {
     GraphicsPipelineBuilder &&with_fixed_scissor(int width, int height) &&;
 
     GraphicsPipelineBuilder &&add_color_attachment() &&;
+
+    template <Vertex V> GraphicsPipelineBuilder &&add_vertex_binding() && {
+        const auto binding = m_input_binding_descriptions.size();
+        const auto location = [this] {
+            if (m_input_attribute_descriptions.empty())
+                return 0u;
+            return static_cast<unsigned>(
+                m_input_attribute_descriptions.back().location + 1);
+        }();
+
+        m_input_binding_descriptions.push_back(V::binding_description(binding));
+
+        for (auto attribute : V::attribute_descriptions(binding, location))
+            m_input_attribute_descriptions.push_back(attribute);
+        return std::move(*this);
+    }
 
     GraphicsPipelineBuilder &&
     with_pipeline_layout(const PipelineLayout &pipelineLayout) &&;
@@ -69,6 +86,9 @@ class GraphicsPipelineBuilder {
     std::optional<vk::Rect2D> m_scissor;
     std::vector<vk::PipelineColorBlendAttachmentState> m_colorAttachmentStates;
 
+    std::vector<vk::VertexInputBindingDescription> m_input_binding_descriptions;
+    std::vector<vk::VertexInputAttributeDescription>
+        m_input_attribute_descriptions;
     const PipelineLayout *m_pipelineLayout;
 };
 } // namespace vw

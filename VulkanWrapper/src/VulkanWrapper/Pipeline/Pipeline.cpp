@@ -110,7 +110,9 @@ GraphicsPipelineBuilder::createDynamicStateInfo() const noexcept {
 
 vk::PipelineVertexInputStateCreateInfo
 GraphicsPipelineBuilder::createVertexInputStateInfo() const noexcept {
-    return vk::PipelineVertexInputStateCreateInfo();
+    return vk::PipelineVertexInputStateCreateInfo()
+        .setVertexAttributeDescriptions(m_input_attribute_descriptions)
+        .setVertexBindingDescriptions(m_input_binding_descriptions);
 }
 
 vk::PipelineInputAssemblyStateCreateInfo

@@ -35,4 +35,6 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
 
     VulkanWrapper/Synchronization/Fence.h
     VulkanWrapper/Synchronization/Semaphore.h
+
+    VulkanWrapper/Descriptors/Vertex.h
 )

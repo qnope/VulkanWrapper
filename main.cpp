@@ -111,6 +111,7 @@ int main() {
 
         auto pipeline =
             vw::GraphicsPipelineBuilder(device, renderPass)
+                .add_vertex_binding<vw::ColoredVertex2D>()
                 .add_shader(vk::ShaderStageFlagBits::eVertex,
                             std::move(vertexShader))
                 .add_shader(vk::ShaderStageFlagBits::eFragment,
