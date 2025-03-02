@@ -55,7 +55,8 @@ createFramebuffers(vw::Device &device, const vw::RenderPass &renderPass,
 void record(vk::CommandBuffer commandBuffer, vk::Extent2D extent,
             const vw::Framebuffer &framebuffer, const vw::Pipeline &pipeline,
             const vw::RenderPass &renderPass,
-            const vw::Buffer<vw::ColoredVertex2D, true> &buffer) {
+            const vw::Buffer<vw::ColoredVertex2D, true, vw::VertexBufferUsage>
+                &buffer) {
     vw::CommandBufferRecorder(commandBuffer)
         .begin_render_pass(renderPass, framebuffer)
         .bind_graphics_pipeline(pipeline)

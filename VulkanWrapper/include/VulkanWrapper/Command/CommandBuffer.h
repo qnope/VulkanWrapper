@@ -10,9 +10,12 @@ class PipelineBoundCommandBufferRecorder {
     friend class RenderPassCommandBufferRecorder;
 
   public:
-    template <typename T, bool HV>
+    template <typename T, bool HV, VkBufferUsageFlags Usage>
     PipelineBoundCommandBufferRecorder &
-    bind_vertex_buffer(int binding, const Buffer<T, HV> &buffer) {
+    bind_vertex_buffer(int binding, const Buffer<T, HV, Usage> &buffer) {
+        static_assert((Usage & VK_BUFFER_USAGE_VERTEX_BUFFER_BIT) ==
+                          VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                      "Buffer must be a Vertex Buffer");
         auto handle = buffer.handle();
         vk::DeviceSize offset = 0;
         m_commandBuffer.bindVertexBuffers(binding, handle, offset);

@@ -6,24 +6,26 @@
 namespace vw {
 class Fence : public ObjectWithUniqueHandle<vk::UniqueFence> {
     friend class FenceBuilder;
+    friend class Queue;
 
   public:
-    Fence(const Fence &) = delete;
-    Fence(Fence &&) = default;
     void wait() const;
     void reset() const;
 
     ~Fence();
 
   private:
+    // The fence is bound to the Queue
     Fence(const Device &device, vk::UniqueFence fence);
+    Fence(const Fence &) = delete;
+    Fence(Fence &&) = default;
 
   private:
     const Device *m_device;
 };
 
 class FenceBuilder {
-  public:
+    friend class Queue;
     FenceBuilder(const Device &device);
     Fence build() &&;
 

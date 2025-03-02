@@ -30,7 +30,5 @@ class Fence;
 
 class Allocator;
 
-template <typename T, bool HostVisible> class Buffer;
-
 enum class QueueType;
 } // namespace vw

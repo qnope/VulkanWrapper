@@ -26,7 +26,8 @@ class BufferBase : public ObjectWithHandle<vk::Buffer> {
     VmaAllocation m_allocation;
 };
 
-template <typename T, bool HostVisible> class Buffer : public BufferBase {
+template <typename T, bool HostVisible, VkBufferUsageFlags flags>
+class Buffer : public BufferBase {
   public:
     Buffer(BufferBase &&bufferBase)
         : BufferBase(std::move(bufferBase)) {}

@@ -6,8 +6,8 @@
 #include <VulkanWrapper/Synchronization/Semaphore.h>
 #include <VulkanWrapper/Vulkan/Queue.h>
 
-vw::FenceAndLivingPools *
-vw_queue_submit(vw::Queue *queue, const VwQueueSubmitArguments *arguments) {
+vw::Fence *vw_queue_submit(vw::Queue *queue,
+                           const VwQueueSubmitArguments *arguments) {
     static_assert(std::is_standard_layout_v<vk::CommandBuffer>);
     static_assert(std::is_standard_layout_v<vk::PipelineStageFlagBits>);
 
@@ -27,6 +27,6 @@ vw_queue_submit(vw::Queue *queue, const VwQueueSubmitArguments *arguments) {
         reinterpret_cast<const vk::Semaphore *>(arguments->signal_semaphores),
         arguments->signal_semaphores_count};
 
-    return new vw::FenceAndLivingPools{
+    return new vw::Fence{
         queue->submit(wait_stages, wait_semaphores, signal_semaphores)};
 }

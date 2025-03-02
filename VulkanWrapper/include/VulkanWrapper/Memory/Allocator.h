@@ -8,18 +8,23 @@
 namespace vw {
 struct AllocatorImpl;
 
+constexpr VkBufferUsageFlags VertexBufferUsage =
+    VkBufferUsageFlags{vk::BufferUsageFlagBits::eVertexBuffer |
+                       vk::BufferUsageFlagBits::eTransferDst};
+
 class Allocator : public ObjectWithHandle<VmaAllocator> {
   public:
     Allocator(VmaAllocator allocator);
 
     template <typename T, bool HostVisible>
-    Buffer<T, HostVisible> allocate_vertex_buffer(uint64_t size) {
+    Buffer<T, HostVisible, VertexBufferUsage>
+    allocate_vertex_buffer(uint64_t size) {
         auto usage =
             vk::BufferUsageFlags(vk::BufferUsageFlagBits::eVertexBuffer);
         if constexpr (!HostVisible) {
             usage |= vk::BufferUsageFlagBits::eTransferDst;
         }
-        return Buffer<T, HostVisible>{
+        return Buffer<T, HostVisible, VertexBufferUsage>{
             allocate_buffer(size * sizeof(T), HostVisible,
                             vk::BufferUsageFlagBits::eVertexBuffer,
                             vk::SharingMode::eExclusive)};
