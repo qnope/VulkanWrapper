@@ -7,6 +7,7 @@ namespace vw {
 class Fence;
 class Queue;
 class Semaphore;
+struct FenceAndLivingPools;
 } // namespace vw
 
 extern "C" {
@@ -19,9 +20,8 @@ struct VwQueueSubmitArguments {
     unsigned wait_semaphore_count;
     const VkSemaphore *signal_semaphores;
     unsigned signal_semaphores_count;
-    const vw::Fence *fence;
 };
 
-void vw_queue_submit(const vw::Queue *queue,
-                     const VwQueueSubmitArguments *arguments);
+vw::FenceAndLivingPools *
+vw_queue_submit(vw::Queue *queue, const VwQueueSubmitArguments *arguments);
 }

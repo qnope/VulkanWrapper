@@ -6,6 +6,9 @@ template <typename UniqueHandle> class ObjectWithUniqueHandle {
     ObjectWithUniqueHandle(UniqueHandle handle) noexcept
         : m_handle{std::move(handle)} {}
 
+    ObjectWithUniqueHandle(const ObjectWithUniqueHandle &) = delete;
+    ObjectWithUniqueHandle(ObjectWithUniqueHandle &&) noexcept = default;
+
     auto handle() const noexcept { return *m_handle; }
 
   private:

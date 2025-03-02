@@ -2,11 +2,12 @@
 
 #include <span>
 #include <type_traits>
+#include <VulkanWrapper/Synchronization/Fence.h>
 #include <VulkanWrapper/Synchronization/Semaphore.h>
 #include <VulkanWrapper/Vulkan/Queue.h>
 
-void vw_queue_submit(const vw::Queue *queue,
-                     const VwQueueSubmitArguments *arguments) {
+vw::FenceAndLivingPools *
+vw_queue_submit(vw::Queue *queue, const VwQueueSubmitArguments *arguments) {
     static_assert(std::is_standard_layout_v<vk::CommandBuffer>);
     static_assert(std::is_standard_layout_v<vk::PipelineStageFlagBits>);
 
@@ -26,6 +27,6 @@ void vw_queue_submit(const vw::Queue *queue,
         reinterpret_cast<const vk::Semaphore *>(arguments->signal_semaphores),
         arguments->signal_semaphores_count};
 
-    queue->submit(command_buffers, wait_stages, wait_semaphores,
-                  signal_semaphores, arguments->fence);
+    return new vw::FenceAndLivingPools{
+        queue->submit(wait_stages, wait_semaphores, signal_semaphores)};
 }

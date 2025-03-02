@@ -5,7 +5,7 @@
 namespace vw {
 CommandPool::CommandPool(const Device &device, vk::UniqueCommandPool pool)
     : ObjectWithUniqueHandle<vk::UniqueCommandPool>(std::move(pool))
-    , m_device(device) {}
+    , m_device(&device) {}
 
 std::vector<vk::CommandBuffer> CommandPool::allocate(std::size_t number) {
     const auto info = vk::CommandBufferAllocateInfo()
@@ -14,7 +14,7 @@ std::vector<vk::CommandBuffer> CommandPool::allocate(std::size_t number) {
                           .setLevel(vk::CommandBufferLevel::ePrimary);
 
     auto [result, commandBuffers] =
-        m_device.handle().allocateCommandBuffers(info);
+        m_device->handle().allocateCommandBuffers(info);
 
     if (result != vk::Result::eSuccess)
         throw CommandBufferAllocationException(std::source_location::current());

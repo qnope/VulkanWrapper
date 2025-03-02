@@ -152,14 +152,11 @@ int main() {
             record(commandBuffer, extent, framebuffer, pipeline, renderPass,
                    vertex_buffer);
 
-        auto fence = vw::FenceBuilder(device).build();
         auto renderFinishedSemaphore = vw::SemaphoreBuilder(device).build();
         auto imageAvailableSemaphore = vw::SemaphoreBuilder(device).build();
 
         while (!window.is_close_requested()) {
             window.update();
-            fence.wait();
-            fence.reset();
 
             auto index = swapchain.acquire_next_image(imageAvailableSemaphore);
 
@@ -171,10 +168,12 @@ int main() {
             const auto render_finished_handle =
                 renderFinishedSemaphore.handle();
 
-            device.graphicsQueue().submit({&commandBuffers[index], 1},
-                                          {&waitStage, 1},
-                                          {&image_available_handle, 1},
-                                          {&render_finished_handle, 1}, &fence);
+            device.graphicsQueue().enqueue_command_buffer(
+                commandBuffers[index]);
+
+            auto fence = device.graphicsQueue().submit(
+                {&waitStage, 1}, {&image_available_handle, 1},
+                {&render_finished_handle, 1});
 
             device.presentQueue().present(swapchain, index,
                                           renderFinishedSemaphore);

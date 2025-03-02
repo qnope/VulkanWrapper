@@ -17,12 +17,13 @@ class CommandPool : public ObjectWithUniqueHandle<vk::UniqueCommandPool> {
 
   public:
     std::vector<vk::CommandBuffer> allocate(std::size_t number);
+    CommandPool(CommandPool &&) noexcept = default;
 
   private:
     CommandPool(const Device &device, vk::UniqueCommandPool commandPool);
 
   private:
-    const Device &m_device;
+    const Device *m_device;
 };
 
 class CommandPoolBuilder {

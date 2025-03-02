@@ -13,7 +13,7 @@ class Device : public ObjectWithUniqueHandle<vk::UniqueDevice> {
     friend class DeviceFinder;
 
   public:
-    const Queue &graphicsQueue() const;
+    Queue &graphicsQueue();
     const PresentQueue &presentQueue() const;
     void wait_idle() const;
     vk::PhysicalDevice physical_device() const;

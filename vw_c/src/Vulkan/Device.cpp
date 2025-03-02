@@ -20,7 +20,7 @@ vw::Device *vw_create_device(const VwDeviceCreateArguments *arguments) {
             .build()};
 }
 
-const vw::Queue *vw_device_graphics_queue(const vw::Device *device) {
+vw::Queue *vw_device_graphics_queue(vw::Device *device) {
     return &device->graphicsQueue();
 }
 

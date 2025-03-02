@@ -174,7 +174,7 @@ Device DeviceFinder::build() && {
         for (int i = 0; i < queueCount; ++i) {
             Queue queue(device->getQueue(familyIndex, i),
                         information.queuesInformation[familyIndex].flags);
-            queues.push_back(queue);
+            queues.push_back(std::move(queue));
         }
     }
 

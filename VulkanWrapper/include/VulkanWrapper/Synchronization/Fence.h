@@ -8,14 +8,18 @@ class Fence : public ObjectWithUniqueHandle<vk::UniqueFence> {
     friend class FenceBuilder;
 
   public:
+    Fence(const Fence &) = delete;
+    Fence(Fence &&) = default;
     void wait() const;
     void reset() const;
+
+    ~Fence();
 
   private:
     Fence(const Device &device, vk::UniqueFence fence);
 
   private:
-    const Device &m_device;
+    const Device *m_device;
 };
 
 class FenceBuilder {
