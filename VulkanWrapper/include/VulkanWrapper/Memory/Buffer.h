@@ -5,6 +5,15 @@
 #include <vk_mem_alloc.h>
 
 namespace vw {
+
+constexpr VkBufferUsageFlags VertexBufferUsage =
+    VkBufferUsageFlags{vk::BufferUsageFlagBits::eVertexBuffer |
+                       vk::BufferUsageFlagBits::eTransferDst};
+
+constexpr VkBufferUsageFlags IndexBufferUsage =
+    VkBufferUsageFlags{vk::BufferUsageFlagBits::eIndexBuffer |
+                       vk::BufferUsageFlagBits::eTransferDst};
+
 class BufferBase : public ObjectWithHandle<vk::Buffer> {
   public:
     BufferBase(Allocator &allocator, vk::Buffer buffer,
@@ -40,5 +49,7 @@ class Buffer : public BufferBase {
         generic_copy(span.data(), span.size() * sizeof(T), offset);
     }
 };
+
+using IndexBuffer = Buffer<unsigned, false, IndexBufferUsage>;
 
 } // namespace vw

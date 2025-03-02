@@ -53,24 +53,30 @@ createFramebuffers(vw::Device &device, const vw::RenderPass &renderPass,
     return framebuffers;
 }
 
-void record(vk::CommandBuffer commandBuffer, vk::Extent2D extent,
-            const vw::Framebuffer &framebuffer, const vw::Pipeline &pipeline,
-            const vw::RenderPass &renderPass,
-            const vw::Buffer<vw::ColoredVertex2D, false, vw::VertexBufferUsage>
-                &buffer) {
+void record(
+    vk::CommandBuffer commandBuffer, vk::Extent2D extent,
+    const vw::Framebuffer &framebuffer, const vw::Pipeline &pipeline,
+    const vw::RenderPass &renderPass,
+    const vw::Buffer<vw::ColoredVertex2D, false, vw::VertexBufferUsage>
+        &vertex_buffer,
+    const vw::Buffer<unsigned, false, vw::IndexBufferUsage> &index_buffer) {
     vw::CommandBufferRecorder(commandBuffer)
         .begin_render_pass(renderPass, framebuffer)
         .bind_graphics_pipeline(pipeline)
-        .bind_vertex_buffer(0, buffer)
-        .draw(3, 1, 0, 0);
+        .bind_vertex_buffer(0, vertex_buffer)
+        .bind_index_buffer(index_buffer)
+        .indexed_draw(6, 1, 0, 0, 0);
 }
 
 int main() {
     try {
         const std::vector<vw::ColoredVertex2D> vertices = {
-            {{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
-            {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-            {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}};
+            {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+            {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+            {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+            {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}};
+
+        const std::vector<unsigned> indices = {0, 1, 2, 2, 3, 0};
 
         vw::SDL_Initializer initializer;
         vw::Window window = vw::WindowBuilder(initializer)
@@ -99,10 +105,13 @@ int main() {
         auto vertex_buffer =
             allocator.allocate_vertex_buffer<vw::ColoredVertex2D>(2000);
 
+        auto index_buffer = allocator.allocate_index_buffer(2000);
+
         vw::StagingBufferManager stagingManager(device, allocator);
 
         stagingManager.fill_buffer<vw::ColoredVertex2D>(vertices, vertex_buffer,
                                                         0);
+        stagingManager.fill_buffer<unsigned>(indices, index_buffer, 0);
 
         auto swapchain = window.create_swapchain(device, surface.handle());
 
@@ -154,7 +163,7 @@ int main() {
         for (auto [framebuffer, commandBuffer] :
              std::views::zip(framebuffers, commandBuffers))
             record(commandBuffer, extent, framebuffer, pipeline, renderPass,
-                   vertex_buffer);
+                   vertex_buffer, index_buffer);
 
         auto renderFinishedSemaphore = vw::SemaphoreBuilder(device).build();
         auto imageAvailableSemaphore = vw::SemaphoreBuilder(device).build();

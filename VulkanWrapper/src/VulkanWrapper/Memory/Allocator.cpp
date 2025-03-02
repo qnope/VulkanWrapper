@@ -9,6 +9,12 @@ namespace vw {
 Allocator::Allocator(VmaAllocator allocator)
     : ObjectWithHandle<VmaAllocator>{allocator} {}
 
+IndexBuffer Allocator::allocate_index_buffer(VkDeviceSize size) {
+    return Buffer<unsigned, false, IndexBufferUsage>{allocate_buffer(
+        size * sizeof(unsigned), false, vk::BufferUsageFlags(IndexBufferUsage),
+        vk::SharingMode::eExclusive)};
+}
+
 Allocator::~Allocator() { vmaDestroyAllocator(handle()); }
 
 BufferBase Allocator::allocate_buffer(VkDeviceSize size, bool host_visible,

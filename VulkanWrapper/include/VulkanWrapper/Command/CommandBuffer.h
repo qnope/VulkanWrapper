@@ -22,8 +22,26 @@ class PipelineBoundCommandBufferRecorder {
         return *this;
     }
 
+    template <VkBufferUsageFlags Usage>
+    PipelineBoundCommandBufferRecorder &
+    bind_index_buffer(const Buffer<unsigned, false, Usage> &buffer) {
+        static_assert((Usage & VK_BUFFER_USAGE_INDEX_BUFFER_BIT) ==
+                          VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                      "Buffer must be an Index Buffer");
+        auto handle = buffer.handle();
+        m_commandBuffer.bindIndexBuffer(handle, 0, vk::IndexType::eUint32);
+        return *this;
+    }
+
     void draw(uint32_t numberVertex, uint32_t numberInstance,
               uint32_t firstVertex, uint32_t firstInstance);
+
+    void indexed_draw(uint32_t index_count, uint32_t instance_count,
+                      uint32_t first_index, uint32_t vertex_offset,
+                      uint32_t first_instance) {
+        m_commandBuffer.drawIndexed(index_count, instance_count, first_index,
+                                    vertex_offset, first_instance);
+    }
 
   private:
     PipelineBoundCommandBufferRecorder(vk::CommandBuffer commandBuffer);
