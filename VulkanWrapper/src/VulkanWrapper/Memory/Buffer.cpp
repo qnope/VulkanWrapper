@@ -4,10 +4,11 @@
 
 namespace vw {
 BufferBase::BufferBase(Allocator &allocator, vk::Buffer buffer,
-                       VmaAllocation allocation)
+                       VmaAllocation allocation, VkDeviceSize size)
     : ObjectWithHandle<vk::Buffer>{buffer}
     , m_allocator{allocator}
-    , m_allocation{allocation} {}
+    , m_allocation{allocation}
+    , m_size_in_bytes{size} {}
 
 BufferBase::BufferBase(BufferBase &&other) noexcept
     : ObjectWithHandle<vk::Buffer>{other.handle()}
@@ -20,8 +21,13 @@ BufferBase &BufferBase::operator=(BufferBase &&other) noexcept {
     return *this;
 }
 
-void BufferBase::generic_copy(const void *data, uint64_t size) {
-    vmaCopyMemoryToAllocation(m_allocator.handle(), data, m_allocation, 0,
+VkDeviceSize BufferBase::size_in_bytes() const noexcept {
+    return m_size_in_bytes;
+}
+
+void BufferBase::generic_copy(const void *data, VkDeviceSize size,
+                              VkDeviceSize offset) {
+    vmaCopyMemoryToAllocation(m_allocator.handle(), data, m_allocation, offset,
                               size);
 }
 

@@ -11,8 +11,8 @@ Allocator::Allocator(VmaAllocator allocator)
 
 Allocator::~Allocator() { vmaDestroyAllocator(handle()); }
 
-BufferBase Allocator::allocate_buffer(uint64_t size, bool host_visible,
-                                      vk::BufferUsageFlagBits usage,
+BufferBase Allocator::allocate_buffer(VkDeviceSize size, bool host_visible,
+                                      vk::BufferUsageFlags usage,
                                       vk::SharingMode sharing_mode) {
     VmaAllocationCreateInfo allocation_info{};
     if (host_visible)
@@ -28,7 +28,7 @@ BufferBase Allocator::allocate_buffer(uint64_t size, bool host_visible,
     VkBuffer buffer;
     vmaCreateBuffer(handle(), &buffer_info, &allocation_info, &buffer,
                     &allocation, nullptr);
-    return BufferBase{*this, buffer, allocation};
+    return BufferBase{*this, buffer, allocation, size};
 }
 
 AllocatorBuilder::AllocatorBuilder(const Instance &instance,

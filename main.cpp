@@ -2,6 +2,7 @@
 #include <VulkanWrapper/Command/CommandPool.h>
 #include <VulkanWrapper/Image/Framebuffer.h>
 #include <VulkanWrapper/Memory/Allocator.h>
+#include <VulkanWrapper/Memory/StagingBufferManager.h>
 #include <VulkanWrapper/Pipeline/Pipeline.h>
 #include <VulkanWrapper/Pipeline/PipelineLayout.h>
 #include <VulkanWrapper/Pipeline/ShaderModule.h>
@@ -55,7 +56,7 @@ createFramebuffers(vw::Device &device, const vw::RenderPass &renderPass,
 void record(vk::CommandBuffer commandBuffer, vk::Extent2D extent,
             const vw::Framebuffer &framebuffer, const vw::Pipeline &pipeline,
             const vw::RenderPass &renderPass,
-            const vw::Buffer<vw::ColoredVertex2D, true, vw::VertexBufferUsage>
+            const vw::Buffer<vw::ColoredVertex2D, false, vw::VertexBufferUsage>
                 &buffer) {
     vw::CommandBufferRecorder(commandBuffer)
         .begin_render_pass(renderPass, framebuffer)
@@ -96,10 +97,12 @@ int main() {
         auto allocator = vw::AllocatorBuilder(instance, device).build();
 
         auto vertex_buffer =
-            allocator.allocate_vertex_buffer<vw::ColoredVertex2D, true>(
-                vertices.size());
+            allocator.allocate_vertex_buffer<vw::ColoredVertex2D>(2000);
 
-        vertex_buffer.copy(vertices);
+        vw::StagingBufferManager stagingManager(device, allocator);
+
+        stagingManager.fill_buffer<vw::ColoredVertex2D>(vertices, vertex_buffer,
+                                                        0);
 
         auto swapchain = window.create_swapchain(device, surface.handle());
 
@@ -155,6 +158,10 @@ int main() {
 
         auto renderFinishedSemaphore = vw::SemaphoreBuilder(device).build();
         auto imageAvailableSemaphore = vw::SemaphoreBuilder(device).build();
+
+        auto cmd_buffer = stagingManager.fill_command_buffer();
+
+        device.graphicsQueue().enqueue_command_buffer(cmd_buffer);
 
         while (!window.is_close_requested()) {
             window.update();

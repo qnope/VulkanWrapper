@@ -16,25 +16,27 @@ class Allocator : public ObjectWithHandle<VmaAllocator> {
   public:
     Allocator(VmaAllocator allocator);
 
-    template <typename T, bool HostVisible>
+    template <typename T, bool HostVisible = false>
     Buffer<T, HostVisible, VertexBufferUsage>
-    allocate_vertex_buffer(uint64_t size) {
-        auto usage =
-            vk::BufferUsageFlags(vk::BufferUsageFlagBits::eVertexBuffer);
-        if constexpr (!HostVisible) {
-            usage |= vk::BufferUsageFlagBits::eTransferDst;
-        }
+    allocate_vertex_buffer(VkDeviceSize size) {
         return Buffer<T, HostVisible, VertexBufferUsage>{
             allocate_buffer(size * sizeof(T), HostVisible,
-                            vk::BufferUsageFlagBits::eVertexBuffer,
+                            vk::BufferUsageFlags(VertexBufferUsage),
                             vk::SharingMode::eExclusive)};
+    }
+
+    template <typename T, bool HostVisible, VkBufferUsageFlags Usage>
+    Buffer<T, HostVisible, Usage> create_buffer(VkDeviceSize number_elements) {
+        return {allocate_buffer(number_elements * sizeof(T), HostVisible,
+                                vk::BufferUsageFlags(Usage),
+                                vk::SharingMode::eExclusive)};
     }
 
     ~Allocator();
 
   private:
-    BufferBase allocate_buffer(uint64_t size, bool host_visible,
-                               vk::BufferUsageFlagBits usage,
+    BufferBase allocate_buffer(VkDeviceSize size, bool host_visible,
+                               vk::BufferUsageFlags usage,
                                vk::SharingMode sharing_mode);
 };
 

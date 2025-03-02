@@ -8,7 +8,7 @@ namespace vw {
 class BufferBase : public ObjectWithHandle<vk::Buffer> {
   public:
     BufferBase(Allocator &allocator, vk::Buffer buffer,
-               VmaAllocation allocation);
+               VmaAllocation allocation, VkDeviceSize size);
 
     BufferBase(const BufferBase &) = delete;
     BufferBase &operator=(const BufferBase &) = delete;
@@ -16,14 +16,16 @@ class BufferBase : public ObjectWithHandle<vk::Buffer> {
     BufferBase(BufferBase &&other) noexcept;
     BufferBase &operator=(BufferBase &&other) noexcept;
 
-    ~BufferBase();
+    VkDeviceSize size_in_bytes() const noexcept;
 
-  protected:
-    void generic_copy(const void *data, uint64_t size);
+    void generic_copy(const void *data, VkDeviceSize size, VkDeviceSize offset);
+
+    ~BufferBase();
 
   private:
     Allocator &m_allocator;
     VmaAllocation m_allocation;
+    VkDeviceSize m_size_in_bytes;
 };
 
 template <typename T, bool HostVisible, VkBufferUsageFlags flags>
@@ -32,10 +34,10 @@ class Buffer : public BufferBase {
     Buffer(BufferBase &&bufferBase)
         : BufferBase(std::move(bufferBase)) {}
 
-    void copy(std::span<const T> span)
+    void copy(std::span<const T> span, VkDeviceSize offset)
         requires(HostVisible)
     {
-        generic_copy(span.data(), span.size() * sizeof(T));
+        generic_copy(span.data(), span.size() * sizeof(T), offset);
     }
 };
 
