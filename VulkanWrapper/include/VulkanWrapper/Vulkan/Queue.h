@@ -27,10 +27,11 @@ class Queue {
 
   private:
     Queue(vk::Queue queue, vk::QueueFlags type) noexcept;
+    int command_buffer_index() const;
 
   private:
-    std::vector<vk::CommandBuffer> m_command_buffers;
-    std::vector<std::pair<CommandPool, std::vector<vk::CommandBuffer>>>
+    std::vector<std::pair<int, vk::CommandBuffer>> m_command_buffers;
+    std::vector<std::tuple<int, CommandPool, std::vector<vk::CommandBuffer>>>
         m_command_buffers_and_living_pools;
 
     Device *m_device;
