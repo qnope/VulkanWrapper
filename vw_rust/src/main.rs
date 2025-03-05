@@ -16,7 +16,6 @@ use vulkan_wrapper::render_pass::attachment::*;
 use vulkan_wrapper::render_pass::render_pass::RenderPass;
 use vulkan_wrapper::render_pass::render_pass::RenderPassBuilder;
 use vulkan_wrapper::render_pass::subpass::SubpassBuilder;
-use vulkan_wrapper::synchronization::fence::FenceBuilder;
 use vulkan_wrapper::synchronization::semaphore::SemaphoreBuilder;
 use vulkan_wrapper::sys::bindings::VkPipelineStageFlagBits;
 use vulkan_wrapper::sys::bindings::VwImageLayout;
@@ -52,14 +51,9 @@ fn create_frame_buffers<'a>(
     images
         .into_iter()
         .map(|image_view| {
-            FramebufferBuilder::new(
-                device,
-                render_pass,
-                swapchain.width(),
-                swapchain.height(),
-            )
-            .with_attachment(image_view)
-            .build()
+            FramebufferBuilder::new(device, render_pass, swapchain.width(), swapchain.height())
+                .with_attachment(image_view)
+                .build()
         })
         .collect()
 }
@@ -126,8 +120,6 @@ fn main() {
         .add_color_attachment()
         .build();
 
-    let fence = FenceBuilder::new(&device).build();
-
     let render_finished_semaphore = SemaphoreBuilder::new(&device).build();
     let image_available_semaphore = SemaphoreBuilder::new(&device).build();
 
@@ -146,21 +138,17 @@ fn main() {
     while !window.is_close_requested() {
         window.update();
 
-        fence.wait();
-        fence.reset();
-
         let index = swapchain.acquire_next_image(&image_available_semaphore);
 
         let wait_stage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
         let image_available_handle = image_available_semaphore.handle();
         let render_finished_handle = render_finished_semaphore.handle();
-        device.graphics_queue().submit(
+        let _fence = device.graphics_queue().submit(
             slice::from_ref(&command_buffers[index as usize]),
             slice::from_ref(&wait_stage),
             slice::from_ref(&image_available_handle),
             slice::from_ref(&render_finished_handle),
-            Some(&fence),
         );
 
         device

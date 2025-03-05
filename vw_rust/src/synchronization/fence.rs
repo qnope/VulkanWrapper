@@ -9,26 +9,13 @@ pub struct Fence<'a> {
     _marker: PhantomData<&'a Device<'a>>,
 }
 
-pub struct FenceBuilder<'a> {
-    device: &'a Device<'a>,
-}
-
-impl<'a> FenceBuilder<'a> {
-    pub fn new(device: &'a Device<'a>) -> FenceBuilder<'a> {
-        FenceBuilder { device: device }
-    }
-
-    pub fn build(self) -> Fence<'a> {
-        unsafe {
-            Fence {
-                ptr: bindings::vw_create_fence(self.device.as_ptr()),
-                _marker: PhantomData,
-            }
+impl<'a> Fence<'a> {
+    pub fn new(fence: *mut vw_Fence, _device: &'a Device) -> Fence<'a> {
+        Fence {
+            ptr: fence,
+            _marker: PhantomData,
         }
     }
-}
-
-impl<'a> Fence<'a> {
     pub fn wait(&self) {
         unsafe {
             bindings::vw_wait_fence(self.ptr);

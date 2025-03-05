@@ -13,7 +13,7 @@ pub struct DeviceFinder<'a> {
     ptr: *mut vw_DeviceFinder,
     queue: VwQueueFlagBits,
     surface: Option<&'a Surface<'a>>,
-    with_synchronization_2: bool
+    with_synchronization_2: bool,
 }
 
 pub struct Device<'a> {
@@ -30,7 +30,7 @@ impl<'a> DeviceFinder<'a> {
                 ptr: bindings::vw_find_gpu_from_instance(instance.as_ptr()),
                 queue: VwQueueFlagBits(0),
                 surface: None,
-                with_synchronization_2: false
+                with_synchronization_2: false,
             }
         }
     }
@@ -59,7 +59,7 @@ impl<'a> DeviceFinder<'a> {
             finder: self.ptr,
             queue_flags: self.queue,
             surface_to_present: ptr_surface,
-            with_synchronization_2: self.with_synchronization_2
+            with_synchronization_2: self.with_synchronization_2,
         };
         unsafe {
             let ptr = bindings::vw_create_device(&arguments);
