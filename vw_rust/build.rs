@@ -11,10 +11,7 @@ fn main() {
     let deps_core = format!("{}/../../../deps/{}", out_dir, core_library);
     let deps_wrapper = format!("{}/../../../deps/{}", out_dir, wrapper_library);
 
-    println!(
-        "cargo:rustc-link-search=native={}",
-        env::var("DYLD_LIBRARY_PATH").unwrap()
-    );
+    println!("cargo:rustc-link-search=native=/opt/homebrew/lib");
     println!("cargo:rustc-link-search=native={}", ".");
     println!("cargo:rustc-link-lib=dylib=VulkanWrapperWrapperLibrary");
     println!("cargo:rustc-link-lib=dylib=vulkan");
@@ -26,7 +23,7 @@ fn main() {
 
     let bindings = bindgen::Builder::default()
         .header("../vw_c/include/bindings.h")
-        .clang_args(["-x", "c++"])
+        .clang_args(["-x", "c++", "-I", "/opt/homebrew/include"])
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .default_enum_style(bindgen::EnumVariation::Rust {
             non_exhaustive: false,
