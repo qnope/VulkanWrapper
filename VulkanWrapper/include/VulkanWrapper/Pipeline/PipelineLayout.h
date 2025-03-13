@@ -20,9 +20,18 @@ class PipelineLayout : public ObjectWithUniqueHandle<vk::UniquePipelineLayout> {
 class PipelineLayoutBuilder {
   public:
     PipelineLayoutBuilder(const Device &device);
+
+    PipelineLayoutBuilder &&
+    with_descriptor_set_layout(std::shared_ptr<DescriptorSetLayout> layout) &&;
+
     PipelineLayout build() &&;
 
   private:
+    vk::UniqueDescriptorSetLayout build_set_layout(
+        const std::vector<vk::DescriptorSetLayoutBinding> &bindings) const;
+
+  private:
     const Device &m_device;
+    std::vector<std::shared_ptr<DescriptorSetLayout>> m_descriptorSetLayouts;
 };
 } // namespace vw

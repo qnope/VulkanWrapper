@@ -26,4 +26,11 @@ template <typename Handle> class ObjectWithHandle {
     Handle m_handle;
 };
 
+constexpr auto to_handle = std::views::transform([](const auto &x) {
+    if constexpr (requires { x.handle(); })
+        return x.handle();
+    else
+        return x->handle();
+});
+
 } // namespace vw

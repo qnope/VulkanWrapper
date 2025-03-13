@@ -4,15 +4,13 @@
 
 namespace vw {
 
-class Image {
+class Image : public ObjectWithHandle<vk::Image> {
   public:
     Image(vk::Image image, vk::Format format);
 
-    vk::Image handle() const noexcept;
     vk::Format format() const noexcept;
 
   private:
-    std::shared_ptr<ObjectWithHandle<vk::Image>> m_object;
     vk::Format m_format;
 };
 

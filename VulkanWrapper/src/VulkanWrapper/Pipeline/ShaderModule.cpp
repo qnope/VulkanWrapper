@@ -30,7 +30,7 @@ static std::vector<uint32_t> readSpirVFile(const std::filesystem::path &path) {
     return result;
 }
 
-ShaderModule
+std::shared_ptr<ShaderModule>
 ShaderModule::create_from_spirv(const Device &device,
                                 std::span<const std::uint32_t> spirV) {
     auto info = vk::ShaderModuleCreateInfo()
@@ -41,10 +41,10 @@ ShaderModule::create_from_spirv(const Device &device,
     if (result != vk::Result::eSuccess)
         throw SpirVInvalidException{std::source_location::current()};
 
-    return ShaderModule{std::move(module)};
+    return std::make_shared<ShaderModule>(std::move(module));
 }
 
-ShaderModule
+std::shared_ptr<ShaderModule>
 ShaderModule::create_from_spirv_file(const Device &device,
                                      const std::filesystem::path &path) {
     const auto spirV = readSpirVFile(path);

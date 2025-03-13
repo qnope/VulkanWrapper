@@ -34,4 +34,6 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Memory/Allocator.cpp
     VulkanWrapper/Memory/Buffer.cpp
     VulkanWrapper/Memory/StagingBufferManager.cpp
+
+    VulkanWrapper/Descriptors/DescriptorSetLayout.cpp
 )

@@ -1,14 +1,27 @@
 #include "VulkanWrapper/Pipeline/PipelineLayout.h"
 
+#include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
+#include "VulkanWrapper/Utils/Algos.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 
 namespace vw {
 PipelineLayoutBuilder::PipelineLayoutBuilder(const Device &device)
     : m_device{device} {}
 
-PipelineLayout PipelineLayoutBuilder::build() && {
-    const auto info = vk::PipelineLayoutCreateInfo();
+PipelineLayoutBuilder &&PipelineLayoutBuilder::with_descriptor_set_layout(
+    std::shared_ptr<DescriptorSetLayout> layout) && {
 
+    m_descriptorSetLayouts.push_back(std::move(layout));
+    return std::move(*this);
+}
+
+PipelineLayout PipelineLayoutBuilder::build() && {
+
+    auto info = vk::PipelineLayoutCreateInfo();
+
+    auto layouts = m_descriptorSetLayouts | to_handle | to<std::vector>;
+
+    info.setSetLayouts(layouts);
     auto [result, layout] = m_device.handle().createPipelineLayoutUnique(info);
 
     if (result != vk::Result::eSuccess)
@@ -16,4 +29,5 @@ PipelineLayout PipelineLayoutBuilder::build() && {
 
     return PipelineLayout(std::move(layout));
 }
+
 } // namespace vw

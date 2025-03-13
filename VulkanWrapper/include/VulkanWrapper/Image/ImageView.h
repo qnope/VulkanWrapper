@@ -9,17 +9,11 @@ namespace vw {
 
 using ImageViewCreationException = TaggedException<struct ImageViewCreationTag>;
 
-class ImageView {
-    friend class ImageViewBuilder;
-
+class ImageView : public ObjectWithUniqueHandle<vk::UniqueImageView> {
   public:
-    vk::ImageView handle() const noexcept;
-
-  private:
     ImageView(const Image &image, vk::UniqueImageView imageView);
 
   private:
-    std::shared_ptr<ObjectWithUniqueHandle<vk::UniqueImageView>> m_object;
     Image m_image;
 };
 
@@ -29,7 +23,7 @@ class ImageViewBuilder {
 
     ImageViewBuilder &&setImageType(vk::ImageViewType imageViewType) &&;
 
-    ImageView build() &&;
+    std::shared_ptr<ImageView> build() &&;
 
   private:
     const Device &m_device;

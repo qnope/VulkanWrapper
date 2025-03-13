@@ -21,8 +21,9 @@ class GraphicsPipelineBuilder {
   public:
     GraphicsPipelineBuilder(const Device &device, const RenderPass &renderPass);
 
-    GraphicsPipelineBuilder &&add_shader(vk::ShaderStageFlagBits flags,
-                                         ShaderModule module) &&;
+    GraphicsPipelineBuilder &&
+    add_shader(vk::ShaderStageFlagBits flags,
+               std::shared_ptr<ShaderModule> module) &&;
 
     GraphicsPipelineBuilder &&add_dynamic_state(vk::DynamicState state) &&;
 
@@ -79,7 +80,8 @@ class GraphicsPipelineBuilder {
   private:
     const Device &m_device;
     const RenderPass &m_renderPass;
-    std::map<vk::ShaderStageFlagBits, ShaderModule> m_shaderModules;
+    std::map<vk::ShaderStageFlagBits, std::shared_ptr<ShaderModule>>
+        m_shaderModules;
     std::vector<vk::DynamicState> m_dynamicStates;
 
     std::optional<vk::Viewport> m_viewport;

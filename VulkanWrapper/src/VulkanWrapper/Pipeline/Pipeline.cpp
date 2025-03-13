@@ -13,7 +13,7 @@ GraphicsPipelineBuilder::GraphicsPipelineBuilder(const Device &device,
 
 GraphicsPipelineBuilder &&
 GraphicsPipelineBuilder::add_shader(vk::ShaderStageFlagBits flags,
-                                    ShaderModule module) && {
+                                    std::shared_ptr<ShaderModule> module) && {
     m_shaderModules.emplace(flags, std::move(module));
     return std::move(*this);
 }
@@ -95,7 +95,7 @@ GraphicsPipelineBuilder::createShaderStageInfos() const noexcept {
         auto info = vk::PipelineShaderStageCreateInfo()
                         .setPName("main")
                         .setStage(stage)
-                        .setModule(module.handle());
+                        .setModule(module->handle());
         infos.push_back(std::move(info));
     }
 

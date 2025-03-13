@@ -31,4 +31,6 @@ class Fence;
 class Allocator;
 
 enum class QueueType;
+
+class DescriptorSetLayout;
 } // namespace vw

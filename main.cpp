@@ -1,5 +1,6 @@
 #include <VulkanWrapper/Command/CommandBuffer.h>
 #include <VulkanWrapper/Command/CommandPool.h>
+#include <VulkanWrapper/Descriptors/DescriptorSetLayout.h>
 #include <VulkanWrapper/Image/Framebuffer.h>
 #include <VulkanWrapper/Memory/Allocator.h>
 #include <VulkanWrapper/Memory/StagingBufferManager.h>
@@ -23,9 +24,9 @@
 
 constexpr std::string_view COLOR = "COLOR";
 
-std::vector<vw::ImageView> create_image_views(const vw::Device &device,
-                                              const vw::Swapchain &swapchain) {
-    std::vector<vw::ImageView> result;
+std::vector<std::shared_ptr<vw::ImageView>>
+create_image_views(const vw::Device &device, const vw::Swapchain &swapchain) {
+    std::vector<std::shared_ptr<vw::ImageView>> result;
     for (auto &&image : swapchain.images()) {
         auto imageView = vw::ImageViewBuilder(device, image)
                              .setImageType(vk::ImageViewType::e2D)
@@ -38,7 +39,7 @@ std::vector<vw::ImageView> create_image_views(const vw::Device &device,
 std::vector<vw::Framebuffer>
 createFramebuffers(vw::Device &device, const vw::RenderPass &renderPass,
                    const vw::Swapchain &swapchain,
-                   const std::vector<vw::ImageView> &images) {
+                   const std::vector<std::shared_ptr<vw::ImageView>> &images) {
     std::vector<vw::Framebuffer> framebuffers;
 
     for (const auto &imageView : images) {
@@ -121,7 +122,15 @@ int main() {
         auto fragmentShader = vw::ShaderModule::create_from_spirv_file(
             device, "../../Shaders/bin/frag.spv");
 
-        auto pipelineLayout = vw::PipelineLayoutBuilder(device).build();
+        auto uniform_buffer_descriptor_layout =
+            vw::DescriptorSetLayoutBuilder(device)
+                .with_uniform_buffer(vk::ShaderStageFlagBits::eVertex, 1)
+                .build();
+
+        auto pipelineLayout =
+            vw::PipelineLayoutBuilder(device)
+                .with_descriptor_set_layout(uniform_buffer_descriptor_layout)
+                .build();
 
         const auto attachment =
             vw::AttachmentBuilder(COLOR)

@@ -24,17 +24,14 @@ FramebufferBuilder::FramebufferBuilder(const Device &device,
     , m_width{width}
     , m_height{height} {}
 
-FramebufferBuilder &&
-FramebufferBuilder::add_attachment(const ImageView &imageView) && {
+FramebufferBuilder &&FramebufferBuilder::add_attachment(
+    const std::shared_ptr<ImageView> &imageView) && {
     m_attachments.push_back(imageView);
     return std::move(*this);
 }
 
 Framebuffer FramebufferBuilder::build() && {
-    const auto attachments =
-        m_attachments |
-        std::views::transform([](auto &&x) { return x.handle(); }) |
-        to<std::vector>;
+    const auto attachments = m_attachments | to_handle | to<std::vector>;
 
     const auto info = vk::FramebufferCreateInfo()
                           .setWidth(m_width)
