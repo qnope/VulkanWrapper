@@ -1,5 +1,7 @@
 #include <VulkanWrapper/Command/CommandBuffer.h>
 #include <VulkanWrapper/Command/CommandPool.h>
+#include <VulkanWrapper/Descriptors/DescriptorAllocator.h>
+#include <VulkanWrapper/Descriptors/DescriptorPool.h>
 #include <VulkanWrapper/Descriptors/DescriptorSetLayout.h>
 #include <VulkanWrapper/Image/Framebuffer.h>
 #include <VulkanWrapper/Memory/Allocator.h>
@@ -36,6 +38,29 @@ create_image_views(const vw::Device &device, const vw::Swapchain &swapchain) {
     return result;
 }
 
+struct UBOData {
+    glm::mat4 proj = [] {
+        auto proj =
+            glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 10.0f);
+        proj[1][1] *= -1;
+        return proj;
+    }();
+    glm::mat4 view =
+        glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f),
+                    glm::vec3(0.0f, 0.0f, 1.0f));
+    glm::mat4 model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f),
+                                  glm::vec3(0.0f, 0.0f, 1.0f));
+};
+
+vw::Buffer<UBOData, true, vw::UniformBufferUsage>
+createUbo(vw::Allocator &allocator) {
+    auto buffer =
+        allocator.create_buffer<UBOData, true, vw::UniformBufferUsage>(1);
+    UBOData data;
+    buffer.copy({&data, 1}, 0);
+    return buffer;
+}
+
 std::vector<vw::Framebuffer>
 createFramebuffers(vw::Device &device, const vw::RenderPass &renderPass,
                    const vw::Swapchain &swapchain,
@@ -60,12 +85,14 @@ void record(
     const vw::RenderPass &renderPass,
     const vw::Buffer<vw::ColoredVertex2D, false, vw::VertexBufferUsage>
         &vertex_buffer,
-    const vw::Buffer<unsigned, false, vw::IndexBufferUsage> &index_buffer) {
+    const vw::Buffer<unsigned, false, vw::IndexBufferUsage> &index_buffer,
+    const vw::PipelineLayout &layout, const vk::DescriptorSet &set) {
     vw::CommandBufferRecorder(commandBuffer)
         .begin_render_pass(renderPass, framebuffer)
         .bind_graphics_pipeline(pipeline)
         .bind_vertex_buffer(0, vertex_buffer)
         .bind_index_buffer(index_buffer)
+        .bind_descriptor_set(layout, 0, std::span(&set, 1), {})
         .indexed_draw(6, 1, 0, 0, 0);
 }
 
@@ -169,10 +196,24 @@ int main() {
 
         const vk::Extent2D extent(swapchain.width(), swapchain.height());
 
+        auto uniform_buffer = createUbo(allocator);
+
+        auto descriptor_pool = vw::DescriptorPoolBuilder(
+                                   device, uniform_buffer_descriptor_layout, 1)
+                                   .build();
+
+        vw::DescriptorAllocator descriptor_allocator;
+        descriptor_allocator.add_buffer(0, vk::DescriptorType::eUniformBuffer,
+                                        uniform_buffer.handle(), 0,
+                                        uniform_buffer.size_in_bytes());
+
+        auto descriptor_set =
+            descriptor_pool.allocate_set(descriptor_allocator);
+
         for (auto [framebuffer, commandBuffer] :
              std::views::zip(framebuffers, commandBuffers))
             record(commandBuffer, extent, framebuffer, pipeline, renderPass,
-                   vertex_buffer, index_buffer);
+                   vertex_buffer, index_buffer, pipelineLayout, descriptor_set);
 
         auto renderFinishedSemaphore = vw::SemaphoreBuilder(device).build();
         auto imageAvailableSemaphore = vw::SemaphoreBuilder(device).build();

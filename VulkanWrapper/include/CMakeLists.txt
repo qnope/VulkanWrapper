@@ -38,6 +38,8 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
 
     VulkanWrapper/Descriptors/Vertex.h
     VulkanWrapper/Descriptors/DescriptorSetLayout.h
+    VulkanWrapper/Descriptors/DescriptorPool.h
+    VulkanWrapper/Descriptors/DescriptorAllocator.h
 
     VulkanWrapper/Memory/Allocator.h
     VulkanWrapper/Memory/Buffer.h

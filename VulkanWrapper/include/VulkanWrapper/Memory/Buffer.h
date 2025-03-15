@@ -14,6 +14,10 @@ constexpr VkBufferUsageFlags IndexBufferUsage =
     VkBufferUsageFlags{vk::BufferUsageFlagBits::eIndexBuffer |
                        vk::BufferUsageFlagBits::eTransferDst};
 
+constexpr VkBufferUsageFlags UniformBufferUsage =
+    VkBufferUsageFlags{vk::BufferUsageFlagBits::eUniformBuffer |
+                       vk::BufferUsageFlagBits::eTransferDst};
+
 class BufferBase : public ObjectWithHandle<vk::Buffer> {
   public:
     BufferBase(Allocator &allocator, vk::Buffer buffer,
@@ -40,6 +44,10 @@ class BufferBase : public ObjectWithHandle<vk::Buffer> {
 template <typename T, bool HostVisible, VkBufferUsageFlags flags>
 class Buffer : public BufferBase {
   public:
+    static consteval bool does_support(vk::BufferUsageFlags usage) {
+        return (vk::BufferUsageFlags(flags) & usage) == usage;
+    }
+
     Buffer(BufferBase &&bufferBase)
         : BufferBase(std::move(bufferBase)) {}
 

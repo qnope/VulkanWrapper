@@ -16,12 +16,10 @@ PipelineLayoutBuilder &&PipelineLayoutBuilder::with_descriptor_set_layout(
 }
 
 PipelineLayout PipelineLayoutBuilder::build() && {
-
-    auto info = vk::PipelineLayoutCreateInfo();
-
     auto layouts = m_descriptorSetLayouts | to_handle | to<std::vector>;
 
-    info.setSetLayouts(layouts);
+    const auto info = vk::PipelineLayoutCreateInfo().setSetLayouts(layouts);
+
     auto [result, layout] = m_device.handle().createPipelineLayoutUnique(info);
 
     if (result != vk::Result::eSuccess)

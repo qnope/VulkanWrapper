@@ -48,4 +48,5 @@ class AllocatorBuilder {
     const Instance &m_instance;
     const Device &m_device;
 };
+
 } // namespace vw

@@ -33,6 +33,11 @@ class PipelineBoundCommandBufferRecorder {
         return *this;
     }
 
+    PipelineBoundCommandBufferRecorder &
+    bind_descriptor_set(const PipelineLayout &layout, int first_set,
+                        std::span<const vk::DescriptorSet> sets,
+                        std::span<const uint32_t> dynamic_offsets);
+
     void draw(uint32_t numberVertex, uint32_t numberInstance,
               uint32_t firstVertex, uint32_t firstInstance);
 

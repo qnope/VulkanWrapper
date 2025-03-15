@@ -11,7 +11,13 @@ using DescriptorSetLayoutCreationException =
 class DescriptorSetLayout
     : public ObjectWithUniqueHandle<vk::UniqueDescriptorSetLayout> {
   public:
+    DescriptorSetLayout(std::vector<vk::DescriptorSetLayoutBinding> pool_sizes,
+                        vk::UniqueDescriptorSetLayout set_layout);
+
+    std::vector<vk::DescriptorPoolSize> get_pool_sizes() const;
+
   private:
+    std::vector<vk::DescriptorSetLayoutBinding> m_bindings;
 };
 
 class DescriptorSetLayoutBuilder {

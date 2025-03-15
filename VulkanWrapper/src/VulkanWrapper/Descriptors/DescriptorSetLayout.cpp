@@ -4,20 +4,42 @@
 #include <source_location>
 
 namespace vw {
+
+DescriptorSetLayout::DescriptorSetLayout(
+    std::vector<vk::DescriptorSetLayoutBinding> pool_sizes,
+    vk::UniqueDescriptorSetLayout set_layout)
+    : ObjectWithUniqueHandle<vk::UniqueDescriptorSetLayout>{std::move(
+          set_layout)}
+    , m_bindings{std::move(pool_sizes)} {}
+
+std::vector<vk::DescriptorPoolSize>
+DescriptorSetLayout::get_pool_sizes() const {
+    std::vector<vk::DescriptorPoolSize> pool_sizes;
+    std::map<vk::DescriptorType, int> size;
+
+    for (const auto &binding : m_bindings) {
+        size[binding.descriptorType] += binding.descriptorCount;
+    }
+
+    for (auto [type, number] : size)
+        pool_sizes.emplace_back(type, number);
+
+    return pool_sizes;
+}
+
 DescriptorSetLayoutBuilder::DescriptorSetLayoutBuilder(const Device &device)
     : m_device{device} {}
 
 DescriptorSetLayoutBuilder &&
 DescriptorSetLayoutBuilder::with_uniform_buffer(vk::ShaderStageFlags stages,
                                                 int number) {
-    std::vector<vk::DescriptorSetLayoutBinding> bindings;
     auto binding = vk::DescriptorSetLayoutBinding()
                        .setBinding(m_current_binding)
                        .setDescriptorType(vk::DescriptorType::eUniformBuffer)
                        .setStageFlags(stages)
                        .setDescriptorCount(number);
     m_current_binding += number;
-    bindings.push_back(binding);
+    m_bindings.push_back(binding);
     return std::move(*this);
 }
 
@@ -29,7 +51,8 @@ std::shared_ptr<DescriptorSetLayout> DescriptorSetLayoutBuilder::build() && {
     if (result != vk::Result::eSuccess)
         throw DescriptorSetLayoutCreationException{
             std::source_location::current()};
-    return std::make_shared<DescriptorSetLayout>(std::move(value));
+    return std::make_shared<DescriptorSetLayout>(std::move(m_bindings),
+                                                 std::move(value));
 }
 
 } // namespace vw

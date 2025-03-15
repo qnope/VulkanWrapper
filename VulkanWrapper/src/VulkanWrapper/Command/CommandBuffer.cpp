@@ -2,6 +2,7 @@
 
 #include "VulkanWrapper/Image/Framebuffer.h"
 #include "VulkanWrapper/Pipeline/Pipeline.h"
+#include "VulkanWrapper/Pipeline/PipelineLayout.h"
 #include "VulkanWrapper/RenderPass/RenderPass.h"
 
 namespace vw {
@@ -9,6 +10,17 @@ namespace vw {
 PipelineBoundCommandBufferRecorder::PipelineBoundCommandBufferRecorder(
     vk::CommandBuffer commandBuffer)
     : m_commandBuffer{commandBuffer} {}
+
+PipelineBoundCommandBufferRecorder &
+PipelineBoundCommandBufferRecorder::bind_descriptor_set(
+    const PipelineLayout &layout, int first_set,
+    std::span<const vk::DescriptorSet> sets,
+    std::span<const uint32_t> dynamic_offsets) {
+    m_commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+                                       layout.handle(), first_set, sets,
+                                       dynamic_offsets);
+    return *this;
+}
 
 void PipelineBoundCommandBufferRecorder::draw(uint32_t numberVertex,
                                               uint32_t numberInstance,

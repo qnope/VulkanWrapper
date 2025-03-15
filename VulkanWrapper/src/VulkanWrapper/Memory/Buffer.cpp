@@ -13,11 +13,13 @@ BufferBase::BufferBase(Allocator &allocator, vk::Buffer buffer,
 BufferBase::BufferBase(BufferBase &&other) noexcept
     : ObjectWithHandle<vk::Buffer>{other.handle()}
     , m_allocator(other.m_allocator)
-    , m_allocation{std::exchange(other.m_allocation, {})} {}
+    , m_allocation{std::exchange(other.m_allocation, {})}
+    , m_size_in_bytes{std::exchange(other.m_size_in_bytes, {})} {}
 
 BufferBase &BufferBase::operator=(BufferBase &&other) noexcept {
     static_cast<ObjectWithHandle<vk::Buffer> &>(*this) = other;
     other.m_allocation = std::exchange(other.m_allocation, {});
+    other.m_size_in_bytes = std::exchange(other.m_size_in_bytes, {});
     return *this;
 }
 
