@@ -5,7 +5,6 @@
 
 #define GLM_FORCE_RADIANS
 #include <algorithm>
-#include <assimp/Importer.hpp>
 #include <concepts>
 #include <filesystem>
 #include <functional>

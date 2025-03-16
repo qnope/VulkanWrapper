@@ -15,6 +15,7 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Image/Image.cpp
     VulkanWrapper/Image/ImageView.cpp
     VulkanWrapper/Image/Framebuffer.cpp
+    VulkanWrapper/Image/ImageLoader.cpp
 
     VulkanWrapper/Pipeline/ShaderModule.cpp
     VulkanWrapper/Pipeline/Pipeline.cpp
