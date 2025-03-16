@@ -7,9 +7,10 @@ constexpr auto STAGING_BUFFER_SIZE = 1 << 22;
 namespace vw {
 
 static vk::DeviceSize compute_size(vk::DeviceSize size) {
-    const auto max_size = std::max<vk::DeviceSize>(size, STAGING_BUFFER_SIZE);
+    const auto max_size =
+        double(std::max<vk::DeviceSize>(size, STAGING_BUFFER_SIZE));
 
-    return std::pow(2, std::ceil(std::log2(size)));
+    return vk::DeviceSize(std::pow(2, std::ceil(std::log2(max_size))));
 }
 
 static CommandPool create_command_pool(Device &device) {
@@ -52,6 +53,7 @@ StagingBuffer &StagingBufferManager::get_staging_buffer(vk::DeviceSize size) {
     auto it = std::ranges::find_if(m_staging_buffers, does_buffer_handle_data);
     if (it != m_staging_buffers.end())
         return *it;
+
     const auto new_size = compute_size(size);
     return m_staging_buffers.emplace_back(*m_allocator, new_size);
 }

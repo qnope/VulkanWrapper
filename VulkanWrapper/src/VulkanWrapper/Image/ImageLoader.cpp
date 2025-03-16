@@ -24,9 +24,9 @@ ImageDescription load_image(const std::filesystem::path &path) {
 
     return {.width = surface->w,
             .height = surface->h,
-            .pixels =
-                std::span(static_cast<const std::byte *>(surface->pixels),
-                          static_cast<std::size_t>(surface->w * surface->h)) |
-                to<std::vector>};
+            .pixels = std::span(static_cast<const std::byte *>(surface->pixels),
+                                static_cast<std::size_t>(surface->pitch *
+                                                         surface->h)) |
+                      to<std::vector>};
 }
 } // namespace vw
