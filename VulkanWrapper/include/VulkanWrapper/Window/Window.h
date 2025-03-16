@@ -21,20 +21,20 @@ class Window {
   public:
     void update() noexcept;
 
-    bool is_close_requested() const noexcept;
+    [[nodiscard]] bool is_close_requested() const noexcept;
 
-    std::span<const char * const> get_required_instance_extensions() const noexcept;
-    Surface create_surface(const Instance &instance) const;
+    [[nodiscard]] static std::span<const char *const>
+    get_required_instance_extensions() noexcept;
+    [[nodiscard]] Surface create_surface(const Instance &instance) const;
 
-    Swapchain create_swapchain(const Device &device,
-                               vk::SurfaceKHR surface) const;
+    [[nodiscard]] Swapchain create_swapchain(const Device &device,
+                                             vk::SurfaceKHR surface) const;
 
   private:
     Window(const SDL_Initializer &initializer, std::string_view name, int width,
            int height);
 
-  private:
-    const SDL_Initializer &m_initializer;
+    const SDL_Initializer *m_initializer;
     std::unique_ptr<SDL_Window, WindowDeleter> m_window;
     bool m_closeRequested = false;
     int m_width;
@@ -52,7 +52,7 @@ class WindowBuilder {
     Window build() &&;
 
   private:
-    const SDL_Initializer &initializer;
+    const SDL_Initializer *initializer;
     std::string_view name = "3D Renderer";
     int width = 0;
     int height = 0;

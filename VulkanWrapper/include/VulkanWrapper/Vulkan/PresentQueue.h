@@ -13,7 +13,6 @@ class PresentQueue {
   private:
     PresentQueue(vk::Queue queue) noexcept;
 
-  private:
     vk::Queue m_queue;
 };
 } // namespace vw

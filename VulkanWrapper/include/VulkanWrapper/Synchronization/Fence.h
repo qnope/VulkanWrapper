@@ -12,15 +12,16 @@ class Fence : public ObjectWithUniqueHandle<vk::UniqueFence> {
     void wait() const;
     void reset() const;
 
+    Fence(const Fence &) = delete;
+    Fence(Fence &&) noexcept = default;
+    Fence &operator=(const Fence &) = delete;
+    Fence &operator=(Fence &&) noexcept = default;
     ~Fence();
 
   private:
     // The fence is bound to the Queue
     Fence(const Device &device, vk::UniqueFence fence);
-    Fence(const Fence &) = delete;
-    Fence(Fence &&) = default;
 
-  private:
     const Device *m_device;
 };
 
@@ -30,6 +31,6 @@ class FenceBuilder {
     Fence build() &&;
 
   private:
-    const Device &m_device;
+    const Device *m_device;
 };
 } // namespace vw

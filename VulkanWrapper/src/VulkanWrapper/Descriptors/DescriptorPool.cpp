@@ -9,28 +9,31 @@ DescriptorPool::DescriptorPool(
     const Device &device, std::shared_ptr<const DescriptorSetLayout> layout,
     vk::UniqueDescriptorPool pool)
     : ObjectWithUniqueHandle<vk::UniqueDescriptorPool>{std::move(pool)}
-    , m_device{device}
+    , m_device{&device}
     , m_layout{std::move(layout)} {}
 
 vk::DescriptorSet
 DescriptorPool::allocate_set(const DescriptorAllocator &descriptorAllocator) {
     auto it = m_sets.find(descriptorAllocator);
-    if (it != m_sets.end())
+    if (it != m_sets.end()) {
         return it->second;
+    }
 
     auto layout_handle = m_layout->handle();
     auto info = vk::DescriptorSetAllocateInfo()
                     .setDescriptorPool(handle())
                     .setSetLayouts(layout_handle);
-    auto [result, value] = m_device.handle().allocateDescriptorSets(info);
-    if (result != vk::Result::eSuccess)
+    auto [result, value] = m_device->handle().allocateDescriptorSets(info);
+    if (result != vk::Result::eSuccess) {
         throw DescriptorSetAllocationException{std::source_location::current()};
+    }
 
     auto writers = descriptorAllocator.get_write_descriptors();
-    for (auto &writer : writers)
+    for (auto &writer : writers) {
         writer.setDstSet(value.front());
+    }
 
-    m_device.handle().updateDescriptorSets(writers, nullptr);
+    m_device->handle().updateDescriptorSets(writers, nullptr);
 
     m_sets.emplace(descriptorAllocator, value.front());
 
@@ -38,9 +41,9 @@ DescriptorPool::allocate_set(const DescriptorAllocator &descriptorAllocator) {
 }
 
 DescriptorPoolBuilder::DescriptorPoolBuilder(
-    const Device &device, std::shared_ptr<DescriptorSetLayout> layout,
+    const Device &device, const std::shared_ptr<DescriptorSetLayout> &layout,
     int number_of_set)
-    : m_device{device}
+    : m_device{&device}
     , m_number_of_set{number_of_set}
     , m_layout{layout} {}
 
@@ -49,11 +52,12 @@ DescriptorPool DescriptorPoolBuilder::build() && {
     const auto info = vk::DescriptorPoolCreateInfo()
                           .setMaxSets(m_number_of_set)
                           .setPoolSizes(pool_size);
-    auto [result, value] = m_device.handle().createDescriptorPoolUnique(info);
+    auto [result, value] = m_device->handle().createDescriptorPoolUnique(info);
 
-    if (result != vk::Result::eSuccess)
+    if (result != vk::Result::eSuccess) {
         throw DescriptorPoolCreationException(std::source_location::current());
-    return DescriptorPool{m_device, std::move(m_layout), std::move(value)};
+    }
+    return DescriptorPool{*m_device, std::move(m_layout), std::move(value)};
 }
 
 } // namespace vw

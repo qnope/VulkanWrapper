@@ -10,11 +10,11 @@
 namespace vw {
 
 DeviceFinder::DeviceFinder(std::span<PhysicalDevice> physicalDevices) noexcept {
-    std::cout << physicalDevices.size() << std::endl;
+    std::cout << physicalDevices.size() << '\n';
     for (auto &device : physicalDevices) {
         std::cout << "Found: " << device.device().getProperties().deviceName
-                  << std::endl;
-        PhysicalDeviceInformation information{device};
+                  << '\n';
+        PhysicalDeviceInformation information{.device = device};
         auto properties = device.queueFamilyProperties();
         for (const auto &property : properties) {
             information.queuesInformation.emplace_back(0, property.queueCount,
@@ -42,9 +42,10 @@ DeviceFinder &&DeviceFinder::with_queue(vk::QueueFlags queueFlags) && noexcept {
 
     for (auto &information : m_physicalDevicesInformation) {
         auto index =
-            *index_if(information.queuesInformation, queueFamilyHandled);
-        ++information.queuesInformation[index].numberAsked;
-        ++information.numberOfQueuesToCreate[index];
+            index_if(information.queuesInformation, queueFamilyHandled);
+        assert(index);
+        ++information.queuesInformation[*index].numberAsked;
+        ++information.numberOfQueuesToCreate[*index];
     }
 
     return std::move(*this);
@@ -59,12 +60,14 @@ DeviceFinder::with_presentation(vk::SurfaceKHR surface) && noexcept {
     auto whichFamilyHandlePresentation =
         [&](const PhysicalDeviceInformation &information)
         -> std::optional<int> {
-        auto &queues = information.queuesInformation;
+        const auto &queues = information.queuesInformation;
         for (int i = 0; i < queues.size(); ++i) {
             auto [result, supportPresentation] =
                 information.device.device().getSurfaceSupportKHR(i, surface);
-            if (result == vk::Result::eSuccess && supportPresentation == true)
+            if (result == vk::Result::eSuccess &&
+                static_cast<bool>(supportPresentation)) {
                 return i;
+            }
         }
         return std::nullopt;
     };
@@ -80,7 +83,7 @@ DeviceFinder::with_presentation(vk::SurfaceKHR surface) && noexcept {
 
     for (auto &information : m_physicalDevicesInformation) {
         information.presentationFamilyIndex =
-            *whichFamilyHandlePresentation(information);
+            whichFamilyHandlePresentation(information);
         information.extensions.push_back(swapchainExtension);
     }
 
@@ -91,18 +94,20 @@ DeviceFinder &&DeviceFinder::with_synchronization_2() && noexcept {
     remove_device_not_supporting_extension(
         VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
 
-    for (auto &information : m_physicalDevicesInformation)
+    for (auto &information : m_physicalDevicesInformation) {
         information.extensions.push_back(
             VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
+    }
 
-    m_synchronisation_2_enabled.setSynchronization2(true);
+    m_synchronisation_2_enabled.setSynchronization2(1U);
     m_features.setPNext(&m_synchronisation_2_enabled);
     return std::move(*this);
 }
 
 std::optional<PhysicalDevice> DeviceFinder::get() && noexcept {
-    if (m_physicalDevicesInformation.empty())
+    if (m_physicalDevicesInformation.empty()) {
         return {};
+    }
     return std::ranges::max_element(m_physicalDevicesInformation, std::less<>{},
                                     &PhysicalDeviceInformation::device)
         ->device;
@@ -119,26 +124,27 @@ void DeviceFinder::remove_device_not_supporting_extension(
 }
 
 Device DeviceFinder::build() && {
-    if (m_physicalDevicesInformation.empty())
+    if (m_physicalDevicesInformation.empty()) {
         throw DeviceNotFoundException{std::source_location::current()};
+    }
 
     auto information =
         *std::ranges::max_element(m_physicalDevicesInformation, std::less<>{},
                                   &PhysicalDeviceInformation::device);
 
     std::cout << "Take "
-              << information.device.device().getProperties().deviceName
-              << std::endl;
+              << information.device.device().getProperties().deviceName << '\n';
 
     if (std::ranges::find(information.availableExtensions,
                           "VK_KHR_portability_subset") !=
-        information.availableExtensions.end())
+        information.availableExtensions.end()) {
         information.extensions.push_back("VK_KHR_portability_subset");
+    }
 
     vk::DeviceCreateInfo info;
     std::vector<vk::DeviceQueueCreateInfo> queueInfos;
 
-    constexpr float priority = {1.0f};
+    constexpr float priority = {1.0F};
 
     for (auto [familyIndex, queueCount] : information.numberOfQueuesToCreate) {
         auto queueInfo = vk::DeviceQueueCreateInfo()
@@ -169,8 +175,9 @@ Device DeviceFinder::build() && {
     auto [result, device] =
         information.device.device().createDeviceUnique(info);
 
-    if (result != vk::Result::eSuccess)
+    if (result != vk::Result::eSuccess) {
         throw DeviceCreationException{std::source_location::current()};
+    }
 
     std::vector<Queue> queues;
 
@@ -190,7 +197,7 @@ Device DeviceFinder::build() && {
     }
 
     return Device{std::move(device), information.device.device(),
-                  std::move(queues), std::move(presentQueue)};
+                  std::move(queues), presentQueue};
 }
 
 } // namespace vw

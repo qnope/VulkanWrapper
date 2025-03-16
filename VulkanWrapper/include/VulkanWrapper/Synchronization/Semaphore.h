@@ -22,6 +22,6 @@ class SemaphoreBuilder {
     Semaphore build() &&;
 
   private:
-    const Device &m_device;
+    const Device *m_device;
 };
 } // namespace vw

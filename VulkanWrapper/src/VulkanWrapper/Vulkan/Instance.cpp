@@ -32,8 +32,9 @@ InstanceBuilder &&InstanceBuilder::addExtension(const char *extension) && {
 
 InstanceBuilder &&
 InstanceBuilder::addExtensions(std::span<char const *const> extensions) && {
-    for (auto extension : extensions)
+    for (const auto *extension : extensions) {
         m_extensions.push_back(extension);
+    }
     return std::move(*this);
 }
 
@@ -63,8 +64,9 @@ Instance InstanceBuilder::build() && {
 
     auto [result, instance] = vk::createInstanceUnique(info);
 
-    if (result != vk::Result::eSuccess)
+    if (result != vk::Result::eSuccess) {
         throw InstanceCreationException{std::source_location::current()};
+    }
 
     return {std::move(instance), m_extensions};
 }

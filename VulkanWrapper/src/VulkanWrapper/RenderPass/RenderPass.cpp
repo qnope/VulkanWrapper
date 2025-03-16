@@ -48,11 +48,12 @@ static SubpassDescription subpassToDescription(
         std::views::transform(std::bind_front(computeReference, attachments)) |
         to<std::vector>;
 
-    return {bindingPointAndSubpass.first, std::move(colorAttachments)};
+    return {.bindingPoint = bindingPointAndSubpass.first,
+            .colorAttachments = std::move(colorAttachments)};
 }
 
 RenderPassBuilder::RenderPassBuilder(const Device &device)
-    : m_device{device} {}
+    : m_device{&device} {}
 
 RenderPassBuilder &&RenderPassBuilder::add_subpass(Subpass subpass) && {
     m_subpasses.emplace_back(vk::PipelineBindPoint::eGraphics,
@@ -80,10 +81,11 @@ RenderPass RenderPassBuilder::build() && {
                           .setAttachments(attachmentDescriptions)
                           .setSubpasses(vkSubpassDescriptions);
 
-    auto [result, renderPass] = m_device.handle().createRenderPass2Unique(info);
+    auto [result, renderPass] = m_device->handle().createRenderPass2Unique(info);
 
-    if (result != vk::Result::eSuccess)
+    if (result != vk::Result::eSuccess) {
         throw RenderPassCreationException{std::source_location::current()};
+    }
     return RenderPass{std::move(renderPass)};
 }
 
@@ -91,8 +93,10 @@ std::vector<Attachment> RenderPassBuilder::createAttachments() const noexcept {
     std::set<Attachment> attachments;
 
     for (const auto &subpass : m_subpasses | std::views::values) {
-        for (auto attachment : subpass.colorReferences | std::views::keys)
+        for (const auto &attachment :
+             subpass.colorReferences | std::views::keys) {
             attachments.insert(attachment);
+        }
     }
 
     return attachments | to<std::vector>;

@@ -41,15 +41,15 @@ create_image_views(const vw::Device &device, const vw::Swapchain &swapchain) {
 struct UBOData {
     glm::mat4 proj = [] {
         auto proj =
-            glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 10.0f);
+            glm::perspective(glm::radians(45.0F), 800.0F / 600.0F, 0.1F, 10.0F);
         proj[1][1] *= -1;
         return proj;
     }();
     glm::mat4 view =
-        glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f),
-                    glm::vec3(0.0f, 0.0f, 1.0f));
-    glm::mat4 model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f),
-                                  glm::vec3(0.0f, 0.0f, 1.0f));
+        glm::lookAt(glm::vec3(2.0F, 2.0F, 2.0F), glm::vec3(0.0F, 0.0F, 0.0F),
+                    glm::vec3(0.0F, 0.0F, 1.0F));
+    glm::mat4 model = glm::rotate(glm::mat4(1.0F), glm::radians(90.0F),
+                                  glm::vec3(0.0F, 0.0F, 1.0F));
 };
 
 vw::Buffer<UBOData, true, vw::UniformBufferUsage>
@@ -99,10 +99,10 @@ void record(
 int main() {
     try {
         const std::vector<vw::ColoredVertex2D> vertices = {
-            {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-            {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-            {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-            {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}};
+            {.vertex = {-0.5F, -0.5F}, .color = {1.0F, 0.0F, 0.0F}},
+            {.vertex = {0.5F, -0.5F}, .color = {0.0F, 1.0F, 0.0F}},
+            {.vertex = {0.5F, 0.5F}, .color = {0.0F, 0.0F, 1.0F}},
+            {.vertex = {-0.5F, 0.5F}, .color = {1.0F, 1.0F, 1.0F}}};
 
         const std::vector<unsigned> indices = {0, 1, 2, 2, 3, 0};
 
@@ -205,15 +205,16 @@ int main() {
         vw::DescriptorAllocator descriptor_allocator;
         descriptor_allocator.add_buffer(0, vk::DescriptorType::eUniformBuffer,
                                         uniform_buffer.handle(), 0,
-                                        uniform_buffer.size_in_bytes());
+                                        uniform_buffer.size_bytes());
 
         auto descriptor_set =
             descriptor_pool.allocate_set(descriptor_allocator);
 
         for (auto [framebuffer, commandBuffer] :
-             std::views::zip(framebuffers, commandBuffers))
+             std::views::zip(framebuffers, commandBuffers)) {
             record(commandBuffer, extent, framebuffer, pipeline, renderPass,
                    vertex_buffer, index_buffer, pipelineLayout, descriptor_set);
+        }
 
         auto renderFinishedSemaphore = vw::SemaphoreBuilder(device).build();
         auto imageAvailableSemaphore = vw::SemaphoreBuilder(device).build();
@@ -248,6 +249,6 @@ int main() {
 
         device.wait_idle();
     } catch (const vw::Exception &exception) {
-        std::cout << exception.m_sourceLocation.function_name() << std::endl;
+        std::cout << exception.m_sourceLocation.function_name() << '\n';
     }
 }

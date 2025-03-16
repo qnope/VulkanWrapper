@@ -27,11 +27,10 @@ class PipelineLayoutBuilder {
     PipelineLayout build() &&;
 
   private:
-    vk::UniqueDescriptorSetLayout build_set_layout(
+    [[nodiscard]] vk::UniqueDescriptorSetLayout build_set_layout(
         const std::vector<vk::DescriptorSetLayoutBinding> &bindings) const;
 
-  private:
-    const Device &m_device;
+    const Device *m_device;
     std::vector<std::shared_ptr<DescriptorSetLayout>> m_descriptorSetLayouts;
 };
 } // namespace vw

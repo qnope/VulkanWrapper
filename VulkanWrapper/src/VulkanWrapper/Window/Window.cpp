@@ -14,13 +14,13 @@ void Window::WindowDeleter::operator()(SDL_Window *window) const noexcept {
 
 Window::Window(const SDL_Initializer &initializer, std::string_view name,
                int width, int height)
-    : m_initializer{initializer}
+    : m_initializer{&initializer}
     , m_width{width}
     , m_height{height} {
-    auto window =
+    auto *window =
         SDL_CreateWindow(name.begin(), width, height, SDL_WINDOW_VULKAN);
 
-    if (!window) {
+    if (window == nullptr) {
         throw WindowInitializationException{std::source_location::current()};
     }
 
@@ -28,11 +28,11 @@ Window::Window(const SDL_Initializer &initializer, std::string_view name,
 }
 
 Surface Window::create_surface(const Instance &instance) const {
-    VkSurfaceKHR surface;
+    VkSurfaceKHR surface{};
     auto x = SDL_Vulkan_CreateSurface(m_window.get(), instance.handle(),
                                       nullptr, &surface);
 
-    if (x == false)
+    if (!x)
         throw SurfaceCreationException{std::source_location::current()};
 
     return Surface{vk::UniqueSurfaceKHR(surface, instance.handle())};
@@ -46,9 +46,9 @@ Swapchain Window::create_swapchain(const Device &device,
 bool Window::is_close_requested() const noexcept { return m_closeRequested; }
 
 std::span<char const *const>
-Window::get_required_instance_extensions() const noexcept {
-    unsigned count;
-    auto array = SDL_Vulkan_GetInstanceExtensions(&count);
+Window::get_required_instance_extensions() noexcept {
+    unsigned count{};
+    const auto *array = SDL_Vulkan_GetInstanceExtensions(&count);
     return {array, count};
 }
 
@@ -59,12 +59,14 @@ void Window::update() noexcept {
         switch (event.type) {
         case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
             m_closeRequested = true;
+        default:
+            break;
         }
     }
 }
 
 WindowBuilder::WindowBuilder(const SDL_Initializer &initializer)
-    : initializer{initializer} {}
+    : initializer{&initializer} {}
 
 WindowBuilder &&WindowBuilder::with_title(std::string_view name) && {
     this->name = name;
@@ -78,7 +80,7 @@ WindowBuilder &&WindowBuilder::sized(int width, int height) && {
 }
 
 Window WindowBuilder::build() && {
-    return Window{initializer, name, width, height};
+    return Window{*initializer, name, width, height};
 }
 
 } // namespace vw

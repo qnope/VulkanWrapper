@@ -12,8 +12,9 @@ void Queue::enqueue_command_buffer(vk::CommandBuffer command_buffer) {
 
 void Queue::enqueue_command_buffers(
     std::span<const vk::CommandBuffer> command_buffers) {
-    for (auto buffer : command_buffers)
+    for (auto buffer : command_buffers) {
         enqueue_command_buffer(buffer);
+    }
 }
 
 Fence Queue::submit(std::span<const vk::PipelineStageFlags> waitStages,

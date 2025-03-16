@@ -12,10 +12,11 @@ ImageDescription load_image(const std::filesystem::path &path) {
     std::unique_ptr<SDL_Surface, static_function<SDL_DestroySurface>> img{
         IMG_Load(path.c_str())};
 
-    if (!img)
+    if (!img) {
         throw ImageNotFoundException{std::source_location::current()};
+    }
 
-    SDL_Surface *t;
+    SDL_Surface *t = nullptr;
     SDL_PixelFormat format = SDL_PIXELFORMAT_RGBA8888;
 
     std::unique_ptr<SDL_Surface, static_function<SDL_DestroySurface>> surface{
@@ -23,8 +24,9 @@ ImageDescription load_image(const std::filesystem::path &path) {
 
     return {.width = surface->w,
             .height = surface->h,
-            .pixels = std::span(static_cast<const std::byte *>(surface->pixels),
-                                surface->w * surface->h) |
-                      to<std::vector>};
+            .pixels =
+                std::span(static_cast<const std::byte *>(surface->pixels),
+                          static_cast<std::size_t>(surface->w * surface->h)) |
+                to<std::vector>};
 }
 } // namespace vw

@@ -14,7 +14,7 @@ class DescriptorSetLayout
     DescriptorSetLayout(std::vector<vk::DescriptorSetLayoutBinding> pool_sizes,
                         vk::UniqueDescriptorSetLayout set_layout);
 
-    std::vector<vk::DescriptorPoolSize> get_pool_sizes() const;
+    [[nodiscard]] std::vector<vk::DescriptorPoolSize> get_pool_sizes() const;
 
   private:
     std::vector<vk::DescriptorSetLayoutBinding> m_bindings;
@@ -30,7 +30,7 @@ class DescriptorSetLayoutBuilder {
     std::shared_ptr<DescriptorSetLayout> build() &&;
 
   private:
-    const Device &m_device;
+    const Device *m_device;
     int m_current_binding = 0;
     std::vector<vk::DescriptorSetLayoutBinding> m_bindings;
 };

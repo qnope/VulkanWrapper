@@ -29,14 +29,14 @@ class BufferBase : public ObjectWithHandle<vk::Buffer> {
     BufferBase(BufferBase &&other) noexcept;
     BufferBase &operator=(BufferBase &&other) noexcept;
 
-    VkDeviceSize size_in_bytes() const noexcept;
+    [[nodiscard]] VkDeviceSize size_bytes() const noexcept;
 
     void generic_copy(const void *data, VkDeviceSize size, VkDeviceSize offset);
 
     ~BufferBase();
 
   private:
-    Allocator &m_allocator;
+    Allocator *m_allocator;
     VmaAllocation m_allocation;
     VkDeviceSize m_size_in_bytes;
 };

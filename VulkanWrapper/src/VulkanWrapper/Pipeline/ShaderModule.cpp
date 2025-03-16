@@ -16,10 +16,11 @@ static std::vector<uint32_t> readSpirVFile(const std::filesystem::path &path) {
         throw SpirVFileNotFoundException{std::source_location::current()};
     }
 
-    const std::size_t size = in.tellg();
+    const auto size = in.tellg();
 
-    if (size == 0 || size % sizeof(std::uint32_t) != 0)
+    if (size == 0 || size % sizeof(std::uint32_t) != 0) {
         throw SpirVIncorrectSizeException{std::source_location::current()};
+    }
 
     std::vector<std::uint32_t> result(size / sizeof(std::uint32_t));
 
@@ -38,8 +39,9 @@ ShaderModule::create_from_spirv(const Device &device,
                     .setCode(spirV);
     auto [result, module] = device.handle().createShaderModuleUnique(info);
 
-    if (result != vk::Result::eSuccess)
+    if (result != vk::Result::eSuccess) {
         throw SpirVInvalidException{std::source_location::current()};
+    }
 
     return std::make_shared<ShaderModule>(std::move(module));
 }

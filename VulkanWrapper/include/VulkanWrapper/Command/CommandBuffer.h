@@ -42,7 +42,7 @@ class PipelineBoundCommandBufferRecorder {
               uint32_t firstVertex, uint32_t firstInstance);
 
     void indexed_draw(uint32_t index_count, uint32_t instance_count,
-                      uint32_t first_index, uint32_t vertex_offset,
+                      uint32_t first_index, int32_t vertex_offset,
                       uint32_t first_instance) {
         m_commandBuffer.drawIndexed(index_count, instance_count, first_index,
                                     vertex_offset, first_instance);
@@ -51,7 +51,6 @@ class PipelineBoundCommandBufferRecorder {
   private:
     PipelineBoundCommandBufferRecorder(vk::CommandBuffer commandBuffer);
 
-  private:
     vk::CommandBuffer m_commandBuffer;
 };
 
@@ -59,6 +58,14 @@ class RenderPassCommandBufferRecorder {
     friend class CommandBufferRecorder;
 
   public:
+    RenderPassCommandBufferRecorder(RenderPassCommandBufferRecorder &&) =
+        delete;
+    RenderPassCommandBufferRecorder(const RenderPassCommandBufferRecorder &) =
+        delete;
+    RenderPassCommandBufferRecorder &
+    operator=(const RenderPassCommandBufferRecorder &) = delete;
+    RenderPassCommandBufferRecorder &
+    operator=(RenderPassCommandBufferRecorder &&) = delete;
     ~RenderPassCommandBufferRecorder();
     PipelineBoundCommandBufferRecorder
     bind_graphics_pipeline(const Pipeline &pipeline);
@@ -66,13 +73,16 @@ class RenderPassCommandBufferRecorder {
   private:
     RenderPassCommandBufferRecorder(vk::CommandBuffer commandBuffer);
 
-  private:
     vk::CommandBuffer m_commandBuffer;
 };
 
 class CommandBufferRecorder {
   public:
     CommandBufferRecorder(vk::CommandBuffer commandBuffer);
+    CommandBufferRecorder(CommandBufferRecorder &&) = delete;
+    CommandBufferRecorder(const CommandBufferRecorder &) = delete;
+    CommandBufferRecorder &operator=(const CommandBufferRecorder &) = delete;
+    CommandBufferRecorder &operator=(CommandBufferRecorder &&) = delete;
     ~CommandBufferRecorder();
 
     RenderPassCommandBufferRecorder

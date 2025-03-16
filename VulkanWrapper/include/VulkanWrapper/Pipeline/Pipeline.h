@@ -35,16 +35,18 @@ class GraphicsPipelineBuilder {
     template <Vertex V> GraphicsPipelineBuilder &&add_vertex_binding() && {
         const auto binding = m_input_binding_descriptions.size();
         const auto location = [this] {
-            if (m_input_attribute_descriptions.empty())
-                return 0u;
+            if (m_input_attribute_descriptions.empty()) {
+                return 0U;
+            }
             return static_cast<unsigned>(
                 m_input_attribute_descriptions.back().location + 1);
         }();
 
         m_input_binding_descriptions.push_back(V::binding_description(binding));
 
-        for (auto attribute : V::attribute_descriptions(binding, location))
+        for (auto attribute : V::attribute_descriptions(binding, location)) {
             m_input_attribute_descriptions.push_back(attribute);
+        }
         return std::move(*this);
     }
 
@@ -54,32 +56,32 @@ class GraphicsPipelineBuilder {
     Pipeline build() &&;
 
   private:
-    std::vector<vk::PipelineShaderStageCreateInfo>
+    [[nodiscard]] std::vector<vk::PipelineShaderStageCreateInfo>
     createShaderStageInfos() const noexcept;
 
-    vk::PipelineDynamicStateCreateInfo createDynamicStateInfo() const noexcept;
+    [[nodiscard]] vk::PipelineDynamicStateCreateInfo
+    createDynamicStateInfo() const noexcept;
 
-    vk::PipelineVertexInputStateCreateInfo
+    [[nodiscard]] vk::PipelineVertexInputStateCreateInfo
     createVertexInputStateInfo() const noexcept;
 
-    vk::PipelineInputAssemblyStateCreateInfo
-    createInputAssemblyStateInfo() const noexcept;
+    [[nodiscard]] static vk::PipelineInputAssemblyStateCreateInfo
+    createInputAssemblyStateInfo() noexcept;
 
-    vk::PipelineViewportStateCreateInfo
+    [[nodiscard]] vk::PipelineViewportStateCreateInfo
     createViewportStateInfo() const noexcept;
 
-    vk::PipelineRasterizationStateCreateInfo
-    createRasterizationStateInfo() const noexcept;
+    [[nodiscard]] static vk::PipelineRasterizationStateCreateInfo
+    createRasterizationStateInfo() noexcept;
 
-    vk::PipelineMultisampleStateCreateInfo
-    createMultisampleStateInfo() const noexcept;
+    [[nodiscard]] static vk::PipelineMultisampleStateCreateInfo
+    createMultisampleStateInfo() noexcept;
 
-    vk::PipelineColorBlendStateCreateInfo
+    [[nodiscard]] vk::PipelineColorBlendStateCreateInfo
     createColorBlendStateInfo() const noexcept;
 
-  private:
-    const Device &m_device;
-    const RenderPass &m_renderPass;
+    const Device *m_device;
+    const RenderPass *m_renderPass;
     std::map<vk::ShaderStageFlagBits, std::shared_ptr<ShaderModule>>
         m_shaderModules;
     std::vector<vk::DynamicState> m_dynamicStates;
@@ -91,6 +93,6 @@ class GraphicsPipelineBuilder {
     std::vector<vk::VertexInputBindingDescription> m_input_binding_descriptions;
     std::vector<vk::VertexInputAttributeDescription>
         m_input_attribute_descriptions;
-    const PipelineLayout *m_pipelineLayout;
+    const PipelineLayout *m_pipelineLayout = nullptr;
 };
 } // namespace vw

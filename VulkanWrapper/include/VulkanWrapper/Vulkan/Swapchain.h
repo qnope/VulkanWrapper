@@ -11,16 +11,17 @@ class Swapchain : public ObjectWithUniqueHandle<vk::UniqueSwapchainKHR> {
     Swapchain(const Device &device, vk::UniqueSwapchainKHR swapchain,
               vk::Format format, int width, int height);
 
-    int width() const noexcept;
-    int height() const noexcept;
-    vk::Format format() const noexcept;
+    [[nodiscard]] int width() const noexcept;
+    [[nodiscard]] int height() const noexcept;
+    [[nodiscard]] vk::Format format() const noexcept;
 
-    std::span<const Image> images() const noexcept;
+    [[nodiscard]] std::span<const Image> images() const noexcept;
 
-    uint64_t acquire_next_image(const Semaphore &semaphore) const noexcept;
+    [[nodiscard]] uint64_t
+    acquire_next_image(const Semaphore &semaphore) const noexcept;
 
   private:
-    const Device &m_device;
+    const Device *m_device;
     vk::Format m_format;
     std::vector<Image> m_images;
     int m_width;
@@ -34,7 +35,7 @@ class SwapchainBuilder {
     Swapchain build() &&;
 
   private:
-    const Device &m_device;
+    const Device *m_device;
     int m_width;
     int m_height;
 

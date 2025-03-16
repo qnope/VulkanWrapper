@@ -26,8 +26,8 @@ class ImageViewBuilder {
     std::shared_ptr<ImageView> build() &&;
 
   private:
-    const Device &m_device;
-    const Image &m_image;
+    const Device *m_device;
+    const Image *m_image;
 
     vk::ImageViewType m_type = vk::ImageViewType::e2D;
 

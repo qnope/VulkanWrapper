@@ -11,13 +11,12 @@ class Instance : public ObjectWithUniqueHandle<vk::UniqueInstance> {
     friend class InstanceBuilder;
 
   public:
-    DeviceFinder findGpu() const noexcept;
+    [[nodiscard]] DeviceFinder findGpu() const noexcept;
 
   private:
     Instance(vk::UniqueInstance instance,
              std::span<const char *> extensions) noexcept;
 
-  private:
     std::vector<const char *> m_extensions;
 };
 

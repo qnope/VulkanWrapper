@@ -23,7 +23,7 @@ class AttachmentBuilder {
 
   private:
     std::string m_id;
-    vk::Format m_format;
+    vk::Format m_format = vk::Format::eUndefined;
     vk::SampleCountFlagBits m_sampleCount = vk::SampleCountFlagBits::e1;
 
     vk::ImageLayout m_initialLayout = vk::ImageLayout::eUndefined;

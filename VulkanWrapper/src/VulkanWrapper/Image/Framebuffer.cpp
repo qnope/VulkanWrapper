@@ -19,7 +19,7 @@ uint32_t Framebuffer::height() const noexcept { return m_height; }
 FramebufferBuilder::FramebufferBuilder(const Device &device,
                                        const RenderPass &renderPass,
                                        uint32_t width, uint32_t height)
-    : m_device{device}
+    : m_device{&device}
     , m_renderPass{renderPass.handle()}
     , m_width{width}
     , m_height{height} {}
@@ -41,9 +41,10 @@ Framebuffer FramebufferBuilder::build() && {
                           .setAttachments(attachments);
 
     auto [result, framebuffer] =
-        m_device.handle().createFramebufferUnique(info);
-    if (result != vk::Result::eSuccess)
+        m_device->handle().createFramebufferUnique(info);
+    if (result != vk::Result::eSuccess) {
         throw FramebufferCreationException{std::source_location::current()};
+    }
     return Framebuffer{std::move(framebuffer), m_width, m_height};
 }
 

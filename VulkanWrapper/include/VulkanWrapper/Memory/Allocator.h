@@ -11,6 +11,11 @@ struct AllocatorImpl;
 class Allocator : public ObjectWithHandle<VmaAllocator> {
   public:
     Allocator(VmaAllocator allocator);
+    Allocator(const Allocator &) = delete;
+    Allocator(Allocator &&) noexcept = default;
+
+    Allocator &operator=(Allocator &&) noexcept = default;
+    Allocator &operator=(const Allocator &) noexcept = delete;
 
     template <typename T, bool HostVisible = false>
     Buffer<T, HostVisible, VertexBufferUsage>
@@ -45,8 +50,8 @@ class AllocatorBuilder {
     Allocator build() &&;
 
   private:
-    const Instance &m_instance;
-    const Device &m_device;
+    const Instance *m_instance;
+    const Device *m_device;
 };
 
 } // namespace vw

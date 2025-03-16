@@ -21,7 +21,6 @@ class DeviceFinder {
   private:
     void remove_device_not_supporting_extension(const char *extension);
 
-  private:
     struct QueueFamilyInformation {
         int numberAsked = 0;
         uint32_t numberAvailable;

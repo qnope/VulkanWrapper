@@ -15,20 +15,22 @@ DescriptorSetLayout::DescriptorSetLayout(
 std::vector<vk::DescriptorPoolSize>
 DescriptorSetLayout::get_pool_sizes() const {
     std::vector<vk::DescriptorPoolSize> pool_sizes;
-    std::map<vk::DescriptorType, int> size;
+    std::map<vk::DescriptorType, uint32_t> size;
 
     for (const auto &binding : m_bindings) {
         size[binding.descriptorType] += binding.descriptorCount;
     }
 
-    for (auto [type, number] : size)
+    pool_sizes.reserve(size.size());
+    for (auto [type, number] : size) {
         pool_sizes.emplace_back(type, number);
+    }
 
     return pool_sizes;
 }
 
 DescriptorSetLayoutBuilder::DescriptorSetLayoutBuilder(const Device &device)
-    : m_device{device} {}
+    : m_device{&device} {}
 
 DescriptorSetLayoutBuilder &&
 DescriptorSetLayoutBuilder::with_uniform_buffer(vk::ShaderStageFlags stages,
@@ -47,10 +49,11 @@ std::shared_ptr<DescriptorSetLayout> DescriptorSetLayoutBuilder::build() && {
     const auto info =
         vk::DescriptorSetLayoutCreateInfo().setBindings(m_bindings);
     auto [result, value] =
-        m_device.handle().createDescriptorSetLayoutUnique(info);
-    if (result != vk::Result::eSuccess)
+        m_device->handle().createDescriptorSetLayoutUnique(info);
+    if (result != vk::Result::eSuccess) {
         throw DescriptorSetLayoutCreationException{
             std::source_location::current()};
+    }
     return std::make_shared<DescriptorSetLayout>(std::move(m_bindings),
                                                  std::move(value));
 }

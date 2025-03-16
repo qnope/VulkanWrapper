@@ -8,8 +8,8 @@
 namespace vw {
 GraphicsPipelineBuilder::GraphicsPipelineBuilder(const Device &device,
                                                  const RenderPass &renderPass)
-    : m_device{device}
-    , m_renderPass{renderPass} {}
+    : m_device{&device}
+    , m_renderPass{&renderPass} {}
 
 GraphicsPipelineBuilder &&
 GraphicsPipelineBuilder::add_shader(vk::ShaderStageFlagBits flags,
@@ -26,7 +26,8 @@ GraphicsPipelineBuilder::add_dynamic_state(vk::DynamicState state) && {
 
 GraphicsPipelineBuilder &&
 GraphicsPipelineBuilder::with_fixed_viewport(int width, int height) && {
-    m_viewport = vk::Viewport(0.0f, 0.0f, width, height, 0.0f, 1.0f);
+    m_viewport = vk::Viewport(0.0F, 0.0F, static_cast<float>(width),
+                              static_cast<float>(height), 0.0F, 1.0F);
     return std::move(*this);
 }
 
@@ -39,7 +40,7 @@ GraphicsPipelineBuilder::with_fixed_scissor(int width, int height) && {
 GraphicsPipelineBuilder &&GraphicsPipelineBuilder::add_color_attachment() && {
     const auto colorBlendAttachment =
         vk::PipelineColorBlendAttachmentState()
-            .setBlendEnable(false)
+            .setBlendEnable(0U)
             .setColorWriteMask(vk::ColorComponentFlagBits::eA |
                                vk::ColorComponentFlagBits::eB |
                                vk::ColorComponentFlagBits::eG |
@@ -64,25 +65,27 @@ Pipeline GraphicsPipelineBuilder::build() && {
     const auto inputAssemblyStateInfo = createInputAssemblyStateInfo();
     const auto rasterizationStateInfo = createRasterizationStateInfo();
 
-    const auto info =
-        vk::GraphicsPipelineCreateInfo()
-            .setStages(shaderStageInfos)
-            .setRenderPass(m_renderPass.handle())
-            .setPDynamicState(&dynamicStateInfo)
-            .setPViewportState(&viewportStateInfo)
-            .setPColorBlendState(&colorBlendStateInfo)
-            .setPVertexInputState(&vertexInputStateInfo)
-            .setPMultisampleState(&multisampleStateInfo)
-            .setPInputAssemblyState(&inputAssemblyStateInfo)
-            .setPRasterizationState(&rasterizationStateInfo)
-            .setLayout(m_pipelineLayout ? m_pipelineLayout->handle() : nullptr);
+    const auto info = vk::GraphicsPipelineCreateInfo()
+                          .setStages(shaderStageInfos)
+                          .setRenderPass(m_renderPass->handle())
+                          .setPDynamicState(&dynamicStateInfo)
+                          .setPViewportState(&viewportStateInfo)
+                          .setPColorBlendState(&colorBlendStateInfo)
+                          .setPVertexInputState(&vertexInputStateInfo)
+                          .setPMultisampleState(&multisampleStateInfo)
+                          .setPInputAssemblyState(&inputAssemblyStateInfo)
+                          .setPRasterizationState(&rasterizationStateInfo)
+                          .setLayout((m_pipelineLayout != nullptr)
+                                         ? m_pipelineLayout->handle()
+                                         : nullptr);
 
-    auto [result, pipeline] = m_device.handle().createGraphicsPipelineUnique(
+    auto [result, pipeline] = m_device->handle().createGraphicsPipelineUnique(
         vk::PipelineCache(), info);
 
-    if (result != vk::Result::eSuccess)
+    if (result != vk::Result::eSuccess) {
         throw GraphicsPipelineCreationException{
             std::source_location::current()};
+    }
 
     return Pipeline{std::move(pipeline)};
 }
@@ -96,7 +99,7 @@ GraphicsPipelineBuilder::createShaderStageInfos() const noexcept {
                         .setPName("main")
                         .setStage(stage)
                         .setModule(module->handle());
-        infos.push_back(std::move(info));
+        infos.push_back(info);
     }
 
     return infos;
@@ -116,10 +119,10 @@ GraphicsPipelineBuilder::createVertexInputStateInfo() const noexcept {
 }
 
 vk::PipelineInputAssemblyStateCreateInfo
-GraphicsPipelineBuilder::createInputAssemblyStateInfo() const noexcept {
+GraphicsPipelineBuilder::createInputAssemblyStateInfo() noexcept {
     return vk::PipelineInputAssemblyStateCreateInfo()
         .setTopology(vk::PrimitiveTopology::eTriangleList)
-        .setPrimitiveRestartEnable(false);
+        .setPrimitiveRestartEnable(0U);
 }
 
 vk::PipelineViewportStateCreateInfo
@@ -132,21 +135,21 @@ GraphicsPipelineBuilder::createViewportStateInfo() const noexcept {
 }
 
 vk::PipelineRasterizationStateCreateInfo
-GraphicsPipelineBuilder::createRasterizationStateInfo() const noexcept {
+GraphicsPipelineBuilder::createRasterizationStateInfo() noexcept {
     return vk::PipelineRasterizationStateCreateInfo()
-        .setDepthClampEnable(false)
-        .setRasterizerDiscardEnable(false)
+        .setDepthClampEnable(0U)
+        .setRasterizerDiscardEnable(0U)
         .setPolygonMode(vk::PolygonMode::eFill)
-        .setLineWidth(1.0f)
+        .setLineWidth(1.0F)
         .setCullMode(vk::CullModeFlagBits::eBack)
         .setFrontFace(vk::FrontFace::eCounterClockwise)
-        .setDepthBiasEnable(false);
+        .setDepthBiasEnable(0U);
 }
 
 vk::PipelineMultisampleStateCreateInfo
-GraphicsPipelineBuilder::createMultisampleStateInfo() const noexcept {
+GraphicsPipelineBuilder::createMultisampleStateInfo() noexcept {
     return vk::PipelineMultisampleStateCreateInfo()
-        .setSampleShadingEnable(false)
+        .setSampleShadingEnable(0U)
         .setRasterizationSamples(vk::SampleCountFlagBits::e1);
 }
 
@@ -154,7 +157,7 @@ vk::PipelineColorBlendStateCreateInfo
 GraphicsPipelineBuilder::createColorBlendStateInfo() const noexcept {
     return vk::PipelineColorBlendStateCreateInfo()
         .setAttachments(m_colorAttachmentStates)
-        .setLogicOpEnable(false);
+        .setLogicOpEnable(0U);
 }
 
 } // namespace vw

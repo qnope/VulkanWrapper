@@ -14,8 +14,8 @@ class Framebuffer : public ObjectWithUniqueHandle<vk::UniqueFramebuffer> {
                 uint32_t height) noexcept;
 
   public:
-    uint32_t width() const noexcept;
-    uint32_t height() const noexcept;
+    [[nodiscard]] uint32_t width() const noexcept;
+    [[nodiscard]] uint32_t height() const noexcept;
 
   private:
     uint32_t m_width;
@@ -33,7 +33,7 @@ class FramebufferBuilder {
     Framebuffer build() &&;
 
   private:
-    const Device &m_device;
+    const Device *m_device;
     vk::RenderPass m_renderPass;
     uint32_t m_width;
     uint32_t m_height;

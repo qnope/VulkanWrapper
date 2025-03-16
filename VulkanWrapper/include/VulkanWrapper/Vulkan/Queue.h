@@ -22,10 +22,9 @@ class Queue {
   private:
     Queue(vk::Queue queue, vk::QueueFlags type) noexcept;
 
-  private:
     std::vector<vk::CommandBuffer> m_command_buffers;
 
-    Device *m_device;
+    Device *m_device = nullptr;
     vk::Queue m_queue;
     vk::QueueFlags m_queueFlags;
 };

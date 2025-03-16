@@ -16,23 +16,25 @@ std::vector<vk::CommandBuffer> CommandPool::allocate(std::size_t number) {
     auto [result, commandBuffers] =
         m_device->handle().allocateCommandBuffers(info);
 
-    if (result != vk::Result::eSuccess)
+    if (result != vk::Result::eSuccess) {
         throw CommandBufferAllocationException(std::source_location::current());
+    }
 
     return commandBuffers;
 }
 
 CommandPoolBuilder::CommandPoolBuilder(const Device &device)
-    : m_device{device} {}
+    : m_device{&device} {}
 
 CommandPool CommandPoolBuilder::build() && {
     auto info = vk::CommandPoolCreateInfo().setQueueFamilyIndex(0);
 
-    auto [result, pool] = m_device.handle().createCommandPoolUnique(info);
+    auto [result, pool] = m_device->handle().createCommandPoolUnique(info);
 
-    if (result != vk::Result::eSuccess)
+    if (result != vk::Result::eSuccess) {
         throw CommandPoolCreationException(std::source_location::current());
+    }
 
-    return {m_device, std::move(pool)};
+    return {*m_device, std::move(pool)};
 }
 } // namespace vw

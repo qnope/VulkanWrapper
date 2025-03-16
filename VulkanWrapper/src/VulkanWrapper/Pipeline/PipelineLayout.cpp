@@ -6,7 +6,7 @@
 
 namespace vw {
 PipelineLayoutBuilder::PipelineLayoutBuilder(const Device &device)
-    : m_device{device} {}
+    : m_device{&device} {}
 
 PipelineLayoutBuilder &&PipelineLayoutBuilder::with_descriptor_set_layout(
     std::shared_ptr<DescriptorSetLayout> layout) && {
@@ -20,12 +20,13 @@ PipelineLayout PipelineLayoutBuilder::build() && {
 
     const auto info = vk::PipelineLayoutCreateInfo().setSetLayouts(layouts);
 
-    auto [result, layout] = m_device.handle().createPipelineLayoutUnique(info);
+    auto [result, layout] = m_device->handle().createPipelineLayoutUnique(info);
 
-    if (result != vk::Result::eSuccess)
+    if (result != vk::Result::eSuccess) {
         throw PipelineLayoutCreationException{std::source_location::current()};
+    }
 
-    return PipelineLayout(std::move(layout));
+    return {std::move(layout)};
 }
 
 } // namespace vw

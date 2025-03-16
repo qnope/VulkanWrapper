@@ -14,16 +14,15 @@ class Device : public ObjectWithUniqueHandle<vk::UniqueDevice> {
 
   public:
     Queue &graphicsQueue();
-    const PresentQueue &presentQueue() const;
+    [[nodiscard]] const PresentQueue &presentQueue() const;
     void wait_idle() const;
-    vk::PhysicalDevice physical_device() const;
+    [[nodiscard]] vk::PhysicalDevice physical_device() const;
 
   private:
     Device(vk::UniqueDevice device, vk::PhysicalDevice physicalDevice,
            std::vector<Queue> queues,
            std::optional<PresentQueue> presentQueue) noexcept;
 
-  private:
     vk::PhysicalDevice m_physicalDevice;
     std::vector<Queue> m_queues;
     std::optional<PresentQueue> m_presentQueue;

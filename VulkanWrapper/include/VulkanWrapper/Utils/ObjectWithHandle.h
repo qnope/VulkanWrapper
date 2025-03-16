@@ -6,9 +6,6 @@ template <typename UniqueHandle> class ObjectWithUniqueHandle {
     ObjectWithUniqueHandle(UniqueHandle handle) noexcept
         : m_handle{std::move(handle)} {}
 
-    ObjectWithUniqueHandle(const ObjectWithUniqueHandle &) = delete;
-    ObjectWithUniqueHandle(ObjectWithUniqueHandle &&) noexcept = default;
-
     auto handle() const noexcept { return *m_handle; }
 
   private:
@@ -27,10 +24,11 @@ template <typename Handle> class ObjectWithHandle {
 };
 
 constexpr auto to_handle = std::views::transform([](const auto &x) {
-    if constexpr (requires { x.handle(); })
+    if constexpr (requires { x.handle(); }) {
         return x.handle();
-    else
+    } else {
         return x->handle();
+    }
 });
 
 } // namespace vw

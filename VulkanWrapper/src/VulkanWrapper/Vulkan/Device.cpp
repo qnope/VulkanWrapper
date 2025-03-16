@@ -10,14 +10,18 @@ Device::Device(vk::UniqueDevice device, vk::PhysicalDevice physicalDevice,
     : ObjectWithUniqueHandle<vk::UniqueDevice>{std::move(device)}
     , m_physicalDevice{physicalDevice}
     , m_queues{std::move(queues)}
-    , m_presentQueue{std::move(presentQueue)} {
-    for (auto &queue : m_queues)
+    , m_presentQueue{presentQueue} {
+    for (auto &queue : m_queues) {
         queue.m_device = this;
+    }
 }
 
 Queue &Device::graphicsQueue() { return m_queues[0]; }
 
-const PresentQueue &Device::presentQueue() const { return *m_presentQueue; }
+const PresentQueue &Device::presentQueue() const {
+    assert(m_presentQueue);
+    return m_presentQueue.value();
+}
 
 void Device::wait_idle() const { handle().waitIdle(); }
 

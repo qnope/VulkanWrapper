@@ -8,12 +8,12 @@ class PhysicalDevice {
   public:
     PhysicalDevice(vk::PhysicalDevice physicalDevice) noexcept;
 
-    std::vector<vk::QueueFamilyProperties>
+    [[nodiscard]] std::vector<vk::QueueFamilyProperties>
     queueFamilyProperties() const noexcept;
 
-    std::set<std::string> extensions() const noexcept;
+    [[nodiscard]] std::set<std::string> extensions() const noexcept;
 
-    vk::PhysicalDevice device() const noexcept;
+    [[nodiscard]] vk::PhysicalDevice device() const noexcept;
 
   private:
     PhysicalDeviceType m_type;
