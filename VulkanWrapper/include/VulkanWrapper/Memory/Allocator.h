@@ -1,6 +1,7 @@
 #pragma once
 
 #include "VulkanWrapper/fwd.h"
+#include "VulkanWrapper/Image/Image.h"
 #include "VulkanWrapper/Memory/Buffer.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
 #include <vk_mem_alloc.h>
@@ -34,6 +35,10 @@ class Allocator : public ObjectWithHandle<VmaAllocator> {
                                 vk::BufferUsageFlags(Usage),
                                 vk::SharingMode::eExclusive)};
     }
+
+    [[nodiscard]] std::shared_ptr<Image>
+    create_image_2D(uint32_t width, uint32_t height, bool mipmap,
+                    vk::Format format, vk::ImageUsageFlags usage);
 
     ~Allocator();
 

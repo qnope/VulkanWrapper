@@ -5,13 +5,15 @@
 
 namespace vw {
 
-ImageView::ImageView(const Image &image, vk::UniqueImageView imageView)
+ImageView::ImageView(const std::shared_ptr<const Image> &image,
+                     vk::UniqueImageView imageView)
     : ObjectWithUniqueHandle<vk::UniqueImageView>(std::move(imageView))
     , m_image{image} {}
 
-ImageViewBuilder::ImageViewBuilder(const Device &device, const Image &image)
+ImageViewBuilder::ImageViewBuilder(const Device &device,
+                                   std::shared_ptr<const Image> image)
     : m_device{&device}
-    , m_image{&image} {}
+    , m_image{image} {}
 
 ImageViewBuilder &&ImageViewBuilder::setImageType(vk::ImageViewType type) && {
     m_type = type;
@@ -30,7 +32,7 @@ std::shared_ptr<ImageView> ImageViewBuilder::build() && {
     if (view.result != vk::Result::eSuccess) {
         throw ImageViewCreationException{std::source_location::current()};
     }
-    return std::make_shared<ImageView>(*m_image, std::move(view.value));
+    return std::make_shared<ImageView>(m_image, std::move(view.value));
 }
 
 } // namespace vw

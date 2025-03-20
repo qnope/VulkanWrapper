@@ -11,15 +11,16 @@ using ImageViewCreationException = TaggedException<struct ImageViewCreationTag>;
 
 class ImageView : public ObjectWithUniqueHandle<vk::UniqueImageView> {
   public:
-    ImageView(const Image &image, vk::UniqueImageView imageView);
+    ImageView(const std::shared_ptr<const Image> &image,
+              vk::UniqueImageView imageView);
 
   private:
-    Image m_image;
+    std::shared_ptr<const Image> m_image;
 };
 
 class ImageViewBuilder {
   public:
-    ImageViewBuilder(const Device &device, const Image &image);
+    ImageViewBuilder(const Device &device, std::shared_ptr<const Image> image);
 
     ImageViewBuilder &&setImageType(vk::ImageViewType imageViewType) &&;
 
@@ -27,7 +28,7 @@ class ImageViewBuilder {
 
   private:
     const Device *m_device;
-    const Image *m_image;
+    std::shared_ptr<const Image> m_image;
 
     vk::ImageViewType m_type = vk::ImageViewType::e2D;
 

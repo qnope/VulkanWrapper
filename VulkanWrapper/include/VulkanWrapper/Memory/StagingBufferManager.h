@@ -1,6 +1,7 @@
 #pragma once
 
 #include "VulkanWrapper/Command/CommandPool.h"
+#include "VulkanWrapper/Image/Image.h"
 #include "VulkanWrapper/Memory/Allocator.h"
 #include "VulkanWrapper/Memory/Buffer.h"
 
@@ -10,29 +11,35 @@ class StagingBuffer {
   public:
     StagingBuffer(Allocator &allocator, vk::DeviceSize size);
 
-    bool handle_data(vk::DeviceSize size) const noexcept;
+    vk::Buffer handle() const noexcept;
+    vk::DeviceSize offset() const noexcept;
+    [[nodiscard]] bool handle_data(vk::DeviceSize size) const noexcept;
+
+    template <typename T> auto fill_buffer(std::span<const T> data) {
+        m_buffer.generic_copy(data.data(), data.size_bytes(), m_offset);
+        m_offset += data.size_bytes();
+    }
 
     template <typename T, VkBufferUsageFlags Usage, bool HostVisible>
-    auto fill_buffer(std::span<const T> data,
-                     Buffer<T, HostVisible, Usage> &buffer,
-                     VkDeviceSize offset_dst_buffer) {
+    [[nodiscard]] auto fill_buffer(std::span<const T> data,
+                                   Buffer<T, HostVisible, Usage> &buffer,
+                                   VkDeviceSize offset_dst_buffer) {
         static_assert((Usage & VK_BUFFER_USAGE_TRANSFER_DST_BIT) ==
                       VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 
-        const auto size = data.size() * sizeof(T);
-        m_buffer.generic_copy(data.data(), data.size() * sizeof(T), m_offset);
+        const auto size = data.size_bytes();
 
-        auto function = [this, &buffer, size, offset_dst_buffer,
-                         offset_src =
-                             m_offset](vk::CommandBuffer command_buffer) {
+        auto function = [src_buffer_handle = m_buffer.handle(), &buffer, size,
+                         offset_dst_buffer, offset_src = m_offset](
+                            vk::CommandBuffer command_buffer) {
             const auto region = vk::BufferCopy()
                                     .setSrcOffset(offset_src)
                                     .setDstOffset(offset_dst_buffer)
                                     .setSize(size);
-            command_buffer.copyBuffer(m_buffer.handle(), buffer.handle(),
+            command_buffer.copyBuffer(src_buffer_handle, buffer.handle(),
                                       region);
         };
-        m_offset += data.size() * sizeof(T);
+        fill_buffer(data);
         return function;
     }
 
@@ -57,6 +64,9 @@ class StagingBufferManager {
             staging_buffer.fill_buffer(data, buffer, offset_dst_buffer);
         m_transfer_functions.emplace_back(function);
     }
+
+    std::shared_ptr<Image>
+    stage_image_from_path(const std::filesystem::path &path);
 
   private:
     void perform_transfer(const void *data, BufferBase &buffer_base);

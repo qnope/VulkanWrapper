@@ -48,15 +48,15 @@ Instance InstanceBuilder::build() && {
 
     auto appInfo = vk::ApplicationInfo()
                        .setApplicationVersion(VK_MAKE_VERSION(1, 0, 0))
-                       .setApiVersion(vk::ApiVersion12)
+                       .setApiVersion(vk::ApiVersion13)
                        .setPEngineName("3D Renderer")
                        .setEngineVersion(VK_MAKE_VERSION(1, 0, 0));
 
     vk::InstanceCreateInfo info;
     info.setFlags(m_flags)
         .setPEnabledExtensionNames(m_extensions)
-        .setPEnabledLayerNames(layers);
-    info.setPApplicationInfo(&appInfo);
+        .setPEnabledLayerNames(layers)
+        .setPApplicationInfo(&appInfo);
 
     if (m_debug) {
         info.setPEnabledLayerNames(layers);

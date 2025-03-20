@@ -128,9 +128,9 @@ Device DeviceFinder::build() && {
         throw DeviceNotFoundException{std::source_location::current()};
     }
 
-    auto information =
-        *std::ranges::max_element(m_physicalDevicesInformation, std::less<>{},
-                                  &PhysicalDeviceInformation::device);
+    auto information = *std::ranges::max_element(
+        m_physicalDevicesInformation, std::greater<>{},
+        &PhysicalDeviceInformation::device);
 
     std::cout << "Take "
               << information.device.device().getProperties().deviceName << '\n';

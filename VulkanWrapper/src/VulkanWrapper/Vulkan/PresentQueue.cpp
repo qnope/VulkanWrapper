@@ -15,7 +15,7 @@ void PresentQueue::present(const Swapchain &swapchain, uint32_t index,
                                  .setSwapchains(swapchainHandle)
                                  .setImageIndices(index)
                                  .setWaitSemaphores(semaphoreHandle);
-    m_queue.presentKHR(presentInfo);
+    std::ignore = m_queue.presentKHR(presentInfo);
 }
 
 } // namespace vw

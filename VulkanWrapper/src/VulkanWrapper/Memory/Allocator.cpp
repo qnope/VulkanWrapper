@@ -15,6 +15,32 @@ IndexBuffer Allocator::allocate_index_buffer(VkDeviceSize size) {
         vk::SharingMode::eExclusive)};
 }
 
+std::shared_ptr<Image> Allocator::create_image_2D(uint32_t width,
+                                                  uint32_t height, bool mipmap,
+                                                  vk::Format format,
+                                                  vk::ImageUsageFlags usage) {
+    VkImageCreateInfo create_info =
+        vk::ImageCreateInfo()
+            .setExtent(vk::Extent3D(width, height, 1))
+            .setMipLevels(1)
+            .setArrayLayers(1)
+            .setInitialLayout(vk::ImageLayout::eUndefined)
+            .setImageType(vk::ImageType::e2D)
+            .setSamples(vk::SampleCountFlagBits::e1)
+            .setFormat(format)
+            .setSharingMode(vk::SharingMode::eExclusive)
+            .setUsage(usage);
+
+    VmaAllocationCreateInfo allocation_info{};
+    allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
+    VmaAllocation allocation = nullptr;
+    VkImage image = nullptr;
+    vmaCreateImage(handle(), &create_info, &allocation_info, &image,
+                   &allocation, nullptr);
+    return std::make_shared<Image>(vk::Image(image), width, height, format,
+                                   usage, this, allocation);
+}
+
 Allocator::~Allocator() { vmaDestroyAllocator(handle()); }
 
 BufferBase Allocator::allocate_buffer(VkDeviceSize size, bool host_visible,

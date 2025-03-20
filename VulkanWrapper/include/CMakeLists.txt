@@ -45,4 +45,5 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Memory/Allocator.h
     VulkanWrapper/Memory/Buffer.h
     VulkanWrapper/Memory/StagingBufferManager.h
+    VulkanWrapper/Memory/Barrier.h
 )

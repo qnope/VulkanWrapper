@@ -1,6 +1,5 @@
 #include "VulkanWrapper/Vulkan/Swapchain.h"
 
-#include "VulkanWrapper/Image/ImageView.h"
 #include "VulkanWrapper/Synchronization/Semaphore.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 
@@ -16,7 +15,9 @@ Swapchain::Swapchain(const Device &device, vk::UniqueSwapchainKHR swapchain,
     auto vkImages = m_device->handle().getSwapchainImagesKHR(handle()).value;
 
     for (auto &vkImage : vkImages) {
-        auto &image = m_images.emplace_back(vkImage, m_format);
+        auto &image = m_images.emplace_back(std::make_shared<Image>(
+            vkImage, m_width, m_height, m_format,
+            vk::ImageUsageFlagBits::eColorAttachment, nullptr, nullptr));
     }
 }
 
@@ -26,7 +27,10 @@ int Swapchain::height() const noexcept { return m_height; }
 
 vk::Format Swapchain::format() const noexcept { return m_format; }
 
-std::span<const Image> Swapchain::images() const noexcept { return m_images; }
+std::span<const std::shared_ptr<const Image>>
+Swapchain::images() const noexcept {
+    return m_images;
+}
 
 uint64_t
 Swapchain::acquire_next_image(const Semaphore &semaphore) const noexcept {

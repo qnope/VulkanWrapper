@@ -1,27 +1,24 @@
 #pragma once
 
 namespace vw {
-template <typename UniqueHandle> class ObjectWithUniqueHandle {
+template <typename T> class ObjectWithHandle {
   public:
-    ObjectWithUniqueHandle(UniqueHandle handle) noexcept
+    ObjectWithHandle(auto handle) noexcept
         : m_handle{std::move(handle)} {}
 
-    auto handle() const noexcept { return *m_handle; }
+    auto handle() const noexcept {
+        if constexpr (sizeof(T) > sizeof(void *))
+            return *m_handle;
+        else
+            return m_handle;
+    }
 
   private:
-    UniqueHandle m_handle;
+    T m_handle;
 };
 
-template <typename Handle> class ObjectWithHandle {
-  public:
-    ObjectWithHandle(Handle handle)
-        : m_handle{handle} {}
-
-    auto handle() const noexcept { return m_handle; }
-
-  private:
-    Handle m_handle;
-};
+template <typename UniqueHandle>
+using ObjectWithUniqueHandle = ObjectWithHandle<UniqueHandle>;
 
 constexpr auto to_handle = std::views::transform([](const auto &x) {
     if constexpr (requires { x.handle(); }) {

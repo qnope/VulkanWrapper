@@ -4,6 +4,7 @@
 #include <VulkanWrapper/Descriptors/DescriptorPool.h>
 #include <VulkanWrapper/Descriptors/DescriptorSetLayout.h>
 #include <VulkanWrapper/Image/Framebuffer.h>
+#include <VulkanWrapper/Image/ImageLoader.h>
 #include <VulkanWrapper/Memory/Allocator.h>
 #include <VulkanWrapper/Memory/StagingBufferManager.h>
 #include <VulkanWrapper/Pipeline/Pipeline.h>
@@ -218,6 +219,9 @@ int main() {
 
         auto renderFinishedSemaphore = vw::SemaphoreBuilder(device).build();
         auto imageAvailableSemaphore = vw::SemaphoreBuilder(device).build();
+
+        auto image =
+            stagingManager.stage_image_from_path("../../Images/image_test.png");
 
         auto cmd_buffer = stagingManager.fill_command_buffer();
 

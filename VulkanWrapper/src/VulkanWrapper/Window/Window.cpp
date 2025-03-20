@@ -1,6 +1,5 @@
 #include "VulkanWrapper/Window/Window.h"
 
-#include "VulkanWrapper/Utils/exceptions.h"
 #include "VulkanWrapper/Vulkan/Instance.h"
 #include "VulkanWrapper/Vulkan/Surface.h"
 #include "VulkanWrapper/Vulkan/Swapchain.h"
