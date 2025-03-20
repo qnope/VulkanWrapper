@@ -10,10 +10,7 @@
 namespace vw {
 
 DeviceFinder::DeviceFinder(std::span<PhysicalDevice> physicalDevices) noexcept {
-    std::cout << physicalDevices.size() << '\n';
     for (auto &device : physicalDevices) {
-        std::cout << "Found: " << device.device().getProperties().deviceName
-                  << '\n';
         PhysicalDeviceInformation information{.device = device};
         auto properties = device.queueFamilyProperties();
         for (const auto &property : properties) {
@@ -128,12 +125,13 @@ Device DeviceFinder::build() && {
         throw DeviceNotFoundException{std::source_location::current()};
     }
 
-    auto information = *std::ranges::max_element(
-        m_physicalDevicesInformation, std::greater<>{},
-        &PhysicalDeviceInformation::device);
+    auto information =
+        *std::ranges::max_element(m_physicalDevicesInformation, std::less<>{},
+                                  &PhysicalDeviceInformation::device);
 
     std::cout << "Take "
-              << information.device.device().getProperties().deviceName << '\n';
+              << information.device.device().getProperties().deviceName
+              << std::endl;
 
     if (std::ranges::find(information.availableExtensions,
                           "VK_KHR_portability_subset") !=

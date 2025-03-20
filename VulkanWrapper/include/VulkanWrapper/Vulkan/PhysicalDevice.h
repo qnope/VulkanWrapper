@@ -12,11 +12,13 @@ class PhysicalDevice {
     queueFamilyProperties() const noexcept;
 
     [[nodiscard]] std::set<std::string> extensions() const noexcept;
-
+    [[nodiscard]] std::string_view name() const noexcept;
     [[nodiscard]] vk::PhysicalDevice device() const noexcept;
+    [[nodiscard]] ApiVersion api_version() const noexcept;
 
   private:
     PhysicalDeviceType m_type;
+    ApiVersion m_version;
     std::string m_name;
 
     vk::PhysicalDevice m_physicalDevice;

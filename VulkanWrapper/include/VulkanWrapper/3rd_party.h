@@ -23,3 +23,13 @@
 template <typename... Fs> struct overloaded : Fs... {
     using Fs::operator()...;
 };
+
+namespace vw {
+enum ApiVersion {
+    e10 = vk::ApiVersion10,
+    e11 = vk::ApiVersion11,
+    e12 = vk::ApiVersion12,
+    e13 = vk::ApiVersion13,
+    e14 = vk::ApiVersion14
+};
+}

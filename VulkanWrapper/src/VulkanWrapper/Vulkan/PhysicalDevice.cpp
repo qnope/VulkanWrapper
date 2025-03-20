@@ -19,6 +19,7 @@ convertPhysicalDeviceType(vk::PhysicalDeviceType physicalDeviceType) {
 
 PhysicalDevice::PhysicalDevice(vk::PhysicalDevice device) noexcept
     : m_type(convertPhysicalDeviceType(device.getProperties().deviceType))
+    , m_version{ApiVersion(device.getProperties().apiVersion)}
     , m_name{device.getProperties().deviceName}
     , m_physicalDevice{device} {}
 
@@ -35,8 +36,12 @@ std::set<std::string> PhysicalDevice::extensions() const noexcept {
     return {names.begin(), names.end()};
 }
 
+std::string_view PhysicalDevice::name() const noexcept { return m_name; }
+
 vk::PhysicalDevice PhysicalDevice::device() const noexcept {
     return m_physicalDevice;
 }
+
+ApiVersion PhysicalDevice::api_version() const noexcept { return m_version; }
 
 } // namespace vw

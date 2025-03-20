@@ -26,7 +26,7 @@ template <template <typename... Ts> typename Container>
 constexpr to_t<Container> to{};
 
 template <typename Range, template <typename... Ts> typename Container>
-auto operator|(const Range &range, to_t<Container> /*unused*/) {
+auto operator|(Range &&range, to_t<Container> /*unused*/) {
     return Container(std::ranges::begin(range), std::ranges::end(range));
 }
 

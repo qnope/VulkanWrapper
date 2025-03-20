@@ -117,6 +117,7 @@ int main() {
             vw::InstanceBuilder()
                 .addPortability()
                 .addExtensions(window.get_required_instance_extensions())
+                .setApiVersion(vw::ApiVersion::e13)
                 .build();
 
         auto surface = window.create_surface(instance);

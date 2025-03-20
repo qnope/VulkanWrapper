@@ -1,5 +1,6 @@
 #include "VulkanWrapper/Vulkan/Instance.h"
 
+#include "VulkanWrapper/Utils/Algos.h"
 #include "VulkanWrapper/Utils/exceptions.h"
 #include "VulkanWrapper/Vulkan/DeviceFinder.h"
 #include "VulkanWrapper/Vulkan/PhysicalDevice.h"
@@ -7,15 +8,27 @@
 namespace vw {
 
 Instance::Instance(vk::UniqueInstance instance,
-                   std::span<const char *> extensions) noexcept
+                   std::span<const char *> extensions,
+                   ApiVersion apiVersion) noexcept
     : ObjectWithUniqueHandle<vk::UniqueInstance>{std::move(instance)}
-    , m_extensions{extensions.begin(), extensions.end()} {}
+    , m_extensions{extensions.begin(), extensions.end()}
+    , m_version{apiVersion} {}
 
 DeviceFinder Instance::findGpu() const noexcept {
+    auto supportVersion = [this](const PhysicalDevice &device) {
+        return device.api_version() >= m_version;
+    };
     auto physicalDevices = [&] {
         auto devices = handle().enumeratePhysicalDevices().value;
-        return std::vector<PhysicalDevice>(devices.begin(), devices.end());
+        auto as_vector =
+            std::vector<PhysicalDevice>(devices.begin(), devices.end());
+
+        for (const auto &device : as_vector)
+            std::cout << "Found: " << device.name() << std::endl;
+
+        return as_vector | std::views::filter(supportVersion) | to<std::vector>;
     }();
+
     return DeviceFinder{physicalDevices};
 }
 
@@ -43,12 +56,17 @@ InstanceBuilder &&InstanceBuilder::setDebug() && {
     return std::move(*this);
 }
 
+InstanceBuilder &&InstanceBuilder::setApiVersion(ApiVersion version) && {
+    m_version = version;
+    return std::move(*this);
+}
+
 Instance InstanceBuilder::build() && {
     const std::vector<const char *> layers = {"VK_LAYER_KHRONOS_validation"};
 
     auto appInfo = vk::ApplicationInfo()
                        .setApplicationVersion(VK_MAKE_VERSION(1, 0, 0))
-                       .setApiVersion(vk::ApiVersion13)
+                       .setApiVersion(m_version)
                        .setPEngineName("3D Renderer")
                        .setEngineVersion(VK_MAKE_VERSION(1, 0, 0));
 
@@ -68,7 +86,7 @@ Instance InstanceBuilder::build() && {
         throw InstanceCreationException{std::source_location::current()};
     }
 
-    return {std::move(instance), m_extensions};
+    return {std::move(instance), m_extensions, m_version};
 }
 
 } // namespace vw
