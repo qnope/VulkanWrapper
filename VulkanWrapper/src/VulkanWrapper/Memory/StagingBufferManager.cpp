@@ -1,7 +1,10 @@
 #include "VulkanWrapper/Memory/StagingBufferManager.h"
 
 #include "VulkanWrapper/Command/CommandPool.h"
+#include "VulkanWrapper/Image/CombinedImage.h"
 #include "VulkanWrapper/Image/ImageLoader.h"
+#include "VulkanWrapper/Image/ImageView.h"
+#include "VulkanWrapper/Image/Sampler.h"
 #include "VulkanWrapper/Memory/Barrier.h"
 
 constexpr auto STAGING_BUFFER_SIZE = 1 << 22;
@@ -35,7 +38,8 @@ bool StagingBuffer::handle_data(vk::DeviceSize size) const noexcept {
 StagingBufferManager::StagingBufferManager(Device &device, Allocator &allocator)
     : m_device{&device}
     , m_allocator{&allocator}
-    , m_command_pool(create_command_pool(device)) {}
+    , m_command_pool(create_command_pool(device))
+    , m_sampler(SamplerBuilder{device}.build()) {}
 
 vk::CommandBuffer StagingBufferManager::fill_command_buffer() {
     auto cmd_buffer = m_command_pool.allocate(1)[0];
@@ -64,7 +68,7 @@ StagingBuffer &StagingBufferManager::get_staging_buffer(vk::DeviceSize size) {
     return m_staging_buffers.emplace_back(*m_allocator, new_size);
 }
 
-std::shared_ptr<Image>
+CombinedImage
 StagingBufferManager::stage_image_from_path(const std::filesystem::path &path) {
     const auto img_description = load_image(path);
     constexpr auto usage =
@@ -109,7 +113,11 @@ StagingBufferManager::stage_image_from_path(const std::filesystem::path &path) {
     m_transfer_functions.emplace_back(function);
     staging_buffer.fill_buffer<std::byte>(img_description.pixels);
 
-    return image;
+    auto image_view = ImageViewBuilder(*m_device, image)
+                          .setImageType(vk::ImageViewType::e2D)
+                          .build();
+
+    return {std::move(image), std::move(image_view), m_sampler};
 }
 
 } // namespace vw

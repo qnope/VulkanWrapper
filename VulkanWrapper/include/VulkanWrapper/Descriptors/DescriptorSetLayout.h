@@ -27,6 +27,12 @@ class DescriptorSetLayoutBuilder {
     DescriptorSetLayoutBuilder &&
     with_uniform_buffer(vk::ShaderStageFlags stages, int number);
 
+    DescriptorSetLayoutBuilder &&with_sampled_image(vk::ShaderStageFlags stages,
+                                                    int number);
+
+    DescriptorSetLayoutBuilder &&
+    with_combined_image(vk::ShaderStageFlags stages, int number);
+
     std::shared_ptr<DescriptorSetLayout> build() &&;
 
   private:

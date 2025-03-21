@@ -23,7 +23,7 @@ const PresentQueue &Device::presentQueue() const {
     return m_presentQueue.value();
 }
 
-void Device::wait_idle() const { handle().waitIdle(); }
+void Device::wait_idle() const { std::ignore = handle().waitIdle(); }
 
 vk::PhysicalDevice Device::physical_device() const { return m_physicalDevice; }
 

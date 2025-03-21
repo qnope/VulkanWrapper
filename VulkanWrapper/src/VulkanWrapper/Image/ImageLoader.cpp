@@ -16,8 +16,7 @@ ImageDescription load_image(const std::filesystem::path &path) {
         throw ImageNotFoundException{std::source_location::current()};
     }
 
-    SDL_Surface *t = nullptr;
-    SDL_PixelFormat format = SDL_PIXELFORMAT_RGBA8888;
+    SDL_PixelFormat format = SDL_PIXELFORMAT_ABGR8888;
 
     std::unique_ptr<SDL_Surface, static_function<SDL_DestroySurface>> surface{
         SDL_ConvertSurface(img.get(), format)};

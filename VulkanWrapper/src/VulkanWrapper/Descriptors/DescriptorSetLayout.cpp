@@ -45,6 +45,34 @@ DescriptorSetLayoutBuilder::with_uniform_buffer(vk::ShaderStageFlags stages,
     return std::move(*this);
 }
 
+DescriptorSetLayoutBuilder &&
+DescriptorSetLayoutBuilder::with_sampled_image(vk::ShaderStageFlags stages,
+                                               int number) {
+    const auto binding =
+        vk::DescriptorSetLayoutBinding()
+            .setBinding(m_current_binding)
+            .setDescriptorType(vk::DescriptorType::eSampledImage)
+            .setStageFlags(stages)
+            .setDescriptorCount(number);
+    m_current_binding += number;
+    m_bindings.push_back(binding);
+    return std::move(*this);
+}
+
+DescriptorSetLayoutBuilder &&
+DescriptorSetLayoutBuilder::with_combined_image(vk::ShaderStageFlags stages,
+                                                int number) {
+    const auto binding =
+        vk::DescriptorSetLayoutBinding()
+            .setBinding(m_current_binding)
+            .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+            .setStageFlags(stages)
+            .setDescriptorCount(number);
+    m_current_binding += number;
+    m_bindings.push_back(binding);
+    return std::move(*this);
+}
+
 std::shared_ptr<DescriptorSetLayout> DescriptorSetLayoutBuilder::build() && {
     const auto info =
         vk::DescriptorSetLayoutCreateInfo().setBindings(m_bindings);

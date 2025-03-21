@@ -3,6 +3,7 @@
 #include <VulkanWrapper/Descriptors/DescriptorAllocator.h>
 #include <VulkanWrapper/Descriptors/DescriptorPool.h>
 #include <VulkanWrapper/Descriptors/DescriptorSetLayout.h>
+#include <VulkanWrapper/Image/CombinedImage.h>
 #include <VulkanWrapper/Image/Framebuffer.h>
 #include <VulkanWrapper/Image/ImageLoader.h>
 #include <VulkanWrapper/Memory/Allocator.h>
@@ -47,10 +48,9 @@ struct UBOData {
         return proj;
     }();
     glm::mat4 view =
-        glm::lookAt(glm::vec3(2.0F, 2.0F, 2.0F), glm::vec3(0.0F, 0.0F, 0.0F),
+        glm::lookAt(glm::vec3(0.0F, 1.0F, 1.0F), glm::vec3(0.0F, 0.0F, 0.0F),
                     glm::vec3(0.0F, 0.0F, 1.0F));
-    glm::mat4 model = glm::rotate(glm::mat4(1.0F), glm::radians(90.0F),
-                                  glm::vec3(0.0F, 0.0F, 1.0F));
+    glm::mat4 model = glm::mat4(1.0);
 };
 
 vw::Buffer<UBOData, true, vw::UniformBufferUsage>
@@ -84,8 +84,8 @@ void record(
     vk::CommandBuffer commandBuffer, vk::Extent2D extent,
     const vw::Framebuffer &framebuffer, const vw::Pipeline &pipeline,
     const vw::RenderPass &renderPass,
-    const vw::Buffer<vw::ColoredVertex2D, false, vw::VertexBufferUsage>
-        &vertex_buffer,
+    const vw::Buffer<vw::ColoredAndTexturedVertex2D, false,
+                     vw::VertexBufferUsage> &vertex_buffer,
     const vw::Buffer<unsigned, false, vw::IndexBufferUsage> &index_buffer,
     const vw::PipelineLayout &layout, const vk::DescriptorSet &set) {
     vw::CommandBufferRecorder(commandBuffer)
@@ -99,11 +99,11 @@ void record(
 
 int main() {
     try {
-        const std::vector<vw::ColoredVertex2D> vertices = {
-            {.vertex = {-0.5F, -0.5F}, .color = {1.0F, 0.0F, 0.0F}},
-            {.vertex = {0.5F, -0.5F}, .color = {0.0F, 1.0F, 0.0F}},
-            {.vertex = {0.5F, 0.5F}, .color = {0.0F, 0.0F, 1.0F}},
-            {.vertex = {-0.5F, 0.5F}, .color = {1.0F, 1.0F, 1.0F}}};
+        const std::vector<vw::ColoredAndTexturedVertex2D> vertices = {
+            {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+            {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+            {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+            {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}};
 
         const std::vector<unsigned> indices = {0, 1, 2, 2, 3, 0};
 
@@ -133,14 +133,15 @@ int main() {
         auto allocator = vw::AllocatorBuilder(instance, device).build();
 
         auto vertex_buffer =
-            allocator.allocate_vertex_buffer<vw::ColoredVertex2D>(2000);
+            allocator.allocate_vertex_buffer<vw::ColoredAndTexturedVertex2D>(
+                2000);
 
         auto index_buffer = allocator.allocate_index_buffer(2000);
 
         vw::StagingBufferManager stagingManager(device, allocator);
 
-        stagingManager.fill_buffer<vw::ColoredVertex2D>(vertices, vertex_buffer,
-                                                        0);
+        stagingManager.fill_buffer<vw::ColoredAndTexturedVertex2D>(
+            vertices, vertex_buffer, 0);
         stagingManager.fill_buffer<unsigned>(indices, index_buffer, 0);
 
         auto swapchain = window.create_swapchain(device, surface.handle());
@@ -151,14 +152,15 @@ int main() {
         auto fragmentShader = vw::ShaderModule::create_from_spirv_file(
             device, "../../Shaders/bin/frag.spv");
 
-        auto uniform_buffer_descriptor_layout =
+        auto descriptor_set_layout =
             vw::DescriptorSetLayoutBuilder(device)
                 .with_uniform_buffer(vk::ShaderStageFlagBits::eVertex, 1)
+                .with_combined_image(vk::ShaderStageFlagBits::eFragment, 1)
                 .build();
 
         auto pipelineLayout =
             vw::PipelineLayoutBuilder(device)
-                .with_descriptor_set_layout(uniform_buffer_descriptor_layout)
+                .with_descriptor_set_layout(descriptor_set_layout)
                 .build();
 
         const auto attachment =
@@ -178,7 +180,7 @@ int main() {
 
         auto pipeline =
             vw::GraphicsPipelineBuilder(device, renderPass)
-                .add_vertex_binding<vw::ColoredVertex2D>()
+                .add_vertex_binding<vw::ColoredAndTexturedVertex2D>()
                 .add_shader(vk::ShaderStageFlagBits::eVertex,
                             std::move(vertexShader))
                 .add_shader(vk::ShaderStageFlagBits::eFragment,
@@ -200,14 +202,16 @@ int main() {
 
         auto uniform_buffer = createUbo(allocator);
 
-        auto descriptor_pool = vw::DescriptorPoolBuilder(
-                                   device, uniform_buffer_descriptor_layout, 1)
-                                   .build();
+        auto descriptor_pool =
+            vw::DescriptorPoolBuilder(device, descriptor_set_layout, 1).build();
+
+        auto image =
+            stagingManager.stage_image_from_path("../../Images/image_test.png");
 
         vw::DescriptorAllocator descriptor_allocator;
-        descriptor_allocator.add_buffer(0, vk::DescriptorType::eUniformBuffer,
-                                        uniform_buffer.handle(), 0,
-                                        uniform_buffer.size_bytes());
+        descriptor_allocator.add_uniform_buffer(0, uniform_buffer.handle(), 0,
+                                                uniform_buffer.size_bytes());
+        descriptor_allocator.add_combined_image(1, image);
 
         auto descriptor_set =
             descriptor_pool.allocate_set(descriptor_allocator);
@@ -220,9 +224,6 @@ int main() {
 
         auto renderFinishedSemaphore = vw::SemaphoreBuilder(device).build();
         auto imageAvailableSemaphore = vw::SemaphoreBuilder(device).build();
-
-        auto image =
-            stagingManager.stage_image_from_path("../../Images/image_test.png");
 
         auto cmd_buffer = stagingManager.fill_command_buffer();
 

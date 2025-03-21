@@ -22,6 +22,32 @@ struct ColoredVertex2D {
     }
 };
 
+struct ColoredAndTexturedVertex2D {
+    glm::vec2 vertex;
+    glm::vec3 color;
+    glm::vec2 texCoord;
+
+    [[nodiscard]] static constexpr auto binding_description(int binding) {
+        return vk::VertexInputBindingDescription(
+            binding, sizeof(ColoredAndTexturedVertex2D),
+            vk::VertexInputRate::eVertex);
+    }
+
+    [[nodiscard]] static constexpr auto attribute_descriptions(int binding,
+                                                               int location) {
+        return std::array{vk::VertexInputAttributeDescription(
+                              location + 0, binding, vk::Format::eR32G32Sfloat,
+                              offsetof(ColoredAndTexturedVertex2D, vertex)),
+                          vk::VertexInputAttributeDescription(
+                              location + 1, binding,
+                              vk::Format::eR32G32B32Sfloat,
+                              offsetof(ColoredAndTexturedVertex2D, color)),
+                          vk::VertexInputAttributeDescription(
+                              location + 2, binding, vk::Format::eR32G32Sfloat,
+                              offsetof(ColoredAndTexturedVertex2D, texCoord))};
+    }
+};
+
 template <typename T>
 concept Vertex =
     std::is_standard_layout_v<T> && std::is_trivially_copyable_v<T> &&

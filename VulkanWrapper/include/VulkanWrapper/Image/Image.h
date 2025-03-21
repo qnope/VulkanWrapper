@@ -12,6 +12,12 @@ class Image : public ObjectWithHandle<vk::Image> {
           vk::ImageUsageFlags usage, Allocator *allocator,
           VmaAllocation allocation);
 
+    Image(const Image &) = delete;
+    Image(Image &&) = default;
+
+    Image &operator=(const Image &) = delete;
+    Image &operator=(Image &&) = delete;
+
     ~Image();
 
     [[nodiscard]] vk::Format format() const noexcept;

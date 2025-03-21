@@ -1,12 +1,16 @@
 #pragma once
 
+#include "VulkanWrapper/fwd.h"
+
 namespace vw {
 class DescriptorAllocator {
   public:
     DescriptorAllocator();
 
-    void add_buffer(int binding, vk::DescriptorType type, vk::Buffer buffer,
-                    vk::DeviceSize offset, vk::DeviceSize size);
+    void add_uniform_buffer(int binding, vk::Buffer buffer,
+                            vk::DeviceSize offset, vk::DeviceSize size);
+
+    void add_combined_image(int binding, const CombinedImage &image);
 
     [[nodiscard]] std::vector<vk::WriteDescriptorSet>
     get_write_descriptors() const;

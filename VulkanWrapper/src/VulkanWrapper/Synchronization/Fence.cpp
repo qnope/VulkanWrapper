@@ -9,8 +9,8 @@ Fence::Fence(const Device &device, vk::UniqueFence fence)
     , m_device{&device} {}
 
 void Fence::wait() const {
-    m_device->handle().waitForFences(handle(), 1U,
-                                     std::numeric_limits<uint64_t>::max());
+    std::ignore = m_device->handle().waitForFences(
+        handle(), 1U, std::numeric_limits<uint64_t>::max());
 }
 
 void Fence::reset() const { m_device->handle().resetFences(handle()); }

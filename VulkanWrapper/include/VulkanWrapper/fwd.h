@@ -12,6 +12,8 @@ class Queue;
 class PresentQueue;
 class Image;
 class ImageView;
+class Sampler;
+class CombinedImage;
 
 class SwapchainBuilder;
 class Swapchain;

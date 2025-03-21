@@ -1,7 +1,7 @@
 #pragma once
 
 #include "VulkanWrapper/Command/CommandPool.h"
-#include "VulkanWrapper/Image/Image.h"
+#include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Memory/Allocator.h"
 #include "VulkanWrapper/Memory/Buffer.h"
 
@@ -11,11 +11,11 @@ class StagingBuffer {
   public:
     StagingBuffer(Allocator &allocator, vk::DeviceSize size);
 
-    vk::Buffer handle() const noexcept;
-    vk::DeviceSize offset() const noexcept;
+    [[nodiscard]] vk::Buffer handle() const noexcept;
+    [[nodiscard]] vk::DeviceSize offset() const noexcept;
     [[nodiscard]] bool handle_data(vk::DeviceSize size) const noexcept;
 
-    template <typename T> auto fill_buffer(std::span<const T> data) {
+    template <typename T> void fill_buffer(std::span<const T> data) {
         m_buffer.generic_copy(data.data(), data.size_bytes(), m_offset);
         m_offset += data.size_bytes();
     }
@@ -65,8 +65,7 @@ class StagingBufferManager {
         m_transfer_functions.emplace_back(function);
     }
 
-    std::shared_ptr<Image>
-    stage_image_from_path(const std::filesystem::path &path);
+    CombinedImage stage_image_from_path(const std::filesystem::path &path);
 
   private:
     void perform_transfer(const void *data, BufferBase &buffer_base);
@@ -78,5 +77,6 @@ class StagingBufferManager {
     std::vector<StagingBuffer> m_staging_buffers;
 
     std::vector<std::function<void(vk::CommandBuffer)>> m_transfer_functions;
+    std::shared_ptr<const Sampler> m_sampler;
 };
 } // namespace vw

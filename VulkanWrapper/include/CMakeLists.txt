@@ -22,6 +22,8 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Image/ImageView.h
     VulkanWrapper/Image/Framebuffer.h
     VulkanWrapper/Image/ImageLoader.h
+    VulkanWrapper/Image/Sampler.h
+    VulkanWrapper/Image/CombinedImage.h
 
     VulkanWrapper/Pipeline/ShaderModule.h
     VulkanWrapper/Pipeline/Pipeline.h

@@ -48,10 +48,12 @@ RenderPassCommandBufferRecorder::RenderPassCommandBufferRecorder(
 
 CommandBufferRecorder::CommandBufferRecorder(vk::CommandBuffer commandBuffer)
     : m_commandBuffer{commandBuffer} {
-    m_commandBuffer.begin(vk::CommandBufferBeginInfo());
+    std::ignore = m_commandBuffer.begin(vk::CommandBufferBeginInfo());
 }
 
-CommandBufferRecorder::~CommandBufferRecorder() { m_commandBuffer.end(); }
+CommandBufferRecorder::~CommandBufferRecorder() {
+    std::ignore = m_commandBuffer.end();
+}
 
 RenderPassCommandBufferRecorder
 CommandBufferRecorder::begin_render_pass(const RenderPass &render_pass,
