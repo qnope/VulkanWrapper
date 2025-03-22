@@ -5,6 +5,12 @@
 #include <vk_mem_alloc.h>
 
 namespace vw {
+namespace {
+uint32_t mip_level_from_size(uint32_t width, uint32_t height, uint32_t depth) {
+    auto size = std::max({width, height, depth});
+    return std::log2(size) + 1;
+}
+} // namespace
 
 Allocator::Allocator(VmaAllocator allocator)
     : ObjectWithHandle<VmaAllocator>{allocator} {}
@@ -15,14 +21,19 @@ IndexBuffer Allocator::allocate_index_buffer(VkDeviceSize size) {
         vk::SharingMode::eExclusive)};
 }
 
-std::shared_ptr<Image> Allocator::create_image_2D(uint32_t width,
-                                                  uint32_t height, bool mipmap,
-                                                  vk::Format format,
-                                                  vk::ImageUsageFlags usage) {
+std::shared_ptr<const Image>
+Allocator::create_image_2D(uint32_t width, uint32_t height, bool mipmap,
+                           vk::Format format, vk::ImageUsageFlags usage) {
+    const auto mip_level = [&] {
+        if (mipmap)
+            return mip_level_from_size(width, height, 1);
+        return 1U;
+    }();
+
     VkImageCreateInfo create_info =
         vk::ImageCreateInfo()
             .setExtent(vk::Extent3D(width, height, 1))
-            .setMipLevels(1)
+            .setMipLevels(mip_level)
             .setArrayLayers(1)
             .setInitialLayout(vk::ImageLayout::eUndefined)
             .setImageType(vk::ImageType::e2D)
@@ -37,8 +48,8 @@ std::shared_ptr<Image> Allocator::create_image_2D(uint32_t width,
     VkImage image = nullptr;
     vmaCreateImage(handle(), &create_info, &allocation_info, &image,
                    &allocation, nullptr);
-    return std::make_shared<Image>(vk::Image(image), width, height, format,
-                                   usage, this, allocation);
+    return std::make_shared<Image>(vk::Image(image), width, height, 1,
+                                   mip_level, format, usage, this, allocation);
 }
 
 Allocator::~Allocator() { vmaDestroyAllocator(handle()); }

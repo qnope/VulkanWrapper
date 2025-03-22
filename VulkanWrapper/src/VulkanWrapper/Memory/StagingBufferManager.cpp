@@ -81,33 +81,22 @@ StagingBufferManager::stage_image_from_path(const std::filesystem::path &path) {
     auto &staging_buffer = get_staging_buffer(img_description.pixels.size());
 
     auto function = [buffer = staging_buffer.handle(),
-                     offset = staging_buffer.offset(), image = image->handle(),
+                     offset = staging_buffer.offset(), image,
                      width = img_description.width,
                      height =
                          img_description.height](vk::CommandBuffer cmd_buffer) {
-        const auto img_subresource =
-            vk::ImageSubresourceLayers()
-                .setLayerCount(1)
-                .setMipLevel(0)
-                .setBaseArrayLayer(0)
-                .setAspectMask(vk::ImageAspectFlagBits::eColor);
         const auto region = vk::BufferImageCopy()
                                 .setBufferOffset(offset)
                                 .setImageExtent(vk::Extent3D(width, height, 1))
-                                .setImageSubresource(img_subresource);
+                                .setImageSubresource(image->mip_level_layer(0));
 
-        const auto range = vk::ImageSubresourceRange()
-                               .setAspectMask(vk::ImageAspectFlagBits::eColor)
-                               .setLayerCount(1)
-                               .setLevelCount(1)
-                               .setBaseArrayLayer(0)
-                               .setBaseMipLevel(0);
-        executeImageMemoryBarrierUndefinedToTransferDst(cmd_buffer, image,
-                                                        range);
-        cmd_buffer.copyBufferToImage(
-            buffer, image, vk::ImageLayout::eTransferDstOptimal, region);
+        execute_image_barrier_undefined_to_transfer_dst(cmd_buffer, image);
 
-        executeImageMemoryBarrierTransferToSampled(cmd_buffer, image, range);
+        cmd_buffer.copyBufferToImage(buffer, image->handle(),
+                                     vk::ImageLayout::eTransferDstOptimal,
+                                     region);
+
+        execute_image_barrier_transfer_dst_to_sampled(cmd_buffer, image, 0U);
     };
 
     m_transfer_functions.emplace_back(function);

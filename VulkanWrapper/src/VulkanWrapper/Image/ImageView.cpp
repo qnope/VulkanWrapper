@@ -13,7 +13,8 @@ ImageView::ImageView(const std::shared_ptr<const Image> &image,
 ImageViewBuilder::ImageViewBuilder(const Device &device,
                                    std::shared_ptr<const Image> image)
     : m_device{&device}
-    , m_image{std::move(image)} {}
+    , m_image{std::move(image)}
+    , m_subResourceRange{m_image->full_range()} {}
 
 ImageViewBuilder &&ImageViewBuilder::setImageType(vk::ImageViewType type) && {
     m_type = type;

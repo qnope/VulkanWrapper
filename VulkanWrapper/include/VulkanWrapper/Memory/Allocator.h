@@ -36,7 +36,7 @@ class Allocator : public ObjectWithHandle<VmaAllocator> {
                                 vk::SharingMode::eExclusive)};
     }
 
-    [[nodiscard]] std::shared_ptr<Image>
+    [[nodiscard]] std::shared_ptr<const Image>
     create_image_2D(uint32_t width, uint32_t height, bool mipmap,
                     vk::Format format, vk::ImageUsageFlags usage);
 

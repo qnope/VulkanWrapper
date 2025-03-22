@@ -32,13 +32,7 @@ class ImageViewBuilder {
 
     vk::ImageViewType m_type = vk::ImageViewType::e2D;
 
-    vk::ImageSubresourceRange m_subResourceRange =
-        vk::ImageSubresourceRange()
-            .setAspectMask(vk::ImageAspectFlagBits::eColor)
-            .setBaseArrayLayer(0)
-            .setLayerCount(1)
-            .setBaseMipLevel(0)
-            .setLevelCount(1);
+    vk::ImageSubresourceRange m_subResourceRange;
 
     vk::ComponentMapping m_componentMapping =
         vk::ComponentMapping()

@@ -1,5 +1,7 @@
 #include "VulkanWrapper/Memory/Barrier.h"
 
+#include "VulkanWrapper/Image/Image.h"
+
 namespace vw {
 void executeMemoryBarrier(vk::CommandBuffer cmd_buffer,
                           const vk::ImageMemoryBarrier2 &barrier) {
@@ -8,10 +10,10 @@ void executeMemoryBarrier(vk::CommandBuffer cmd_buffer,
     cmd_buffer.pipelineBarrier2(dependency);
 }
 
-void executeImageMemoryBarrierUndefinedToTransferDst(
-    vk::CommandBuffer cmd_buffer, vk::Image image,
-    vk::ImageSubresourceRange range) {
+void execute_image_barrier_undefined_to_transfer_dst(
+    vk::CommandBuffer cmd_buffer, const std::shared_ptr<const Image> &image) {
 
+    const auto range = image->full_range();
     const auto img_barrier =
         vk::ImageMemoryBarrier2()
             .setSubresourceRange(range)
@@ -21,7 +23,7 @@ void executeImageMemoryBarrierUndefinedToTransferDst(
             .setDstStageMask(vk::PipelineStageFlagBits2::eTransfer)
             .setOldLayout(vk::ImageLayout::eUndefined)
             .setNewLayout(vk::ImageLayout::eTransferDstOptimal)
-            .setImage(image);
+            .setImage(image->handle());
 
     const auto dependency_info =
         vk::DependencyInfo().setImageMemoryBarriers(img_barrier);
@@ -29,10 +31,11 @@ void executeImageMemoryBarrierUndefinedToTransferDst(
     cmd_buffer.pipelineBarrier2(dependency_info);
 }
 
-void executeImageMemoryBarrierTransferToSampled(
-    vk::CommandBuffer cmd_buffer, vk::Image image,
-    vk::ImageSubresourceRange range) {
+void execute_image_barrier_transfer_dst_to_sampled(
+    vk::CommandBuffer cmd_buffer, const std::shared_ptr<const Image> &image,
+    uint32_t mip_level) {
 
+    const auto range = image->mip_level_range(mip_level);
     const auto img_barrier =
         vk::ImageMemoryBarrier2()
             .setSubresourceRange(range)
@@ -42,7 +45,7 @@ void executeImageMemoryBarrierTransferToSampled(
             .setDstStageMask(vk::PipelineStageFlagBits2::eFragmentShader)
             .setOldLayout(vk::ImageLayout::eTransferDstOptimal)
             .setNewLayout(vk::ImageLayout::eReadOnlyOptimal)
-            .setImage(image);
+            .setImage(image->handle());
 
     const auto dependency_info =
         vk::DependencyInfo().setImageMemoryBarriers(img_barrier);
