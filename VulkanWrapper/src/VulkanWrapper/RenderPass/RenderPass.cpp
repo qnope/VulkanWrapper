@@ -14,7 +14,8 @@ attachmentToDescription(const Attachment &attachment) {
         .setLoadOp(attachment.loadOp)
         .setStoreOp(attachment.storeOp)
         .setInitialLayout(attachment.initialLayout)
-        .setFinalLayout(attachment.finalLayout);
+        .setFinalLayout(attachment.finalLayout)
+        .setStencilLoadOp(vk::AttachmentLoadOp::eClear);
 }
 
 static vk::AttachmentReference2 computeReference(
@@ -28,42 +29,51 @@ static vk::AttachmentReference2 computeReference(
 }
 
 struct SubpassDescription {
-    vk::PipelineBindPoint bindingPoint;
-    std::vector<vk::AttachmentReference2> colorAttachments;
+    std::vector<vk::AttachmentReference2> color_attachments;
+    std::optional<vk::AttachmentReference2> depth_attachment;
 };
 
 vk::SubpassDescription2
 toVulkanDescriptions(const SubpassDescription &description) {
-    return vk::SubpassDescription2()
-        .setPipelineBindPoint(description.bindingPoint)
-        .setColorAttachments(description.colorAttachments);
+    auto result = vk::SubpassDescription2()
+                      .setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
+                      .setColorAttachments(description.color_attachments);
+
+    if (description.depth_attachment)
+        result.setPDepthStencilAttachment(&*description.depth_attachment);
+
+    return result;
 }
 
-static SubpassDescription subpassToDescription(
-    const std::vector<Attachment> &attachments,
-    const std::pair<vk::PipelineBindPoint, Subpass> &bindingPointAndSubpass) {
-
-    std::vector<vk::AttachmentReference2> colorAttachments =
-        bindingPointAndSubpass.second.colorReferences |
+static SubpassDescription
+subpassToDescription(const std::vector<Attachment> &attachments,
+                     const Subpass &subpass) {
+    std::vector<vk::AttachmentReference2> color_references =
+        subpass.color_attachments |
         std::views::transform(std::bind_front(computeReference, attachments)) |
         to<std::vector>;
 
-    return {.bindingPoint = bindingPointAndSubpass.first,
-            .colorAttachments = std::move(colorAttachments)};
+    SubpassDescription result{.color_attachments = std::move(color_references)};
+
+    if (subpass.depth_attachment) {
+        result.depth_attachment =
+            computeReference(attachments, *subpass.depth_attachment);
+    }
+
+    return result;
 }
 
 RenderPassBuilder::RenderPassBuilder(const Device &device)
     : m_device{&device} {}
 
 RenderPassBuilder &&RenderPassBuilder::add_subpass(Subpass subpass) && {
-    m_subpasses.emplace_back(vk::PipelineBindPoint::eGraphics,
-                             std::move(subpass));
+    m_subpasses.push_back(std::move(subpass));
     return std::move(*this);
 }
 
 RenderPass RenderPassBuilder::build() && {
 
-    const auto attachments = createAttachments();
+    const auto attachments = create_attachments();
     const auto attachmentDescriptions =
         attachments | std::views::transform(attachmentToDescription) |
         to<std::vector>;
@@ -81,7 +91,8 @@ RenderPass RenderPassBuilder::build() && {
                           .setAttachments(attachmentDescriptions)
                           .setSubpasses(vkSubpassDescriptions);
 
-    auto [result, renderPass] = m_device->handle().createRenderPass2Unique(info);
+    auto [result, renderPass] =
+        m_device->handle().createRenderPass2Unique(info);
 
     if (result != vk::Result::eSuccess) {
         throw RenderPassCreationException{std::source_location::current()};
@@ -89,14 +100,16 @@ RenderPass RenderPassBuilder::build() && {
     return RenderPass{std::move(renderPass)};
 }
 
-std::vector<Attachment> RenderPassBuilder::createAttachments() const noexcept {
+std::vector<Attachment> RenderPassBuilder::create_attachments() const noexcept {
     std::set<Attachment> attachments;
 
-    for (const auto &subpass : m_subpasses | std::views::values) {
+    for (const auto &subpass : m_subpasses) {
         for (const auto &attachment :
-             subpass.colorReferences | std::views::keys) {
+             subpass.color_attachments | std::views::keys) {
             attachments.insert(attachment);
         }
+        if (subpass.depth_attachment)
+            attachments.insert(subpass.depth_attachment->first);
     }
 
     return attachments | to<std::vector>;

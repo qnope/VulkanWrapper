@@ -59,13 +59,15 @@ RenderPassCommandBufferRecorder
 CommandBufferRecorder::begin_render_pass(const RenderPass &render_pass,
                                          const Framebuffer &framebuffer) {
     vk::ClearValue color;
+    vk::ClearValue depth = vk::ClearDepthStencilValue(1.0);
+    std::array clear_values = {color, depth};
 
     const auto renderPassBeginInfo =
         vk::RenderPassBeginInfo()
             .setRenderPass(render_pass.handle())
             .setFramebuffer(framebuffer.handle())
             .setRenderArea(vk::Rect2D(vk::Offset2D(), framebuffer.extent2D()))
-            .setClearValues(color);
+            .setClearValues(clear_values);
 
     const auto subpassInfo =
         vk::SubpassBeginInfo().setContents(vk::SubpassContents::eInline);

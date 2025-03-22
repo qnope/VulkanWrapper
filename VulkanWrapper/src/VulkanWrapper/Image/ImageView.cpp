@@ -21,7 +21,7 @@ ImageViewBuilder &&ImageViewBuilder::setImageType(vk::ImageViewType type) && {
     return std::move(*this);
 }
 
-std::shared_ptr<ImageView> ImageViewBuilder::build() && {
+std::shared_ptr<const ImageView> ImageViewBuilder::build() && {
     const auto info = vk::ImageViewCreateInfo()
                           .setImage(m_image->handle())
                           .setFormat(m_image->format())
@@ -33,7 +33,7 @@ std::shared_ptr<ImageView> ImageViewBuilder::build() && {
     if (view.result != vk::Result::eSuccess) {
         throw ImageViewCreationException{std::source_location::current()};
     }
-    return std::make_shared<ImageView>(m_image, std::move(view.value));
+    return std::make_shared<const ImageView>(m_image, std::move(view.value));
 }
 
 } // namespace vw

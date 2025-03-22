@@ -9,5 +9,5 @@ layout(set = 0, binding = 1) uniform sampler2D image;
 
 void main()
 {
-    outColor = textureLod(image, texCoord, 7.0);
+    outColor = textureLod(image, texCoord, 0.0);
 }

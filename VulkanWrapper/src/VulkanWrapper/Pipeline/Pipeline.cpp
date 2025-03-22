@@ -49,6 +49,15 @@ GraphicsPipelineBuilder &&GraphicsPipelineBuilder::add_color_attachment() && {
     return std::move(*this);
 }
 
+GraphicsPipelineBuilder &&
+GraphicsPipelineBuilder::with_depth_test(bool write,
+                                         vk::CompareOp compare_operator) && {
+    m_depthTestEnabled = static_cast<vk::Bool32>(true);
+    m_depthWriteEnabled = static_cast<vk::Bool32>(write);
+    m_depthCompareOp = compare_operator;
+    return std::move(*this);
+}
+
 GraphicsPipelineBuilder &&GraphicsPipelineBuilder::with_pipeline_layout(
     const PipelineLayout &pipelineLayout) && {
     m_pipelineLayout = &pipelineLayout;
@@ -62,6 +71,7 @@ Pipeline GraphicsPipelineBuilder::build() && {
     const auto colorBlendStateInfo = createColorBlendStateInfo();
     const auto multisampleStateInfo = createMultisampleStateInfo();
     const auto vertexInputStateInfo = createVertexInputStateInfo();
+    const auto depthStencilStateInfo = createDepthStencilStateInfo();
     const auto inputAssemblyStateInfo = createInputAssemblyStateInfo();
     const auto rasterizationStateInfo = createRasterizationStateInfo();
 
@@ -73,6 +83,7 @@ Pipeline GraphicsPipelineBuilder::build() && {
                           .setPColorBlendState(&colorBlendStateInfo)
                           .setPVertexInputState(&vertexInputStateInfo)
                           .setPMultisampleState(&multisampleStateInfo)
+                          .setPDepthStencilState(&depthStencilStateInfo)
                           .setPInputAssemblyState(&inputAssemblyStateInfo)
                           .setPRasterizationState(&rasterizationStateInfo)
                           .setLayout((m_pipelineLayout != nullptr)
@@ -158,6 +169,14 @@ GraphicsPipelineBuilder::createColorBlendStateInfo() const noexcept {
     return vk::PipelineColorBlendStateCreateInfo()
         .setAttachments(m_colorAttachmentStates)
         .setLogicOpEnable(0U);
+}
+
+vk::PipelineDepthStencilStateCreateInfo
+GraphicsPipelineBuilder::createDepthStencilStateInfo() const noexcept {
+    return vk::PipelineDepthStencilStateCreateInfo()
+        .setDepthTestEnable(m_depthTestEnabled)
+        .setDepthWriteEnable(m_depthWriteEnabled)
+        .setDepthCompareOp(m_depthCompareOp);
 }
 
 } // namespace vw

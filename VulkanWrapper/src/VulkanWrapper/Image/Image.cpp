@@ -6,7 +6,17 @@ namespace vw {
 
 namespace {
 vk::ImageAspectFlags aspect_flags_from_format(vk::Format format) {
-    return vk::ImageAspectFlagBits::eColor;
+    switch (format) {
+        using enum vk::Format;
+    case eD16Unorm:
+    case eD16UnormS8Uint:
+    case eD24UnormS8Uint:
+    case eD32Sfloat:
+    case eD32SfloatS8Uint:
+        return vk::ImageAspectFlagBits::eDepth;
+    default:
+        return vk::ImageAspectFlagBits::eColor;
+    }
 }
 } // namespace
 

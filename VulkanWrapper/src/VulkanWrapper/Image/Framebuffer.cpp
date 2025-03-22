@@ -29,7 +29,7 @@ FramebufferBuilder::FramebufferBuilder(const Device &device,
     , m_height{height} {}
 
 FramebufferBuilder &&FramebufferBuilder::add_attachment(
-    const std::shared_ptr<ImageView> &imageView) && {
+    const std::shared_ptr<const ImageView> &imageView) && {
     m_attachments.push_back(imageView);
     return std::move(*this);
 }

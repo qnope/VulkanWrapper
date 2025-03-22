@@ -27,10 +27,11 @@
 #include <VulkanWrapper/Window/Window.h>
 
 constexpr std::string_view COLOR = "COLOR";
+constexpr std::string_view DEPTH = "DEPTH";
 
-std::vector<std::shared_ptr<vw::ImageView>>
+std::vector<std::shared_ptr<const vw::ImageView>>
 create_image_views(const vw::Device &device, const vw::Swapchain &swapchain) {
-    std::vector<std::shared_ptr<vw::ImageView>> result;
+    std::vector<std::shared_ptr<const vw::ImageView>> result;
     for (auto &&image : swapchain.images()) {
         auto imageView = vw::ImageViewBuilder(device, image)
                              .setImageType(vk::ImageViewType::e2D)
@@ -62,10 +63,11 @@ createUbo(vw::Allocator &allocator) {
     return buffer;
 }
 
-std::vector<vw::Framebuffer>
-createFramebuffers(vw::Device &device, const vw::RenderPass &renderPass,
-                   const vw::Swapchain &swapchain,
-                   const std::vector<std::shared_ptr<vw::ImageView>> &images) {
+std::vector<vw::Framebuffer> createFramebuffers(
+    vw::Device &device, const vw::RenderPass &renderPass,
+    const vw::Swapchain &swapchain,
+    const std::vector<std::shared_ptr<const vw::ImageView>> &images,
+    const std::shared_ptr<const vw::ImageView> &depth_buffer) {
     std::vector<vw::Framebuffer> framebuffers;
 
     for (const auto &imageView : images) {
@@ -73,6 +75,7 @@ createFramebuffers(vw::Device &device, const vw::RenderPass &renderPass,
             vw::FramebufferBuilder(device, renderPass, swapchain.width(),
                                    swapchain.height())
                 .add_attachment(imageView)
+                .add_attachment(depth_buffer)
                 .build();
         framebuffers.push_back(std::move(framebuffer));
     }
@@ -84,7 +87,7 @@ void record(
     vk::CommandBuffer commandBuffer, vk::Extent2D extent,
     const vw::Framebuffer &framebuffer, const vw::Pipeline &pipeline,
     const vw::RenderPass &renderPass,
-    const vw::Buffer<vw::ColoredAndTexturedVertex2D, false,
+    const vw::Buffer<vw::ColoredAndTexturedVertex3D, false,
                      vw::VertexBufferUsage> &vertex_buffer,
     const vw::Buffer<unsigned, false, vw::IndexBufferUsage> &index_buffer,
     const vw::PipelineLayout &layout, const vk::DescriptorSet &set) {
@@ -94,18 +97,24 @@ void record(
         .bind_vertex_buffer(0, vertex_buffer)
         .bind_index_buffer(index_buffer)
         .bind_descriptor_set(layout, 0, std::span(&set, 1), {})
-        .indexed_draw(6, 1, 0, 0, 0);
+        .indexed_draw(12, 1, 0, 0, 0);
 }
 
 int main() {
     try {
-        const std::vector<vw::ColoredAndTexturedVertex2D> vertices = {
-            {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-            {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-            {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-            {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}};
+        const std::vector<vw::ColoredAndTexturedVertex3D> vertices = {
+            {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+            {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+            {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+            {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
 
-        const std::vector<unsigned> indices = {0, 1, 2, 2, 3, 0};
+            {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+            {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+            {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+            {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}};
+
+        const std::vector<unsigned> indices = {0, 1, 2, 2, 3, 0,
+                                               4, 5, 6, 6, 7, 4};
 
         vw::SDL_Initializer initializer;
         vw::Window window = vw::WindowBuilder(initializer)
@@ -133,14 +142,14 @@ int main() {
         auto allocator = vw::AllocatorBuilder(instance, device).build();
 
         auto vertex_buffer =
-            allocator.allocate_vertex_buffer<vw::ColoredAndTexturedVertex2D>(
+            allocator.allocate_vertex_buffer<vw::ColoredAndTexturedVertex3D>(
                 2000);
 
         auto index_buffer = allocator.allocate_index_buffer(2000);
 
         vw::StagingBufferManager stagingManager(device, allocator);
 
-        stagingManager.fill_buffer<vw::ColoredAndTexturedVertex2D>(
+        stagingManager.fill_buffer<vw::ColoredAndTexturedVertex3D>(
             vertices, vertex_buffer, 0);
         stagingManager.fill_buffer<unsigned>(indices, index_buffer, 0);
 
@@ -163,16 +172,35 @@ int main() {
                 .with_descriptor_set_layout(descriptor_set_layout)
                 .build();
 
-        const auto attachment =
+        const auto depth_buffer = allocator.create_image_2D(
+            swapchain.width(), swapchain.height(), false,
+            vk::Format::eD24UnormS8Uint,
+            vk::ImageUsageFlagBits::eDepthStencilAttachment);
+
+        const auto depth_buffer_view =
+            vw::ImageViewBuilder(device, depth_buffer)
+                .setImageType(vk::ImageViewType::e2D)
+                .build();
+
+        const auto color_attachment =
             vw::AttachmentBuilder(COLOR)
                 .with_format(swapchain.format())
                 .with_final_layout(vk::ImageLayout::ePresentSrcKHR)
                 .build();
 
-        auto subpass = vw::SubpassBuilder()
-                           .add_color_attachment(
-                               attachment, vk::ImageLayout::eAttachmentOptimal)
-                           .build();
+        const auto depth_attachment =
+            vw::AttachmentBuilder(DEPTH)
+                .with_format(depth_buffer->format())
+                .with_final_layout(
+                    vk::ImageLayout::eDepthStencilAttachmentOptimal)
+                .build();
+
+        auto subpass =
+            vw::SubpassBuilder()
+                .add_color_attachment(color_attachment,
+                                      vk::ImageLayout::eAttachmentOptimal)
+                .add_depth_stencil_attachment(depth_attachment)
+                .build();
 
         auto renderPass = vw::RenderPassBuilder(device)
                               .add_subpass(std::move(subpass))
@@ -180,7 +208,7 @@ int main() {
 
         auto pipeline =
             vw::GraphicsPipelineBuilder(device, renderPass)
-                .add_vertex_binding<vw::ColoredAndTexturedVertex2D>()
+                .add_vertex_binding<vw::ColoredAndTexturedVertex3D>()
                 .add_shader(vk::ShaderStageFlagBits::eVertex,
                             std::move(vertexShader))
                 .add_shader(vk::ShaderStageFlagBits::eFragment,
@@ -189,6 +217,7 @@ int main() {
                                     uint32_t(swapchain.height()))
                 .with_fixed_viewport(uint32_t(swapchain.width()),
                                      uint32_t(swapchain.height()))
+                .with_depth_test(true, vk::CompareOp::eLess)
                 .with_pipeline_layout(pipelineLayout)
                 .add_color_attachment()
                 .build();
@@ -197,8 +226,8 @@ int main() {
         auto image_views = create_image_views(device, swapchain);
         auto commandBuffers = commandPool.allocate(image_views.size());
 
-        const auto framebuffers =
-            createFramebuffers(device, renderPass, swapchain, image_views);
+        const auto framebuffers = createFramebuffers(
+            device, renderPass, swapchain, image_views, depth_buffer_view);
 
         const vk::Extent2D extent(uint32_t(swapchain.width()),
                                   uint32_t(swapchain.height()));

@@ -23,9 +23,9 @@ class RenderPassBuilder {
     RenderPass build() &&;
 
   private:
-    [[nodiscard]] std::vector<Attachment> createAttachments() const noexcept;
+    [[nodiscard]] std::vector<Attachment> create_attachments() const noexcept;
 
     const Device *m_device;
-    std::vector<std::pair<vk::PipelineBindPoint, vw::Subpass>> m_subpasses;
+    std::vector<vw::Subpass> m_subpasses;
 };
 } // namespace vw

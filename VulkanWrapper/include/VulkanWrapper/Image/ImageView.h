@@ -24,7 +24,7 @@ class ImageViewBuilder {
 
     ImageViewBuilder &&setImageType(vk::ImageViewType imageViewType) &&;
 
-    std::shared_ptr<ImageView> build() &&;
+    std::shared_ptr<const ImageView> build() &&;
 
   private:
     const Device *m_device;

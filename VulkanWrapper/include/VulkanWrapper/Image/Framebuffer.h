@@ -29,7 +29,7 @@ class FramebufferBuilder {
                        Width width, Height height);
 
     FramebufferBuilder &&
-    add_attachment(const std::shared_ptr<ImageView> &imageView) &&;
+    add_attachment(const std::shared_ptr<const ImageView> &imageView) &&;
 
     Framebuffer build() &&;
 
@@ -38,7 +38,7 @@ class FramebufferBuilder {
     vk::RenderPass m_renderPass;
     Width m_width;
     Height m_height;
-    std::vector<std::shared_ptr<ImageView>> m_attachments;
+    std::vector<std::shared_ptr<const ImageView>> m_attachments;
 };
 
 } // namespace vw

@@ -4,6 +4,7 @@
 #define VULKAN_HPP_ASSERT_ON_RESULT
 
 #define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <algorithm>
 #include <concepts>
 #include <filesystem>

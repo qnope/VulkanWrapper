@@ -51,6 +51,9 @@ class GraphicsPipelineBuilder {
     }
 
     GraphicsPipelineBuilder &&
+    with_depth_test(bool write, vk::CompareOp compare_operator) &&;
+
+    GraphicsPipelineBuilder &&
     with_pipeline_layout(const PipelineLayout &pipelineLayout) &&;
 
     Pipeline build() &&;
@@ -80,6 +83,9 @@ class GraphicsPipelineBuilder {
     [[nodiscard]] vk::PipelineColorBlendStateCreateInfo
     createColorBlendStateInfo() const noexcept;
 
+    [[nodiscard]] vk::PipelineDepthStencilStateCreateInfo
+    createDepthStencilStateInfo() const noexcept;
+
     const Device *m_device;
     const RenderPass *m_renderPass;
     std::map<vk::ShaderStageFlagBits, std::shared_ptr<ShaderModule>>
@@ -93,6 +99,11 @@ class GraphicsPipelineBuilder {
     std::vector<vk::VertexInputBindingDescription> m_input_binding_descriptions;
     std::vector<vk::VertexInputAttributeDescription>
         m_input_attribute_descriptions;
+
+    vk::Bool32 m_depthTestEnabled = false;
+    vk::Bool32 m_depthWriteEnabled = false;
+    vk::CompareOp m_depthCompareOp = vk::CompareOp::eLess;
+
     const PipelineLayout *m_pipelineLayout = nullptr;
 };
 } // namespace vw
