@@ -21,8 +21,8 @@ ImageDescription load_image(const std::filesystem::path &path) {
     std::unique_ptr<SDL_Surface, static_function<SDL_DestroySurface>> surface{
         SDL_ConvertSurface(img.get(), format)};
 
-    return {.width = surface->w,
-            .height = surface->h,
+    return {.width = Width{surface->w},
+            .height = Height{surface->h},
             .pixels = std::span(static_cast<const std::byte *>(surface->pixels),
                                 static_cast<std::size_t>(surface->pitch *
                                                          surface->h)) |

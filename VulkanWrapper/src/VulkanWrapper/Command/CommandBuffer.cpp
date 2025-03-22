@@ -64,9 +64,7 @@ CommandBufferRecorder::begin_render_pass(const RenderPass &render_pass,
         vk::RenderPassBeginInfo()
             .setRenderPass(render_pass.handle())
             .setFramebuffer(framebuffer.handle())
-            .setRenderArea(
-                vk::Rect2D(vk::Offset2D(), vk::Extent2D{framebuffer.width(),
-                                                        framebuffer.height()}))
+            .setRenderArea(vk::Rect2D(vk::Offset2D(), framebuffer.extent2D()))
             .setClearValues(color);
 
     const auto subpassInfo =

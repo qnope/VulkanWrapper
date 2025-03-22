@@ -32,4 +32,10 @@ enum ApiVersion {
     e13 = vk::ApiVersion13,
     e14 = vk::ApiVersion14
 };
-}
+
+enum class Width {};
+enum class Height {};
+enum class Depth {};
+enum class MipLevel {};
+enum class MipLevels {};
+} // namespace vw

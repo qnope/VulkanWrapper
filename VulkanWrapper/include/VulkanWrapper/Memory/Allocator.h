@@ -37,8 +37,8 @@ class Allocator : public ObjectWithHandle<VmaAllocator> {
     }
 
     [[nodiscard]] std::shared_ptr<const Image>
-    create_image_2D(uint32_t width, uint32_t height, bool mipmap,
-                    vk::Format format, vk::ImageUsageFlags usage);
+    create_image_2D(Width width, Height height, bool mipmap, vk::Format format,
+                    vk::ImageUsageFlags usage);
 
     ~Allocator();
 

@@ -7,8 +7,8 @@ namespace vw {
 using ImageNotFoundException = TaggedException<struct ImageNotFoundTag>;
 
 struct ImageDescription {
-    int width;
-    int height;
+    Width width;
+    Height height;
     std::vector<std::byte> pixels;
 };
 

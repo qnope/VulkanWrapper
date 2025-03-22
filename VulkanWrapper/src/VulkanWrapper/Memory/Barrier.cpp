@@ -33,7 +33,7 @@ void execute_image_barrier_undefined_to_transfer_dst(
 
 void execute_image_barrier_transfer_dst_to_sampled(
     vk::CommandBuffer cmd_buffer, const std::shared_ptr<const Image> &image,
-    uint32_t mip_level) {
+    MipLevel mip_level) {
 
     const auto range = image->mip_level_range(mip_level);
     const auto img_barrier =

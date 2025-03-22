@@ -9,10 +9,10 @@ namespace vw {
 class Swapchain : public ObjectWithUniqueHandle<vk::UniqueSwapchainKHR> {
   public:
     Swapchain(const Device &device, vk::UniqueSwapchainKHR swapchain,
-              vk::Format format, int width, int height);
+              vk::Format format, Width width, Height height);
 
-    [[nodiscard]] int width() const noexcept;
-    [[nodiscard]] int height() const noexcept;
+    [[nodiscard]] Width width() const noexcept;
+    [[nodiscard]] Height height() const noexcept;
     [[nodiscard]] vk::Format format() const noexcept;
 
     [[nodiscard]] std::span<const std::shared_ptr<const Image>>
@@ -25,20 +25,20 @@ class Swapchain : public ObjectWithUniqueHandle<vk::UniqueSwapchainKHR> {
     const Device *m_device;
     vk::Format m_format;
     std::vector<std::shared_ptr<const Image>> m_images;
-    int m_width;
-    int m_height;
+    Width m_width;
+    Height m_height;
 };
 
 class SwapchainBuilder {
   public:
-    SwapchainBuilder(const Device &device, vk::SurfaceKHR surface, int width,
-                     int height) noexcept;
+    SwapchainBuilder(const Device &device, vk::SurfaceKHR surface, Width width,
+                     Height height) noexcept;
     Swapchain build() &&;
 
   private:
     const Device *m_device;
-    int m_width;
-    int m_height;
+    Width m_width;
+    Height m_height;
 
     vk::SwapchainCreateInfoKHR m_info;
     vk::PresentModeKHR m_presentMode = vk::PresentModeKHR::eMailbox;

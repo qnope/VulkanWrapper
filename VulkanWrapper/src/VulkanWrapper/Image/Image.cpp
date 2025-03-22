@@ -10,8 +10,8 @@ vk::ImageAspectFlags aspect_flags_from_format(vk::Format format) {
 }
 } // namespace
 
-Image::Image(vk::Image image, uint32_t width, uint32_t height, uint32_t depth,
-             uint32_t mip_level, vk::Format format, vk::ImageUsageFlags usage,
+Image::Image(vk::Image image, Width width, Height height, Depth depth,
+             MipLevels mip_level, vk::Format format, vk::ImageUsageFlags usage,
              Allocator *allocator, VmaAllocation allocation)
     : ObjectWithHandle<vk::Image>(image)
     , m_width{width}
@@ -31,21 +31,21 @@ Image::~Image() {
 vk::Format Image::format() const noexcept { return m_format; }
 
 vk::ImageSubresourceRange
-Image::mip_level_range(uint32_t mip_level) const noexcept {
+Image::mip_level_range(MipLevel mip_level) const noexcept {
     return vk::ImageSubresourceRange()
         .setBaseArrayLayer(0)
         .setLayerCount(1)
-        .setBaseMipLevel(mip_level)
+        .setBaseMipLevel(uint32_t(mip_level))
         .setLevelCount(1)
         .setAspectMask(aspect_flags_from_format(m_format));
 }
 
 vk::ImageSubresourceLayers
-Image::mip_level_layer(uint32_t mip_level) const noexcept {
+Image::mip_level_layer(MipLevel mip_level) const noexcept {
     return vk::ImageSubresourceLayers()
         .setBaseArrayLayer(0)
         .setLayerCount(1)
-        .setMipLevel(mip_level)
+        .setMipLevel(uint32_t(mip_level))
         .setAspectMask(aspect_flags_from_format(m_format));
 }
 
@@ -54,8 +54,16 @@ vk::ImageSubresourceRange Image::full_range() const noexcept {
         .setBaseArrayLayer(0)
         .setLayerCount(1)
         .setBaseMipLevel(0)
-        .setLevelCount(m_mip_levels)
+        .setLevelCount(uint32_t(m_mip_levels))
         .setAspectMask(aspect_flags_from_format(m_format));
+}
+
+vk::Extent2D Image::extent2D() const noexcept {
+    return {uint32_t(m_width), uint32_t(m_height)};
+}
+
+vk::Extent3D Image::extent3D() const noexcept {
+    return {uint32_t(m_width), uint32_t(m_height), uint32_t(m_depth)};
 }
 
 } // namespace vw

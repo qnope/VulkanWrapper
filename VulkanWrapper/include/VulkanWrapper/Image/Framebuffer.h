@@ -10,22 +10,23 @@ using FramebufferCreationException =
 
 class Framebuffer : public ObjectWithUniqueHandle<vk::UniqueFramebuffer> {
     friend class FramebufferBuilder;
-    Framebuffer(vk::UniqueFramebuffer framebuffer, uint32_t width,
-                uint32_t height) noexcept;
+    Framebuffer(vk::UniqueFramebuffer framebuffer, vw::Width width,
+                vw::Height height) noexcept;
 
   public:
-    [[nodiscard]] uint32_t width() const noexcept;
-    [[nodiscard]] uint32_t height() const noexcept;
+    [[nodiscard]] Width width() const noexcept;
+    [[nodiscard]] Height height() const noexcept;
+    [[nodiscard]] vk::Extent2D extent2D() const noexcept;
 
   private:
-    uint32_t m_width;
-    uint32_t m_height;
+    Width m_width;
+    Height m_height;
 };
 
 class FramebufferBuilder {
   public:
     FramebufferBuilder(const Device &device, const RenderPass &renderPass,
-                       uint32_t width, uint32_t height);
+                       Width width, Height height);
 
     FramebufferBuilder &&
     add_attachment(const std::shared_ptr<ImageView> &imageView) &&;
@@ -35,8 +36,8 @@ class FramebufferBuilder {
   private:
     const Device *m_device;
     vk::RenderPass m_renderPass;
-    uint32_t m_width;
-    uint32_t m_height;
+    Width m_width;
+    Height m_height;
     std::vector<std::shared_ptr<ImageView>> m_attachments;
 };
 

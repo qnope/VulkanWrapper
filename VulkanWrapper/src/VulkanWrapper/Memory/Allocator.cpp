@@ -6,9 +6,9 @@
 
 namespace vw {
 namespace {
-uint32_t mip_level_from_size(uint32_t width, uint32_t height, uint32_t depth) {
-    auto size = std::max({width, height, depth});
-    return std::log2(size) + 1;
+MipLevels mip_level_from_size(Width width, Height height, Depth depth) {
+    auto size = std::max({uint32_t(width), uint32_t(height), uint32_t(depth)});
+    return static_cast<MipLevels>(uint32_t(std::log2(size)) + 1);
 }
 } // namespace
 
@@ -22,18 +22,18 @@ IndexBuffer Allocator::allocate_index_buffer(VkDeviceSize size) {
 }
 
 std::shared_ptr<const Image>
-Allocator::create_image_2D(uint32_t width, uint32_t height, bool mipmap,
+Allocator::create_image_2D(Width width, Height height, bool mipmap,
                            vk::Format format, vk::ImageUsageFlags usage) {
-    const auto mip_level = [&] {
+    const auto mip_levels = [&] {
         if (mipmap)
-            return mip_level_from_size(width, height, 1);
-        return 1U;
+            return mip_level_from_size(width, height, Depth(1));
+        return MipLevels(1);
     }();
 
     VkImageCreateInfo create_info =
         vk::ImageCreateInfo()
-            .setExtent(vk::Extent3D(width, height, 1))
-            .setMipLevels(mip_level)
+            .setExtent(vk::Extent3D(uint32_t(width), uint32_t(height), 1))
+            .setMipLevels(uint32_t(mip_levels))
             .setArrayLayers(1)
             .setInitialLayout(vk::ImageLayout::eUndefined)
             .setImageType(vk::ImageType::e2D)
@@ -48,8 +48,8 @@ Allocator::create_image_2D(uint32_t width, uint32_t height, bool mipmap,
     VkImage image = nullptr;
     vmaCreateImage(handle(), &create_info, &allocation_info, &image,
                    &allocation, nullptr);
-    return std::make_shared<Image>(vk::Image(image), width, height, 1,
-                                   mip_level, format, usage, this, allocation);
+    return std::make_shared<Image>(vk::Image(image), width, height, Depth(1),
+                                   mip_levels, format, usage, this, allocation);
 }
 
 Allocator::~Allocator() { vmaDestroyAllocator(handle()); }

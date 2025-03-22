@@ -6,19 +6,23 @@
 #include "VulkanWrapper/Vulkan/Device.h"
 
 namespace vw {
-Framebuffer::Framebuffer(vk::UniqueFramebuffer framebuffer, uint32_t width,
-                         uint32_t height) noexcept
+Framebuffer::Framebuffer(vk::UniqueFramebuffer framebuffer, Width width,
+                         Height height) noexcept
     : ObjectWithUniqueHandle<vk::UniqueFramebuffer>{std::move(framebuffer)}
     , m_width{width}
     , m_height{height} {}
 
-uint32_t Framebuffer::width() const noexcept { return m_width; }
+Width Framebuffer::width() const noexcept { return m_width; }
 
-uint32_t Framebuffer::height() const noexcept { return m_height; }
+Height Framebuffer::height() const noexcept { return m_height; }
+
+vk::Extent2D Framebuffer::extent2D() const noexcept {
+    return {uint32_t(m_width), uint32_t(m_height)};
+}
 
 FramebufferBuilder::FramebufferBuilder(const Device &device,
                                        const RenderPass &renderPass,
-                                       uint32_t width, uint32_t height)
+                                       Width width, Height height)
     : m_device{&device}
     , m_renderPass{renderPass.handle()}
     , m_width{width}
@@ -34,8 +38,8 @@ Framebuffer FramebufferBuilder::build() && {
     const auto attachments = m_attachments | to_handle | to<std::vector>;
 
     const auto info = vk::FramebufferCreateInfo()
-                          .setWidth(m_width)
-                          .setHeight(m_height)
+                          .setWidth(uint32_t(m_width))
+                          .setHeight(uint32_t(m_height))
                           .setLayers(1)
                           .setRenderPass(m_renderPass)
                           .setAttachments(attachments);

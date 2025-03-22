@@ -110,7 +110,7 @@ int main() {
         vw::SDL_Initializer initializer;
         vw::Window window = vw::WindowBuilder(initializer)
                                 .with_title("Coucou")
-                                .sized(800, 600)
+                                .sized(vw::Width(800), vw::Height(600))
                                 .build();
 
         vw::Instance instance =
@@ -185,8 +185,10 @@ int main() {
                             std::move(vertexShader))
                 .add_shader(vk::ShaderStageFlagBits::eFragment,
                             std::move(fragmentShader))
-                .with_fixed_scissor(swapchain.width(), swapchain.height())
-                .with_fixed_viewport(swapchain.width(), swapchain.height())
+                .with_fixed_scissor(uint32_t(swapchain.width()),
+                                    uint32_t(swapchain.height()))
+                .with_fixed_viewport(uint32_t(swapchain.width()),
+                                     uint32_t(swapchain.height()))
                 .with_pipeline_layout(pipelineLayout)
                 .add_color_attachment()
                 .build();
@@ -198,7 +200,8 @@ int main() {
         const auto framebuffers =
             createFramebuffers(device, renderPass, swapchain, image_views);
 
-        const vk::Extent2D extent(swapchain.width(), swapchain.height());
+        const vk::Extent2D extent(uint32_t(swapchain.width()),
+                                  uint32_t(swapchain.height()));
 
         auto uniform_buffer = createUbo(allocator);
 

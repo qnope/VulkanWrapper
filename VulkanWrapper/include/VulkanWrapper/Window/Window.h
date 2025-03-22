@@ -31,14 +31,14 @@ class Window {
                                              vk::SurfaceKHR surface) const;
 
   private:
-    Window(const SDL_Initializer &initializer, std::string_view name, int width,
-           int height);
+    Window(const SDL_Initializer &initializer, std::string_view name,
+           Width width, Height height);
 
     const SDL_Initializer *m_initializer;
     std::unique_ptr<SDL_Window, WindowDeleter> m_window;
     bool m_closeRequested = false;
-    int m_width;
-    int m_height;
+    Width m_width;
+    Height m_height;
 };
 
 class WindowBuilder {
@@ -47,15 +47,15 @@ class WindowBuilder {
     WindowBuilder(SDL_Initializer &&initializer) = delete;
 
     WindowBuilder &&with_title(std::string_view name) &&;
-    WindowBuilder &&sized(int width, int height) &&;
+    WindowBuilder &&sized(Width width, Height height) &&;
 
     Window build() &&;
 
   private:
     const SDL_Initializer *initializer;
     std::string_view name = "3D Renderer";
-    int width = 0;
-    int height = 0;
+    Width width{};
+    Height height{};
 };
 
 } // namespace vw

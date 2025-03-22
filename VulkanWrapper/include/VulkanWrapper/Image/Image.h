@@ -8,8 +8,8 @@ namespace vw {
 
 class Image : public ObjectWithHandle<vk::Image> {
   public:
-    Image(vk::Image image, uint32_t width, uint32_t height, uint32_t depth,
-          uint32_t mip_level, vk::Format format, vk::ImageUsageFlags usage,
+    Image(vk::Image image, Width width, Height height, Depth depth,
+          MipLevels mip_level, vk::Format format, vk::ImageUsageFlags usage,
           Allocator *allocator, VmaAllocation allocation);
 
     Image(const Image &) = delete;
@@ -25,16 +25,19 @@ class Image : public ObjectWithHandle<vk::Image> {
     [[nodiscard]] vk::ImageSubresourceRange full_range() const noexcept;
 
     [[nodiscard]] vk::ImageSubresourceRange
-    mip_level_range(uint32_t mip_level) const noexcept;
+    mip_level_range(MipLevel mip_level) const noexcept;
 
     [[nodiscard]] vk::ImageSubresourceLayers
-    mip_level_layer(uint32_t mip_level) const noexcept;
+    mip_level_layer(MipLevel mip_level) const noexcept;
+
+    [[nodiscard]] vk::Extent2D extent2D() const noexcept;
+    [[nodiscard]] vk::Extent3D extent3D() const noexcept;
 
   private:
-    uint32_t m_width;
-    uint32_t m_height;
-    uint32_t m_depth;
-    uint32_t m_mip_levels;
+    Width m_width;
+    Height m_height;
+    Depth m_depth;
+    MipLevels m_mip_levels;
     vk::Format m_format;
     vk::ImageUsageFlags m_usage;
     Allocator *m_allocator;

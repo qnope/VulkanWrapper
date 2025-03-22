@@ -80,24 +80,25 @@ StagingBufferManager::stage_image_from_path(const std::filesystem::path &path) {
 
     auto &staging_buffer = get_staging_buffer(img_description.pixels.size());
 
-    auto function = [buffer = staging_buffer.handle(),
-                     offset = staging_buffer.offset(), image,
-                     width = img_description.width,
-                     height =
-                         img_description.height](vk::CommandBuffer cmd_buffer) {
-        const auto region = vk::BufferImageCopy()
-                                .setBufferOffset(offset)
-                                .setImageExtent(vk::Extent3D(width, height, 1))
-                                .setImageSubresource(image->mip_level_layer(0));
+    auto function =
+        [buffer = staging_buffer.handle(), offset = staging_buffer.offset(),
+         image, width = img_description.width,
+         height = img_description.height](vk::CommandBuffer cmd_buffer) {
+            const auto region =
+                vk::BufferImageCopy()
+                    .setBufferOffset(offset)
+                    .setImageExtent(image->extent3D())
+                    .setImageSubresource(image->mip_level_layer(MipLevel(0)));
 
-        execute_image_barrier_undefined_to_transfer_dst(cmd_buffer, image);
+            execute_image_barrier_undefined_to_transfer_dst(cmd_buffer, image);
 
-        cmd_buffer.copyBufferToImage(buffer, image->handle(),
-                                     vk::ImageLayout::eTransferDstOptimal,
-                                     region);
+            cmd_buffer.copyBufferToImage(buffer, image->handle(),
+                                         vk::ImageLayout::eTransferDstOptimal,
+                                         region);
 
-        execute_image_barrier_transfer_dst_to_sampled(cmd_buffer, image, 0U);
-    };
+            execute_image_barrier_transfer_dst_to_sampled(cmd_buffer, image,
+                                                          MipLevel(0));
+        };
 
     m_transfer_functions.emplace_back(function);
     staging_buffer.fill_buffer<std::byte>(img_description.pixels);

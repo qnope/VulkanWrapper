@@ -6,7 +6,7 @@
 namespace vw {
 
 Swapchain::Swapchain(const Device &device, vk::UniqueSwapchainKHR swapchain,
-                     vk::Format format, int width, int height)
+                     vk::Format format, Width width, Height height)
     : vw::ObjectWithUniqueHandle<vk::UniqueSwapchainKHR>{std::move(swapchain)}
     , m_device{&device}
     , m_format{format}
@@ -16,14 +16,14 @@ Swapchain::Swapchain(const Device &device, vk::UniqueSwapchainKHR swapchain,
 
     for (auto &vkImage : vkImages) {
         auto &image = m_images.emplace_back(std::make_shared<Image>(
-            vkImage, m_width, m_height, 1, 1, m_format,
+            vkImage, m_width, m_height, Depth(1), MipLevels(1), m_format,
             vk::ImageUsageFlagBits::eColorAttachment, nullptr, nullptr));
     }
 }
 
-int Swapchain::width() const noexcept { return m_width; }
+Width Swapchain::width() const noexcept { return m_width; }
 
-int Swapchain::height() const noexcept { return m_height; }
+Height Swapchain::height() const noexcept { return m_height; }
 
 vk::Format Swapchain::format() const noexcept { return m_format; }
 
@@ -40,12 +40,12 @@ Swapchain::acquire_next_image(const Semaphore &semaphore) const noexcept {
 }
 
 SwapchainBuilder::SwapchainBuilder(const Device &device, vk::SurfaceKHR surface,
-                                   int width, int height) noexcept
+                                   Width width, Height height) noexcept
     : m_device{&device}
     , m_width{width}
     , m_height{height} {
     m_info.setSurface(surface)
-        .setImageExtent(vk::Extent2D(width, height))
+        .setImageExtent(vk::Extent2D(uint32_t(width), uint32_t(height)))
         .setImageColorSpace(vk::ColorSpaceKHR::eSrgbNonlinear)
         .setImageFormat(vk::Format::eB8G8R8A8Srgb)
         .setPresentMode(vk::PresentModeKHR::eFifo)
