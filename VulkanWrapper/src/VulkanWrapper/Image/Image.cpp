@@ -80,7 +80,8 @@ vk::Extent3D Image::mip_level_extent3D(MipLevel mip_level) const noexcept {
 std::array<vk::Offset3D, 2>
 Image::mip_level_offsets(MipLevel mip_level) const noexcept {
     const auto [width, height, depth] = mip_level_extent3D(mip_level);
-    return {vk::Offset3D(), vk::Offset3D(width, height, depth)};
+    return {vk::Offset3D(),
+            vk::Offset3D(int32_t(width), int32_t(height), int32_t(depth))};
 }
 
 } // namespace vw
