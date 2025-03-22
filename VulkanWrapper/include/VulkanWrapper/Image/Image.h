@@ -9,7 +9,7 @@ namespace vw {
 class Image : public ObjectWithHandle<vk::Image> {
   public:
     Image(vk::Image image, Width width, Height height, Depth depth,
-          MipLevels mip_level, vk::Format format, vk::ImageUsageFlags usage,
+          MipLevel mip_level, vk::Format format, vk::ImageUsageFlags usage,
           Allocator *allocator, VmaAllocation allocation);
 
     Image(const Image &) = delete;
@@ -19,6 +19,8 @@ class Image : public ObjectWithHandle<vk::Image> {
     Image &operator=(Image &&) = delete;
 
     ~Image();
+
+    [[nodiscard]] MipLevel mip_levels() const noexcept;
 
     [[nodiscard]] vk::Format format() const noexcept;
 
@@ -33,11 +35,17 @@ class Image : public ObjectWithHandle<vk::Image> {
     [[nodiscard]] vk::Extent2D extent2D() const noexcept;
     [[nodiscard]] vk::Extent3D extent3D() const noexcept;
 
+    [[nodiscard]] vk::Extent3D
+    mip_level_extent3D(MipLevel mip_level) const noexcept;
+
+    [[nodiscard]] std::array<vk::Offset3D, 2>
+    mip_level_offsets(MipLevel mip_level) const noexcept;
+
   private:
     Width m_width;
     Height m_height;
     Depth m_depth;
-    MipLevels m_mip_levels;
+    MipLevel m_mip_levels;
     vk::Format m_format;
     vk::ImageUsageFlags m_usage;
     Allocator *m_allocator;

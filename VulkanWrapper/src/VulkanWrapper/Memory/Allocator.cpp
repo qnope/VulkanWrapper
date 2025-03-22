@@ -6,9 +6,9 @@
 
 namespace vw {
 namespace {
-MipLevels mip_level_from_size(Width width, Height height, Depth depth) {
+MipLevel mip_level_from_size(Width width, Height height, Depth depth) {
     auto size = std::max({uint32_t(width), uint32_t(height), uint32_t(depth)});
-    return static_cast<MipLevels>(uint32_t(std::log2(size)) + 1);
+    return static_cast<MipLevel>(uint32_t(std::log2(size)) + 1);
 }
 } // namespace
 
@@ -27,7 +27,7 @@ Allocator::create_image_2D(Width width, Height height, bool mipmap,
     const auto mip_levels = [&] {
         if (mipmap)
             return mip_level_from_size(width, height, Depth(1));
-        return MipLevels(1);
+        return MipLevel(1);
     }();
 
     VkImageCreateInfo create_info =

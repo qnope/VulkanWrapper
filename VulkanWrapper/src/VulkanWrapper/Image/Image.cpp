@@ -11,7 +11,7 @@ vk::ImageAspectFlags aspect_flags_from_format(vk::Format format) {
 } // namespace
 
 Image::Image(vk::Image image, Width width, Height height, Depth depth,
-             MipLevels mip_level, vk::Format format, vk::ImageUsageFlags usage,
+             MipLevel mip_level, vk::Format format, vk::ImageUsageFlags usage,
              Allocator *allocator, VmaAllocation allocation)
     : ObjectWithHandle<vk::Image>(image)
     , m_width{width}
@@ -27,6 +27,8 @@ Image::~Image() {
     if (m_allocator != nullptr)
         vmaDestroyImage(m_allocator->handle(), handle(), m_allocation);
 }
+
+MipLevel Image::mip_levels() const noexcept { return m_mip_levels; }
 
 vk::Format Image::format() const noexcept { return m_format; }
 
@@ -64,6 +66,21 @@ vk::Extent2D Image::extent2D() const noexcept {
 
 vk::Extent3D Image::extent3D() const noexcept {
     return {uint32_t(m_width), uint32_t(m_height), uint32_t(m_depth)};
+}
+
+vk::Extent3D Image::mip_level_extent3D(MipLevel mip_level) const noexcept {
+    assert(mip_level < m_mip_levels);
+    auto width = uint32_t(m_width) >> uint32_t(mip_level);
+    auto height = uint32_t(m_height) >> uint32_t(mip_level);
+    auto depth = uint32_t(m_depth) >> uint32_t(mip_level);
+
+    return {std::max(1U, width), std::max(1U, height), std::max(1U, depth)};
+}
+
+std::array<vk::Offset3D, 2>
+Image::mip_level_offsets(MipLevel mip_level) const noexcept {
+    const auto [width, height, depth] = mip_level_extent3D(mip_level);
+    return {vk::Offset3D(), vk::Offset3D(width, height, depth)};
 }
 
 } // namespace vw

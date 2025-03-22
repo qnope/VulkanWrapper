@@ -208,8 +208,8 @@ int main() {
         auto descriptor_pool =
             vw::DescriptorPoolBuilder(device, descriptor_set_layout, 1).build();
 
-        auto image =
-            stagingManager.stage_image_from_path("../../Images/image_test.png");
+        auto image = stagingManager.stage_image_from_path(
+            "../../Images/image_test.png", true);
 
         vw::DescriptorAllocator descriptor_allocator;
         descriptor_allocator.add_uniform_buffer(0, uniform_buffer.handle(), 0,

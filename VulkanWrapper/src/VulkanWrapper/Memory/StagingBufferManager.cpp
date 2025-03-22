@@ -4,6 +4,7 @@
 #include "VulkanWrapper/Image/CombinedImage.h"
 #include "VulkanWrapper/Image/ImageLoader.h"
 #include "VulkanWrapper/Image/ImageView.h"
+#include "VulkanWrapper/Image/Mipmap.h"
 #include "VulkanWrapper/Image/Sampler.h"
 #include "VulkanWrapper/Memory/Barrier.h"
 
@@ -69,36 +70,47 @@ StagingBuffer &StagingBufferManager::get_staging_buffer(vk::DeviceSize size) {
 }
 
 CombinedImage
-StagingBufferManager::stage_image_from_path(const std::filesystem::path &path) {
+StagingBufferManager::stage_image_from_path(const std::filesystem::path &path,
+                                            bool mipmaps) {
     const auto img_description = load_image(path);
-    constexpr auto usage =
+    auto usage =
         vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
 
+    if (mipmaps)
+        usage |= vk::ImageUsageFlagBits::eTransferSrc;
+
     auto image = m_allocator->create_image_2D(img_description.width,
-                                              img_description.height, false,
+                                              img_description.height, mipmaps,
                                               vk::Format::eR8G8B8A8Srgb, usage);
 
     auto &staging_buffer = get_staging_buffer(img_description.pixels.size());
 
-    auto function =
-        [buffer = staging_buffer.handle(), offset = staging_buffer.offset(),
-         image, width = img_description.width,
-         height = img_description.height](vk::CommandBuffer cmd_buffer) {
-            const auto region =
-                vk::BufferImageCopy()
-                    .setBufferOffset(offset)
-                    .setImageExtent(image->extent3D())
-                    .setImageSubresource(image->mip_level_layer(MipLevel(0)));
+    auto function = [buffer = staging_buffer.handle(),
+                     offset = staging_buffer.offset(), image,
+                     width = img_description.width,
+                     height = img_description.height,
+                     mipmaps](vk::CommandBuffer cmd_buffer) {
+        const auto region =
+            vk::BufferImageCopy()
+                .setBufferOffset(offset)
+                .setImageExtent(image->extent3D())
+                .setImageSubresource(image->mip_level_layer(MipLevel(0)));
 
-            execute_image_barrier_undefined_to_transfer_dst(cmd_buffer, image);
+        execute_image_barrier_undefined_to_transfer_dst(cmd_buffer, image);
 
-            cmd_buffer.copyBufferToImage(buffer, image->handle(),
-                                         vk::ImageLayout::eTransferDstOptimal,
-                                         region);
+        cmd_buffer.copyBufferToImage(buffer, image->handle(),
+                                     vk::ImageLayout::eTransferDstOptimal,
+                                     region);
 
-            execute_image_barrier_transfer_dst_to_sampled(cmd_buffer, image,
-                                                          MipLevel(0));
-        };
+        if (mipmaps) {
+            execute_image_barrier_transfer_dst_to_src(cmd_buffer, image,
+                                                      MipLevel(0));
+            generate_mipmap(cmd_buffer, image);
+            execute_image_barrier_transfer_src_to_dst(cmd_buffer, image);
+        } else {
+            execute_image_barrier_transfer_dst_to_sampled(cmd_buffer, image);
+        }
+    };
 
     m_transfer_functions.emplace_back(function);
     staging_buffer.fill_buffer<std::byte>(img_description.pixels);

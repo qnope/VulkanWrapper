@@ -65,7 +65,8 @@ class StagingBufferManager {
         m_transfer_functions.emplace_back(function);
     }
 
-    CombinedImage stage_image_from_path(const std::filesystem::path &path);
+    CombinedImage stage_image_from_path(const std::filesystem::path &path,
+                                        bool mipmaps);
 
   private:
     void perform_transfer(const void *data, BufferBase &buffer_base);

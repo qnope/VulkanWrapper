@@ -37,5 +37,4 @@ enum class Width {};
 enum class Height {};
 enum class Depth {};
 enum class MipLevel {};
-enum class MipLevels {};
 } // namespace vw
