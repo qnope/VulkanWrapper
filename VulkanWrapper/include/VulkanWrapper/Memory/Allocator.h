@@ -20,14 +20,14 @@ class Allocator : public ObjectWithHandle<VmaAllocator> {
 
     template <typename T, bool HostVisible = false>
     Buffer<T, HostVisible, VertexBufferUsage>
-    allocate_vertex_buffer(VkDeviceSize size) {
+    allocate_vertex_buffer(VkDeviceSize size) const {
         return Buffer<T, HostVisible, VertexBufferUsage>{
             allocate_buffer(size * sizeof(T), HostVisible,
                             vk::BufferUsageFlags(VertexBufferUsage),
                             vk::SharingMode::eExclusive)};
     }
 
-    IndexBuffer allocate_index_buffer(VkDeviceSize size);
+    IndexBuffer allocate_index_buffer(VkDeviceSize size) const;
 
     template <typename T, bool HostVisible, VkBufferUsageFlags Usage>
     Buffer<T, HostVisible, Usage>

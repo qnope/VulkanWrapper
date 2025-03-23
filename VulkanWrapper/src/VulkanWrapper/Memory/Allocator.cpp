@@ -15,7 +15,7 @@ MipLevel mip_level_from_size(Width width, Height height, Depth depth) {
 Allocator::Allocator(VmaAllocator allocator)
     : ObjectWithHandle<VmaAllocator>{allocator} {}
 
-IndexBuffer Allocator::allocate_index_buffer(VkDeviceSize size) {
+IndexBuffer Allocator::allocate_index_buffer(VkDeviceSize size) const {
     return Buffer<unsigned, false, IndexBufferUsage>{allocate_buffer(
         size * sizeof(unsigned), false, vk::BufferUsageFlags(IndexBufferUsage),
         vk::SharingMode::eExclusive)};

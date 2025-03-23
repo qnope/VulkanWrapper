@@ -45,14 +45,14 @@ create_image_views(const vw::Device &device, const vw::Swapchain &swapchain) {
 
 struct UBOData {
     glm::mat4 proj = [] {
-        auto proj =
-            glm::perspective(glm::radians(45.0F), 800.0F / 600.0F, 0.1F, 10.0F);
+        auto proj = glm::perspective(glm::radians(45.0F), 800.0F / 600.0F, 1.F,
+                                     10000.0F);
         proj[1][1] *= -1;
         return proj;
     }();
     glm::mat4 view =
-        glm::lookAt(glm::vec3(0.0F, 1.0F, 1.0F), glm::vec3(0.0F, 0.0F, 0.0F),
-                    glm::vec3(0.0F, 0.0F, 1.0F));
+        glm::lookAt(glm::vec3(1000.0F, 4000.0F, 1000.0F),
+                    glm::vec3(0.0F, 0.0F, 0.0F), glm::vec3(0.0F, 0.0F, 1.0F));
     glm::mat4 model = glm::mat4(1.0);
 };
 
@@ -85,39 +85,22 @@ std::vector<vw::Framebuffer> createFramebuffers(
     return framebuffers;
 }
 
-void record(
-    vk::CommandBuffer commandBuffer, vk::Extent2D extent,
-    const vw::Framebuffer &framebuffer, const vw::Pipeline &pipeline,
-    const vw::RenderPass &renderPass,
-    const vw::Buffer<vw::ColoredAndTexturedVertex3D, false,
-                     vw::VertexBufferUsage> &vertex_buffer,
-    const vw::Buffer<unsigned, false, vw::IndexBufferUsage> &index_buffer,
-    const vw::PipelineLayout &layout, const vk::DescriptorSet &set) {
-    vw::CommandBufferRecorder(commandBuffer)
-        .begin_render_pass(renderPass, framebuffer)
-        .bind_graphics_pipeline(pipeline)
-        .bind_vertex_buffer(0, vertex_buffer)
-        .bind_index_buffer(index_buffer)
-        .bind_descriptor_set(layout, 0, std::span(&set, 1), {})
-        .indexed_draw(12, 1, 0, 0, 0);
+void record(vk::CommandBuffer commandBuffer, vk::Extent2D extent,
+            const vw::Framebuffer &framebuffer, const vw::Pipeline &pipeline,
+            const vw::RenderPass &renderPass,
+            const std::vector<vw::Model::Mesh> &meshes,
+            const vw::PipelineLayout &layout, vk::DescriptorSet ubo_set) {
+    auto recorder = vw::CommandBufferRecorder(commandBuffer);
+    auto rp = recorder.begin_render_pass(renderPass, framebuffer);
+    auto pi = rp.bind_graphics_pipeline(pipeline);
+    pi.bind_descriptor_set(layout, 0, std::span(&ubo_set, 1), {});
+    for (const auto &m : meshes) {
+        m.draw(pi.m_commandBuffer, layout);
+    }
 }
 
 int main() {
     try {
-        const std::vector<vw::ColoredAndTexturedVertex3D> vertices = {
-            {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-            {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-            {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-            {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-
-            {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-            {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-            {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-            {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}};
-
-        const std::vector<unsigned> indices = {0, 1, 2, 2, 3, 0,
-                                               4, 5, 6, 6, 7, 4};
-
         vw::SDL_Initializer initializer;
         vw::Window window = vw::WindowBuilder(initializer)
                                 .with_title("Coucou")
@@ -143,18 +126,6 @@ int main() {
 
         auto allocator = vw::AllocatorBuilder(instance, device).build();
 
-        auto vertex_buffer =
-            allocator.allocate_vertex_buffer<vw::ColoredAndTexturedVertex3D>(
-                2000);
-
-        auto index_buffer = allocator.allocate_index_buffer(2000);
-
-        vw::StagingBufferManager stagingManager(device, allocator);
-
-        stagingManager.fill_buffer<vw::ColoredAndTexturedVertex3D>(
-            vertices, vertex_buffer, 0);
-        stagingManager.fill_buffer<unsigned>(indices, index_buffer, 0);
-
         auto swapchain = window.create_swapchain(device, surface.handle());
 
         auto vertexShader = vw::ShaderModule::create_from_spirv_file(
@@ -169,9 +140,13 @@ int main() {
                 .with_combined_image(vk::ShaderStageFlagBits::eFragment, 1)
                 .build();
 
+        vw::Model::MeshManager mesh_manager(device, allocator);
+        mesh_manager.read_file("../../Models/Sponza/sponza.obj");
+
         auto pipelineLayout =
             vw::PipelineLayoutBuilder(device)
                 .with_descriptor_set_layout(descriptor_set_layout)
+                .with_descriptor_set_layout(mesh_manager.layout())
                 .build();
 
         const auto depth_buffer = allocator.create_image_2D(
@@ -209,21 +184,20 @@ int main() {
                               .add_subpass(std::move(subpass))
                               .build();
 
-        auto pipeline =
-            vw::GraphicsPipelineBuilder(device, renderPass)
-                .add_vertex_binding<vw::ColoredAndTexturedVertex3D>()
-                .add_shader(vk::ShaderStageFlagBits::eVertex,
-                            std::move(vertexShader))
-                .add_shader(vk::ShaderStageFlagBits::eFragment,
-                            std::move(fragmentShader))
-                .with_fixed_scissor(int32_t(swapchain.width()),
-                                    int32_t(swapchain.height()))
-                .with_fixed_viewport(int32_t(swapchain.width()),
-                                     int32_t(swapchain.height()))
-                .with_depth_test(true, vk::CompareOp::eLess)
-                .with_pipeline_layout(pipelineLayout)
-                .add_color_attachment()
-                .build();
+        auto pipeline = vw::GraphicsPipelineBuilder(device, renderPass)
+                            .add_vertex_binding<vw::FullVertex3D>()
+                            .add_shader(vk::ShaderStageFlagBits::eVertex,
+                                        std::move(vertexShader))
+                            .add_shader(vk::ShaderStageFlagBits::eFragment,
+                                        std::move(fragmentShader))
+                            .with_fixed_scissor(int32_t(swapchain.width()),
+                                                int32_t(swapchain.height()))
+                            .with_fixed_viewport(int32_t(swapchain.width()),
+                                                 int32_t(swapchain.height()))
+                            .with_depth_test(true, vk::CompareOp::eLess)
+                            .with_pipeline_layout(pipelineLayout)
+                            .add_color_attachment()
+                            .build();
 
         auto commandPool = vw::CommandPoolBuilder(device).build();
         auto image_views = create_image_views(device, swapchain);
@@ -240,13 +214,9 @@ int main() {
         auto descriptor_pool =
             vw::DescriptorPoolBuilder(device, descriptor_set_layout, 1).build();
 
-        auto image = stagingManager.stage_image_from_path(
-            "../../Images/image_test.png", true);
-
         vw::DescriptorAllocator descriptor_allocator;
         descriptor_allocator.add_uniform_buffer(0, uniform_buffer.handle(), 0,
                                                 uniform_buffer.size_bytes());
-        descriptor_allocator.add_combined_image(1, image);
 
         auto descriptor_set =
             descriptor_pool.allocate_set(descriptor_allocator);
@@ -254,19 +224,15 @@ int main() {
         for (auto [framebuffer, commandBuffer] :
              std::views::zip(framebuffers, commandBuffers)) {
             record(commandBuffer, extent, framebuffer, pipeline, renderPass,
-                   vertex_buffer, index_buffer, pipelineLayout, descriptor_set);
+                   mesh_manager.meshes(), pipelineLayout, descriptor_set);
         }
 
         auto renderFinishedSemaphore = vw::SemaphoreBuilder(device).build();
         auto imageAvailableSemaphore = vw::SemaphoreBuilder(device).build();
 
-        auto cmd_buffer = stagingManager.fill_command_buffer();
+        auto cmd_buffer = mesh_manager.fill_command_buffer();
 
         device.graphicsQueue().enqueue_command_buffer(cmd_buffer);
-
-        vw::Model::Importer importer("../../Models/Sponza/sponza.obj");
-
-        vw::MeshManager mesh_manager(device, allocator);
 
         while (!window.is_close_requested()) {
             window.update();

@@ -47,6 +47,7 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Model/Importer.cpp
     VulkanWrapper/Model/Mesh.cpp
     VulkanWrapper/Model/MeshManager.cpp
+    VulkanWrapper/Model/Material.cpp
     VulkanWrapper/Model/Internal/Material.cpp
     VulkanWrapper/Model/Internal/Mesh.cpp
 )

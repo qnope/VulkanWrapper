@@ -48,7 +48,7 @@ class PipelineBoundCommandBufferRecorder {
                                     vertex_offset, first_instance);
     }
 
-  private:
+  public:
     PipelineBoundCommandBufferRecorder(vk::CommandBuffer commandBuffer);
 
     vk::CommandBuffer m_commandBuffer;

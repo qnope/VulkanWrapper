@@ -55,4 +55,5 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Model/MeshManager.h
     VulkanWrapper/Model/Internal/Material.h
     VulkanWrapper/Model/Internal/Mesh.h
+    VulkanWrapper/Model/Material.h
 )
