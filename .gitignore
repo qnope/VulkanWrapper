@@ -59,3 +59,4 @@ target
 __pycache__
 *.lock
 */bindings_vw_py.py*
+vcpkg_installed
