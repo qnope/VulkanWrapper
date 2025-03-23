@@ -184,13 +184,14 @@ int main() {
 
         const auto color_attachment =
             vw::AttachmentBuilder(COLOR)
-                .with_format(swapchain.format())
+                .with_format(swapchain.format(), vk::ClearColorValue())
                 .with_final_layout(vk::ImageLayout::ePresentSrcKHR)
                 .build();
 
         const auto depth_attachment =
             vw::AttachmentBuilder(DEPTH)
-                .with_format(depth_buffer->format())
+                .with_format(depth_buffer->format(),
+                             vk::ClearDepthStencilValue(1.0))
                 .with_final_layout(
                     vk::ImageLayout::eDepthStencilAttachmentOptimal)
                 .build();

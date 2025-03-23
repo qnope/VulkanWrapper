@@ -12,8 +12,15 @@ class RenderPass : public ObjectWithUniqueHandle<vk::UniqueRenderPass> {
     friend class RenderPassBuilder;
 
   public:
+    RenderPass(vk::UniqueRenderPass render_pass,
+               std::vector<Attachment> attachments);
+
+    [[nodiscard]] const std::vector<vk::ClearValue> &
+    clear_values() const noexcept;
+
   private:
-    using ObjectWithUniqueHandle<vk::UniqueRenderPass>::ObjectWithUniqueHandle;
+    std::vector<Attachment> m_attachments;
+    std::vector<vk::ClearValue> m_clear_values;
 };
 
 class RenderPassBuilder {

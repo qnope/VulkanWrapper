@@ -58,9 +58,7 @@ CommandBufferRecorder::~CommandBufferRecorder() {
 RenderPassCommandBufferRecorder
 CommandBufferRecorder::begin_render_pass(const RenderPass &render_pass,
                                          const Framebuffer &framebuffer) {
-    vk::ClearValue color;
-    vk::ClearValue depth = vk::ClearDepthStencilValue(1.0);
-    std::array clear_values = {color, depth};
+    const auto &clear_values = render_pass.clear_values();
 
     const auto renderPassBeginInfo =
         vk::RenderPassBeginInfo()

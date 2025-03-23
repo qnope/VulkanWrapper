@@ -4,8 +4,11 @@ namespace vw {
 AttachmentBuilder::AttachmentBuilder(std::string_view id)
     : m_id{id} {}
 
-AttachmentBuilder AttachmentBuilder::with_format(vk::Format format) && {
+AttachmentBuilder
+AttachmentBuilder::with_format(vk::Format format,
+                               vk::ClearValue clear_value) && {
     m_format = format;
+    m_clearValue = clear_value;
     return std::move(*this);
 }
 
@@ -22,6 +25,7 @@ Attachment AttachmentBuilder::build() && {
                       .loadOp = m_loadOp,
                       .storeOp = m_storeOp,
                       .initialLayout = m_initialLayout,
-                      .finalLayout = m_finalLayout};
+                      .finalLayout = m_finalLayout,
+                      .clearValue = m_clearValue};
 }
 } // namespace vw

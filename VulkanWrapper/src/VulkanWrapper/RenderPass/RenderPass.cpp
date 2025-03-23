@@ -6,6 +6,18 @@
 
 namespace vw {
 
+RenderPass::RenderPass(vk::UniqueRenderPass render_pass,
+                       std::vector<Attachment> attachments)
+    : ObjectWithUniqueHandle<vk::UniqueRenderPass>{std::move(render_pass)}
+    , m_attachments{std::move(attachments)}
+    , m_clear_values{m_attachments |
+                     std::views::transform(&Attachment::clearValue) |
+                     to<std::vector>} {}
+
+const std::vector<vk::ClearValue> &RenderPass::clear_values() const noexcept {
+    return m_clear_values;
+}
+
 static vk::AttachmentDescription2
 attachmentToDescription(const Attachment &attachment) {
     return vk::AttachmentDescription2()
@@ -72,7 +84,6 @@ RenderPassBuilder &&RenderPassBuilder::add_subpass(Subpass subpass) && {
 }
 
 RenderPass RenderPassBuilder::build() && {
-
     const auto attachments = create_attachments();
     const auto attachmentDescriptions =
         attachments | std::views::transform(attachmentToDescription) |
@@ -97,7 +108,7 @@ RenderPass RenderPassBuilder::build() && {
     if (result != vk::Result::eSuccess) {
         throw RenderPassCreationException{std::source_location::current()};
     }
-    return RenderPass{std::move(renderPass)};
+    return RenderPass{std::move(renderPass), std::move(attachments)};
 }
 
 std::vector<Attachment> RenderPassBuilder::create_attachments() const noexcept {
