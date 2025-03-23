@@ -23,7 +23,7 @@ IndexBuffer Allocator::allocate_index_buffer(VkDeviceSize size) {
 
 std::shared_ptr<const Image>
 Allocator::create_image_2D(Width width, Height height, bool mipmap,
-                           vk::Format format, vk::ImageUsageFlags usage) {
+                           vk::Format format, vk::ImageUsageFlags usage) const {
     const auto mip_levels = [&] {
         if (mipmap)
             return mip_level_from_size(width, height, Depth(1));
@@ -48,15 +48,16 @@ Allocator::create_image_2D(Width width, Height height, bool mipmap,
     VkImage image = nullptr;
     vmaCreateImage(handle(), &create_info, &allocation_info, &image,
                    &allocation, nullptr);
-    return std::make_shared<Image>(vk::Image(image), width, height, Depth(1),
-                                   mip_levels, format, usage, this, allocation);
+    return std::make_shared<const Image>(vk::Image(image), width, height,
+                                         Depth(1), mip_levels, format, usage,
+                                         this, allocation);
 }
 
 Allocator::~Allocator() { vmaDestroyAllocator(handle()); }
 
 BufferBase Allocator::allocate_buffer(VkDeviceSize size, bool host_visible,
                                       vk::BufferUsageFlags usage,
-                                      vk::SharingMode sharing_mode) {
+                                      vk::SharingMode sharing_mode) const {
     VmaAllocationCreateInfo allocation_info{};
     if (host_visible) {
         allocation_info.flags =

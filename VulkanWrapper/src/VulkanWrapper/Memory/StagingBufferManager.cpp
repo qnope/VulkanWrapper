@@ -19,11 +19,11 @@ static vk::DeviceSize compute_size(vk::DeviceSize size) {
     return vk::DeviceSize(std::pow(2, std::ceil(std::log2(max_size))));
 }
 
-static CommandPool create_command_pool(Device &device) {
+static CommandPool create_command_pool(const Device &device) {
     return CommandPoolBuilder(device).build();
 }
 
-StagingBuffer::StagingBuffer(Allocator &allocator, vk::DeviceSize size)
+StagingBuffer::StagingBuffer(const Allocator &allocator, vk::DeviceSize size)
     : m_buffer{
           allocator.create_buffer<std::byte, true,
                                   VK_BUFFER_USAGE_TRANSFER_SRC_BIT>(size)} {}
@@ -36,7 +36,8 @@ bool StagingBuffer::handle_data(vk::DeviceSize size) const noexcept {
     return (m_buffer.size_bytes() - m_offset) >= size;
 }
 
-StagingBufferManager::StagingBufferManager(Device &device, Allocator &allocator)
+StagingBufferManager::StagingBufferManager(const Device &device,
+                                           const Allocator &allocator)
     : m_device{&device}
     , m_allocator{&allocator}
     , m_command_pool(create_command_pool(device))

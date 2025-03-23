@@ -9,7 +9,7 @@ namespace vw {
 
 class StagingBuffer {
   public:
-    StagingBuffer(Allocator &allocator, vk::DeviceSize size);
+    StagingBuffer(const Allocator &allocator, vk::DeviceSize size);
 
     [[nodiscard]] vk::Buffer handle() const noexcept;
     [[nodiscard]] vk::DeviceSize offset() const noexcept;
@@ -50,7 +50,7 @@ class StagingBuffer {
 
 class StagingBufferManager {
   public:
-    StagingBufferManager(Device &device, Allocator &allocator);
+    StagingBufferManager(const Device &device, const Allocator &allocator);
 
     vk::CommandBuffer fill_command_buffer();
 
@@ -72,8 +72,8 @@ class StagingBufferManager {
     void perform_transfer(const void *data, BufferBase &buffer_base);
     StagingBuffer &get_staging_buffer(vk::DeviceSize size);
 
-    Device *m_device;
-    Allocator *m_allocator;
+    const Device *m_device;
+    const Allocator *m_allocator;
     CommandPool m_command_pool;
     std::vector<StagingBuffer> m_staging_buffers;
 

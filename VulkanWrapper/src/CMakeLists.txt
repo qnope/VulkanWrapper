@@ -43,4 +43,10 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Descriptors/DescriptorSetLayout.cpp
     VulkanWrapper/Descriptors/DescriptorPool.cpp
     VulkanWrapper/Descriptors/DescriptorAllocator.cpp
+
+    VulkanWrapper/Model/Importer.cpp
+    VulkanWrapper/Model/Mesh.cpp
+    VulkanWrapper/Model/MeshManager.cpp
+    VulkanWrapper/Model/Internal/Material.cpp
+    VulkanWrapper/Model/Internal/Mesh.cpp
 )

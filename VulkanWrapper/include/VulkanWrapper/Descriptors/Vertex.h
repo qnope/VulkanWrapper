@@ -81,6 +81,32 @@ using ColoredAndTexturedVertex2D = ColoredAndTexturedVertex<glm::vec2>;
 using ColoredVertex3D = ColoredVertex<glm::vec3>;
 using ColoredAndTexturedVertex3D = ColoredAndTexturedVertex<glm::vec3>;
 
+struct FullVertex3D
+    : VertexInterface<glm::vec3, glm::vec3, glm::vec3, glm::vec3, glm::vec2> {
+    FullVertex3D() = default;
+
+    FullVertex3D(glm::vec3 position, glm::vec3 normal, glm::vec3 tangeant,
+                 glm::vec3 bitangeant)
+        : position{position}
+        , normal{normal}
+        , tangeant{normal}
+        , bitangeant{normal} {}
+
+    FullVertex3D(glm::vec3 position, glm::vec3 normal, glm::vec3 tangeant,
+                 glm::vec3 bitangeant, glm::vec2 uv)
+        : position{position}
+        , normal{normal}
+        , tangeant{normal}
+        , bitangeant{normal}
+        , uv{uv} {}
+
+    glm::vec3 position;
+    glm::vec3 normal;
+    glm::vec3 tangeant;
+    glm::vec3 bitangeant;
+    glm::vec2 uv;
+};
+
 template <typename T>
 concept Vertex =
     std::is_standard_layout_v<T> && std::is_trivially_copyable_v<T> &&

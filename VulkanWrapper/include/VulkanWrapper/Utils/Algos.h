@@ -31,4 +31,22 @@ auto operator|(Range &&range, to_t<Container> /*unused*/) {
                      std::forward<Range>(range).end());
 }
 
+template <typename T> struct construct_t {};
+
+template <typename T> constexpr construct_t<T> construct{};
+
+template <typename Range, typename T>
+auto operator|(Range &&range, construct_t<T> /*unused*/) {
+    auto constructor = [](const auto &x) {
+        if constexpr (requires { T{x}; })
+            return T{x};
+        else
+            return std::apply(
+                [](auto &&...xs) {
+                    return T{std::forward<decltype(xs)>(xs)...};
+                },
+                x);
+    };
+    return std::forward<Range>(range) | std::views::transform(constructor);
+}
 } // namespace vw

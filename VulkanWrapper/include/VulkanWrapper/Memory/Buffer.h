@@ -20,7 +20,7 @@ constexpr VkBufferUsageFlags UniformBufferUsage =
 
 class BufferBase : public ObjectWithHandle<vk::Buffer> {
   public:
-    BufferBase(Allocator &allocator, vk::Buffer buffer,
+    BufferBase(const Allocator &allocator, vk::Buffer buffer,
                VmaAllocation allocation, VkDeviceSize size);
 
     BufferBase(const BufferBase &) = delete;
@@ -36,7 +36,7 @@ class BufferBase : public ObjectWithHandle<vk::Buffer> {
     ~BufferBase();
 
   private:
-    Allocator *m_allocator;
+    const Allocator *m_allocator;
     VmaAllocation m_allocation;
     VkDeviceSize m_size_in_bytes;
 };

@@ -10,7 +10,7 @@ class Image : public ObjectWithHandle<vk::Image> {
   public:
     Image(vk::Image image, Width width, Height height, Depth depth,
           MipLevel mip_level, vk::Format format, vk::ImageUsageFlags usage,
-          Allocator *allocator, VmaAllocation allocation);
+          const Allocator *allocator, VmaAllocation allocation);
 
     Image(const Image &) = delete;
     Image(Image &&) = default;
@@ -48,7 +48,7 @@ class Image : public ObjectWithHandle<vk::Image> {
     MipLevel m_mip_levels;
     vk::Format m_format;
     vk::ImageUsageFlags m_usage;
-    Allocator *m_allocator;
+    const Allocator *m_allocator;
     VmaAllocation m_allocation;
 };
 

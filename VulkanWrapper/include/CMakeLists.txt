@@ -49,4 +49,10 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Memory/Buffer.h
     VulkanWrapper/Memory/StagingBufferManager.h
     VulkanWrapper/Memory/Barrier.h
+
+    VulkanWrapper/Model/Importer.h
+    VulkanWrapper/Model/Mesh.h
+    VulkanWrapper/Model/MeshManager.h
+    VulkanWrapper/Model/Internal/Material.h
+    VulkanWrapper/Model/Internal/Mesh.h
 )

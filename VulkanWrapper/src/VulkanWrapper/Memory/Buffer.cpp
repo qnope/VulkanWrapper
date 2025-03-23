@@ -3,7 +3,7 @@
 #include "VulkanWrapper/Memory/Allocator.h"
 
 namespace vw {
-BufferBase::BufferBase(Allocator &allocator, vk::Buffer buffer,
+BufferBase::BufferBase(const Allocator &allocator, vk::Buffer buffer,
                        VmaAllocation allocation, VkDeviceSize size)
     : ObjectWithHandle<vk::Buffer>{buffer}
     , m_allocator{&allocator}

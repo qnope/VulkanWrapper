@@ -8,6 +8,8 @@
 #include <VulkanWrapper/Image/ImageLoader.h>
 #include <VulkanWrapper/Memory/Allocator.h>
 #include <VulkanWrapper/Memory/StagingBufferManager.h>
+#include <VulkanWrapper/Model/Importer.h>
+#include <VulkanWrapper/Model/MeshManager.h>
 #include <VulkanWrapper/Pipeline/Pipeline.h>
 #include <VulkanWrapper/Pipeline/PipelineLayout.h>
 #include <VulkanWrapper/Pipeline/ShaderModule.h>
@@ -214,10 +216,10 @@ int main() {
                             std::move(vertexShader))
                 .add_shader(vk::ShaderStageFlagBits::eFragment,
                             std::move(fragmentShader))
-                .with_fixed_scissor(uint32_t(swapchain.width()),
-                                    uint32_t(swapchain.height()))
-                .with_fixed_viewport(uint32_t(swapchain.width()),
-                                     uint32_t(swapchain.height()))
+                .with_fixed_scissor(int32_t(swapchain.width()),
+                                    int32_t(swapchain.height()))
+                .with_fixed_viewport(int32_t(swapchain.width()),
+                                     int32_t(swapchain.height()))
                 .with_depth_test(true, vk::CompareOp::eLess)
                 .with_pipeline_layout(pipelineLayout)
                 .add_color_attachment()
@@ -261,6 +263,10 @@ int main() {
         auto cmd_buffer = stagingManager.fill_command_buffer();
 
         device.graphicsQueue().enqueue_command_buffer(cmd_buffer);
+
+        vw::Model::Importer importer("../../Models/Sponza/sponza.obj");
+
+        vw::MeshManager mesh_manager(device, allocator);
 
         while (!window.is_close_requested()) {
             window.update();

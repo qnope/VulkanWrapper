@@ -22,7 +22,7 @@ vk::ImageAspectFlags aspect_flags_from_format(vk::Format format) {
 
 Image::Image(vk::Image image, Width width, Height height, Depth depth,
              MipLevel mip_level, vk::Format format, vk::ImageUsageFlags usage,
-             Allocator *allocator, VmaAllocation allocation)
+             const Allocator *allocator, VmaAllocation allocation)
     : ObjectWithHandle<vk::Image>(image)
     , m_width{width}
     , m_height{height}

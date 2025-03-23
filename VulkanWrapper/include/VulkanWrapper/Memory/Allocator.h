@@ -30,7 +30,8 @@ class Allocator : public ObjectWithHandle<VmaAllocator> {
     IndexBuffer allocate_index_buffer(VkDeviceSize size);
 
     template <typename T, bool HostVisible, VkBufferUsageFlags Usage>
-    Buffer<T, HostVisible, Usage> create_buffer(VkDeviceSize number_elements) {
+    Buffer<T, HostVisible, Usage>
+    create_buffer(VkDeviceSize number_elements) const {
         return {allocate_buffer(number_elements * sizeof(T), HostVisible,
                                 vk::BufferUsageFlags(Usage),
                                 vk::SharingMode::eExclusive)};
@@ -38,14 +39,14 @@ class Allocator : public ObjectWithHandle<VmaAllocator> {
 
     [[nodiscard]] std::shared_ptr<const Image>
     create_image_2D(Width width, Height height, bool mipmap, vk::Format format,
-                    vk::ImageUsageFlags usage);
+                    vk::ImageUsageFlags usage) const;
 
     ~Allocator();
 
   private:
     BufferBase allocate_buffer(VkDeviceSize size, bool host_visible,
                                vk::BufferUsageFlags usage,
-                               vk::SharingMode sharing_mode);
+                               vk::SharingMode sharing_mode) const;
 };
 
 class AllocatorBuilder {
