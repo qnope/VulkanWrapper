@@ -78,6 +78,5 @@ Importer::Importer(const std::filesystem::path &path,
         mesh_manager.m_index_offset += mesh.indices.size();
         mesh_manager.m_vertex_offset += mesh.vertices.size();
     }
-    std::cout << "lol" << std::endl;
 }
 } // namespace vw::Model
