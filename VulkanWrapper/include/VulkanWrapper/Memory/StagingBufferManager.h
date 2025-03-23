@@ -23,7 +23,7 @@ class StagingBuffer {
     template <typename T, VkBufferUsageFlags Usage, bool HostVisible>
     [[nodiscard]] auto fill_buffer(std::span<const T> data,
                                    Buffer<T, HostVisible, Usage> &buffer,
-                                   VkDeviceSize offset_dst_buffer) {
+                                   uint32_t offset_dst_buffer) {
         static_assert((Usage & VK_BUFFER_USAGE_TRANSFER_DST_BIT) ==
                       VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 
@@ -34,7 +34,7 @@ class StagingBuffer {
                             vk::CommandBuffer command_buffer) {
             const auto region = vk::BufferCopy()
                                     .setSrcOffset(offset_src)
-                                    .setDstOffset(offset_dst_buffer)
+                                    .setDstOffset(offset_dst_buffer * sizeof(T))
                                     .setSize(size);
             command_buffer.copyBuffer(src_buffer_handle, buffer.handle(),
                                       region);
@@ -57,7 +57,7 @@ class StagingBufferManager {
     template <typename T, VkBufferUsageFlags Usage, bool HostVisible>
     auto fill_buffer(std::span<const T> data,
                      Buffer<T, HostVisible, Usage> &buffer,
-                     VkDeviceSize offset_dst_buffer) {
+                     uint32_t offset_dst_buffer) {
         auto &staging_buffer = get_staging_buffer(data.size_bytes());
 
         auto function =

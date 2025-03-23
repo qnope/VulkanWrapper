@@ -11,5 +11,6 @@ layout(set = 1, binding = 0) uniform sampler2D image;
 
 void main()
 {
-    outColor = textureLod(image, texCoord, 0.0);
+    float mipmapLevel = textureQueryLod(image, texCoord).x;
+    outColor = textureLod(image, texCoord, mipmapLevel);
 }

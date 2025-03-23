@@ -45,14 +45,14 @@ create_image_views(const vw::Device &device, const vw::Swapchain &swapchain) {
 
 struct UBOData {
     glm::mat4 proj = [] {
-        auto proj = glm::perspective(glm::radians(45.0F), 800.0F / 600.0F, 1.F,
+        auto proj = glm::perspective(glm::radians(45.0F), 1024.0F / 800.0F, 1.F,
                                      10000.0F);
         proj[1][1] *= -1;
         return proj;
     }();
-    glm::mat4 view =
-        glm::lookAt(glm::vec3(1000.0F, 4000.0F, 1000.0F),
-                    glm::vec3(0.0F, 0.0F, 0.0F), glm::vec3(0.0F, 0.0F, 1.0F));
+    glm::mat4 view = glm::lookAt(glm::vec3(-30.0F, 300.0F, 0.0F),
+                                 glm::vec3(10.0F, 300.0F, 0.0F),
+                                 glm::vec3(0.0F, 1.0F, 0.0F));
     glm::mat4 model = glm::mat4(1.0);
 };
 
@@ -104,7 +104,7 @@ int main() {
         vw::SDL_Initializer initializer;
         vw::Window window = vw::WindowBuilder(initializer)
                                 .with_title("Coucou")
-                                .sized(vw::Width(800), vw::Height(600))
+                                .sized(vw::Width(1024), vw::Height(800))
                                 .build();
 
         vw::Instance instance =
