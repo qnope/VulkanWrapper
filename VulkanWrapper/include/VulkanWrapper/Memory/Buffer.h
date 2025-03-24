@@ -56,8 +56,10 @@ class Buffer : public BufferBase {
     {
         generic_copy(span.data(), span.size() * sizeof(T), offset);
     }
+
+    std::size_t size() const noexcept { return size_bytes() / sizeof(T); }
 };
 
-using IndexBuffer = Buffer<unsigned, false, IndexBufferUsage>;
+using IndexBuffer = Buffer<uint32_t, false, IndexBufferUsage>;
 
 } // namespace vw

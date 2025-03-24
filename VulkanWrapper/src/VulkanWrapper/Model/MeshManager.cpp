@@ -20,8 +20,8 @@ MeshManager::MeshManager(const Device &device, const Allocator &allocator)
     : m_staging_buffer_manager{device, allocator}
     , m_descriptor_set_layout{create_layout(device)}
     , m_descriptor_pool{create_pool(device, m_descriptor_set_layout)}
-    , m_vertex_buffer{allocator.allocate_vertex_buffer<FullVertex3D>(4'000'000)}
-    , m_index_buffer{allocator.allocate_index_buffer(4'000'000)} {}
+    , m_vertex_buffer{allocator}
+    , m_index_buffer{allocator} {}
 
 std::shared_ptr<DescriptorSetLayout> MeshManager::layout() const noexcept {
     return m_descriptor_set_layout;

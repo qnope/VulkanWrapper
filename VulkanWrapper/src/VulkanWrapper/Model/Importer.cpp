@@ -26,7 +26,7 @@ Importer::Importer(const std::filesystem::path &path,
         aiPostProcessSteps::aiProcess_JoinIdenticalVertices |
         aiPostProcessSteps::aiProcess_RemoveRedundantMaterials;
 
-    auto scene = importer.ReadFile(path.c_str(), post_process);
+    auto scene = importer.ReadFile(path.string().c_str(), post_process);
 
     if (scene == nullptr) {
         throw ModelNotFoundException{std::source_location::current()};
@@ -47,12 +47,10 @@ Importer::Importer(const std::filesystem::path &path,
             if (material.diffuse_texture_path.empty())
                 return mesh_manager.m_staging_buffer_manager
                     .stage_image_from_path("../../Images/image_test.png", true);
-            else
-                return mesh_manager.m_staging_buffer_manager
-                    .stage_image_from_path(
-                        std::string("../../Models/Sponza/") +
-                            material.diffuse_texture_path.c_str(),
-                        true);
+
+            return mesh_manager.m_staging_buffer_manager.stage_image_from_path(
+                "../../Models/Sponza/" + material.diffuse_texture_path.string(),
+                true);
         }();
 
         DescriptorAllocator allocator;
@@ -62,21 +60,20 @@ Importer::Importer(const std::filesystem::path &path,
     }
 
     for (const auto &mesh : meshes) {
+        auto [vertex_buffer, vertex_offset] =
+            mesh_manager.m_vertex_buffer.create_buffer(mesh.vertices.size());
+        auto [index_buffer, first_index] =
+            mesh_manager.m_index_buffer.create_buffer(mesh.indices.size());
+
         mesh_manager.m_meshes.emplace_back(
-            &mesh_manager.m_vertex_buffer, &mesh_manager.m_index_buffer,
-            real_material[mesh.material_index], mesh.indices.size(),
-            mesh_manager.m_vertex_offset, mesh_manager.m_index_offset);
+            vertex_buffer, index_buffer, real_material[mesh.material_index],
+            mesh.indices.size(), vertex_offset, first_index);
 
         mesh_manager.m_staging_buffer_manager.fill_buffer<FullVertex3D>(
-            mesh.vertices, mesh_manager.m_vertex_buffer,
-            mesh_manager.m_vertex_offset);
+            mesh.vertices, *vertex_buffer, vertex_offset);
 
         mesh_manager.m_staging_buffer_manager.fill_buffer<uint32_t>(
-            mesh.indices, mesh_manager.m_index_buffer,
-            mesh_manager.m_index_offset);
-
-        mesh_manager.m_index_offset += mesh.indices.size();
-        mesh_manager.m_vertex_offset += mesh.vertices.size();
+            mesh.indices, *index_buffer, first_index);
     }
 }
 } // namespace vw::Model

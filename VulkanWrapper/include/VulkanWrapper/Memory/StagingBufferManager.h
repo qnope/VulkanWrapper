@@ -22,7 +22,7 @@ class StagingBuffer {
 
     template <typename T, VkBufferUsageFlags Usage, bool HostVisible>
     [[nodiscard]] auto fill_buffer(std::span<const T> data,
-                                   Buffer<T, HostVisible, Usage> &buffer,
+                                   const Buffer<T, HostVisible, Usage> &buffer,
                                    uint32_t offset_dst_buffer) {
         static_assert((Usage & VK_BUFFER_USAGE_TRANSFER_DST_BIT) ==
                       VK_BUFFER_USAGE_TRANSFER_DST_BIT);
@@ -56,7 +56,7 @@ class StagingBufferManager {
 
     template <typename T, VkBufferUsageFlags Usage, bool HostVisible>
     auto fill_buffer(std::span<const T> data,
-                     Buffer<T, HostVisible, Usage> &buffer,
+                     const Buffer<T, HostVisible, Usage> &buffer,
                      uint32_t offset_dst_buffer) {
         auto &staging_buffer = get_staging_buffer(data.size_bytes());
 
@@ -69,7 +69,6 @@ class StagingBufferManager {
                                         bool mipmaps);
 
   private:
-    void perform_transfer(const void *data, BufferBase &buffer_base);
     StagingBuffer &get_staging_buffer(vk::DeviceSize size);
 
     const Device *m_device;

@@ -3,6 +3,7 @@
 #include "VulkanWrapper/Descriptors/DescriptorPool.h"
 #include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
 #include "VulkanWrapper/Descriptors/Vertex.h"
+#include "VulkanWrapper/Memory/BufferList.h"
 #include "VulkanWrapper/Memory/StagingBufferManager.h"
 #include "VulkanWrapper/Model/Material.h"
 #include "VulkanWrapper/Model/Mesh.h"
@@ -26,10 +27,8 @@ class MeshManager {
     StagingBufferManager m_staging_buffer_manager;
     std::shared_ptr<DescriptorSetLayout> m_descriptor_set_layout;
     DescriptorPool m_descriptor_pool;
-    Buffer<FullVertex3D, false, VertexBufferUsage> m_vertex_buffer;
-    IndexBuffer m_index_buffer;
-    int m_vertex_offset = 0;
-    int m_index_offset = 0;
+    BufferList<FullVertex3D, false, VertexBufferUsage> m_vertex_buffer;
+    IndexBufferList m_index_buffer;
 
     std::vector<Mesh> m_meshes;
 };
