@@ -51,10 +51,17 @@ class Buffer : public BufferBase {
     Buffer(BufferBase &&bufferBase)
         : BufferBase(std::move(bufferBase)) {}
 
-    void copy(std::span<const T> span, VkDeviceSize offset)
+    void copy(std::span<const T> span, std::size_t offset)
         requires(HostVisible)
     {
-        generic_copy(span.data(), span.size() * sizeof(T), offset);
+        BufferBase::generic_copy(span.data(), span.size_bytes(),
+                                 offset * sizeof(T));
+    }
+
+    template <typename U>
+    void generic_copy(std::span<const U> span, std::size_t offset) {
+        BufferBase::generic_copy(span.data(), span.size_bytes(),
+                                 offset * sizeof(T));
     }
 
     std::size_t size() const noexcept { return size_bytes() / sizeof(T); }

@@ -23,24 +23,12 @@ static CommandPool create_command_pool(const Device &device) {
     return CommandPoolBuilder(device).build();
 }
 
-StagingBuffer::StagingBuffer(const Allocator &allocator, vk::DeviceSize size)
-    : m_buffer{
-          allocator.create_buffer<std::byte, true,
-                                  VK_BUFFER_USAGE_TRANSFER_SRC_BIT>(size)} {}
-
-vk::Buffer StagingBuffer::handle() const noexcept { return m_buffer.handle(); }
-
-vk::DeviceSize StagingBuffer::offset() const noexcept { return m_offset; }
-
-bool StagingBuffer::handle_data(vk::DeviceSize size) const noexcept {
-    return (m_buffer.size_bytes() - m_offset) >= size;
-}
-
 StagingBufferManager::StagingBufferManager(const Device &device,
                                            const Allocator &allocator)
     : m_device{&device}
     , m_allocator{&allocator}
     , m_command_pool(create_command_pool(device))
+    , m_staging_buffers{allocator}
     , m_sampler(SamplerBuilder{device}.build()) {}
 
 vk::CommandBuffer StagingBufferManager::fill_command_buffer() {
@@ -57,19 +45,6 @@ vk::CommandBuffer StagingBufferManager::fill_command_buffer() {
     return cmd_buffer;
 }
 
-StagingBuffer &StagingBufferManager::get_staging_buffer(vk::DeviceSize size) {
-    auto does_buffer_handle_data = [size](const StagingBuffer &buffer) {
-        return buffer.handle_data(size);
-    };
-
-    auto it = std::ranges::find_if(m_staging_buffers, does_buffer_handle_data);
-    if (it != m_staging_buffers.end())
-        return *it;
-
-    const auto new_size = compute_size(size);
-    return m_staging_buffers.emplace_back(*m_allocator, new_size);
-}
-
 CombinedImage
 StagingBufferManager::stage_image_from_path(const std::filesystem::path &path,
                                             bool mipmaps) {
@@ -84,10 +59,10 @@ StagingBufferManager::stage_image_from_path(const std::filesystem::path &path,
                                               img_description.height, mipmaps,
                                               vk::Format::eR8G8B8A8Srgb, usage);
 
-    auto &staging_buffer = get_staging_buffer(img_description.pixels.size());
+    auto [staging_buffer, offset] =
+        m_staging_buffers.create_buffer(img_description.pixels.size());
 
-    auto function = [buffer = staging_buffer.handle(),
-                     offset = staging_buffer.offset(), image,
+    auto function = [buffer = staging_buffer->handle(), offset, image,
                      width = img_description.width,
                      height = img_description.height,
                      mipmaps](vk::CommandBuffer cmd_buffer) {
@@ -114,7 +89,7 @@ StagingBufferManager::stage_image_from_path(const std::filesystem::path &path,
     };
 
     m_transfer_functions.emplace_back(function);
-    staging_buffer.fill_buffer<std::byte>(img_description.pixels);
+    staging_buffer->copy(img_description.pixels, offset);
 
     auto image_view = ImageViewBuilder(*m_device, image)
                           .setImageType(vk::ImageViewType::e2D)

@@ -8,7 +8,7 @@ template <typename T, bool HostVisible, VkBufferUsageFlags flags>
 class BufferList {
   public:
     struct BufferInfo {
-        const Buffer<T, HostVisible, flags> *buffer;
+        Buffer<T, HostVisible, flags> *buffer;
         std::size_t offset;
     };
 
@@ -16,7 +16,7 @@ class BufferList {
         : m_allocator{&allocator} {}
 
     BufferInfo create_buffer(std::size_t size) {
-        constexpr std::size_t buffer_size = 1 << 22;
+        constexpr std::size_t buffer_size = 1 << 24;
         auto has_enough_place = [size](auto &buffer) {
             return buffer->buffer.size() >= size + buffer->offset;
         };
