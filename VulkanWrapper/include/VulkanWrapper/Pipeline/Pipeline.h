@@ -100,8 +100,8 @@ class GraphicsPipelineBuilder {
     std::vector<vk::VertexInputAttributeDescription>
         m_input_attribute_descriptions;
 
-    vk::Bool32 m_depthTestEnabled = false;
-    vk::Bool32 m_depthWriteEnabled = false;
+    vk::Bool32 m_depthTestEnabled = vk::Bool32{false};
+    vk::Bool32 m_depthWriteEnabled = vk::Bool32{false};
     vk::CompareOp m_depthCompareOp = vk::CompareOp::eLess;
 
     const PipelineLayout *m_pipelineLayout = nullptr;

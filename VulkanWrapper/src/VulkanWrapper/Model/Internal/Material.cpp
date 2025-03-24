@@ -17,7 +17,7 @@ Material::Material(const aiMaterial *material) {
         material->GetTexture(aiTextureType::aiTextureType_DIFFUSE, 0, &string);
         path = string.C_Str();
     }
-    std::replace(path.begin(), path.end(), '\\', '/');
+    std::ranges::replace(path, '\\', '/');
     diffuse_texture_path = path;
 }
 } // namespace vw::Model::Internal

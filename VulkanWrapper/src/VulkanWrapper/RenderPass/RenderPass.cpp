@@ -84,7 +84,7 @@ RenderPassBuilder &&RenderPassBuilder::add_subpass(Subpass subpass) && {
 }
 
 RenderPass RenderPassBuilder::build() && {
-    const auto attachments = create_attachments();
+    auto attachments = create_attachments();
     const auto attachmentDescriptions =
         attachments | std::views::transform(attachmentToDescription) |
         to<std::vector>;

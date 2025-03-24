@@ -64,7 +64,9 @@ class Buffer : public BufferBase {
                                  offset * sizeof(T));
     }
 
-    std::size_t size() const noexcept { return size_bytes() / sizeof(T); }
+    [[nodiscard]] std::size_t size() const noexcept {
+        return size_bytes() / sizeof(T);
+    }
 };
 
 using IndexBuffer = Buffer<uint32_t, false, IndexBufferUsage>;

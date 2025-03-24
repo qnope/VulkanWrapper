@@ -39,11 +39,11 @@ class PipelineBoundCommandBufferRecorder {
                         std::span<const uint32_t> dynamic_offsets);
 
     void draw(uint32_t numberVertex, uint32_t numberInstance,
-              uint32_t firstVertex, uint32_t firstInstance);
+              uint32_t firstVertex, uint32_t firstInstance) const;
 
     void indexed_draw(uint32_t index_count, uint32_t instance_count,
                       uint32_t first_index, int32_t vertex_offset,
-                      uint32_t first_instance) {
+                      uint32_t first_instance) const {
         m_commandBuffer.drawIndexed(index_count, instance_count, first_index,
                                     vertex_offset, first_instance);
     }

@@ -100,11 +100,11 @@ struct FullVertex3D
         , bitangeant{normal}
         , uv{uv} {}
 
-    glm::vec3 position;
-    glm::vec3 normal;
-    glm::vec3 tangeant;
-    glm::vec3 bitangeant;
-    glm::vec2 uv;
+    glm::vec3 position{};
+    glm::vec3 normal{};
+    glm::vec3 tangeant{};
+    glm::vec3 bitangeant{};
+    glm::vec2 uv{};
 };
 
 template <typename T>

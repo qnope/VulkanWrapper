@@ -3,8 +3,8 @@
 #include "VulkanWrapper/Utils/Algos.h"
 #include <assimp/mesh.h>
 namespace vw::Model::Internal {
-Mesh::Mesh(const aiMesh *mesh) {
-    material_index = mesh->mMaterialIndex;
+Mesh::Mesh(const aiMesh *mesh)
+    : material_index{mesh->mMaterialIndex} {
     auto to_vec3 =
         std::views::transform([](auto x) { return glm::vec3{x.x, x.y, x.z}; });
     auto to_vec2 =

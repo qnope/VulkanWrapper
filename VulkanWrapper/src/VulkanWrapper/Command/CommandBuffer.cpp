@@ -25,7 +25,7 @@ PipelineBoundCommandBufferRecorder::bind_descriptor_set(
 void PipelineBoundCommandBufferRecorder::draw(uint32_t numberVertex,
                                               uint32_t numberInstance,
                                               uint32_t firstVertex,
-                                              uint32_t firstInstance) {
+                                              uint32_t firstInstance) const {
     m_commandBuffer.draw(numberVertex, numberInstance, firstVertex,
                          firstInstance);
 }

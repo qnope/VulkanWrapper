@@ -27,7 +27,7 @@ class Allocator : public ObjectWithHandle<VmaAllocator> {
                             vk::SharingMode::eExclusive)};
     }
 
-    IndexBuffer allocate_index_buffer(VkDeviceSize size) const;
+    [[nodiscard]] IndexBuffer allocate_index_buffer(VkDeviceSize size) const;
 
     template <typename T, bool HostVisible, VkBufferUsageFlags Usage>
     Buffer<T, HostVisible, Usage>
@@ -44,9 +44,10 @@ class Allocator : public ObjectWithHandle<VmaAllocator> {
     ~Allocator();
 
   private:
-    BufferBase allocate_buffer(VkDeviceSize size, bool host_visible,
-                               vk::BufferUsageFlags usage,
-                               vk::SharingMode sharing_mode) const;
+    [[nodiscard]] BufferBase
+    allocate_buffer(VkDeviceSize size, bool host_visible,
+                    vk::BufferUsageFlags usage,
+                    vk::SharingMode sharing_mode) const;
 };
 
 class AllocatorBuilder {
