@@ -3,7 +3,6 @@
 #include "VulkanWrapper/Model/Internal/Material.h"
 #include "VulkanWrapper/Model/Internal/Mesh.h"
 #include "VulkanWrapper/Model/Material.h"
-#include "VulkanWrapper/Model/Mesh.h"
 #include "VulkanWrapper/Model/MeshManager.h"
 #include "VulkanWrapper/Utils/Algos.h"
 #include <assimp/Importer.hpp>
@@ -11,8 +10,8 @@
 #include <assimp/scene.h>
 
 namespace vw::Model {
-Importer::Importer(const std::filesystem::path &path,
-                   MeshManager &mesh_manager) {
+void import_model(const std::filesystem::path &path,
+                  MeshManager &mesh_manager) {
     Assimp::Importer importer;
     constexpr auto post_process =
         aiPostProcessSteps::aiProcess_Triangulate |

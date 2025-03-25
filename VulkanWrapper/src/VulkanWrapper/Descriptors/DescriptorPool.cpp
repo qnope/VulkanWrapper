@@ -5,11 +5,34 @@
 
 namespace vw {
 
+constexpr auto MAX_DESCRIPTOR_SET_BY_POOL = 16;
+namespace Internal {
+DescriptorPoolImpl::DescriptorPoolImpl(
+    vk::UniqueDescriptorPool pool, const Device &device,
+    const std::shared_ptr<const DescriptorSetLayout> &layout) noexcept
+    : ObjectWithUniqueHandle<vk::UniqueDescriptorPool>{std::move(pool)} {
+    std::vector layouts(MAX_DESCRIPTOR_SET_BY_POOL, layout->handle());
+
+    const auto info = vk::DescriptorSetAllocateInfo()
+                          .setDescriptorPool(handle())
+                          .setSetLayouts(layouts);
+
+    auto [result, sets] = device.handle().allocateDescriptorSets(info);
+    if (result != vk::Result::eSuccess) {
+        throw DescriptorSetAllocationException{std::source_location::current()};
+    }
+    m_sets = std::move(sets);
+}
+
+std::optional<vk::DescriptorSet> DescriptorPoolImpl::allocate_set() {
+    if (m_number_allocation < m_sets.size())
+        return m_sets[m_number_allocation++];
+    return std::nullopt;
+}
+} // namespace Internal
 DescriptorPool::DescriptorPool(
-    const Device &device, std::shared_ptr<const DescriptorSetLayout> layout,
-    vk::UniqueDescriptorPool pool)
-    : ObjectWithUniqueHandle<vk::UniqueDescriptorPool>{std::move(pool)}
-    , m_device{&device}
+    const Device &device, std::shared_ptr<const DescriptorSetLayout> layout)
+    : m_device{&device}
     , m_layout{std::move(layout)} {}
 
 vk::DescriptorSet
@@ -19,45 +42,51 @@ DescriptorPool::allocate_set(const DescriptorAllocator &descriptorAllocator) {
         return it->second;
     }
 
-    auto layout_handle = m_layout->handle();
-    auto info = vk::DescriptorSetAllocateInfo()
-                    .setDescriptorPool(handle())
-                    .setSetLayouts(layout_handle);
-    auto [result, value] = m_device->handle().allocateDescriptorSets(info);
-    if (result != vk::Result::eSuccess) {
-        throw DescriptorSetAllocationException{std::source_location::current()};
-    }
+    auto set = allocate_descriptor_set_from_last_pool();
 
     auto writers = descriptorAllocator.get_write_descriptors();
     for (auto &writer : writers) {
-        writer.setDstSet(value.front());
+        writer.setDstSet(set);
     }
 
     m_device->handle().updateDescriptorSets(writers, nullptr);
+    m_sets.emplace(descriptorAllocator, set);
 
-    m_sets.emplace(descriptorAllocator, value.front());
-
-    return value.front();
+    return set;
 }
 
-DescriptorPoolBuilder::DescriptorPoolBuilder(
-    const Device &device, const std::shared_ptr<DescriptorSetLayout> &layout,
-    int number_of_set)
-    : m_device{&device}
-    , m_number_of_set{number_of_set}
-    , m_layout{layout} {}
+vk::DescriptorSet DescriptorPool::allocate_descriptor_set_from_last_pool() {
+    if (!m_descriptor_pools.empty()) {
+        if (auto set = m_descriptor_pools.back().allocate_set())
+            return *set;
+    }
 
-DescriptorPool DescriptorPoolBuilder::build() && {
-    const auto pool_size = m_layout->get_pool_sizes();
+    auto pool_sizes = m_layout->get_pool_sizes();
+    for (auto &pool_size : pool_sizes)
+        pool_size.descriptorCount *= MAX_DESCRIPTOR_SET_BY_POOL;
+
     const auto info = vk::DescriptorPoolCreateInfo()
-                          .setMaxSets(m_number_of_set)
-                          .setPoolSizes(pool_size);
-    auto [result, value] = m_device->handle().createDescriptorPoolUnique(info);
+                          .setMaxSets(MAX_DESCRIPTOR_SET_BY_POOL)
+                          .setPoolSizes(pool_sizes);
 
+    auto [result, pool] = m_device->handle().createDescriptorPoolUnique(info);
     if (result != vk::Result::eSuccess) {
         throw DescriptorPoolCreationException(std::source_location::current());
     }
-    return DescriptorPool{*m_device, std::move(m_layout), std::move(value)};
+
+    return *m_descriptor_pools
+                .emplace_back(std::move(pool), *m_device, m_layout)
+                .allocate_set();
+}
+
+DescriptorPoolBuilder::DescriptorPoolBuilder(
+    const Device &device, const std::shared_ptr<DescriptorSetLayout> &layout)
+    : m_device{&device}
+    , m_layout{layout} {}
+
+DescriptorPool DescriptorPoolBuilder::build() && {
+
+    return DescriptorPool{*m_device, std::move(m_layout)};
 }
 
 } // namespace vw

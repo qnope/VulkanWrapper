@@ -12,7 +12,7 @@ std::shared_ptr<DescriptorSetLayout> create_layout(const Device &device) {
 
 DescriptorPool create_pool(const Device &device,
                            const std::shared_ptr<DescriptorSetLayout> &layout) {
-    return DescriptorPoolBuilder(device, layout, 1'000).build();
+    return DescriptorPoolBuilder(device, layout).build();
 }
 } // namespace
 
@@ -28,7 +28,7 @@ std::shared_ptr<DescriptorSetLayout> MeshManager::layout() const noexcept {
 }
 
 void MeshManager::read_file(const std::filesystem::path &path) {
-    Model::Importer importer{path, *this};
+    import_model(path, *this);
 }
 
 vk::CommandBuffer MeshManager::fill_command_buffer() {

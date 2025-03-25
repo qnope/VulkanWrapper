@@ -212,7 +212,7 @@ int main() {
         auto uniform_buffer = createUbo(allocator);
 
         auto descriptor_pool =
-            vw::DescriptorPoolBuilder(device, descriptor_set_layout, 1).build();
+            vw::DescriptorPoolBuilder(device, descriptor_set_layout).build();
 
         vw::DescriptorAllocator descriptor_allocator;
         descriptor_allocator.add_uniform_buffer(0, uniform_buffer.handle(), 0,

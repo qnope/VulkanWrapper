@@ -5,12 +5,11 @@
 #include "VulkanWrapper/Descriptors/Vertex.h"
 #include "VulkanWrapper/Memory/BufferList.h"
 #include "VulkanWrapper/Memory/StagingBufferManager.h"
-#include "VulkanWrapper/Model/Material.h"
 #include "VulkanWrapper/Model/Mesh.h"
 
 namespace vw::Model {
 class MeshManager {
-    friend class Importer;
+    friend void import_model(const std::filesystem::path &, MeshManager &);
 
   public:
     MeshManager(const Device &device, const Allocator &allocator);

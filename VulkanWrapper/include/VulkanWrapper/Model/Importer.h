@@ -8,10 +8,6 @@ class MeshManager;
 
 using ModelNotFoundException = TaggedException<struct ModelNotFoundTag>;
 
-class Importer {
-  public:
-    Importer(const std::filesystem::path &path, MeshManager &mesh_manager);
+void import_model(const std::filesystem::path &path, MeshManager &mesh_manager);
 
-  private:
-};
 } // namespace vw::Model
