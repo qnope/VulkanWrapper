@@ -6,10 +6,20 @@
 #include "VulkanWrapper/Vulkan/Device.h"
 
 namespace vw {
+
+Pipeline::Pipeline(vk::UniquePipeline pipeline,
+                   PipelineLayout pipeline_layout) noexcept
+    : ObjectWithUniqueHandle<vk::UniquePipeline>{std::move(pipeline)}
+    , m_layout{std::move(pipeline_layout)} {}
+
+const PipelineLayout &Pipeline::layout() const noexcept { return m_layout; }
+
 GraphicsPipelineBuilder::GraphicsPipelineBuilder(const Device &device,
-                                                 const RenderPass &renderPass)
+                                                 const RenderPass &renderPass,
+                                                 PipelineLayout pipelineLayout)
     : m_device{&device}
-    , m_renderPass{&renderPass} {}
+    , m_renderPass{&renderPass}
+    , m_pipelineLayout{std::move(pipelineLayout)} {}
 
 GraphicsPipelineBuilder &&
 GraphicsPipelineBuilder::add_shader(vk::ShaderStageFlagBits flags,
@@ -58,12 +68,6 @@ GraphicsPipelineBuilder::with_depth_test(bool write,
     return std::move(*this);
 }
 
-GraphicsPipelineBuilder &&GraphicsPipelineBuilder::with_pipeline_layout(
-    const PipelineLayout &pipelineLayout) && {
-    m_pipelineLayout = &pipelineLayout;
-    return std::move(*this);
-}
-
 Pipeline GraphicsPipelineBuilder::build() && {
     const auto shaderStageInfos = createShaderStageInfos();
     const auto dynamicStateInfo = createDynamicStateInfo();
@@ -86,9 +90,7 @@ Pipeline GraphicsPipelineBuilder::build() && {
                           .setPDepthStencilState(&depthStencilStateInfo)
                           .setPInputAssemblyState(&inputAssemblyStateInfo)
                           .setPRasterizationState(&rasterizationStateInfo)
-                          .setLayout((m_pipelineLayout != nullptr)
-                                         ? m_pipelineLayout->handle()
-                                         : nullptr);
+                          .setLayout(m_pipelineLayout.handle());
 
     auto [result, pipeline] = m_device->handle().createGraphicsPipelineUnique(
         vk::PipelineCache(), info);
@@ -98,7 +100,7 @@ Pipeline GraphicsPipelineBuilder::build() && {
             std::source_location::current()};
     }
 
-    return Pipeline{std::move(pipeline)};
+    return Pipeline{std::move(pipeline), std::move(m_pipelineLayout)};
 }
 
 std::vector<vk::PipelineShaderStageCreateInfo>

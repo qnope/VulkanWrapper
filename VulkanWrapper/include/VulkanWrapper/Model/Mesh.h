@@ -13,6 +13,8 @@ class Mesh {
          Material::Material descriptor_material, uint32_t indice_count,
          int vertex_offset, int first_index);
 
+    [[nodiscard]] Material::MaterialTypeTag material_type_tag() const noexcept;
+
     void draw(vk::CommandBuffer cmd_buffer,
               const PipelineLayout &pipeline_layout) const;
 

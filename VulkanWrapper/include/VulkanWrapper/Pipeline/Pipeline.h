@@ -2,6 +2,7 @@
 
 #include "VulkanWrapper/Descriptors/Vertex.h"
 #include "VulkanWrapper/fwd.h"
+#include "VulkanWrapper/Pipeline/PipelineLayout.h"
 #include "VulkanWrapper/Utils/exceptions.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
 
@@ -13,13 +14,19 @@ class Pipeline : public ObjectWithUniqueHandle<vk::UniquePipeline> {
     friend class GraphicsPipelineBuilder;
 
   public:
+    Pipeline(vk::UniquePipeline pipeline,
+             PipelineLayout pipeline_layout) noexcept;
+
+    [[nodiscard]] const PipelineLayout &layout() const noexcept;
+
   private:
-    using ObjectWithUniqueHandle<vk::UniquePipeline>::ObjectWithUniqueHandle;
+    PipelineLayout m_layout;
 };
 
 class GraphicsPipelineBuilder {
   public:
-    GraphicsPipelineBuilder(const Device &device, const RenderPass &renderPass);
+    GraphicsPipelineBuilder(const Device &device, const RenderPass &renderPass,
+                            PipelineLayout pipelineLayout);
 
     GraphicsPipelineBuilder &&
     add_shader(vk::ShaderStageFlagBits flags,
@@ -53,9 +60,6 @@ class GraphicsPipelineBuilder {
     GraphicsPipelineBuilder &&
     with_depth_test(bool write, vk::CompareOp compare_operator) &&;
 
-    GraphicsPipelineBuilder &&
-    with_pipeline_layout(const PipelineLayout &pipelineLayout) &&;
-
     Pipeline build() &&;
 
   private:
@@ -88,6 +92,8 @@ class GraphicsPipelineBuilder {
 
     const Device *m_device;
     const RenderPass *m_renderPass;
+    PipelineLayout m_pipelineLayout;
+
     std::map<vk::ShaderStageFlagBits, std::shared_ptr<ShaderModule>>
         m_shaderModules;
     std::vector<vk::DynamicState> m_dynamicStates;
@@ -103,7 +109,5 @@ class GraphicsPipelineBuilder {
     vk::Bool32 m_depthTestEnabled = vk::Bool32{false};
     vk::Bool32 m_depthWriteEnabled = vk::Bool32{false};
     vk::CompareOp m_depthCompareOp = vk::CompareOp::eLess;
-
-    const PipelineLayout *m_pipelineLayout = nullptr;
 };
 } // namespace vw

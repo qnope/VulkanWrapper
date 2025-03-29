@@ -38,7 +38,10 @@ enum class QueueType;
 
 class DescriptorSetLayout;
 
-namespace Model::Material {
+namespace Model {
+class Mesh;
+namespace Material {
 class Material;
 }
+} // namespace Model
 } // namespace vw

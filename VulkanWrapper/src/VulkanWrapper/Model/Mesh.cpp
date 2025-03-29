@@ -13,6 +13,10 @@ Mesh::Mesh(const FullVertex3DBuffer *full_vertex_buffer,
     , m_vertex_offset{vertex_offset}
     , m_first_index{first_index} {}
 
+Material::MaterialTypeTag Mesh::material_type_tag() const noexcept {
+    return m_material.material_type;
+}
+
 void Mesh::draw(vk::CommandBuffer cmd_buffer,
                 const PipelineLayout &layout) const {
     vk::Buffer vb = m_full_vertex_buffer->handle();

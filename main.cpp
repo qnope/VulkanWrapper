@@ -11,6 +11,7 @@
 #include <VulkanWrapper/Model/Importer.h>
 #include <VulkanWrapper/Model/Material/TexturedMaterialManager.h>
 #include <VulkanWrapper/Model/MeshManager.h>
+#include <VulkanWrapper/Pipeline/MeshRenderer.h>
 #include <VulkanWrapper/Pipeline/Pipeline.h>
 #include <VulkanWrapper/Pipeline/PipelineLayout.h>
 #include <VulkanWrapper/Pipeline/ShaderModule.h>
@@ -87,17 +88,55 @@ std::vector<vw::Framebuffer> createFramebuffers(
 }
 
 void record(vk::CommandBuffer commandBuffer, vk::Extent2D extent,
-            const vw::Framebuffer &framebuffer, const vw::Pipeline &pipeline,
+            const vw::Framebuffer &framebuffer,
             const vw::RenderPass &renderPass,
             const std::vector<vw::Model::Mesh> &meshes,
-            const vw::PipelineLayout &layout, vk::DescriptorSet ubo_set) {
+            const vw::MeshRenderer &mesh_renderer, vk::DescriptorSet ubo_set) {
     auto recorder = vw::CommandBufferRecorder(commandBuffer);
     auto rp = recorder.begin_render_pass(renderPass, framebuffer);
-    auto pi = rp.bind_graphics_pipeline(pipeline);
-    pi.bind_descriptor_set(layout, 0, std::span(&ubo_set, 1), {});
     for (const auto &m : meshes) {
-        m.draw(pi.m_commandBuffer, layout);
+        mesh_renderer.draw_mesh(commandBuffer, m, ubo_set);
     }
+}
+
+vw::MeshRenderer create_renderer(
+    const vw::Device &device, const vw::RenderPass &render_pass,
+    const vw::Model::MeshManager &mesh_manager,
+    const std::shared_ptr<const vw::DescriptorSetLayout> &uniform_buffer_layout,
+    const vw::Swapchain &swapchain) {
+    auto vertexShader = vw::ShaderModule::create_from_spirv_file(
+        device, "../../Shaders/bin/vert.spv");
+
+    auto fragmentShader = vw::ShaderModule::create_from_spirv_file(
+        device, "../../Shaders/bin/frag.spv");
+
+    auto pipelineLayout =
+        vw::PipelineLayoutBuilder(device)
+            .with_descriptor_set_layout(uniform_buffer_layout)
+            .with_descriptor_set_layout(
+                mesh_manager.material_manager_map().layout(
+                    vw::Model::Material::textured_material_tag))
+            .build();
+
+    auto pipeline = vw::GraphicsPipelineBuilder(device, render_pass,
+                                                std::move(pipelineLayout))
+                        .add_vertex_binding<vw::FullVertex3D>()
+                        .add_shader(vk::ShaderStageFlagBits::eVertex,
+                                    std::move(vertexShader))
+                        .add_shader(vk::ShaderStageFlagBits::eFragment,
+                                    std::move(fragmentShader))
+                        .with_fixed_scissor(int32_t(swapchain.width()),
+                                            int32_t(swapchain.height()))
+                        .with_fixed_viewport(int32_t(swapchain.width()),
+                                             int32_t(swapchain.height()))
+                        .with_depth_test(true, vk::CompareOp::eLess)
+                        .add_color_attachment()
+                        .build();
+
+    vw::MeshRenderer renderer;
+    renderer.add_pipeline(vw::Model::Material::textured_material_tag,
+                          std::move(pipeline));
+    return renderer;
 }
 
 int main() {
@@ -129,28 +168,13 @@ int main() {
 
         auto swapchain = window.create_swapchain(device, surface.handle());
 
-        auto vertexShader = vw::ShaderModule::create_from_spirv_file(
-            device, "../../Shaders/bin/vert.spv");
-
-        auto fragmentShader = vw::ShaderModule::create_from_spirv_file(
-            device, "../../Shaders/bin/frag.spv");
-
         auto descriptor_set_layout =
             vw::DescriptorSetLayoutBuilder(device)
                 .with_uniform_buffer(vk::ShaderStageFlagBits::eVertex, 1)
-                .with_combined_image(vk::ShaderStageFlagBits::eFragment, 1)
                 .build();
 
         vw::Model::MeshManager mesh_manager(device, allocator);
         mesh_manager.read_file("../../Models/Sponza/sponza.obj");
-
-        auto pipelineLayout =
-            vw::PipelineLayoutBuilder(device)
-                .with_descriptor_set_layout(descriptor_set_layout)
-                .with_descriptor_set_layout(
-                    mesh_manager.material_manager_map().layout(
-                        vw::Model::Material::textured_material_tag))
-                .build();
 
         const auto depth_buffer = allocator.create_image_2D(
             swapchain.width(), swapchain.height(), false,
@@ -187,20 +211,8 @@ int main() {
                               .add_subpass(std::move(subpass))
                               .build();
 
-        auto pipeline = vw::GraphicsPipelineBuilder(device, renderPass)
-                            .add_vertex_binding<vw::FullVertex3D>()
-                            .add_shader(vk::ShaderStageFlagBits::eVertex,
-                                        std::move(vertexShader))
-                            .add_shader(vk::ShaderStageFlagBits::eFragment,
-                                        std::move(fragmentShader))
-                            .with_fixed_scissor(int32_t(swapchain.width()),
-                                                int32_t(swapchain.height()))
-                            .with_fixed_viewport(int32_t(swapchain.width()),
-                                                 int32_t(swapchain.height()))
-                            .with_depth_test(true, vk::CompareOp::eLess)
-                            .with_pipeline_layout(pipelineLayout)
-                            .add_color_attachment()
-                            .build();
+        auto mesh_renderer = create_renderer(device, renderPass, mesh_manager,
+                                             descriptor_set_layout, swapchain);
 
         auto commandPool = vw::CommandPoolBuilder(device).build();
         auto image_views = create_image_views(device, swapchain);
@@ -226,8 +238,8 @@ int main() {
 
         for (auto [framebuffer, commandBuffer] :
              std::views::zip(framebuffers, commandBuffers)) {
-            record(commandBuffer, extent, framebuffer, pipeline, renderPass,
-                   mesh_manager.meshes(), pipelineLayout, descriptor_set);
+            record(commandBuffer, extent, framebuffer, renderPass,
+                   mesh_manager.meshes(), mesh_renderer, descriptor_set);
         }
 
         auto renderFinishedSemaphore = vw::SemaphoreBuilder(device).build();

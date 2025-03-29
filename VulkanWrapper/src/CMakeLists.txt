@@ -23,6 +23,7 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Pipeline/ShaderModule.cpp
     VulkanWrapper/Pipeline/Pipeline.cpp
     VulkanWrapper/Pipeline/PipelineLayout.cpp
+    VulkanWrapper/Pipeline/MeshRenderer.cpp
 
     VulkanWrapper/RenderPass/Attachment.cpp
     VulkanWrapper/RenderPass/RenderPass.cpp
