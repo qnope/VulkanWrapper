@@ -7,39 +7,8 @@
 
 namespace vw {
 
-PipelineBoundCommandBufferRecorder::PipelineBoundCommandBufferRecorder(
-    vk::CommandBuffer commandBuffer)
-    : m_commandBuffer{commandBuffer} {}
-
-PipelineBoundCommandBufferRecorder &
-PipelineBoundCommandBufferRecorder::bind_descriptor_set(
-    const PipelineLayout &layout, int first_set,
-    std::span<const vk::DescriptorSet> sets,
-    std::span<const uint32_t> dynamic_offsets) {
-    m_commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-                                       layout.handle(), first_set, sets,
-                                       dynamic_offsets);
-    return *this;
-}
-
-void PipelineBoundCommandBufferRecorder::draw(uint32_t numberVertex,
-                                              uint32_t numberInstance,
-                                              uint32_t firstVertex,
-                                              uint32_t firstInstance) const {
-    m_commandBuffer.draw(numberVertex, numberInstance, firstVertex,
-                         firstInstance);
-}
-
 RenderPassCommandBufferRecorder::~RenderPassCommandBufferRecorder() {
     m_commandBuffer.endRenderPass();
-}
-
-PipelineBoundCommandBufferRecorder
-RenderPassCommandBufferRecorder::bind_graphics_pipeline(
-    const Pipeline &pipeline) {
-    m_commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
-                                 pipeline.handle());
-    return PipelineBoundCommandBufferRecorder{m_commandBuffer};
 }
 
 RenderPassCommandBufferRecorder::RenderPassCommandBufferRecorder(

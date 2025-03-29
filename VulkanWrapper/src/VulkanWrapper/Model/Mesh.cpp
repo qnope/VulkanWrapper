@@ -8,7 +8,7 @@ Mesh::Mesh(const FullVertex3DBuffer *full_vertex_buffer,
            uint32_t indice_count, int vertex_offset, int first_index)
     : m_full_vertex_buffer{full_vertex_buffer}
     , m_index_buffer{index_buffer}
-    , m_material{std::move(material)}
+    , m_material{material}
     , m_indice_count{indice_count}
     , m_vertex_offset{vertex_offset}
     , m_first_index{first_index} {}
