@@ -4,7 +4,7 @@
 
 namespace vw ::Model {
 Mesh::Mesh(const FullVertex3DBuffer *full_vertex_buffer,
-           const IndexBuffer *index_buffer, Material material,
+           const IndexBuffer *index_buffer, Material::Material material,
            uint32_t indice_count, int vertex_offset, int first_index)
     : m_full_vertex_buffer{full_vertex_buffer}
     , m_index_buffer{index_buffer}

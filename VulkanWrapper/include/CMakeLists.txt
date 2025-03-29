@@ -5,6 +5,7 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Utils/Algos.h
     VulkanWrapper/Utils/exceptions.h
     VulkanWrapper/Utils/ObjectWithHandle.h
+    VulkanWrapper/Utils/IdentifierTag.h
 
     VulkanWrapper/Window/SDL_Initializer.h
     VulkanWrapper/Window/Window.h
@@ -54,7 +55,14 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Model/Importer.h
     VulkanWrapper/Model/Mesh.h
     VulkanWrapper/Model/MeshManager.h
-    VulkanWrapper/Model/Internal/Material.h
-    VulkanWrapper/Model/Internal/Mesh.h
-    VulkanWrapper/Model/Material.h
+
+    VulkanWrapper/Model/Material/Material.h
+    VulkanWrapper/Model/Material/MaterialTypeTag.h
+    VulkanWrapper/Model/Material/MaterialManager.h
+    VulkanWrapper/Model/Material/MaterialManagerMap.h
+    VulkanWrapper/Model/Material/TexturedMaterialManager.h
+
+    VulkanWrapper/Model/Internal/MaterialInfo.h
+    VulkanWrapper/Model/Internal/MeshInfo.h
+
 )

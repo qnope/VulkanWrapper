@@ -5,8 +5,8 @@
 struct aiMesh;
 
 namespace vw::Model::Internal {
-struct Mesh {
-    Mesh(const aiMesh *mesh);
+struct MeshInfo {
+    MeshInfo(const aiMesh *mesh);
 
     std::vector<FullVertex3D> vertices;
     std::vector<uint32_t> indices;

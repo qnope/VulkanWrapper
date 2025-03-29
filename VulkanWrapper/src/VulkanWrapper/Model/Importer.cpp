@@ -1,8 +1,9 @@
 #include "VulkanWrapper/Model/Importer.h"
 
-#include "VulkanWrapper/Model/Internal/Material.h"
-#include "VulkanWrapper/Model/Internal/Mesh.h"
-#include "VulkanWrapper/Model/Material.h"
+#include "VulkanWrapper/Model/Internal/MaterialInfo.h"
+#include "VulkanWrapper/Model/Internal/MeshInfo.h"
+#include "VulkanWrapper/Model/Material/Material.h"
+#include "VulkanWrapper/Model/Material/TexturedMaterialManager.h"
 #include "VulkanWrapper/Model/MeshManager.h"
 #include "VulkanWrapper/Utils/Algos.h"
 #include <assimp/Importer.hpp>
@@ -25,37 +26,35 @@ void import_model(const std::filesystem::path &path,
         aiPostProcessSteps::aiProcess_JoinIdenticalVertices |
         aiPostProcessSteps::aiProcess_RemoveRedundantMaterials;
 
-    auto scene = importer.ReadFile(path.string().c_str(), post_process);
+    const auto *scene = importer.ReadFile(path.string().c_str(), post_process);
 
     if (scene == nullptr) {
         throw ModelNotFoundException{std::source_location::current()};
     }
 
-    std::vector<Internal::Mesh> meshes =
+    std::vector<Internal::MeshInfo> meshes =
         std::span(scene->mMeshes, scene->mNumMeshes) |
-        construct<Internal::Mesh> | to<std::vector>;
+        construct<Internal::MeshInfo> | to<std::vector>;
 
-    std::vector<Internal::Material> materials =
+    std::vector<Internal::MaterialInfo> materials =
         std::span(scene->mMaterials, scene->mNumMaterials) |
-        construct<Internal::Material> | to<std::vector>;
+        construct<Internal::MaterialInfo> | to<std::vector>;
 
-    std::vector<Material> real_material;
+    std::vector<Material::Material> real_material;
 
-    for (const auto &material : materials) {
-        auto image = [&] {
-            if (material.diffuse_texture_path.empty())
-                return mesh_manager.m_staging_buffer_manager
-                    .stage_image_from_path("../../Images/image_test.png", true);
+    for (const auto &materialInfo : materials) {
+        auto material = [&] {
+            if (materialInfo.diffuse_texture_path.empty())
+                return mesh_manager.m_material_manager_map
+                    .allocate_material<&Material::textured_material_tag>(
+                        "../../Images/image_test.png");
 
-            return mesh_manager.m_staging_buffer_manager.stage_image_from_path(
-                "../../Models/Sponza/" + material.diffuse_texture_path.string(),
-                true);
+            return mesh_manager.m_material_manager_map
+                .allocate_material<&Material::textured_material_tag>(
+                    "../../Models/Sponza/" +
+                    materialInfo.diffuse_texture_path.string());
         }();
-
-        DescriptorAllocator allocator;
-        allocator.add_combined_image(0, image);
-        auto set = mesh_manager.m_descriptor_pool.allocate_set(allocator);
-        real_material.emplace_back(image, set);
+        real_material.push_back(material);
     }
 
     for (const auto &mesh : meshes) {

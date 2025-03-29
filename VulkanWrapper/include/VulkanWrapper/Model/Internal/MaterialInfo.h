@@ -3,8 +3,8 @@
 class aiMaterial;
 
 namespace vw::Model::Internal {
-struct Material {
-    Material(const aiMaterial *material);
+struct MaterialInfo {
+    MaterialInfo(const aiMaterial *material);
 
     std::filesystem::path diffuse_texture_path;
 };

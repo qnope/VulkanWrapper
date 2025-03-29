@@ -35,8 +35,13 @@ DescriptorPool::DescriptorPool(
     : m_device{&device}
     , m_layout{std::move(layout)} {}
 
-vk::DescriptorSet
-DescriptorPool::allocate_set(const DescriptorAllocator &descriptorAllocator) {
+std::shared_ptr<const DescriptorSetLayout>
+DescriptorPool::layout() const noexcept {
+    return m_layout;
+}
+
+vk::DescriptorSet DescriptorPool::allocate_set(
+    const DescriptorAllocator &descriptorAllocator) noexcept {
     auto it = m_sets.find(descriptorAllocator);
     if (it != m_sets.end()) {
         return it->second;

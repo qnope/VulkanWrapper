@@ -12,10 +12,10 @@ class StagingBufferManager {
   public:
     StagingBufferManager(const Device &device, const Allocator &allocator);
 
-    vk::CommandBuffer fill_command_buffer();
+    [[nodiscard]] vk::CommandBuffer fill_command_buffer();
 
     template <typename T, bool HostVisible, VkBufferUsageFlags Usage>
-    auto fill_buffer(std::span<const T> data,
+    void fill_buffer(std::span<const T> data,
                      const Buffer<T, HostVisible, Usage> &buffer,
                      uint32_t offset_dst_buffer) {
         auto [staging_buffer, offset_src] =
@@ -42,8 +42,8 @@ class StagingBufferManager {
         m_transfer_functions.emplace_back(function);
     }
 
-    CombinedImage stage_image_from_path(const std::filesystem::path &path,
-                                        bool mipmaps);
+    [[nodiscard]] CombinedImage
+    stage_image_from_path(const std::filesystem::path &path, bool mipmaps);
 
   private:
     const Device *m_device;

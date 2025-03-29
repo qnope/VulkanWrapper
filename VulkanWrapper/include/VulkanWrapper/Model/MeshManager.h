@@ -1,10 +1,10 @@
 #pragma once
 
-#include "VulkanWrapper/Descriptors/DescriptorPool.h"
-#include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
 #include "VulkanWrapper/Descriptors/Vertex.h"
+#include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Memory/BufferList.h"
 #include "VulkanWrapper/Memory/StagingBufferManager.h"
+#include "VulkanWrapper/Model/Material/MaterialManagerMap.h"
 #include "VulkanWrapper/Model/Mesh.h"
 
 namespace vw::Model {
@@ -14,21 +14,23 @@ class MeshManager {
   public:
     MeshManager(const Device &device, const Allocator &allocator);
 
-    [[nodiscard]] std::shared_ptr<DescriptorSetLayout> layout() const noexcept;
-
     void read_file(const std::filesystem::path &path);
 
-    vk::CommandBuffer fill_command_buffer();
+    [[nodiscard]] vk::CommandBuffer fill_command_buffer();
 
     [[nodiscard]] const std::vector<Mesh> &meshes() const noexcept;
 
+    [[nodiscard]] const Material::MaterialManagerMap &
+    material_manager_map() const noexcept;
+
+  private:
+    void create_default_material_managers(const Device &device);
+
   private:
     StagingBufferManager m_staging_buffer_manager;
-    std::shared_ptr<DescriptorSetLayout> m_descriptor_set_layout;
-    DescriptorPool m_descriptor_pool;
     BufferList<FullVertex3D, false, VertexBufferUsage> m_vertex_buffer;
     IndexBufferList m_index_buffer;
-
+    Material::MaterialManagerMap m_material_manager_map;
     std::vector<Mesh> m_meshes;
 };
 } // namespace vw::Model

@@ -9,7 +9,7 @@ PipelineLayoutBuilder::PipelineLayoutBuilder(const Device &device)
     : m_device{&device} {}
 
 PipelineLayoutBuilder &&PipelineLayoutBuilder::with_descriptor_set_layout(
-    std::shared_ptr<DescriptorSetLayout> layout) && {
+    std::shared_ptr<const DescriptorSetLayout> layout) && {
 
     m_descriptorSetLayouts.push_back(std::move(layout));
     return std::move(*this);

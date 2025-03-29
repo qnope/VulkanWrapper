@@ -1,9 +1,9 @@
-#include "VulkanWrapper/Model/Internal/Material.h"
+#include "VulkanWrapper/Model/Internal/MaterialInfo.h"
 
 #include <assimp/material.h>
 
 namespace vw::Model::Internal {
-Material::Material(const aiMaterial *material) {
+MaterialInfo::MaterialInfo(const aiMaterial *material) {
     std::string path;
     if (material->GetTextureCount(aiTextureType::aiTextureType_BASE_COLOR) >
         0) {

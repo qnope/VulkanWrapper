@@ -9,6 +9,7 @@
 #include <VulkanWrapper/Memory/Allocator.h>
 #include <VulkanWrapper/Memory/StagingBufferManager.h>
 #include <VulkanWrapper/Model/Importer.h>
+#include <VulkanWrapper/Model/Material/TexturedMaterialManager.h>
 #include <VulkanWrapper/Model/MeshManager.h>
 #include <VulkanWrapper/Pipeline/Pipeline.h>
 #include <VulkanWrapper/Pipeline/PipelineLayout.h>
@@ -146,7 +147,9 @@ int main() {
         auto pipelineLayout =
             vw::PipelineLayoutBuilder(device)
                 .with_descriptor_set_layout(descriptor_set_layout)
-                .with_descriptor_set_layout(mesh_manager.layout())
+                .with_descriptor_set_layout(
+                    mesh_manager.material_manager_map().layout(
+                        vw::Model::Material::textured_material_tag))
                 .build();
 
         const auto depth_buffer = allocator.create_image_2D(

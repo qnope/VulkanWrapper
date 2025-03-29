@@ -4,6 +4,8 @@ namespace vw {
 class SDL_Initializer;
 class Window;
 
+class StagingBufferManager;
+
 class Instance;
 class PhysicalDevice;
 class DeviceFinder;
@@ -35,4 +37,8 @@ class Allocator;
 enum class QueueType;
 
 class DescriptorSetLayout;
+
+namespace Model::Material {
+class Material;
+}
 } // namespace vw

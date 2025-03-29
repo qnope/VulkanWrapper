@@ -21,8 +21,8 @@ class PipelineLayoutBuilder {
   public:
     PipelineLayoutBuilder(const Device &device);
 
-    PipelineLayoutBuilder &&
-    with_descriptor_set_layout(std::shared_ptr<DescriptorSetLayout> layout) &&;
+    PipelineLayoutBuilder &&with_descriptor_set_layout(
+        std::shared_ptr<const DescriptorSetLayout> layout) &&;
 
     PipelineLayout build() &&;
 
@@ -31,6 +31,7 @@ class PipelineLayoutBuilder {
         const std::vector<vk::DescriptorSetLayoutBinding> &bindings) const;
 
     const Device *m_device;
-    std::vector<std::shared_ptr<DescriptorSetLayout>> m_descriptorSetLayouts;
+    std::vector<std::shared_ptr<const DescriptorSetLayout>>
+        m_descriptorSetLayouts;
 };
 } // namespace vw

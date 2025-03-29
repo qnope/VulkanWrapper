@@ -1,30 +1,15 @@
 #include "VulkanWrapper/Model/MeshManager.h"
 
 #include "VulkanWrapper/Model/Importer.h"
+#include "VulkanWrapper/Model/Material/TexturedMaterialManager.h"
 
 namespace vw::Model {
-namespace {
-std::shared_ptr<DescriptorSetLayout> create_layout(const Device &device) {
-    return DescriptorSetLayoutBuilder(device)
-        .with_combined_image(vk::ShaderStageFlagBits::eFragment, 1)
-        .build();
-}
-
-DescriptorPool create_pool(const Device &device,
-                           const std::shared_ptr<DescriptorSetLayout> &layout) {
-    return DescriptorPoolBuilder(device, layout).build();
-}
-} // namespace
 
 MeshManager::MeshManager(const Device &device, const Allocator &allocator)
     : m_staging_buffer_manager{device, allocator}
-    , m_descriptor_set_layout{create_layout(device)}
-    , m_descriptor_pool{create_pool(device, m_descriptor_set_layout)}
     , m_vertex_buffer{allocator}
-    , m_index_buffer{allocator} {}
-
-std::shared_ptr<DescriptorSetLayout> MeshManager::layout() const noexcept {
-    return m_descriptor_set_layout;
+    , m_index_buffer{allocator} {
+    create_default_material_managers(device);
 }
 
 void MeshManager::read_file(const std::filesystem::path &path) {
@@ -37,5 +22,17 @@ vk::CommandBuffer MeshManager::fill_command_buffer() {
 
 const std::vector<Mesh> &MeshManager::meshes() const noexcept {
     return m_meshes;
+}
+
+const Material::MaterialManagerMap &
+MeshManager::material_manager_map() const noexcept {
+    return m_material_manager_map;
+}
+
+void MeshManager::create_default_material_managers(const Device &device) {
+    m_material_manager_map.insert_manager(
+        std::make_unique<Material::ConcreteMaterialManager<
+            &Material::textured_material_tag>>(device,
+                                               m_staging_buffer_manager));
 }
 } // namespace vw::Model

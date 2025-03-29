@@ -33,8 +33,11 @@ class DescriptorPool {
     DescriptorPool(const Device &device,
                    std::shared_ptr<const DescriptorSetLayout> layout);
 
-    vk::DescriptorSet
-    allocate_set(const DescriptorAllocator &descriptorAllocator);
+    [[nodiscard]] std::shared_ptr<const DescriptorSetLayout>
+    layout() const noexcept;
+
+    [[nodiscard]] vk::DescriptorSet
+    allocate_set(const DescriptorAllocator &descriptorAllocator) noexcept;
 
   private:
     vk::DescriptorSet allocate_descriptor_set_from_last_pool();
