@@ -194,6 +194,7 @@ int main() {
 
         vw::Model::MeshManager mesh_manager(device, allocator);
         mesh_manager.read_file("../../Models/Sponza/sponza.obj");
+        mesh_manager.read_file("../../Models/cube.obj");
 
         const auto depth_buffer = allocator.create_image_2D(
             swapchain.width(), swapchain.height(), false,
