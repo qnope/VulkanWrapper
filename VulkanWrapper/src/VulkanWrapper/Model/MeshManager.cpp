@@ -33,12 +33,10 @@ MeshManager::material_manager_map() const noexcept {
 void MeshManager::create_default_material_managers(const Device &device,
                                                    const Allocator &allocator) {
     m_material_manager_map.insert_manager(
-        std::make_unique<Material::ConcreteMaterialManager<
-            &Material::textured_material_tag>>(device,
-                                               m_staging_buffer_manager));
+        std::make_unique<Material::TextureMaterialManager>(
+            device, m_staging_buffer_manager));
     m_material_manager_map.insert_manager(
-        std::make_unique<
-            Material::ConcreteMaterialManager<&Material::colored_material_tag>>(
+        std::make_unique<Material::ColoredMaterialManager>(
             device, allocator, m_staging_buffer_manager));
 }
 } // namespace vw::Model

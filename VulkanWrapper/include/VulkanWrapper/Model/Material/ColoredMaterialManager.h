@@ -23,4 +23,7 @@ class ConcreteMaterialManager<&colored_material_tag> : public MaterialManager {
     StagingBufferManager *m_staging_buffer_manager;
     BufferList<glm::vec4, false, UniformBufferUsage> m_buffer;
 };
+
+using ColoredMaterialManager = ConcreteMaterialManager<&colored_material_tag>;
+
 } // namespace vw::Model::Material

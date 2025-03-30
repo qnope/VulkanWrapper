@@ -21,4 +21,7 @@ class ConcreteMaterialManager<&textured_material_tag> : public MaterialManager {
     StagingBufferManager *m_staging_buffer;
     std::vector<CombinedImage> m_combined_images;
 };
+
+using TextureMaterialManager = ConcreteMaterialManager<&textured_material_tag>;
+
 } // namespace vw::Model::Material

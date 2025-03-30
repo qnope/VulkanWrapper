@@ -3,7 +3,14 @@
 #include <assimp/material.h>
 
 namespace vw::Model::Internal {
-MaterialInfo::MaterialInfo(const aiMaterial *material) {
+MaterialInfo::MaterialInfo(const aiMaterial *material,
+                           const std::filesystem::path &directory_path) {
+    decode_diffuse_texture(material, directory_path);
+    decode_diffuse_color(material);
+}
+
+void MaterialInfo::decode_diffuse_texture(
+    const aiMaterial *material, const std::filesystem::path &directory_path) {
     std::string path;
     if (material->GetTextureCount(aiTextureType::aiTextureType_BASE_COLOR) >
         0) {
@@ -19,11 +26,11 @@ MaterialInfo::MaterialInfo(const aiMaterial *material) {
     }
     if (!path.empty()) {
         std::ranges::replace(path, '\\', '/');
-        diffuse_texture_path = path;
-    } else {
-        std::cout << "lol";
+        diffuse_texture_path = directory_path.string() + '/' + path;
     }
+}
 
+void MaterialInfo::decode_diffuse_color(const aiMaterial *material) {
     aiColor4D color;
     if (material->Get(AI_MATKEY_BASE_COLOR, color) == aiReturn_SUCCESS) {
         diffuse_color.emplace(color.r, color.g, color.b, color.a);

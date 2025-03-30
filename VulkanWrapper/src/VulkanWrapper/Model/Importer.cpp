@@ -27,6 +27,7 @@ void import_model(const std::filesystem::path &path,
         aiPostProcessSteps::aiProcess_JoinIdenticalVertices |
         aiPostProcessSteps::aiProcess_RemoveRedundantMaterials;
 
+    const auto directory_path = path.parent_path();
     const auto *scene = importer.ReadFile(path.string().c_str(), post_process);
 
     if (scene == nullptr) {
@@ -39,7 +40,10 @@ void import_model(const std::filesystem::path &path,
 
     std::vector<Internal::MaterialInfo> materials =
         std::span(scene->mMaterials, scene->mNumMaterials) |
-        construct<Internal::MaterialInfo> | to<std::vector>;
+        std::views::transform([&](auto *material) {
+            return Internal::MaterialInfo(material, directory_path);
+        }) |
+        to<std::vector>;
 
     std::vector<Material::Material> real_material;
 
@@ -48,8 +52,7 @@ void import_model(const std::filesystem::path &path,
             if (materialInfo.diffuse_texture_path)
                 return mesh_manager.m_material_manager_map
                     .allocate_material<&Material::textured_material_tag>(
-                        "../../Models/Sponza/" +
-                        materialInfo.diffuse_texture_path->string());
+                        *materialInfo.diffuse_texture_path);
             return mesh_manager.m_material_manager_map
                 .allocate_material<&Material::colored_material_tag>(
                     materialInfo.diffuse_color.value_or(glm::vec4{}));
