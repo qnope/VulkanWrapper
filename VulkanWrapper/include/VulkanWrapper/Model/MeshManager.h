@@ -4,6 +4,7 @@
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Memory/BufferList.h"
 #include "VulkanWrapper/Memory/StagingBufferManager.h"
+#include "VulkanWrapper/Model/Material/MaterialFactory.h"
 #include "VulkanWrapper/Model/Material/MaterialManagerMap.h"
 #include "VulkanWrapper/Model/Mesh.h"
 
@@ -26,12 +27,14 @@ class MeshManager {
   private:
     void create_default_material_managers(const Device &device,
                                           const Allocator &allocator);
+    void create_default_material_factories();
 
   private:
     StagingBufferManager m_staging_buffer_manager;
     BufferList<FullVertex3D, false, VertexBufferUsage> m_vertex_buffer;
     IndexBufferList m_index_buffer;
     Material::MaterialManagerMap m_material_manager_map;
+    Material::MaterialFactory m_material_factory;
     std::vector<Mesh> m_meshes;
 };
 } // namespace vw::Model

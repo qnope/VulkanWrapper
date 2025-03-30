@@ -10,12 +10,11 @@ class MaterialManagerMap {
     [[nodiscard]] std::shared_ptr<const DescriptorSetLayout>
     layout(MaterialTypeTag tag) const noexcept;
 
-    template <const MaterialTypeTag *tag, typename... Args>
-    Material allocate_material(Args &&...args) {
+    template <const MaterialTypeTag *tag>
+    ConcreteMaterialManager<tag> &manager() const {
         auto it = m_material_managers.find(*tag);
         assert(it != m_material_managers.end());
-        return static_cast<ConcreteMaterialManager<tag> *>(it->second.get())
-            ->allocate(std::forward<Args>(args)...);
+        return *static_cast<ConcreteMaterialManager<tag> *>(it->second.get());
     }
 
     template <const MaterialTypeTag *Tag>

@@ -40,8 +40,13 @@ class DescriptorSetLayout;
 
 namespace Model {
 class Mesh;
+namespace Internal {
+struct MaterialInfo;
+}
 namespace Material {
 class Material;
-}
+class MaterialManager;
+class MaterialManagerMap;
+} // namespace Material
 } // namespace Model
 } // namespace vw

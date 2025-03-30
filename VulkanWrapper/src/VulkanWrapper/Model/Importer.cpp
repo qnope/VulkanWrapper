@@ -48,15 +48,8 @@ void import_model(const std::filesystem::path &path,
     std::vector<Material::Material> real_material;
 
     for (const auto &materialInfo : materials) {
-        auto material = [&] {
-            if (materialInfo.diffuse_texture_path)
-                return mesh_manager.m_material_manager_map
-                    .allocate_material<&Material::textured_material_tag>(
-                        *materialInfo.diffuse_texture_path);
-            return mesh_manager.m_material_manager_map
-                .allocate_material<&Material::colored_material_tag>(
-                    materialInfo.diffuse_color.value_or(glm::vec4{}));
-        }();
+        auto material =
+            mesh_manager.m_material_factory.allocate_material(materialInfo);
         real_material.push_back(material);
     }
 

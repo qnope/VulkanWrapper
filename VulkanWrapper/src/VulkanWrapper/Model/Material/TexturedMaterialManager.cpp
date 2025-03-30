@@ -3,6 +3,7 @@
 #include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
 #include "VulkanWrapper/Image/CombinedImage.h"
 #include "VulkanWrapper/Memory/StagingBufferManager.h"
+#include "VulkanWrapper/Model/Internal/MaterialInfo.h"
 #include "VulkanWrapper/Model/Material/Material.h"
 
 namespace vw::Model::Material {
@@ -21,7 +22,7 @@ ConcreteMaterialManager<&textured_material_tag>::ConcreteMaterialManager(
 
 Material ConcreteMaterialManager<&textured_material_tag>::allocate(
     const std::filesystem::path &path) {
-    auto image = m_staging_buffer->stage_image_from_path(path, true);
+    CombinedImage image = m_staging_buffer->stage_image_from_path(path, true);
 
     DescriptorAllocator set_allocator;
     set_allocator.add_combined_image(0, image);
@@ -30,4 +31,13 @@ Material ConcreteMaterialManager<&textured_material_tag>::allocate(
     m_combined_images.push_back(std::move(image));
     return {.material_type = textured_material_tag, .descriptor_set = set};
 }
+
+std::optional<Material>
+allocate_textured_material(const Internal::MaterialInfo &info,
+                           TextureMaterialManager &manager) {
+    if (info.diffuse_texture_path)
+        return manager.allocate(*info.diffuse_texture_path);
+    return std::nullopt;
+}
+
 } // namespace vw::Model::Material

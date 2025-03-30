@@ -3,6 +3,7 @@
 #include "VulkanWrapper/Descriptors/DescriptorPool.h"
 #include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
 #include "VulkanWrapper/Memory/StagingBufferManager.h"
+#include "VulkanWrapper/Model/Internal/MaterialInfo.h"
 #include "VulkanWrapper/Model/Material/Material.h"
 
 namespace vw::Model::Material {
@@ -33,6 +34,14 @@ Material ConcreteMaterialManager<&colored_material_tag>::allocate(
                                  offset * sizeof(glm::vec4), sizeof(glm::vec4));
     auto set = allocate_set(allocator);
     return {.material_type = colored_material_tag, .descriptor_set = set};
+}
+
+std::optional<Material>
+allocate_colored_material(const Internal::MaterialInfo &info,
+                          ColoredMaterialManager &manager) {
+    if (info.diffuse_color)
+        return manager.allocate(*info.diffuse_color);
+    return manager.allocate(glm::vec4{});
 }
 
 } // namespace vw::Model::Material

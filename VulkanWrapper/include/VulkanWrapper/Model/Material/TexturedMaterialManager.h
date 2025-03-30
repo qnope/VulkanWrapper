@@ -24,4 +24,8 @@ class ConcreteMaterialManager<&textured_material_tag> : public MaterialManager {
 
 using TextureMaterialManager = ConcreteMaterialManager<&textured_material_tag>;
 
+std::optional<Material>
+allocate_textured_material(const Internal::MaterialInfo &info,
+                           TextureMaterialManager &manager);
+
 } // namespace vw::Model::Material

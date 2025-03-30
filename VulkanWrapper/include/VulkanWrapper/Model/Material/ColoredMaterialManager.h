@@ -26,4 +26,8 @@ class ConcreteMaterialManager<&colored_material_tag> : public MaterialManager {
 
 using ColoredMaterialManager = ConcreteMaterialManager<&colored_material_tag>;
 
+std::optional<Material>
+allocate_colored_material(const Internal::MaterialInfo &info,
+                          ColoredMaterialManager &manager);
+
 } // namespace vw::Model::Material
