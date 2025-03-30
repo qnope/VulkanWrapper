@@ -17,7 +17,19 @@ MaterialInfo::MaterialInfo(const aiMaterial *material) {
         material->GetTexture(aiTextureType::aiTextureType_DIFFUSE, 0, &string);
         path = string.C_Str();
     }
-    std::ranges::replace(path, '\\', '/');
-    diffuse_texture_path = path;
+    if (!path.empty()) {
+        std::ranges::replace(path, '\\', '/');
+        diffuse_texture_path = path;
+    } else {
+        std::cout << "lol";
+    }
+
+    aiColor4D color;
+    if (material->Get(AI_MATKEY_BASE_COLOR, color) == aiReturn_SUCCESS) {
+        diffuse_color.emplace(color.r, color.g, color.b, color.a);
+    } else if (material->Get(AI_MATKEY_COLOR_DIFFUSE, color) ==
+               aiReturn_SUCCESS) {
+        diffuse_color.emplace(color.r, color.g, color.b, color.a);
+    }
 }
 } // namespace vw::Model::Internal

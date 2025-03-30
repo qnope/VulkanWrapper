@@ -1,6 +1,7 @@
 #include "VulkanWrapper/Model/MeshManager.h"
 
 #include "VulkanWrapper/Model/Importer.h"
+#include "VulkanWrapper/Model/Material/ColoredMaterialManager.h"
 #include "VulkanWrapper/Model/Material/TexturedMaterialManager.h"
 
 namespace vw::Model {
@@ -9,7 +10,7 @@ MeshManager::MeshManager(const Device &device, const Allocator &allocator)
     : m_staging_buffer_manager{device, allocator}
     , m_vertex_buffer{allocator}
     , m_index_buffer{allocator} {
-    create_default_material_managers(device);
+    create_default_material_managers(device, allocator);
 }
 
 void MeshManager::read_file(const std::filesystem::path &path) {
@@ -29,10 +30,15 @@ MeshManager::material_manager_map() const noexcept {
     return m_material_manager_map;
 }
 
-void MeshManager::create_default_material_managers(const Device &device) {
+void MeshManager::create_default_material_managers(const Device &device,
+                                                   const Allocator &allocator) {
     m_material_manager_map.insert_manager(
         std::make_unique<Material::ConcreteMaterialManager<
             &Material::textured_material_tag>>(device,
                                                m_staging_buffer_manager));
+    m_material_manager_map.insert_manager(
+        std::make_unique<
+            Material::ConcreteMaterialManager<&Material::colored_material_tag>>(
+            device, allocator, m_staging_buffer_manager));
 }
 } // namespace vw::Model

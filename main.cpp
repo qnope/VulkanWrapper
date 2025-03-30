@@ -9,6 +9,7 @@
 #include <VulkanWrapper/Memory/Allocator.h>
 #include <VulkanWrapper/Memory/StagingBufferManager.h>
 #include <VulkanWrapper/Model/Importer.h>
+#include <VulkanWrapper/Model/Material/ColoredMaterialManager.h>
 #include <VulkanWrapper/Model/Material/TexturedMaterialManager.h>
 #include <VulkanWrapper/Model/MeshManager.h>
 #include <VulkanWrapper/Pipeline/MeshRenderer.h>
@@ -52,9 +53,9 @@ struct UBOData {
         proj[1][1] *= -1;
         return proj;
     }();
-    glm::mat4 view = glm::lookAt(glm::vec3(-30.0F, 300.0F, 0.0F),
-                                 glm::vec3(10.0F, 300.0F, 0.0F),
-                                 glm::vec3(0.0F, 1.0F, 0.0F));
+    glm::mat4 view =
+        glm::lookAt(glm::vec3(0.0F, 300.0F, 0.0F),
+                    glm::vec3(1.0F, 300.0F, 0.0F), glm::vec3(0.0F, 1.0F, 0.0F));
     glm::mat4 model = glm::mat4(1.0);
 };
 
@@ -99,43 +100,61 @@ void record(vk::CommandBuffer commandBuffer, vk::Extent2D extent,
     }
 }
 
+vw::Pipeline create_pipeline(
+    const vw::Device &device, const vw::RenderPass &render_pass,
+    std::shared_ptr<const vw::ShaderModule> vertex,
+    std::shared_ptr<const vw::ShaderModule> fragment,
+    std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
+    std::shared_ptr<const vw::DescriptorSetLayout> material_layout,
+    vw::Width width, vw::Height height) {
+
+    auto pipelineLayout = vw::PipelineLayoutBuilder(device)
+                              .with_descriptor_set_layout(uniform_buffer_layout)
+                              .with_descriptor_set_layout(material_layout)
+                              .build();
+
+    return vw::GraphicsPipelineBuilder(device, render_pass,
+                                       std::move(pipelineLayout))
+        .add_vertex_binding<vw::FullVertex3D>()
+        .add_shader(vk::ShaderStageFlagBits::eVertex, std::move(vertex))
+        .add_shader(vk::ShaderStageFlagBits::eFragment, std::move(fragment))
+        .with_fixed_scissor(int32_t(width), int32_t(height))
+        .with_fixed_viewport(int32_t(width), int32_t(height))
+        .with_depth_test(true, vk::CompareOp::eLess)
+        .add_color_attachment()
+        .build();
+}
+
 vw::MeshRenderer create_renderer(
     const vw::Device &device, const vw::RenderPass &render_pass,
     const vw::Model::MeshManager &mesh_manager,
     const std::shared_ptr<const vw::DescriptorSetLayout> &uniform_buffer_layout,
     const vw::Swapchain &swapchain) {
     auto vertexShader = vw::ShaderModule::create_from_spirv_file(
-        device, "../../Shaders/bin/vert.spv");
+        device, "../../Shaders/bin/GBuffer/gbuffer.spv");
+    auto fragment_textured = vw::ShaderModule::create_from_spirv_file(
+        device, "../../Shaders/bin/GBuffer/gbuffer_textured.spv");
+    auto fragment_colored = vw::ShaderModule::create_from_spirv_file(
+        device, "../../Shaders/bin/GBuffer/gbuffer_colored.spv");
+    auto textured_pipeline =
+        create_pipeline(device, render_pass, vertexShader, fragment_textured,
+                        uniform_buffer_layout,
+                        mesh_manager.material_manager_map().layout(
+                            vw::Model::Material::textured_material_tag),
+                        swapchain.width(), swapchain.height());
 
-    auto fragmentShader = vw::ShaderModule::create_from_spirv_file(
-        device, "../../Shaders/bin/frag.spv");
-
-    auto pipelineLayout =
-        vw::PipelineLayoutBuilder(device)
-            .with_descriptor_set_layout(uniform_buffer_layout)
-            .with_descriptor_set_layout(
-                mesh_manager.material_manager_map().layout(
-                    vw::Model::Material::textured_material_tag))
-            .build();
-
-    auto pipeline = vw::GraphicsPipelineBuilder(device, render_pass,
-                                                std::move(pipelineLayout))
-                        .add_vertex_binding<vw::FullVertex3D>()
-                        .add_shader(vk::ShaderStageFlagBits::eVertex,
-                                    std::move(vertexShader))
-                        .add_shader(vk::ShaderStageFlagBits::eFragment,
-                                    std::move(fragmentShader))
-                        .with_fixed_scissor(int32_t(swapchain.width()),
-                                            int32_t(swapchain.height()))
-                        .with_fixed_viewport(int32_t(swapchain.width()),
-                                             int32_t(swapchain.height()))
-                        .with_depth_test(true, vk::CompareOp::eLess)
-                        .add_color_attachment()
-                        .build();
+    auto colored_pipeline =
+        create_pipeline(device, render_pass, vertexShader, fragment_colored,
+                        uniform_buffer_layout,
+                        mesh_manager.material_manager_map().layout(
+                            vw::Model::Material::colored_material_tag),
+                        swapchain.width(), swapchain.height());
 
     vw::MeshRenderer renderer;
     renderer.add_pipeline(vw::Model::Material::textured_material_tag,
-                          std::move(pipeline));
+                          std::move(textured_pipeline));
+    renderer.add_pipeline(vw::Model::Material::colored_material_tag,
+                          std::move(colored_pipeline));
     return renderer;
 }
 

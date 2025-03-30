@@ -21,9 +21,9 @@ GraphicsPipelineBuilder::GraphicsPipelineBuilder(const Device &device,
     , m_renderPass{&renderPass}
     , m_pipelineLayout{std::move(pipelineLayout)} {}
 
-GraphicsPipelineBuilder &&
-GraphicsPipelineBuilder::add_shader(vk::ShaderStageFlagBits flags,
-                                    std::shared_ptr<ShaderModule> module) && {
+GraphicsPipelineBuilder &&GraphicsPipelineBuilder::add_shader(
+    vk::ShaderStageFlagBits flags,
+    std::shared_ptr<const ShaderModule> module) && {
     m_shaderModules.emplace(flags, std::move(module));
     return std::move(*this);
 }

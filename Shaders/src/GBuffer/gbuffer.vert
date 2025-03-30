@@ -12,15 +12,15 @@ layout(location = 2) in vec3 inTangeant;
 layout(location = 3) in vec3 inBitangeant;
 layout(location = 4) in vec2 inTexCoord;
 
-layout(location = 0) out vec2 texCoord;
-layout(location = 1) out vec3 n;
-layout(location = 2) out vec3 t;
-layout(location = 3) out vec3 b;
+layout(location = 0) out vec3 outNormal;
+layout(location = 1) out vec3 outTangeant;
+layout(location = 2) out vec3 outBiTangeant;
+layout(location = 3) out vec2 outTexCoord;
 
 void main() {
     gl_Position = proj * view * model * vec4(inPosition, 1.0);
-    texCoord = inTexCoord;
-    n = inNormal;
-    t = inTangeant;
-    b = inBitangeant;
+    outTexCoord = inTexCoord;
+    outNormal = inNormal;
+    outTangeant = inTangeant;
+    outBiTangeant = inBitangeant;
 }

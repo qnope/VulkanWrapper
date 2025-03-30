@@ -30,7 +30,7 @@ class GraphicsPipelineBuilder {
 
     GraphicsPipelineBuilder &&
     add_shader(vk::ShaderStageFlagBits flags,
-               std::shared_ptr<ShaderModule> module) &&;
+               std::shared_ptr<const ShaderModule> module) &&;
 
     GraphicsPipelineBuilder &&add_dynamic_state(vk::DynamicState state) &&;
 
@@ -94,7 +94,7 @@ class GraphicsPipelineBuilder {
     const RenderPass *m_renderPass;
     PipelineLayout m_pipelineLayout;
 
-    std::map<vk::ShaderStageFlagBits, std::shared_ptr<ShaderModule>>
+    std::map<vk::ShaderStageFlagBits, std::shared_ptr<const ShaderModule>>
         m_shaderModules;
     std::vector<vk::DynamicState> m_dynamicStates;
 

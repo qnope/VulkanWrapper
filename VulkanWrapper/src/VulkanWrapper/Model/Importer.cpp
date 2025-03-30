@@ -2,6 +2,7 @@
 
 #include "VulkanWrapper/Model/Internal/MaterialInfo.h"
 #include "VulkanWrapper/Model/Internal/MeshInfo.h"
+#include "VulkanWrapper/Model/Material/ColoredMaterialManager.h"
 #include "VulkanWrapper/Model/Material/Material.h"
 #include "VulkanWrapper/Model/Material/TexturedMaterialManager.h"
 #include "VulkanWrapper/Model/MeshManager.h"
@@ -44,15 +45,14 @@ void import_model(const std::filesystem::path &path,
 
     for (const auto &materialInfo : materials) {
         auto material = [&] {
-            if (materialInfo.diffuse_texture_path.empty())
+            if (materialInfo.diffuse_texture_path)
                 return mesh_manager.m_material_manager_map
                     .allocate_material<&Material::textured_material_tag>(
-                        "../../Images/image_test.png");
-
+                        "../../Models/Sponza/" +
+                        materialInfo.diffuse_texture_path->string());
             return mesh_manager.m_material_manager_map
-                .allocate_material<&Material::textured_material_tag>(
-                    "../../Models/Sponza/" +
-                    materialInfo.diffuse_texture_path.string());
+                .allocate_material<&Material::colored_material_tag>(
+                    materialInfo.diffuse_color.value_or(glm::vec4{}));
         }();
         real_material.push_back(material);
     }

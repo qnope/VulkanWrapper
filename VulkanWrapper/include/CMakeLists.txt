@@ -62,6 +62,7 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Model/Material/MaterialManager.h
     VulkanWrapper/Model/Material/MaterialManagerMap.h
     VulkanWrapper/Model/Material/TexturedMaterialManager.h
+    VulkanWrapper/Model/Material/ColoredMaterialManager.h
 
     VulkanWrapper/Model/Internal/MaterialInfo.h
     VulkanWrapper/Model/Internal/MeshInfo.h

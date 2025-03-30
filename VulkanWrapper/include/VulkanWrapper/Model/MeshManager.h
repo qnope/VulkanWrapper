@@ -24,7 +24,8 @@ class MeshManager {
     material_manager_map() const noexcept;
 
   private:
-    void create_default_material_managers(const Device &device);
+    void create_default_material_managers(const Device &device,
+                                          const Allocator &allocator);
 
   private:
     StagingBufferManager m_staging_buffer_manager;
