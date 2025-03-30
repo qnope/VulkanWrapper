@@ -14,7 +14,8 @@ class MaterialFactory {
 
   public:
     MaterialFactory(MaterialManagerMap &material_manager_map) noexcept;
-    Material allocate_material(const Internal::MaterialInfo &) const noexcept;
+    [[nodiscard]] Material
+    allocate_material(const Internal::MaterialInfo &) const noexcept;
 
     template <const MaterialTypeTag *tag>
     void insert_factory(

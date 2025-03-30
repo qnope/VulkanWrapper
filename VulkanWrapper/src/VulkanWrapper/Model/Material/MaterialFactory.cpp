@@ -9,7 +9,7 @@ MaterialFactory::MaterialFactory(
 
 Material MaterialFactory::allocate_material(
     const Internal::MaterialInfo &info) const noexcept {
-    for (auto &factory : m_factories | std::views::values)
+    for (const auto &factory : m_factories | std::views::values)
         if (auto material = factory(info))
             return *material;
     std::terminate();

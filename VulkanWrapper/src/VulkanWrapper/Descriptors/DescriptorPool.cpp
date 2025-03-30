@@ -79,9 +79,11 @@ vk::DescriptorSet DescriptorPool::allocate_descriptor_set_from_last_pool() {
         throw DescriptorPoolCreationException(std::source_location::current());
     }
 
-    return *m_descriptor_pools
-                .emplace_back(std::move(pool), *m_device, m_layout)
-                .allocate_set();
+    auto set =
+        m_descriptor_pools.emplace_back(std::move(pool), *m_device, m_layout)
+            .allocate_set();
+    assert(set);
+    return *set;
 }
 
 DescriptorPoolBuilder::DescriptorPoolBuilder(
