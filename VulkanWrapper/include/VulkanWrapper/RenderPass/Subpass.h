@@ -5,7 +5,7 @@
 namespace vw {
 
 struct Subpass {
-    std::map<Attachment, vk::ImageLayout> color_attachments;
+    std::unordered_map<Attachment, vk::ImageLayout> color_attachments;
     std::optional<std::pair<Attachment, vk::ImageLayout>> depth_attachment;
 };
 
@@ -18,7 +18,7 @@ class SubpassBuilder {
     Subpass build() &&;
 
   private:
-    std::map<Attachment, vk::ImageLayout> m_color_attachments;
+    std::unordered_map<Attachment, vk::ImageLayout> m_color_attachments;
     std::optional<std::pair<Attachment, vk::ImageLayout>> m_depth_attachment;
 };
 } // namespace vw

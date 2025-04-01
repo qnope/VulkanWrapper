@@ -31,8 +31,10 @@
 #include <VulkanWrapper/Window/SDL_Initializer.h>
 #include <VulkanWrapper/Window/Window.h>
 
-constexpr std::string_view COLOR = "COLOR";
-constexpr std::string_view DEPTH = "DEPTH";
+struct ColorAttachmentTag {};
+struct DepthAttachmentTag {};
+inline const auto COLOR = vw::create_attachment_tag<ColorAttachmentTag>();
+inline const auto DEPTH = vw::create_attachment_tag<DepthAttachmentTag>();
 
 std::vector<std::shared_ptr<const vw::ImageView>>
 create_image_views(const vw::Device &device, const vw::Swapchain &swapchain) {
@@ -131,11 +133,11 @@ vw::MeshRenderer create_renderer(
     const std::shared_ptr<const vw::DescriptorSetLayout> &uniform_buffer_layout,
     const vw::Swapchain &swapchain) {
     auto vertexShader = vw::ShaderModule::create_from_spirv_file(
-        device, "../../Shaders/bin/GBuffer/gbuffer.spv");
+        device, "../Shaders/bin/GBuffer/gbuffer.spv");
     auto fragment_textured = vw::ShaderModule::create_from_spirv_file(
-        device, "../../Shaders/bin/GBuffer/gbuffer_textured.spv");
+        device, "../Shaders/bin/GBuffer/gbuffer_textured.spv");
     auto fragment_colored = vw::ShaderModule::create_from_spirv_file(
-        device, "../../Shaders/bin/GBuffer/gbuffer_colored.spv");
+        device, "../Shaders/bin/GBuffer/gbuffer_colored.spv");
     auto textured_pipeline =
         create_pipeline(device, render_pass, vertexShader, fragment_textured,
                         uniform_buffer_layout,
@@ -193,8 +195,8 @@ int main() {
                 .build();
 
         vw::Model::MeshManager mesh_manager(device, allocator);
-        mesh_manager.read_file("../../Models/Sponza/sponza.obj");
-        mesh_manager.read_file("../../Models/cube.obj");
+        mesh_manager.read_file("../Models/Sponza/sponza.obj");
+        mesh_manager.read_file("../Models/cube.obj");
 
         const auto depth_buffer = allocator.create_image_2D(
             swapchain.width(), swapchain.height(), false,

@@ -18,7 +18,7 @@ class DescriptorPoolImpl
   public:
     DescriptorPoolImpl(
         vk::UniqueDescriptorPool pool, const Device &device,
-        const std::shared_ptr<const DescriptorSetLayout> &layout) noexcept;
+        const std::shared_ptr<const DescriptorSetLayout> &layout) ;
 
     std::optional<vk::DescriptorSet> allocate_set();
 

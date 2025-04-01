@@ -3,6 +3,7 @@
 #include "VulkanWrapper/RenderPass/Subpass.h"
 #include "VulkanWrapper/Utils/Algos.h"
 #include "VulkanWrapper/Vulkan/Device.h"
+#include <unordered_set>
 
 namespace vw {
 
@@ -112,7 +113,7 @@ RenderPass RenderPassBuilder::build() && {
 }
 
 std::vector<Attachment> RenderPassBuilder::create_attachments() const noexcept {
-    std::set<Attachment> attachments;
+    std::unordered_set<Attachment> attachments;
 
     for (const auto &subpass : m_subpasses) {
         for (const auto &attachment :

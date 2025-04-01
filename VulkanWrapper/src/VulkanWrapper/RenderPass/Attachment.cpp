@@ -1,7 +1,7 @@
 #include "VulkanWrapper/RenderPass/Attachment.h"
 
 namespace vw {
-AttachmentBuilder::AttachmentBuilder(std::string_view id)
+AttachmentBuilder::AttachmentBuilder(AttachmentTag id)
     : m_id{id} {}
 
 AttachmentBuilder

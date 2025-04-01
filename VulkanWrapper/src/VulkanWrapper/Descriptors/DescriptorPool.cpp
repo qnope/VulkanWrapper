@@ -9,7 +9,7 @@ constexpr auto MAX_DESCRIPTOR_SET_BY_POOL = 16;
 namespace Internal {
 DescriptorPoolImpl::DescriptorPoolImpl(
     vk::UniqueDescriptorPool pool, const Device &device,
-    const std::shared_ptr<const DescriptorSetLayout> &layout) noexcept
+    const std::shared_ptr<const DescriptorSetLayout> &layout)
     : ObjectWithUniqueHandle<vk::UniqueDescriptorPool>{std::move(pool)} {
     std::vector layouts(MAX_DESCRIPTOR_SET_BY_POOL, layout->handle());
 

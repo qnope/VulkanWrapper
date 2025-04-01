@@ -1,8 +1,16 @@
 #pragma once
 
+#include "VulkanWrapper/Utils/IdentifierTag.h"
+
 namespace vw {
+using AttachmentTag = IdentifierTag<struct AttachmentIdentifierTag>;
+
+template <typename T> AttachmentTag create_attachment_tag() {
+    return AttachmentTag{typeid(T)};
+}
+
 struct Attachment {
-    std::string id;
+    AttachmentTag id;
     vk::Format format;
     vk::SampleCountFlagBits sampleCount;
     vk::AttachmentLoadOp loadOp;
@@ -11,16 +19,12 @@ struct Attachment {
     vk::ImageLayout finalLayout;
     vk::ClearValue clearValue;
 
-    std::strong_ordering operator<=>(const Attachment &other) const {
-        return id <=> other.id;
-    };
-
     bool operator==(const Attachment &other) const { return id == other.id; }
 };
 
 class AttachmentBuilder {
   public:
-    AttachmentBuilder(std::string_view id);
+    AttachmentBuilder(AttachmentTag id);
 
     AttachmentBuilder with_format(vk::Format format,
                                   vk::ClearValue clear_value) &&;
@@ -28,7 +32,7 @@ class AttachmentBuilder {
     Attachment build() &&;
 
   private:
-    std::string m_id;
+    AttachmentTag m_id;
     vk::Format m_format = vk::Format::eUndefined;
     vk::SampleCountFlagBits m_sampleCount = vk::SampleCountFlagBits::e1;
 
@@ -40,3 +44,9 @@ class AttachmentBuilder {
 };
 
 } // namespace vw
+
+template <> struct std::hash<vw::Attachment> {
+    std::size_t operator()(const vw::Attachment &x) const noexcept {
+        return std::hash<vw::AttachmentTag>{}(x.id);
+    }
+};
