@@ -20,6 +20,9 @@ struct Attachment {
     vk::ClearValue clearValue;
 
     bool operator==(const Attachment &other) const { return id == other.id; }
+    std::strong_ordering operator<=>(const Attachment &other) const {
+        return id <=> other.id;
+    }
 };
 
 class AttachmentBuilder {

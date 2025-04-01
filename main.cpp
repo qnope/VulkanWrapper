@@ -78,11 +78,15 @@ std::vector<vw::Framebuffer> createFramebuffers(
     std::vector<vw::Framebuffer> framebuffers;
 
     for (const auto &imageView : images) {
+        std::map<vw::AttachmentTag, std::shared_ptr<const vw::ImageView>>
+            attachment = {{COLOR, imageView}, {DEPTH, depth_buffer}};
+        auto first = attachment.begin()->second;
+        auto second = attachment.rbegin()->second;
         auto framebuffer =
             vw::FramebufferBuilder(device, renderPass, swapchain.width(),
                                    swapchain.height())
-                .add_attachment(imageView)
-                .add_attachment(depth_buffer)
+                .add_attachment(first)
+                .add_attachment(second)
                 .build();
         framebuffers.push_back(std::move(framebuffer));
     }
@@ -167,6 +171,8 @@ int main() {
                                 .with_title("Coucou")
                                 .sized(vw::Width(1024), vw::Height(800))
                                 .build();
+
+        std::vector a = {0, 1, 2, 3};
 
         vw::Instance instance =
             vw::InstanceBuilder()

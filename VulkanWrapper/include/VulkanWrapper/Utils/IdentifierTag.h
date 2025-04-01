@@ -9,7 +9,7 @@ template <typename Tag> class IdentifierTag {
     constexpr IdentifierTag(std::type_index index) noexcept
         : m_index{index} {}
 
-    bool operator==(const IdentifierTag &) const = default;
+    std::strong_ordering operator<=>(const IdentifierTag &) const = default;
 
   private:
     std::type_index m_index;

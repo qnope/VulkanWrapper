@@ -113,7 +113,7 @@ RenderPass RenderPassBuilder::build() && {
 }
 
 std::vector<Attachment> RenderPassBuilder::create_attachments() const noexcept {
-    std::unordered_set<Attachment> attachments;
+    std::set<Attachment> attachments;
 
     for (const auto &subpass : m_subpasses) {
         for (const auto &attachment :
