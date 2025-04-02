@@ -114,8 +114,7 @@ void DeviceFinder::remove_device_not_supporting_extension(
     const char *extension) {
     auto need_to_remove =
         [extension](const PhysicalDeviceInformation &information) {
-            return information.availableExtensions.find(extension) ==
-                   information.availableExtensions.end();
+            return !information.availableExtensions.contains(extension);
         };
     std::erase_if(m_physicalDevicesInformation, need_to_remove);
 }

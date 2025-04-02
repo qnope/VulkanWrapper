@@ -6,13 +6,21 @@ namespace vw {
 
 class Subpass {
   public:
+    Subpass() noexcept = default;
+
+    Subpass(const Subpass &) = delete;
+    Subpass(Subpass &&) = delete;
+    Subpass &operator=(Subpass &&) = delete;
+    Subpass &operator=(const Subpass &) = delete;
+
     virtual ~Subpass() = default;
 
-    virtual vk::PipelineBindPoint pipeline_bind_point() const noexcept;
-    virtual const vk::AttachmentReference2 *
+    [[nodiscard]] virtual vk::PipelineBindPoint
+    pipeline_bind_point() const noexcept;
+    [[nodiscard]] virtual const vk::AttachmentReference2 *
     depth_stencil_attachment() const noexcept;
 
-    virtual const std::vector<vk::AttachmentReference2> &
+    [[nodiscard]] virtual const std::vector<vk::AttachmentReference2> &
     color_attachments() const noexcept = 0;
 
     virtual void execute(vk::CommandBuffer cmd_buffer,

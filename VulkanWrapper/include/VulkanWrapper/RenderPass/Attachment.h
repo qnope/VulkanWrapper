@@ -4,8 +4,8 @@ namespace vw {
 
 class AttachmentBuilder {
   public:
-    AttachmentBuilder with_format(vk::Format format) &&;
-    AttachmentBuilder with_final_layout(vk::ImageLayout layout) &&;
+    AttachmentBuilder &&with_format(vk::Format format) &&;
+    AttachmentBuilder &&with_final_layout(vk::ImageLayout layout) &&;
     vk::AttachmentDescription2 build() &&;
 
   private:

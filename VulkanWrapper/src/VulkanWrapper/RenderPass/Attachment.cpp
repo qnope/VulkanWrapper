@@ -2,12 +2,12 @@
 
 namespace vw {
 
-AttachmentBuilder AttachmentBuilder::with_format(vk::Format format) && {
+AttachmentBuilder &&AttachmentBuilder::with_format(vk::Format format) && {
     m_attachment.setFormat(format);
     return std::move(*this);
 }
 
-AttachmentBuilder
+AttachmentBuilder &&
 AttachmentBuilder::with_final_layout(vk::ImageLayout finalLayout) && {
     m_attachment.setFinalLayout(finalLayout);
     return std::move(*this);

@@ -20,9 +20,8 @@ class RenderPass : public ObjectWithUniqueHandle<vk::UniqueRenderPass> {
     [[nodiscard]] const std::vector<vk::ClearValue> &
     clear_values() const noexcept;
 
-    void
-    execute(vk::CommandBuffer cmd_buffer, const Framebuffer &framebuffer,
-            const std::span<const vk::DescriptorSet> first_descriptor_sets);
+    void execute(vk::CommandBuffer cmd_buffer, const Framebuffer &framebuffer,
+                 std::span<const vk::DescriptorSet> first_descriptor_sets);
 
   private:
     std::vector<vk::AttachmentDescription2> m_attachments;
