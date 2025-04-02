@@ -1,24 +1,28 @@
 #pragma once
 
-#include "VulkanWrapper/RenderPass/Attachment.h"
+#include "VulkanWrapper/fwd.h"
 
 namespace vw {
 
-struct Subpass {
-    std::unordered_map<Attachment, vk::ImageLayout> color_attachments;
-    std::optional<std::pair<Attachment, vk::ImageLayout>> depth_attachment;
-};
-
-class SubpassBuilder {
+class Subpass {
   public:
-    SubpassBuilder &&add_color_attachment(const Attachment &attachment,
-                                          vk::ImageLayout layout) &&;
-    SubpassBuilder &&
-    add_depth_stencil_attachment(const Attachment &attachment) &&;
-    Subpass build() &&;
+    virtual ~Subpass() = default;
 
-  private:
-    std::unordered_map<Attachment, vk::ImageLayout> m_color_attachments;
-    std::optional<std::pair<Attachment, vk::ImageLayout>> m_depth_attachment;
+    virtual vk::PipelineBindPoint pipeline_bind_point() const noexcept;
+    virtual const vk::AttachmentReference2 *
+    depth_stencil_attachment() const noexcept;
+
+    virtual const std::vector<vk::AttachmentReference2> &
+    color_attachments() const noexcept = 0;
+
+    virtual void execute(vk::CommandBuffer cmd_buffer,
+                         std::span<const vk::DescriptorSet>
+                             first_descriptor_sets) const noexcept = 0;
+
+  protected:
+    virtual void initialize(const RenderPass &render_pass) = 0;
+
+    friend class RenderPass;
 };
+
 } // namespace vw

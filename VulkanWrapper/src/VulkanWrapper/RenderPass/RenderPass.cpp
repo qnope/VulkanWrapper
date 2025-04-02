@@ -1,44 +1,44 @@
 #include "VulkanWrapper/RenderPass/RenderPass.h"
 
+#include "VulkanWrapper/Image/Framebuffer.h"
 #include "VulkanWrapper/RenderPass/Subpass.h"
 #include "VulkanWrapper/Utils/Algos.h"
 #include "VulkanWrapper/Vulkan/Device.h"
-#include <unordered_set>
 
 namespace vw {
 
 RenderPass::RenderPass(vk::UniqueRenderPass render_pass,
-                       std::vector<Attachment> attachments)
+                       std::vector<vk::AttachmentDescription2> attachments,
+                       std::vector<vk::ClearValue> clear_values,
+                       std::vector<std::unique_ptr<Subpass>> subpasses)
     : ObjectWithUniqueHandle<vk::UniqueRenderPass>{std::move(render_pass)}
     , m_attachments{std::move(attachments)}
-    , m_clear_values{m_attachments |
-                     std::views::transform(&Attachment::clearValue) |
-                     to<std::vector>} {}
+    , m_clear_values{std::move(clear_values)}
+    , m_subpasses{std::move(subpasses)} {
+    for (auto &subpass : m_subpasses)
+        subpass->initialize(*this);
+}
 
 const std::vector<vk::ClearValue> &RenderPass::clear_values() const noexcept {
     return m_clear_values;
 }
 
-static vk::AttachmentDescription2
-attachmentToDescription(const Attachment &attachment) {
-    return vk::AttachmentDescription2()
-        .setFormat(attachment.format)
-        .setSamples(attachment.sampleCount)
-        .setLoadOp(attachment.loadOp)
-        .setStoreOp(attachment.storeOp)
-        .setInitialLayout(attachment.initialLayout)
-        .setFinalLayout(attachment.finalLayout)
-        .setStencilLoadOp(vk::AttachmentLoadOp::eClear);
-}
+void RenderPass::execute(
+    vk::CommandBuffer cmd_buffer, const Framebuffer &framebuffer,
+    const std::span<const vk::DescriptorSet> first_descriptor_sets) {
+    const auto renderPassBeginInfo =
+        vk::RenderPassBeginInfo()
+            .setRenderPass(handle())
+            .setFramebuffer(framebuffer.handle())
+            .setRenderArea(vk::Rect2D(vk::Offset2D(), framebuffer.extent2D()))
+            .setClearValues(m_clear_values);
 
-static vk::AttachmentReference2 computeReference(
-    const std::vector<Attachment> &attachments,
-    std::pair<const Attachment &, vk::ImageLayout> attachmentAndLayout) {
-    auto index = index_of(attachments, attachmentAndLayout.first);
-    assert(index);
+    const auto subpassInfo =
+        vk::SubpassBeginInfo().setContents(vk::SubpassContents::eInline);
 
-    return vk::AttachmentReference2().setAttachment(*index).setLayout(
-        attachmentAndLayout.second);
+    cmd_buffer.beginRenderPass2(renderPassBeginInfo, subpassInfo);
+    m_subpasses.front()->execute(cmd_buffer, first_descriptor_sets);
+    cmd_buffer.endRenderPass2(vk::SubpassEndInfo());
 }
 
 struct SubpassDescription {
@@ -47,31 +47,13 @@ struct SubpassDescription {
 };
 
 vk::SubpassDescription2
-toVulkanDescriptions(const SubpassDescription &description) {
+subpassToDescription(const std::unique_ptr<Subpass> &subpass) {
     auto result = vk::SubpassDescription2()
-                      .setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
-                      .setColorAttachments(description.color_attachments);
+                      .setPipelineBindPoint(subpass->pipeline_bind_point())
+                      .setColorAttachments(subpass->color_attachments());
 
-    if (description.depth_attachment)
-        result.setPDepthStencilAttachment(&*description.depth_attachment);
-
-    return result;
-}
-
-static SubpassDescription
-subpassToDescription(const std::vector<Attachment> &attachments,
-                     const Subpass &subpass) {
-    std::vector<vk::AttachmentReference2> color_references =
-        subpass.color_attachments |
-        std::views::transform(std::bind_front(computeReference, attachments)) |
-        to<std::vector>;
-
-    SubpassDescription result{.color_attachments = std::move(color_references)};
-
-    if (subpass.depth_attachment) {
-        result.depth_attachment =
-            computeReference(attachments, *subpass.depth_attachment);
-    }
+    if (const auto *depth = subpass->depth_stencil_attachment())
+        result.setPDepthStencilAttachment(depth);
 
     return result;
 }
@@ -79,28 +61,27 @@ subpassToDescription(const std::vector<Attachment> &attachments,
 RenderPassBuilder::RenderPassBuilder(const Device &device)
     : m_device{&device} {}
 
-RenderPassBuilder &&RenderPassBuilder::add_subpass(Subpass subpass) && {
+RenderPassBuilder &&
+RenderPassBuilder::add_attachment(vk::AttachmentDescription2 attachment,
+                                  vk::ClearValue clear_value) && {
+    m_attachments.push_back(attachment);
+    m_clear_values.push_back(clear_value);
+    return std::move(*this);
+}
+
+RenderPassBuilder &&
+RenderPassBuilder::add_subpass(std::unique_ptr<Subpass> subpass) && {
     m_subpasses.push_back(std::move(subpass));
     return std::move(*this);
 }
 
 RenderPass RenderPassBuilder::build() && {
-    auto attachments = create_attachments();
-    const auto attachmentDescriptions =
-        attachments | std::views::transform(attachmentToDescription) |
-        to<std::vector>;
-
-    const auto toSubpassDescriptions =
-        std::bind_front(subpassToDescription, attachments);
-    const auto subpassDescriptions =
-        m_subpasses | std::views::transform(toSubpassDescriptions) |
-        to<std::vector>;
     const auto vkSubpassDescriptions =
-        subpassDescriptions | std::views::transform(toVulkanDescriptions) |
+        m_subpasses | std::views::transform(subpassToDescription) |
         to<std::vector>;
 
     const auto info = vk::RenderPassCreateInfo2()
-                          .setAttachments(attachmentDescriptions)
+                          .setAttachments(m_attachments)
                           .setSubpasses(vkSubpassDescriptions);
 
     auto [result, renderPass] =
@@ -109,22 +90,8 @@ RenderPass RenderPassBuilder::build() && {
     if (result != vk::Result::eSuccess) {
         throw RenderPassCreationException{std::source_location::current()};
     }
-    return RenderPass{std::move(renderPass), std::move(attachments)};
-}
-
-std::vector<Attachment> RenderPassBuilder::create_attachments() const noexcept {
-    std::set<Attachment> attachments;
-
-    for (const auto &subpass : m_subpasses) {
-        for (const auto &attachment :
-             subpass.color_attachments | std::views::keys) {
-            attachments.insert(attachment);
-        }
-        if (subpass.depth_attachment)
-            attachments.insert(subpass.depth_attachment->first);
-    }
-
-    return attachments | to<std::vector>;
+    return RenderPass{std::move(renderPass), std::move(m_attachments),
+                      std::move(m_clear_values), std::move(m_subpasses)};
 }
 
 } // namespace vw

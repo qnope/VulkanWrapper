@@ -16,6 +16,7 @@
 #include <VulkanWrapper/Pipeline/Pipeline.h>
 #include <VulkanWrapper/Pipeline/PipelineLayout.h>
 #include <VulkanWrapper/Pipeline/ShaderModule.h>
+#include <VulkanWrapper/RenderPass/Attachment.h>
 #include <VulkanWrapper/RenderPass/RenderPass.h>
 #include <VulkanWrapper/RenderPass/Subpass.h>
 #include <VulkanWrapper/Synchronization/Fence.h>
@@ -30,11 +31,6 @@
 #include <VulkanWrapper/Vulkan/Swapchain.h>
 #include <VulkanWrapper/Window/SDL_Initializer.h>
 #include <VulkanWrapper/Window/Window.h>
-
-struct ColorAttachmentTag {};
-struct DepthAttachmentTag {};
-inline const auto COLOR = vw::create_attachment_tag<ColorAttachmentTag>();
-inline const auto DEPTH = vw::create_attachment_tag<DepthAttachmentTag>();
 
 std::vector<std::shared_ptr<const vw::ImageView>>
 create_image_views(const vw::Device &device, const vw::Swapchain &swapchain) {
@@ -78,32 +74,16 @@ std::vector<vw::Framebuffer> createFramebuffers(
     std::vector<vw::Framebuffer> framebuffers;
 
     for (const auto &imageView : images) {
-        std::map<vw::AttachmentTag, std::shared_ptr<const vw::ImageView>>
-            attachment = {{COLOR, imageView}, {DEPTH, depth_buffer}};
-        auto first = attachment.begin()->second;
-        auto second = attachment.rbegin()->second;
         auto framebuffer =
             vw::FramebufferBuilder(device, renderPass, swapchain.width(),
                                    swapchain.height())
-                .add_attachment(first)
-                .add_attachment(second)
+                .add_attachment(imageView)
+                .add_attachment(depth_buffer)
                 .build();
         framebuffers.push_back(std::move(framebuffer));
     }
 
     return framebuffers;
-}
-
-void record(vk::CommandBuffer commandBuffer, vk::Extent2D extent,
-            const vw::Framebuffer &framebuffer,
-            const vw::RenderPass &renderPass,
-            const std::vector<vw::Model::Mesh> &meshes,
-            const vw::MeshRenderer &mesh_renderer, vk::DescriptorSet ubo_set) {
-    auto recorder = vw::CommandBufferRecorder(commandBuffer);
-    auto rp = recorder.begin_render_pass(renderPass, framebuffer);
-    for (const auto &m : meshes) {
-        mesh_renderer.draw_mesh(commandBuffer, m, ubo_set);
-    }
 }
 
 vw::Pipeline create_pipeline(
@@ -135,7 +115,7 @@ vw::MeshRenderer create_renderer(
     const vw::Device &device, const vw::RenderPass &render_pass,
     const vw::Model::MeshManager &mesh_manager,
     const std::shared_ptr<const vw::DescriptorSetLayout> &uniform_buffer_layout,
-    const vw::Swapchain &swapchain) {
+    vw::Width width, vw::Height height) {
     auto vertexShader = vw::ShaderModule::create_from_spirv_file(
         device, "../Shaders/bin/GBuffer/gbuffer.spv");
     auto fragment_textured = vw::ShaderModule::create_from_spirv_file(
@@ -147,14 +127,14 @@ vw::MeshRenderer create_renderer(
                         uniform_buffer_layout,
                         mesh_manager.material_manager_map().layout(
                             vw::Model::Material::textured_material_tag),
-                        swapchain.width(), swapchain.height());
+                        width, height);
 
     auto colored_pipeline =
         create_pipeline(device, render_pass, vertexShader, fragment_colored,
                         uniform_buffer_layout,
                         mesh_manager.material_manager_map().layout(
                             vw::Model::Material::colored_material_tag),
-                        swapchain.width(), swapchain.height());
+                        width, height);
 
     vw::MeshRenderer renderer;
     renderer.add_pipeline(vw::Model::Material::textured_material_tag,
@@ -163,6 +143,62 @@ vw::MeshRenderer create_renderer(
                           std::move(colored_pipeline));
     return renderer;
 }
+
+class Subpass : public vw::Subpass {
+  public:
+    Subpass(
+        const vw::Device &device, const vw::Model::MeshManager &mesh_manager,
+        std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
+        vw::Width width, vw::Height height)
+        : m_device{device}
+        , m_mesh_manager{mesh_manager}
+        , m_uniform_buffer_layout{uniform_buffer_layout}
+        , m_width{width}
+        , m_height{height} {}
+
+    void execute(vk::CommandBuffer cmd_buffer,
+                 std::span<const vk::DescriptorSet> first_descriptor_sets)
+        const noexcept override {
+        const auto &meshes = m_mesh_manager.meshes();
+        for (const auto &mesh : meshes) {
+            m_mesh_renderer.draw_mesh(cmd_buffer, mesh, first_descriptor_sets);
+        }
+    }
+
+    const std::vector<vk::AttachmentReference2> &
+    color_attachments() const noexcept override {
+        return m_color_attachments;
+    }
+
+    const vk::AttachmentReference2 *
+    depth_stencil_attachment() const noexcept override {
+        return &m_depth_stencil_attachment;
+    }
+
+  protected:
+    void initialize(const vw::RenderPass &render_pass) override {
+        m_mesh_renderer =
+            create_renderer(m_device, render_pass, m_mesh_manager,
+                            m_uniform_buffer_layout, m_width, m_height);
+    }
+
+  private:
+    const vw::Device &m_device;
+    const vw::Model::MeshManager &m_mesh_manager;
+    std::shared_ptr<const vw::DescriptorSetLayout> m_uniform_buffer_layout;
+    vw::Width m_width;
+    vw::Height m_height;
+    vw::MeshRenderer m_mesh_renderer;
+
+    vk::AttachmentReference2 m_depth_stencil_attachment =
+        vk::AttachmentReference2(
+            1, vk::ImageLayout::eDepthStencilAttachmentOptimal,
+            vk::ImageAspectFlagBits::eDepth);
+
+    std::vector<vk::AttachmentReference2> m_color_attachments = {
+        vk::AttachmentReference2(0, vk::ImageLayout::eColorAttachmentOptimal,
+                                 vk::ImageAspectFlagBits::eColor)};
+};
 
 int main() {
     try {
@@ -215,32 +251,29 @@ int main() {
                 .build();
 
         const auto color_attachment =
-            vw::AttachmentBuilder(COLOR)
-                .with_format(swapchain.format(), vk::ClearColorValue())
+            vw::AttachmentBuilder{}
+                .with_format(swapchain.format())
                 .with_final_layout(vk::ImageLayout::ePresentSrcKHR)
                 .build();
 
         const auto depth_attachment =
-            vw::AttachmentBuilder(DEPTH)
-                .with_format(depth_buffer->format(),
-                             vk::ClearDepthStencilValue(1.0))
+            vw::AttachmentBuilder{}
+                .with_format(depth_buffer->format())
                 .with_final_layout(
                     vk::ImageLayout::eDepthStencilAttachmentOptimal)
                 .build();
 
-        auto subpass =
-            vw::SubpassBuilder()
-                .add_color_attachment(color_attachment,
-                                      vk::ImageLayout::eAttachmentOptimal)
-                .add_depth_stencil_attachment(depth_attachment)
+        auto subpass = std::make_unique<Subpass>(
+            device, mesh_manager, descriptor_set_layout, swapchain.width(),
+            swapchain.height());
+
+        auto renderPass =
+            vw::RenderPassBuilder(device)
+                .add_attachment(color_attachment, vk::ClearColorValue())
+                .add_attachment(depth_attachment,
+                                vk::ClearDepthStencilValue(1.0))
+                .add_subpass(std::move(subpass))
                 .build();
-
-        auto renderPass = vw::RenderPassBuilder(device)
-                              .add_subpass(std::move(subpass))
-                              .build();
-
-        auto mesh_renderer = create_renderer(device, renderPass, mesh_manager,
-                                             descriptor_set_layout, swapchain);
 
         auto commandPool = vw::CommandPoolBuilder(device).build();
         auto image_views = create_image_views(device, swapchain);
@@ -266,8 +299,9 @@ int main() {
 
         for (auto [framebuffer, commandBuffer] :
              std::views::zip(framebuffers, commandBuffers)) {
-            record(commandBuffer, extent, framebuffer, renderPass,
-                   mesh_manager.meshes(), mesh_renderer, descriptor_set);
+            vw::CommandBufferRecorder recorder(commandBuffer);
+            renderPass.execute(commandBuffer, framebuffer,
+                               std::span{&descriptor_set, 1});
         }
 
         auto renderFinishedSemaphore = vw::SemaphoreBuilder(device).build();

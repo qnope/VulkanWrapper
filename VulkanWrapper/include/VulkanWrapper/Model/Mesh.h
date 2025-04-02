@@ -16,7 +16,8 @@ class Mesh {
     [[nodiscard]] Material::MaterialTypeTag material_type_tag() const noexcept;
 
     void draw(vk::CommandBuffer cmd_buffer,
-              const PipelineLayout &pipeline_layout) const;
+              const PipelineLayout &pipeline_layout,
+              uint32_t material_descriptor_set_index) const;
 
   private:
     const FullVertex3DBuffer *m_full_vertex_buffer;

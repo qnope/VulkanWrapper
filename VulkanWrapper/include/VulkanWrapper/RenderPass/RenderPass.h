@@ -13,26 +13,37 @@ class RenderPass : public ObjectWithUniqueHandle<vk::UniqueRenderPass> {
 
   public:
     RenderPass(vk::UniqueRenderPass render_pass,
-               std::vector<Attachment> attachments);
+               std::vector<vk::AttachmentDescription2> attachments,
+               std::vector<vk::ClearValue> clear_values,
+               std::vector<std::unique_ptr<Subpass>> subpasses);
 
     [[nodiscard]] const std::vector<vk::ClearValue> &
     clear_values() const noexcept;
 
+    void
+    execute(vk::CommandBuffer cmd_buffer, const Framebuffer &framebuffer,
+            const std::span<const vk::DescriptorSet> first_descriptor_sets);
+
   private:
-    std::vector<Attachment> m_attachments;
+    std::vector<vk::AttachmentDescription2> m_attachments;
     std::vector<vk::ClearValue> m_clear_values;
+    std::vector<std::unique_ptr<Subpass>> m_subpasses;
 };
 
 class RenderPassBuilder {
   public:
     RenderPassBuilder(const Device &device);
-    RenderPassBuilder &&add_subpass(Subpass subpass) &&;
-    RenderPass build() &&;
+    [[nodiscard]] RenderPassBuilder &&
+    add_attachment(vk::AttachmentDescription2 attachment,
+                   vk::ClearValue clear_value) &&;
+    [[nodiscard]] RenderPassBuilder &&
+    add_subpass(std::unique_ptr<Subpass> subpass) &&;
+    [[nodiscard]] RenderPass build() &&;
 
   private:
-    [[nodiscard]] std::vector<Attachment> create_attachments() const noexcept;
-
     const Device *m_device;
-    std::vector<vw::Subpass> m_subpasses;
+    std::vector<vk::AttachmentDescription2> m_attachments;
+    std::vector<vk::ClearValue> m_clear_values;
+    std::vector<std::unique_ptr<vw::Subpass>> m_subpasses;
 };
 } // namespace vw

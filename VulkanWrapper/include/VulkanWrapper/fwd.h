@@ -16,6 +16,7 @@ class Image;
 class ImageView;
 class Sampler;
 class CombinedImage;
+class Framebuffer;
 
 class SwapchainBuilder;
 class Swapchain;
@@ -25,7 +26,6 @@ class ShaderModule;
 class Pipeline;
 class PipelineLayout;
 
-class Attachment;
 class Subpass;
 class RenderPass;
 

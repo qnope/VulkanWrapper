@@ -17,16 +17,16 @@ Material::MaterialTypeTag Mesh::material_type_tag() const noexcept {
     return m_material.material_type;
 }
 
-void Mesh::draw(vk::CommandBuffer cmd_buffer,
-                const PipelineLayout &layout) const {
+void Mesh::draw(vk::CommandBuffer cmd_buffer, const PipelineLayout &layout,
+                uint32_t material_descriptor_set_index) const {
     vk::Buffer vb = m_full_vertex_buffer->handle();
     vk::Buffer ib = m_index_buffer->handle();
     vk::DeviceSize vbo = 0;
     cmd_buffer.bindVertexBuffers(0, vb, vbo);
     cmd_buffer.bindIndexBuffer(ib, 0, vk::IndexType::eUint32);
-    cmd_buffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-                                  layout.handle(), 1, m_material.descriptor_set,
-                                  nullptr);
+    cmd_buffer.bindDescriptorSets(
+        vk::PipelineBindPoint::eGraphics, layout.handle(),
+        material_descriptor_set_index, m_material.descriptor_set, nullptr);
     cmd_buffer.drawIndexed(m_indice_count, 1, m_first_index, m_vertex_offset,
                            0);
 }

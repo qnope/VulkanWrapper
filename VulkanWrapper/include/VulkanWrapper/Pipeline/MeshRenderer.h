@@ -8,8 +8,9 @@ namespace vw {
 class MeshRenderer {
   public:
     void add_pipeline(Model::Material::MaterialTypeTag tag, Pipeline pipeline);
-    void draw_mesh(vk::CommandBuffer cmd_buffer, const Model::Mesh &mesh,
-                   vk::DescriptorSet descriptor_set) const;
+    void
+    draw_mesh(vk::CommandBuffer cmd_buffer, const Model::Mesh &mesh,
+              std::span<const vk::DescriptorSet> first_descriptor_sets) const;
 
   private:
     std::unordered_map<Model::Material::MaterialTypeTag, Pipeline> m_pipelines;
