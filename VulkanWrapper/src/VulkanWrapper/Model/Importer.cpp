@@ -55,7 +55,8 @@ void import_model(const std::filesystem::path &path,
 
     for (const auto &mesh : meshes) {
         auto [vertex_buffer, vertex_offset] =
-            mesh_manager.m_vertex_buffer.create_buffer(mesh.vertices.size());
+            mesh_manager.m_full_vertex_buffer.create_buffer(
+                mesh.vertices.size());
         auto [index_buffer, first_index] =
             mesh_manager.m_index_buffer.create_buffer(mesh.indices.size());
 

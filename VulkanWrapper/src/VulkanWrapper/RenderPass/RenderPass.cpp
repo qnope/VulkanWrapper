@@ -39,10 +39,10 @@ void RenderPass::execute(
     cmd_buffer.beginRenderPass2(renderPassBeginInfo, subpassInfo);
     for (auto &subpass :
          m_subpasses | std::views::take(m_subpasses.size() - 1)) {
-        subpass->execute(cmd_buffer, first_descriptor_sets);
+        subpass->execute(cmd_buffer);
         cmd_buffer.nextSubpass2(subpassInfo, vk::SubpassEndInfo());
     }
-    m_subpasses.back()->execute(cmd_buffer, first_descriptor_sets);
+    m_subpasses.back()->execute(cmd_buffer);
     cmd_buffer.endRenderPass2(vk::SubpassEndInfo());
 }
 
@@ -75,19 +75,22 @@ RenderPassBuilder::add_attachment(vk::AttachmentDescription2 attachment,
 }
 
 RenderPassBuilder &&
-RenderPassBuilder::add_subpass(std::unique_ptr<Subpass> subpass) && {
-    m_subpasses.push_back(std::move(subpass));
+RenderPassBuilder::add_subpass(SubpassTag tag,
+                               std::unique_ptr<Subpass> subpass) && {
+    m_subpasses.emplace_back(tag, std::move(subpass));
     return std::move(*this);
 }
 
 RenderPass RenderPassBuilder::build() && {
+    using namespace std::views;
+    auto subpasses = m_subpasses | values | as_rvalue | to<std::vector>;
     const auto vkSubpassDescriptions =
-        m_subpasses | std::views::transform(subpassToDescription) |
-        to<std::vector>;
+        subpasses | transform(subpassToDescription) | to<std::vector>;
 
     const auto info = vk::RenderPassCreateInfo2()
                           .setAttachments(m_attachments)
-                          .setSubpasses(vkSubpassDescriptions);
+                          .setSubpasses(vkSubpassDescriptions)
+                          .setDependencies(m_subpass_dependencies);
 
     auto [result, renderPass] =
         m_device->handle().createRenderPass2Unique(info);
@@ -96,7 +99,32 @@ RenderPass RenderPassBuilder::build() && {
         throw RenderPassCreationException{std::source_location::current()};
     }
     return RenderPass{std::move(renderPass), std::move(m_attachments),
-                      std::move(m_clear_values), std::move(m_subpasses)};
+                      std::move(m_clear_values), std::move(subpasses)};
+}
+
+RenderPassBuilder &&RenderPassBuilder::add_dependency(SubpassTag src,
+                                                      SubpassTag dst) && {
+    using namespace std::views;
+    auto index_src = index_of(m_subpasses | std::views::keys, src);
+    auto index_dst = index_of(m_subpasses | std::views::keys, dst);
+
+    assert(index_src);
+    assert(index_dst);
+
+    vk::SubpassDependency2 dependency{};
+    auto [src_stage, src_access] =
+        m_subpasses[*index_src].second->output_dependencies();
+    auto [dst_stage, dst_access] =
+        m_subpasses[*index_dst].second->input_dependencies();
+
+    dependency.setSrcSubpass(*index_src)
+        .setDstSubpass(*index_dst)
+        .setSrcStageMask(src_stage)
+        .setSrcAccessMask(src_access)
+        .setDstStageMask(dst_stage)
+        .setDstAccessMask(dst_access);
+    m_subpass_dependencies.push_back(dependency);
+    return std::move(*this);
 }
 
 } // namespace vw

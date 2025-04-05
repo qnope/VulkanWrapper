@@ -144,22 +144,25 @@ vw::MeshRenderer create_renderer(
     return renderer;
 }
 
+struct ColorPassTag {};
+const auto color_pass_tag = vw::create_subpass_tag<ColorPassTag>();
+
 class Subpass : public vw::Subpass {
   public:
     Subpass(
         const vw::Device &device, const vw::Model::MeshManager &mesh_manager,
         std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
-        vw::Width width, vw::Height height)
+        vw::Width width, vw::Height height, vk::DescriptorSet descriptor_set)
         : m_device{device}
         , m_mesh_manager{mesh_manager}
         , m_uniform_buffer_layout{uniform_buffer_layout}
         , m_width{width}
-        , m_height{height} {}
+        , m_height{height}
+        , m_descriptor_set{descriptor_set} {}
 
-    void execute(vk::CommandBuffer cmd_buffer,
-                 std::span<const vk::DescriptorSet> first_descriptor_sets)
-        const noexcept override {
+    void execute(vk::CommandBuffer cmd_buffer) const noexcept override {
         const auto &meshes = m_mesh_manager.meshes();
+        std::span first_descriptor_sets = {&m_descriptor_set, 1};
         for (const auto &mesh : meshes) {
             m_mesh_renderer.draw_mesh(cmd_buffer, mesh, first_descriptor_sets);
         }
@@ -173,6 +176,14 @@ class Subpass : public vw::Subpass {
     const vk::AttachmentReference2 *
     depth_stencil_attachment() const noexcept override {
         return &m_depth_stencil_attachment;
+    }
+
+    vw::SubpassDependencyMask input_dependencies() const noexcept override {
+        return {};
+    }
+
+    vw::SubpassDependencyMask output_dependencies() const noexcept override {
+        return {};
     }
 
   protected:
@@ -189,6 +200,7 @@ class Subpass : public vw::Subpass {
     vw::Width m_width;
     vw::Height m_height;
     vw::MeshRenderer m_mesh_renderer;
+    vk::DescriptorSet m_descriptor_set;
 
     vk::AttachmentReference2 m_depth_stencil_attachment =
         vk::AttachmentReference2(
@@ -236,6 +248,18 @@ int main() {
                 .with_uniform_buffer(vk::ShaderStageFlagBits::eVertex, 1)
                 .build();
 
+        auto uniform_buffer = createUbo(allocator);
+
+        auto descriptor_pool =
+            vw::DescriptorPoolBuilder(device, descriptor_set_layout).build();
+
+        vw::DescriptorAllocator descriptor_allocator;
+        descriptor_allocator.add_uniform_buffer(0, uniform_buffer.handle(), 0,
+                                                uniform_buffer.size_bytes());
+
+        auto descriptor_set =
+            descriptor_pool.allocate_set(descriptor_allocator);
+
         vw::Model::MeshManager mesh_manager(device, allocator);
         mesh_manager.read_file("../Models/Sponza/sponza.obj");
         mesh_manager.read_file("../Models/cube.obj");
@@ -265,14 +289,14 @@ int main() {
 
         auto subpass = std::make_unique<Subpass>(
             device, mesh_manager, descriptor_set_layout, swapchain.width(),
-            swapchain.height());
+            swapchain.height(), descriptor_set);
 
         auto renderPass =
             vw::RenderPassBuilder(device)
                 .add_attachment(color_attachment, vk::ClearColorValue())
                 .add_attachment(depth_attachment,
                                 vk::ClearDepthStencilValue(1.0))
-                .add_subpass(std::move(subpass))
+                .add_subpass(color_pass_tag, std::move(subpass))
                 .build();
 
         auto commandPool = vw::CommandPoolBuilder(device).build();
@@ -284,18 +308,6 @@ int main() {
 
         const vk::Extent2D extent(uint32_t(swapchain.width()),
                                   uint32_t(swapchain.height()));
-
-        auto uniform_buffer = createUbo(allocator);
-
-        auto descriptor_pool =
-            vw::DescriptorPoolBuilder(device, descriptor_set_layout).build();
-
-        vw::DescriptorAllocator descriptor_allocator;
-        descriptor_allocator.add_uniform_buffer(0, uniform_buffer.handle(), 0,
-                                                uniform_buffer.size_bytes());
-
-        auto descriptor_set =
-            descriptor_pool.allocate_set(descriptor_allocator);
 
         for (auto [framebuffer, commandBuffer] :
              std::views::zip(framebuffers, commandBuffers)) {

@@ -107,6 +107,15 @@ struct FullVertex3D
     glm::vec2 uv{};
 };
 
+struct Vertex3D : VertexInterface<glm::vec3> {
+    Vertex3D() = default;
+
+    Vertex3D(glm::vec3 position) noexcept
+        : position{position} {}
+
+    glm::vec3 position;
+};
+
 template <typename T>
 concept Vertex =
     std::is_standard_layout_v<T> && std::is_trivially_copyable_v<T> &&

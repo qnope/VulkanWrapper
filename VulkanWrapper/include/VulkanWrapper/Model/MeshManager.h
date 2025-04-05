@@ -31,7 +31,8 @@ class MeshManager {
 
   private:
     StagingBufferManager m_staging_buffer_manager;
-    BufferList<FullVertex3D, false, VertexBufferUsage> m_vertex_buffer;
+    BufferList<Vertex3D, false, VertexBufferUsage> m_vertex_buffer;
+    BufferList<FullVertex3D, false, VertexBufferUsage> m_full_vertex_buffer;
     IndexBufferList m_index_buffer;
     Material::MaterialManagerMap m_material_manager_map;
     Material::MaterialFactory m_material_factory;

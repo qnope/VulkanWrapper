@@ -10,4 +10,5 @@ const vk::AttachmentReference2 *
 Subpass::depth_stencil_attachment() const noexcept {
     return nullptr;
 }
+
 } // namespace vw

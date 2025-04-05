@@ -9,6 +9,7 @@ namespace vw::Model {
 MeshManager::MeshManager(const Device &device, const Allocator &allocator)
     : m_staging_buffer_manager{device, allocator}
     , m_vertex_buffer{allocator}
+    , m_full_vertex_buffer{allocator}
     , m_index_buffer{allocator}
     , m_material_factory{m_material_manager_map} {
     create_default_material_managers(device, allocator);

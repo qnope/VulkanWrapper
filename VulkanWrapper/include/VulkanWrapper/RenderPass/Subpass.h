@@ -1,8 +1,20 @@
 #pragma once
 
 #include "VulkanWrapper/fwd.h"
+#include "VulkanWrapper/Utils/IdentifierTag.h"
 
 namespace vw {
+
+struct SubpassDependencyMask {
+    vk::PipelineStageFlags stage = vk::PipelineStageFlagBits::eNone;
+    vk::AccessFlags access = vk::AccessFlagBits::eNone;
+};
+
+using SubpassTag = IdentifierTag<struct SubpassIdentifierTag>;
+
+template <typename T> SubpassTag create_subpass_tag() {
+    return SubpassTag{typeid(T)};
+}
 
 class Subpass {
   public:
@@ -23,9 +35,12 @@ class Subpass {
     [[nodiscard]] virtual const std::vector<vk::AttachmentReference2> &
     color_attachments() const noexcept = 0;
 
-    virtual void execute(vk::CommandBuffer cmd_buffer,
-                         std::span<const vk::DescriptorSet>
-                             first_descriptor_sets) const noexcept = 0;
+    [[nodiscard]] virtual SubpassDependencyMask
+    input_dependencies() const noexcept = 0;
+    [[nodiscard]] virtual SubpassDependencyMask
+    output_dependencies() const noexcept = 0;
+
+    virtual void execute(vk::CommandBuffer cmd_buffer) const noexcept = 0;
 
   protected:
     virtual void initialize(const RenderPass &render_pass) = 0;
