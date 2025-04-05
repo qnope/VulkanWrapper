@@ -5,10 +5,13 @@
 #include "VulkanWrapper/Model/Material/Material.h"
 
 namespace vw::Model {
+using Vertex3DBuffer = Buffer<Vertex3D, false, VertexBufferUsage>;
 using FullVertex3DBuffer = Buffer<FullVertex3D, false, VertexBufferUsage>;
+
 class Mesh {
   public:
-    Mesh(const FullVertex3DBuffer *full_vertex_buffer,
+    Mesh(const Vertex3DBuffer *vertex_buffer,
+         const FullVertex3DBuffer *full_vertex_buffer,
          const IndexBuffer *index_buffer,
          Material::Material descriptor_material, uint32_t indice_count,
          int vertex_offset, int first_index);
@@ -20,6 +23,7 @@ class Mesh {
               uint32_t material_descriptor_set_index) const;
 
   private:
+    const Vertex3DBuffer *m_vertex_buffer;
     const FullVertex3DBuffer *m_full_vertex_buffer;
     const IndexBuffer *m_index_buffer;
     Material::Material m_material;

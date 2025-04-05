@@ -54,18 +54,26 @@ void import_model(const std::filesystem::path &path,
     }
 
     for (const auto &mesh : meshes) {
-        auto [vertex_buffer, vertex_offset] =
+        auto [full_vertex_buffer, vertex_offset] =
             mesh_manager.m_full_vertex_buffer.create_buffer(
-                mesh.vertices.size());
+                mesh.full_vertices.size());
         auto [index_buffer, first_index] =
             mesh_manager.m_index_buffer.create_buffer(mesh.indices.size());
 
+        auto vertex_buffer = mesh_manager.m_vertex_buffer
+                                 .create_buffer(mesh.full_vertices.size())
+                                 .buffer;
+
         mesh_manager.m_meshes.emplace_back(
-            vertex_buffer, index_buffer, real_material[mesh.material_index],
-            mesh.indices.size(), vertex_offset, first_index);
+            vertex_buffer, full_vertex_buffer, index_buffer,
+            real_material[mesh.material_index], mesh.indices.size(),
+            vertex_offset, first_index);
+
+        mesh_manager.m_staging_buffer_manager.fill_buffer<Vertex3D>(
+            mesh.vertices, *vertex_buffer, vertex_offset);
 
         mesh_manager.m_staging_buffer_manager.fill_buffer<FullVertex3D>(
-            mesh.vertices, *vertex_buffer, vertex_offset);
+            mesh.full_vertices, *full_vertex_buffer, vertex_offset);
 
         mesh_manager.m_staging_buffer_manager.fill_buffer<uint32_t>(
             mesh.indices, *index_buffer, first_index);

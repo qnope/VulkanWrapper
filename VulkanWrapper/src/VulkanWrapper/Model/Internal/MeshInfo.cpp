@@ -21,9 +21,10 @@ MeshInfo::MeshInfo(const aiMesh *mesh)
     const auto uvs =
         std::span(mesh->mTextureCoords[0], mesh->mNumVertices) | to_vec2;
 
-    vertices =
+    full_vertices =
         std::views::zip(positions, normals, tangeants, bitangeants, uvs) |
         construct<FullVertex3D> | to<std::vector>;
+    vertices = positions | construct<Vertex3D> | to<std::vector>;
 
     const auto faces = std::span(mesh->mFaces, mesh->mNumFaces);
 
