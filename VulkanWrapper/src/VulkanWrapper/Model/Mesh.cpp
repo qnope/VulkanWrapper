@@ -32,4 +32,15 @@ void Mesh::draw(vk::CommandBuffer cmd_buffer, const PipelineLayout &layout,
     cmd_buffer.drawIndexed(m_indice_count, 1, m_first_index, m_vertex_offset,
                            0);
 }
+
+void Mesh::draw_zpass(vk::CommandBuffer cmd_buffer) const {
+    vk::Buffer vb = m_vertex_buffer->handle();
+    vk::Buffer ib = m_index_buffer->handle();
+    vk::DeviceSize vbo = 0;
+    cmd_buffer.bindVertexBuffers(0, vb, vbo);
+    cmd_buffer.bindIndexBuffer(ib, 0, vk::IndexType::eUint32);
+    cmd_buffer.drawIndexed(m_indice_count, 1, m_first_index, m_vertex_offset,
+                           0);
+}
+
 } // namespace vw::Model

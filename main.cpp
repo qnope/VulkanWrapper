@@ -99,15 +99,37 @@ vw::Pipeline create_pipeline(
                               .with_descriptor_set_layout(material_layout)
                               .build();
 
-    return vw::GraphicsPipelineBuilder(device, render_pass,
+    return vw::GraphicsPipelineBuilder(device, render_pass, 1,
                                        std::move(pipelineLayout))
         .add_vertex_binding<vw::FullVertex3D>()
         .add_shader(vk::ShaderStageFlagBits::eVertex, std::move(vertex))
         .add_shader(vk::ShaderStageFlagBits::eFragment, std::move(fragment))
         .with_fixed_scissor(int32_t(width), int32_t(height))
         .with_fixed_viewport(int32_t(width), int32_t(height))
-        .with_depth_test(true, vk::CompareOp::eLess)
+        .with_depth_test(false, vk::CompareOp::eEqual)
         .add_color_attachment()
+        .build();
+}
+
+vw::Pipeline create_zpass_pipeline(
+    const vw::Device &device, const vw::RenderPass &render_pass,
+    std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
+    vw::Width width, vw::Height height) {
+    auto vertex_shader = vw::ShaderModule::create_from_spirv_file(
+        device, "../Shaders/bin/GBuffer/zpass.spv");
+
+    auto pipeline_layout =
+        vw::PipelineLayoutBuilder(device)
+            .with_descriptor_set_layout(uniform_buffer_layout)
+            .build();
+
+    return vw::GraphicsPipelineBuilder(device, render_pass, 0,
+                                       std::move(pipeline_layout))
+        .add_vertex_binding<vw::Vertex3D>()
+        .add_shader(vk::ShaderStageFlagBits::eVertex, std::move(vertex_shader))
+        .with_fixed_scissor(int32_t(width), int32_t(height))
+        .with_fixed_viewport(int32_t(width), int32_t(height))
+        .with_depth_test(true, vk::CompareOp::eLess)
         .build();
 }
 
@@ -144,12 +166,84 @@ vw::MeshRenderer create_renderer(
     return renderer;
 }
 
+struct ZPassTag {};
 struct ColorPassTag {};
 const auto color_pass_tag = vw::create_subpass_tag<ColorPassTag>();
+const auto z_pass_tag = vw::create_subpass_tag<ZPassTag>();
 
-class Subpass : public vw::Subpass {
+class ZPass : public vw::Subpass {
   public:
-    Subpass(
+    ZPass(const vw::Device &device, const vw::Model::MeshManager &mesh_manager,
+          std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
+          vw::Width width, vw::Height height, vk::DescriptorSet descriptor_set)
+        : m_device{device}
+        , m_mesh_manager{mesh_manager}
+        , m_uniform_buffer_layout{uniform_buffer_layout}
+        , m_width{width}
+        , m_height{height}
+        , m_descriptor_set{descriptor_set} {}
+
+    void execute(vk::CommandBuffer cmd_buffer) const noexcept override {
+        const auto &meshes = m_mesh_manager.meshes();
+        std::span first_descriptor_sets = {&m_descriptor_set, 1};
+        cmd_buffer.bindPipeline(pipeline_bind_point(), m_pipeline->handle());
+        cmd_buffer.bindDescriptorSets(pipeline_bind_point(),
+                                      m_pipeline->layout().handle(), 0,
+                                      first_descriptor_sets, nullptr);
+        for (const auto &mesh : meshes) {
+            mesh.draw_zpass(cmd_buffer);
+        }
+    }
+
+    const std::vector<vk::AttachmentReference2> &
+    color_attachments() const noexcept override {
+        return m_color_attachments;
+    }
+
+    const vk::AttachmentReference2 *
+    depth_stencil_attachment() const noexcept override {
+        return &m_depth_stencil_attachment;
+    }
+
+    vw::SubpassDependencyMask input_dependencies() const noexcept override {
+        return {};
+    }
+
+    vw::SubpassDependencyMask output_dependencies() const noexcept override {
+        vw::SubpassDependencyMask mask;
+        mask.access = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+        mask.stage = vk::PipelineStageFlagBits::eEarlyFragmentTests |
+                     vk::PipelineStageFlagBits::eLateFragmentTests;
+        return mask;
+    }
+
+  protected:
+    void initialize(const vw::RenderPass &render_pass) override {
+        m_pipeline = create_zpass_pipeline(
+            m_device, render_pass, m_uniform_buffer_layout, m_width, m_height);
+    }
+
+  private:
+    const vw::Device &m_device;
+    const vw::Model::MeshManager &m_mesh_manager;
+    std::shared_ptr<const vw::DescriptorSetLayout> m_uniform_buffer_layout;
+    vw::Width m_width;
+    vw::Height m_height;
+    vk::DescriptorSet m_descriptor_set;
+    std::optional<vw::Pipeline> m_pipeline;
+
+    inline static const vk::AttachmentReference2 m_depth_stencil_attachment =
+        vk::AttachmentReference2(
+            1, vk::ImageLayout::eDepthStencilAttachmentOptimal,
+            vk::ImageAspectFlagBits::eDepth);
+
+    inline static const std::vector<vk::AttachmentReference2>
+        m_color_attachments = {};
+};
+
+class ColorSubpass : public vw::Subpass {
+  public:
+    ColorSubpass(
         const vw::Device &device, const vw::Model::MeshManager &mesh_manager,
         std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
         vw::Width width, vw::Height height, vk::DescriptorSet descriptor_set)
@@ -179,7 +273,11 @@ class Subpass : public vw::Subpass {
     }
 
     vw::SubpassDependencyMask input_dependencies() const noexcept override {
-        return {};
+        vw::SubpassDependencyMask mask;
+        mask.access = vk::AccessFlagBits::eDepthStencilAttachmentRead;
+        mask.stage = vk::PipelineStageFlagBits::eEarlyFragmentTests |
+                     vk::PipelineStageFlagBits::eLateFragmentTests;
+        return mask;
     }
 
     vw::SubpassDependencyMask output_dependencies() const noexcept override {
@@ -202,14 +300,15 @@ class Subpass : public vw::Subpass {
     vw::MeshRenderer m_mesh_renderer;
     vk::DescriptorSet m_descriptor_set;
 
-    vk::AttachmentReference2 m_depth_stencil_attachment =
-        vk::AttachmentReference2(
-            1, vk::ImageLayout::eDepthStencilAttachmentOptimal,
-            vk::ImageAspectFlagBits::eDepth);
+    inline static const vk::AttachmentReference2 m_depth_stencil_attachment =
+        vk::AttachmentReference2(1,
+                                 vk::ImageLayout::eDepthStencilReadOnlyOptimal,
+                                 vk::ImageAspectFlagBits::eDepth);
 
-    std::vector<vk::AttachmentReference2> m_color_attachments = {
-        vk::AttachmentReference2(0, vk::ImageLayout::eColorAttachmentOptimal,
-                                 vk::ImageAspectFlagBits::eColor)};
+    inline static const std::vector<vk::AttachmentReference2>
+        m_color_attachments = {vk::AttachmentReference2(
+            0, vk::ImageLayout::eColorAttachmentOptimal,
+            vk::ImageAspectFlagBits::eColor)};
 };
 
 int main() {
@@ -219,8 +318,6 @@ int main() {
                                 .with_title("Coucou")
                                 .sized(vw::Width(1024), vw::Height(800))
                                 .build();
-
-        std::vector a = {0, 1, 2, 3};
 
         vw::Instance instance =
             vw::InstanceBuilder()
@@ -287,7 +384,10 @@ int main() {
                     vk::ImageLayout::eDepthStencilAttachmentOptimal)
                 .build();
 
-        auto subpass = std::make_unique<Subpass>(
+        auto depth_subpass = std::make_unique<ZPass>(
+            device, mesh_manager, descriptor_set_layout, swapchain.width(),
+            swapchain.height(), descriptor_set);
+        auto color_subpass = std::make_unique<ColorSubpass>(
             device, mesh_manager, descriptor_set_layout, swapchain.width(),
             swapchain.height(), descriptor_set);
 
@@ -296,7 +396,9 @@ int main() {
                 .add_attachment(color_attachment, vk::ClearColorValue())
                 .add_attachment(depth_attachment,
                                 vk::ClearDepthStencilValue(1.0))
-                .add_subpass(color_pass_tag, std::move(subpass))
+                .add_subpass(z_pass_tag, std::move(depth_subpass))
+                .add_subpass(color_pass_tag, std::move(color_subpass))
+                .add_dependency(z_pass_tag, color_pass_tag)
                 .build();
 
         auto commandPool = vw::CommandPoolBuilder(device).build();

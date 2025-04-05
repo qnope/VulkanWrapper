@@ -16,9 +16,11 @@ const PipelineLayout &Pipeline::layout() const noexcept { return m_layout; }
 
 GraphicsPipelineBuilder::GraphicsPipelineBuilder(const Device &device,
                                                  const RenderPass &renderPass,
+                                                 uint32_t subpass_index,
                                                  PipelineLayout pipelineLayout)
     : m_device{&device}
     , m_renderPass{&renderPass}
+    , m_subpass_index{subpass_index}
     , m_pipelineLayout{std::move(pipelineLayout)} {}
 
 GraphicsPipelineBuilder &&GraphicsPipelineBuilder::add_shader(
@@ -81,6 +83,7 @@ Pipeline GraphicsPipelineBuilder::build() && {
 
     const auto info = vk::GraphicsPipelineCreateInfo()
                           .setStages(shaderStageInfos)
+                          .setSubpass(m_subpass_index)
                           .setRenderPass(m_renderPass->handle())
                           .setPDynamicState(&dynamicStateInfo)
                           .setPViewportState(&viewportStateInfo)

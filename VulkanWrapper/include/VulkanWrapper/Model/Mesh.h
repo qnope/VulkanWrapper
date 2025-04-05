@@ -22,6 +22,8 @@ class Mesh {
               const PipelineLayout &pipeline_layout,
               uint32_t material_descriptor_set_index) const;
 
+    void draw_zpass(vk::CommandBuffer cmd_buffer) const;
+
   private:
     const Vertex3DBuffer *m_vertex_buffer;
     const FullVertex3DBuffer *m_full_vertex_buffer;
