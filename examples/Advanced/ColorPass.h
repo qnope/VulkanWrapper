@@ -39,15 +39,12 @@ inline vw::MeshRenderer create_renderer(
     const vw::Model::MeshManager &mesh_manager,
     const std::shared_ptr<const vw::DescriptorSetLayout> &uniform_buffer_layout,
     vw::Width width, vw::Height height) {
-    auto vertexShader = vw::ShaderModule::create_from_spirv_file(
-        device, "../../../examples/Advanced/Shaders/bin/GBuffer/"
-                "gbuffer.spv");
+    auto vertexShader =
+        vw::ShaderModule::create_from_spirv_file(device, "Shaders/gbuffer.spv");
     auto fragment_textured = vw::ShaderModule::create_from_spirv_file(
-        device, "../../../examples/Advanced/Shaders/bin/GBuffer/"
-                "gbuffer_textured.spv");
+        device, "Shaders/gbuffer_textured.spv");
     auto fragment_colored = vw::ShaderModule::create_from_spirv_file(
-        device, "../../../examples/Advanced/Shaders/bin/GBuffer/"
-                "gbuffer_colored.spv");
+        device, "Shaders/gbuffer_colored.spv");
     auto textured_pipeline =
         create_pipeline(device, render_pass, vertexShader, fragment_textured,
                         uniform_buffer_layout,

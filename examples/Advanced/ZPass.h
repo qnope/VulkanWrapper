@@ -14,8 +14,8 @@ inline vw::Pipeline create_zpass_pipeline(
     const vw::Device &device, const vw::RenderPass &render_pass,
     std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
     vw::Width width, vw::Height height) {
-    auto vertex_shader = vw::ShaderModule::create_from_spirv_file(
-        device, "../../../examples/Advanced/Shaders/bin/GBuffer/zpass.spv");
+    auto vertex_shader =
+        vw::ShaderModule::create_from_spirv_file(device, "Shaders/zpass.spv");
 
     auto pipeline_layout =
         vw::PipelineLayoutBuilder(device)
