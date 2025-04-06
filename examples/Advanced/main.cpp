@@ -1,3 +1,4 @@
+#include <VulkanWrapper/3rd_party.h>
 #include <VulkanWrapper/Command/CommandBuffer.h>
 #include <VulkanWrapper/Command/CommandPool.h>
 #include <VulkanWrapper/Descriptors/DescriptorAllocator.h>
@@ -116,7 +117,7 @@ vw::Pipeline create_zpass_pipeline(
     std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
     vw::Width width, vw::Height height) {
     auto vertex_shader = vw::ShaderModule::create_from_spirv_file(
-        device, "../Shaders/bin/GBuffer/zpass.spv");
+        device, "../../../examples/Advanced/Shaders/bin/GBuffer/zpass.spv");
 
     auto pipeline_layout =
         vw::PipelineLayoutBuilder(device)
@@ -139,11 +140,14 @@ vw::MeshRenderer create_renderer(
     const std::shared_ptr<const vw::DescriptorSetLayout> &uniform_buffer_layout,
     vw::Width width, vw::Height height) {
     auto vertexShader = vw::ShaderModule::create_from_spirv_file(
-        device, "../Shaders/bin/GBuffer/gbuffer.spv");
+        device, "../../../examples/Advanced/Shaders/bin/GBuffer/"
+                "gbuffer.spv");
     auto fragment_textured = vw::ShaderModule::create_from_spirv_file(
-        device, "../Shaders/bin/GBuffer/gbuffer_textured.spv");
+        device, "../../../examples/Advanced/Shaders/bin/GBuffer/"
+                "gbuffer_textured.spv");
     auto fragment_colored = vw::ShaderModule::create_from_spirv_file(
-        device, "../Shaders/bin/GBuffer/gbuffer_colored.spv");
+        device, "../../../examples/Advanced/Shaders/bin/GBuffer/"
+                "gbuffer_colored.spv");
     auto textured_pipeline =
         create_pipeline(device, render_pass, vertexShader, fragment_textured,
                         uniform_buffer_layout,
@@ -358,8 +362,8 @@ int main() {
             descriptor_pool.allocate_set(descriptor_allocator);
 
         vw::Model::MeshManager mesh_manager(device, allocator);
-        mesh_manager.read_file("../Models/Sponza/sponza.obj");
-        mesh_manager.read_file("../Models/cube.obj");
+        mesh_manager.read_file("../../../Models/Sponza/sponza.obj");
+        mesh_manager.read_file("../../../Models/cube.obj");
 
         const auto depth_buffer = allocator.create_image_2D(
             swapchain.width(), swapchain.height(), false,
