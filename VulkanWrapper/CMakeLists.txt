@@ -52,15 +52,11 @@ function(VwCompileShader TARGET_NAME SHADER_PATH RELATIVE_OUTPUT_PATH)
 
     set(COMPILED_SHADER "${OUTPUT_SHADER_DIR}/${RELATIVE_OUTPUT_PATH}")
 
-    message("Compile ${ABS_SHADER_PATH} into ${COMPILED_SHADER}")
-
-    message("${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} -V ${ABS_SHADER_PATH} -o ${COMPILED_SHADER}")
-
     add_custom_command(
         OUTPUT "${COMPILED_SHADER}"
         COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} -V "${ABS_SHADER_PATH}" -o "${COMPILED_SHADER}"
         DEPENDS "${ABS_SHADER_PATH}"
-        COMMENT "Compilation du shader : ${SHADER_PATH} -> ${COMPILED_SHADER}"
+        COMMENT "Compile Shader : ${COMPILED_SHADER}"
         VERBATIM
     )
 
