@@ -5,6 +5,8 @@
 #include "VulkanWrapper/Vulkan/DeviceFinder.h"
 #include "VulkanWrapper/Vulkan/PhysicalDevice.h"
 
+VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
+
 namespace vw {
 
 Instance::Instance(vk::UniqueInstance instance,
@@ -80,11 +82,15 @@ Instance InstanceBuilder::build() && {
         info.setPEnabledLayerNames(layers);
     }
 
+    VULKAN_HPP_DEFAULT_DISPATCHER.init();
+
     auto [result, instance] = vk::createInstanceUnique(info);
 
     if (result != vk::Result::eSuccess) {
         throw InstanceCreationException{std::source_location::current()};
     }
+
+    VULKAN_HPP_DEFAULT_DISPATCHER.init(*instance);
 
     return {std::move(instance), m_extensions, m_version};
 }

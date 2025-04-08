@@ -195,6 +195,7 @@ int main() {
 
             app.device.presentQueue().present(app.swapchain, index,
                                               renderFinishedSemaphore);
+            app.device.wait_idle();
         }
 
         app.device.wait_idle();

@@ -7,7 +7,7 @@ void executeMemoryBarrier(vk::CommandBuffer cmd_buffer,
                           const vk::ImageMemoryBarrier2 &barrier) {
     const auto dependency =
         vk::DependencyInfo().setImageMemoryBarriers(barrier);
-    cmd_buffer.pipelineBarrier2(dependency);
+    cmd_buffer.pipelineBarrier2KHR(dependency);
 }
 
 void execute_image_barrier_undefined_to_transfer_dst(
@@ -28,7 +28,7 @@ void execute_image_barrier_undefined_to_transfer_dst(
     const auto dependency_info =
         vk::DependencyInfo().setImageMemoryBarriers(img_barrier);
 
-    cmd_buffer.pipelineBarrier2(dependency_info);
+    cmd_buffer.pipelineBarrier2KHR(dependency_info);
 }
 
 void execute_image_barrier_transfer_dst_to_sampled(
@@ -48,7 +48,7 @@ void execute_image_barrier_transfer_dst_to_sampled(
     const auto dependency_info =
         vk::DependencyInfo().setImageMemoryBarriers(img_barrier);
 
-    cmd_buffer.pipelineBarrier2(dependency_info);
+    cmd_buffer.pipelineBarrier2KHR(dependency_info);
 }
 
 void execute_image_barrier_transfer_src_to_dst(
@@ -68,7 +68,7 @@ void execute_image_barrier_transfer_src_to_dst(
     const auto dependency_info =
         vk::DependencyInfo().setImageMemoryBarriers(img_barrier);
 
-    cmd_buffer.pipelineBarrier2(dependency_info);
+    cmd_buffer.pipelineBarrier2KHR(dependency_info);
 }
 
 void execute_image_barrier_transfer_dst_to_src(
@@ -89,7 +89,7 @@ void execute_image_barrier_transfer_dst_to_src(
     const auto dependency_info =
         vk::DependencyInfo().setImageMemoryBarriers(img_barrier);
 
-    cmd_buffer.pipelineBarrier2(dependency_info);
+    cmd_buffer.pipelineBarrier2KHR(dependency_info);
 }
 
 } // namespace vw
