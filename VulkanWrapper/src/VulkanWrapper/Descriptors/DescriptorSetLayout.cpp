@@ -34,7 +34,7 @@ DescriptorSetLayoutBuilder::DescriptorSetLayoutBuilder(const Device &device)
 
 DescriptorSetLayoutBuilder &&
 DescriptorSetLayoutBuilder::with_uniform_buffer(vk::ShaderStageFlags stages,
-                                                int number) {
+                                                int number) && {
     auto binding = vk::DescriptorSetLayoutBinding()
                        .setBinding(m_current_binding)
                        .setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -47,7 +47,7 @@ DescriptorSetLayoutBuilder::with_uniform_buffer(vk::ShaderStageFlags stages,
 
 DescriptorSetLayoutBuilder &&
 DescriptorSetLayoutBuilder::with_sampled_image(vk::ShaderStageFlags stages,
-                                               int number) {
+                                               int number) && {
     const auto binding =
         vk::DescriptorSetLayoutBinding()
             .setBinding(m_current_binding)
@@ -61,7 +61,7 @@ DescriptorSetLayoutBuilder::with_sampled_image(vk::ShaderStageFlags stages,
 
 DescriptorSetLayoutBuilder &&
 DescriptorSetLayoutBuilder::with_combined_image(vk::ShaderStageFlags stages,
-                                                int number) {
+                                                int number) && {
     const auto binding =
         vk::DescriptorSetLayoutBinding()
             .setBinding(m_current_binding)
@@ -69,6 +69,19 @@ DescriptorSetLayoutBuilder::with_combined_image(vk::ShaderStageFlags stages,
             .setStageFlags(stages)
             .setDescriptorCount(number);
     m_current_binding += number;
+    m_bindings.push_back(binding);
+    return std::move(*this);
+}
+
+DescriptorSetLayoutBuilder &&DescriptorSetLayoutBuilder::with_input_attachment(
+    vk::ShaderStageFlags stages) && {
+    const auto binding =
+        vk::DescriptorSetLayoutBinding()
+            .setBinding(m_current_binding)
+            .setDescriptorType(vk::DescriptorType::eInputAttachment)
+            .setStageFlags(stages)
+            .setDescriptorCount(1);
+    m_current_binding += 1;
     m_bindings.push_back(binding);
     return std::move(*this);
 }

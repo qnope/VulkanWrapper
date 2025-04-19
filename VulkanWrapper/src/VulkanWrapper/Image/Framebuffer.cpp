@@ -6,11 +6,13 @@
 #include "VulkanWrapper/Vulkan/Device.h"
 
 namespace vw {
-Framebuffer::Framebuffer(vk::UniqueFramebuffer framebuffer, Width width,
-                         Height height) noexcept
+Framebuffer::Framebuffer(
+    vk::UniqueFramebuffer framebuffer, Width width, Height height,
+    std::vector<std::shared_ptr<const ImageView>> views) noexcept
     : ObjectWithUniqueHandle<vk::UniqueFramebuffer>{std::move(framebuffer)}
     , m_width{width}
-    , m_height{height} {}
+    , m_height{height}
+    , m_image_views{std::move(views)} {}
 
 Width Framebuffer::width() const noexcept { return m_width; }
 
@@ -49,7 +51,8 @@ Framebuffer FramebufferBuilder::build() && {
     if (result != vk::Result::eSuccess) {
         throw FramebufferCreationException{std::source_location::current()};
     }
-    return Framebuffer{std::move(framebuffer), m_width, m_height};
+    return Framebuffer{std::move(framebuffer), m_width, m_height,
+                       std::move(m_attachments)};
 }
 
 } // namespace vw

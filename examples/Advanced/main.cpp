@@ -1,5 +1,6 @@
 #include "Application.h"
 #include "ColorPass.h"
+#include "TonemapPass.h"
 #include "ZPass.h"
 #include <VulkanWrapper/3rd_party.h>
 #include <VulkanWrapper/Command/CommandBuffer.h>
@@ -63,16 +64,55 @@ createUbo(vw::Allocator &allocator) {
 }
 
 std::vector<vw::Framebuffer> createFramebuffers(
-    vw::Device &device, const vw::RenderPass &renderPass,
-    const vw::Swapchain &swapchain,
+    vw::Device &device, const vw::Allocator &allocator,
+    const vw::RenderPass &renderPass, const vw::Swapchain &swapchain,
     const std::vector<std::shared_ptr<const vw::ImageView>> &images,
     const std::shared_ptr<const vw::ImageView> &depth_buffer) {
     std::vector<vw::Framebuffer> framebuffers;
 
+    auto create_img = [&]() {
+        return allocator.create_image_2D(
+            swapchain.width(), swapchain.height(), false,
+            vk::Format::eR32G32B32Sfloat,
+            vk::ImageUsageFlagBits::eColorAttachment |
+                vk::ImageUsageFlagBits::eInputAttachment);
+    };
+
+    auto create_img_view = [&](auto img) {
+        return vw::ImageViewBuilder(device, img)
+            .setImageType(vk::ImageViewType::e2D)
+            .build();
+    };
+
     for (const auto &imageView : images) {
+        auto img_color = allocator.create_image_2D(
+            swapchain.width(), swapchain.height(), false,
+            vk::Format::eR8G8B8A8Unorm,
+            vk::ImageUsageFlagBits::eColorAttachment |
+                vk::ImageUsageFlagBits::eInputAttachment);
+
+        auto img_position = create_img();
+        auto img_normal = create_img();
+        auto img_tangeant = create_img();
+        auto img_biTangeant = create_img();
+        auto img_light = create_img();
+
+        auto img_view_color = create_img_view(img_color);
+        auto img_view_position = create_img_view(img_position);
+        auto img_view_normal = create_img_view(img_normal);
+        auto img_view_tangeant = create_img_view(img_tangeant);
+        auto img_view_biTangeant = create_img_view(img_biTangeant);
+        auto img_view_light = create_img_view(img_light);
+
         auto framebuffer =
             vw::FramebufferBuilder(device, renderPass, swapchain.width(),
                                    swapchain.height())
+                .add_attachment(img_view_color)
+                .add_attachment(img_view_position)
+                .add_attachment(img_view_normal)
+                .add_attachment(img_view_tangeant)
+                .add_attachment(img_view_biTangeant)
+                .add_attachment(img_view_light)
                 .add_attachment(imageView)
                 .add_attachment(depth_buffer)
                 .build();
@@ -81,6 +121,21 @@ std::vector<vw::Framebuffer> createFramebuffers(
 
     return framebuffers;
 }
+
+class AccelerationStructure {
+  public:
+  private:
+};
+
+class AccelerationStructureBuilder {
+  public:
+    void add_meshes(const std::vector<vw::Model::Mesh> &meshes) {}
+
+    AccelerationStructure build() && { return AccelerationStructure{}; }
+
+  private:
+  private:
+};
 
 int main() {
     try {
@@ -119,6 +174,18 @@ int main() {
 
         const auto color_attachment =
             vw::AttachmentBuilder{}
+                .with_format(vk::Format::eR8G8B8A8Unorm)
+                .with_final_layout(vk::ImageLayout::eAttachmentOptimal)
+                .build();
+
+        const auto data_attachment =
+            vw::AttachmentBuilder{}
+                .with_format(vk::Format::eR32G32B32Sfloat)
+                .with_final_layout(vk::ImageLayout::eAttachmentOptimal)
+                .build();
+
+        const auto final_attachment =
+            vw::AttachmentBuilder{}
                 .with_format(app.swapchain.format())
                 .with_final_layout(vk::ImageLayout::ePresentSrcKHR)
                 .build();
@@ -136,15 +203,25 @@ int main() {
         auto color_subpass = std::make_unique<ColorSubpass>(
             app.device, mesh_manager, descriptor_set_layout,
             app.swapchain.width(), app.swapchain.height(), descriptor_set);
+        auto tonemap_pass = std::make_unique<TonemapPass>(
+            app.device, app.swapchain.width(), app.swapchain.height());
 
         auto renderPass =
             vw::RenderPassBuilder(app.device)
                 .add_attachment(color_attachment, vk::ClearColorValue())
+                .add_attachment(data_attachment, vk::ClearColorValue())
+                .add_attachment(data_attachment, vk::ClearColorValue())
+                .add_attachment(data_attachment, vk::ClearColorValue())
+                .add_attachment(data_attachment, vk::ClearColorValue())
+                .add_attachment(data_attachment, vk::ClearColorValue())
+                .add_attachment(final_attachment, vk::ClearColorValue())
                 .add_attachment(depth_attachment,
                                 vk::ClearDepthStencilValue(1.0))
                 .add_subpass(z_pass_tag, std::move(depth_subpass))
                 .add_subpass(color_pass_tag, std::move(color_subpass))
+                .add_subpass(tonemap_pass_tag, std::move(tonemap_pass))
                 .add_dependency(z_pass_tag, color_pass_tag)
+                .add_dependency(color_pass_tag, tonemap_pass_tag)
                 .build();
 
         auto commandPool = vw::CommandPoolBuilder(app.device).build();
@@ -152,8 +229,8 @@ int main() {
         auto commandBuffers = commandPool.allocate(image_views.size());
 
         const auto framebuffers =
-            createFramebuffers(app.device, renderPass, app.swapchain,
-                               image_views, depth_buffer_view);
+            createFramebuffers(app.device, app.allocator, renderPass,
+                               app.swapchain, image_views, depth_buffer_view);
 
         const vk::Extent2D extent(uint32_t(app.swapchain.width()),
                                   uint32_t(app.swapchain.height()));
@@ -161,8 +238,7 @@ int main() {
         for (auto [framebuffer, commandBuffer] :
              std::views::zip(framebuffers, commandBuffers)) {
             vw::CommandBufferRecorder recorder(commandBuffer);
-            renderPass.execute(commandBuffer, framebuffer,
-                               std::span{&descriptor_set, 1});
+            renderPass.execute(commandBuffer, framebuffer);
         }
 
         auto renderFinishedSemaphore = vw::SemaphoreBuilder(app.device).build();
@@ -171,6 +247,10 @@ int main() {
         auto cmd_buffer = mesh_manager.fill_command_buffer();
 
         app.device.graphicsQueue().enqueue_command_buffer(cmd_buffer);
+
+        AccelerationStructureBuilder asBuilder;
+        asBuilder.add_meshes(mesh_manager.meshes());
+        auto as = std::move(asBuilder).build();
 
         while (!app.window.is_close_requested()) {
             app.window.update();

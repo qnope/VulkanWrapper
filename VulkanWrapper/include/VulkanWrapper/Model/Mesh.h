@@ -24,6 +24,9 @@ class Mesh {
 
     void draw_zpass(vk::CommandBuffer cmd_buffer) const;
 
+    vk::AccelerationStructureGeometryKHR
+    acceleration_structure_geometry() const noexcept;
+
   private:
     const Vertex3DBuffer *m_vertex_buffer;
     const FullVertex3DBuffer *m_full_vertex_buffer;

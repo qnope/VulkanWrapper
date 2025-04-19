@@ -25,13 +25,16 @@ class DescriptorSetLayoutBuilder {
     DescriptorSetLayoutBuilder(const Device &device);
 
     DescriptorSetLayoutBuilder &&
-    with_uniform_buffer(vk::ShaderStageFlags stages, int number);
+    with_uniform_buffer(vk::ShaderStageFlags stages, int number) &&;
 
     DescriptorSetLayoutBuilder &&with_sampled_image(vk::ShaderStageFlags stages,
-                                                    int number);
+                                                    int number) &&;
 
     DescriptorSetLayoutBuilder &&
-    with_combined_image(vk::ShaderStageFlags stages, int number);
+    with_combined_image(vk::ShaderStageFlags stages, int number) &&;
+
+    DescriptorSetLayoutBuilder &&
+    with_input_attachment(vk::ShaderStageFlags stages) &&;
 
     std::shared_ptr<DescriptorSetLayout> build() &&;
 

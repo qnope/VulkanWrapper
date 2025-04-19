@@ -23,9 +23,8 @@ const std::vector<vk::ClearValue> &RenderPass::clear_values() const noexcept {
     return m_clear_values;
 }
 
-void RenderPass::execute(
-    vk::CommandBuffer cmd_buffer, const Framebuffer &framebuffer,
-    std::span<const vk::DescriptorSet> first_descriptor_sets) {
+void RenderPass::execute(vk::CommandBuffer cmd_buffer,
+                         const Framebuffer &framebuffer) {
     const auto renderPassBeginInfo =
         vk::RenderPassBeginInfo()
             .setRenderPass(handle())

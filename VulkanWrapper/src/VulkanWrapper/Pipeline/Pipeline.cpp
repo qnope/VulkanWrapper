@@ -70,6 +70,12 @@ GraphicsPipelineBuilder::with_depth_test(bool write,
     return std::move(*this);
 }
 
+GraphicsPipelineBuilder &&
+GraphicsPipelineBuilder::with_topology(vk::PrimitiveTopology topology) && {
+    m_topology = topology;
+    return std::move(*this);
+}
+
 Pipeline GraphicsPipelineBuilder::build() && {
     const auto shaderStageInfos = createShaderStageInfos();
     const auto dynamicStateInfo = createDynamicStateInfo();
@@ -135,9 +141,9 @@ GraphicsPipelineBuilder::createVertexInputStateInfo() const noexcept {
 }
 
 vk::PipelineInputAssemblyStateCreateInfo
-GraphicsPipelineBuilder::createInputAssemblyStateInfo() noexcept {
+GraphicsPipelineBuilder::createInputAssemblyStateInfo() const noexcept {
     return vk::PipelineInputAssemblyStateCreateInfo()
-        .setTopology(vk::PrimitiveTopology::eTriangleList)
+        .setTopology(m_topology)
         .setPrimitiveRestartEnable(0U);
 }
 

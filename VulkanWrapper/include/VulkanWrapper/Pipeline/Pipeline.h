@@ -61,6 +61,8 @@ class GraphicsPipelineBuilder {
     GraphicsPipelineBuilder &&
     with_depth_test(bool write, vk::CompareOp compare_operator) &&;
 
+    GraphicsPipelineBuilder &&with_topology(vk::PrimitiveTopology topology) &&;
+
     Pipeline build() &&;
 
   private:
@@ -73,8 +75,8 @@ class GraphicsPipelineBuilder {
     [[nodiscard]] vk::PipelineVertexInputStateCreateInfo
     createVertexInputStateInfo() const noexcept;
 
-    [[nodiscard]] static vk::PipelineInputAssemblyStateCreateInfo
-    createInputAssemblyStateInfo() noexcept;
+    [[nodiscard]] vk::PipelineInputAssemblyStateCreateInfo
+    createInputAssemblyStateInfo() const noexcept;
 
     [[nodiscard]] vk::PipelineViewportStateCreateInfo
     createViewportStateInfo() const noexcept;
@@ -111,5 +113,6 @@ class GraphicsPipelineBuilder {
     vk::Bool32 m_depthTestEnabled = vk::Bool32{false};
     vk::Bool32 m_depthWriteEnabled = vk::Bool32{false};
     vk::CompareOp m_depthCompareOp = vk::CompareOp::eLess;
+    vk::PrimitiveTopology m_topology = vk::PrimitiveTopology::eTriangleList;
 };
 } // namespace vw

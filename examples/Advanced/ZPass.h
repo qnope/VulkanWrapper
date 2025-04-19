@@ -14,8 +14,8 @@ inline vw::Pipeline create_zpass_pipeline(
     const vw::Device &device, const vw::RenderPass &render_pass,
     std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
     vw::Width width, vw::Height height) {
-    auto vertex_shader =
-        vw::ShaderModule::create_from_spirv_file(device, "Shaders/zpass.spv");
+    auto vertex_shader = vw::ShaderModule::create_from_spirv_file(
+        device, "Shaders/GBuffer/zpass.spv");
 
     auto pipeline_layout =
         vw::PipelineLayoutBuilder(device)
@@ -95,7 +95,7 @@ class ZPass : public vw::Subpass {
 
     inline static const vk::AttachmentReference2 m_depth_stencil_attachment =
         vk::AttachmentReference2(
-            1, vk::ImageLayout::eDepthStencilAttachmentOptimal,
+            7, vk::ImageLayout::eDepthStencilAttachmentOptimal,
             vk::ImageAspectFlagBits::eDepth);
 
     inline static const std::vector<vk::AttachmentReference2>

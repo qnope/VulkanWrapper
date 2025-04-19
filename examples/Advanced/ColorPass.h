@@ -31,6 +31,10 @@ inline vw::Pipeline create_pipeline(
         .with_fixed_viewport(int32_t(width), int32_t(height))
         .with_depth_test(false, vk::CompareOp::eEqual)
         .add_color_attachment()
+        .add_color_attachment()
+        .add_color_attachment()
+        .add_color_attachment()
+        .add_color_attachment()
         .build();
 }
 
@@ -39,12 +43,12 @@ inline vw::MeshRenderer create_renderer(
     const vw::Model::MeshManager &mesh_manager,
     const std::shared_ptr<const vw::DescriptorSetLayout> &uniform_buffer_layout,
     vw::Width width, vw::Height height) {
-    auto vertexShader =
-        vw::ShaderModule::create_from_spirv_file(device, "Shaders/gbuffer.spv");
+    auto vertexShader = vw::ShaderModule::create_from_spirv_file(
+        device, "Shaders/GBuffer/gbuffer.spv");
     auto fragment_textured = vw::ShaderModule::create_from_spirv_file(
-        device, "Shaders/gbuffer_textured.spv");
+        device, "Shaders/GBuffer/gbuffer_textured.spv");
     auto fragment_colored = vw::ShaderModule::create_from_spirv_file(
-        device, "Shaders/gbuffer_colored.spv");
+        device, "Shaders/GBuffer/gbuffer_colored.spv");
     auto textured_pipeline =
         create_pipeline(device, render_pass, vertexShader, fragment_textured,
                         uniform_buffer_layout,
@@ -110,7 +114,10 @@ class ColorSubpass : public vw::Subpass {
     }
 
     vw::SubpassDependencyMask output_dependencies() const noexcept override {
-        return {};
+        vw::SubpassDependencyMask mask;
+        mask.access = vk::AccessFlagBits::eColorAttachmentWrite;
+        mask.stage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+        return mask;
     }
 
   protected:
@@ -130,12 +137,25 @@ class ColorSubpass : public vw::Subpass {
     vk::DescriptorSet m_descriptor_set;
 
     inline static const vk::AttachmentReference2 m_depth_stencil_attachment =
-        vk::AttachmentReference2(1,
+        vk::AttachmentReference2(7,
                                  vk::ImageLayout::eDepthStencilReadOnlyOptimal,
                                  vk::ImageAspectFlagBits::eDepth);
 
     inline static const std::vector<vk::AttachmentReference2>
-        m_color_attachments = {vk::AttachmentReference2(
-            0, vk::ImageLayout::eColorAttachmentOptimal,
-            vk::ImageAspectFlagBits::eColor)};
+        m_color_attachments = {
+            vk::AttachmentReference2(0,
+                                     vk::ImageLayout::eColorAttachmentOptimal,
+                                     vk::ImageAspectFlagBits::eColor),
+            vk::AttachmentReference2(1,
+                                     vk::ImageLayout::eColorAttachmentOptimal,
+                                     vk::ImageAspectFlagBits::eColor),
+            vk::AttachmentReference2(2,
+                                     vk::ImageLayout::eColorAttachmentOptimal,
+                                     vk::ImageAspectFlagBits::eColor),
+            vk::AttachmentReference2(3,
+                                     vk::ImageLayout::eColorAttachmentOptimal,
+                                     vk::ImageAspectFlagBits::eColor),
+            vk::AttachmentReference2(4,
+                                     vk::ImageLayout::eColorAttachmentOptimal,
+                                     vk::ImageAspectFlagBits::eColor)};
 };

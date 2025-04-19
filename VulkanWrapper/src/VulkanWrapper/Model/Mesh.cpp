@@ -43,4 +43,23 @@ void Mesh::draw_zpass(vk::CommandBuffer cmd_buffer) const {
                            0);
 }
 
+vk::AccelerationStructureGeometryKHR
+Mesh::acceleration_structure_geometry() const noexcept {
+    /* const auto triangles =
+     vk::AccelerationStructureGeometryTrianglesDataKHR()
+                                .setIndexType(vk::IndexType::eUint32)
+                                .setVertexFormat(vk::Format::eR32G32B32Sfloat)
+                                .setVertexStride(sizeof(vw::Vertex3D))
+                                .setMaxVertex();
+
+     const auto data =
+         vk::AccelerationStructureGeometryDataKHR().setTriangles(triangles);
+
+     const auto geometry = vk::AccelerationStructureGeometryKHR()
+                               .setGeometry(data)
+                               .setGeometryType(vk::GeometryTypeKHR::eTriangles);
+
+     return geometry;*/
+}
+
 } // namespace vw::Model

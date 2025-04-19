@@ -36,6 +36,7 @@ class App {
                                         vk::QueueFlagBits::eTransfer)
                             .with_presentation(surface.handle())
                             .with_synchronization_2()
+                            .with_ray_tracing()
                             .build();
 
     vw::Allocator allocator = vw::AllocatorBuilder(instance, device).build();

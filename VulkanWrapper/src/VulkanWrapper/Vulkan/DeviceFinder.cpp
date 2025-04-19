@@ -101,6 +101,21 @@ DeviceFinder &&DeviceFinder::with_synchronization_2() && noexcept {
     return std::move(*this);
 }
 
+DeviceFinder &&DeviceFinder::with_ray_tracing() && noexcept {
+    constexpr std::array extensions = {
+        VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+        VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+        VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME};
+
+    for (const auto &extension : extensions)
+        remove_device_not_supporting_extension(extension);
+
+    for (auto &information : m_physicalDevicesInformation)
+        information.extensions.append_range(extensions);
+
+    return std::move(*this);
+}
+
 std::optional<PhysicalDevice> DeviceFinder::get() && noexcept {
     if (m_physicalDevicesInformation.empty()) {
         return {};

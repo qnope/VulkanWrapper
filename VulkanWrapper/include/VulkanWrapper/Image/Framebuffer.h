@@ -11,7 +11,8 @@ using FramebufferCreationException =
 class Framebuffer : public ObjectWithUniqueHandle<vk::UniqueFramebuffer> {
     friend class FramebufferBuilder;
     Framebuffer(vk::UniqueFramebuffer framebuffer, vw::Width width,
-                vw::Height height) noexcept;
+                vw::Height height,
+                std::vector<std::shared_ptr<const ImageView>> views) noexcept;
 
   public:
     [[nodiscard]] Width width() const noexcept;
@@ -21,6 +22,7 @@ class Framebuffer : public ObjectWithUniqueHandle<vk::UniqueFramebuffer> {
   private:
     Width m_width;
     Height m_height;
+    std::vector<std::shared_ptr<const ImageView>> m_image_views;
 };
 
 class FramebufferBuilder {
