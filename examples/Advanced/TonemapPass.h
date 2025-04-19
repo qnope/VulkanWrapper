@@ -60,6 +60,7 @@ class TonemapPass : public vw::Subpass {
                             std::move(fragment))
                 .with_fixed_scissor(int32_t(m_width), int32_t(m_height))
                 .with_fixed_viewport(int32_t(m_width), int32_t(m_height))
+                .with_topology(vk::PrimitiveTopology::eTriangleStrip)
                 .add_color_attachment()
                 .build();
     }

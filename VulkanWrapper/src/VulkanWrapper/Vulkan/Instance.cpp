@@ -9,6 +9,10 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
 namespace vw {
 
+vk::DispatchLoaderDynamic &DefaultDispatcher() {
+    return VULKAN_HPP_DEFAULT_DISPATCHER;
+}
+
 Instance::Instance(vk::UniqueInstance instance,
                    std::span<const char *> extensions,
                    ApiVersion apiVersion) noexcept
@@ -35,8 +39,8 @@ DeviceFinder Instance::findGpu() const noexcept {
 }
 
 InstanceBuilder &&InstanceBuilder::addPortability() && {
-    m_extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-    m_flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
+    // m_extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+    // m_flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
     return std::move(*this);
 }
 
@@ -87,7 +91,9 @@ Instance InstanceBuilder::build() && {
     auto [result, instance] = vk::createInstanceUnique(info);
 
     if (result != vk::Result::eSuccess) {
+        std::cout << unsigned(result) << std::endl;
         throw InstanceCreationException{std::source_location::current()};
+        system("pause");
     }
 
     VULKAN_HPP_DEFAULT_DISPATCHER.init(*instance);

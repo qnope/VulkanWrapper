@@ -73,7 +73,7 @@ std::vector<vw::Framebuffer> createFramebuffers(
     auto create_img = [&]() {
         return allocator.create_image_2D(
             swapchain.width(), swapchain.height(), false,
-            vk::Format::eR32G32B32Sfloat,
+            vk::Format::eR32G32B32A32Sfloat,
             vk::ImageUsageFlagBits::eColorAttachment |
                 vk::ImageUsageFlagBits::eInputAttachment);
     };
@@ -158,19 +158,19 @@ int main() {
         auto descriptor_set =
             descriptor_pool.allocate_set(descriptor_allocator);
 
-        vw::Model::MeshManager mesh_manager(app.device, app.allocator);
-        mesh_manager.read_file("../../../Models/Sponza/sponza.obj");
-        mesh_manager.read_file("../../../Models/cube.obj");
-
         const auto depth_buffer = app.allocator.create_image_2D(
             app.swapchain.width(), app.swapchain.height(), false,
-            vk::Format::eD24UnormS8Uint,
+            vk::Format::eD32Sfloat,
             vk::ImageUsageFlagBits::eDepthStencilAttachment);
 
         const auto depth_buffer_view =
             vw::ImageViewBuilder(app.device, depth_buffer)
                 .setImageType(vk::ImageViewType::e2D)
                 .build();
+
+        vw::Model::MeshManager mesh_manager(app.device, app.allocator);
+        mesh_manager.read_file("../../../Models/Sponza/sponza.obj");
+        mesh_manager.read_file("../../../Models/cube.obj");
 
         const auto color_attachment =
             vw::AttachmentBuilder{}
@@ -180,7 +180,7 @@ int main() {
 
         const auto data_attachment =
             vw::AttachmentBuilder{}
-                .with_format(vk::Format::eR32G32B32Sfloat)
+                .with_format(vk::Format::eR32G32B32A32Sfloat)
                 .with_final_layout(vk::ImageLayout::eAttachmentOptimal)
                 .build();
 
@@ -204,7 +204,7 @@ int main() {
             app.device, mesh_manager, descriptor_set_layout,
             app.swapchain.width(), app.swapchain.height(), descriptor_set);
         auto tonemap_pass = std::make_unique<TonemapPass>(
-            app.device, app.swapchain.width(), app.swapchain.height());
+             app.device, app.swapchain.width(), app.swapchain.height());
 
         auto renderPass =
             vw::RenderPassBuilder(app.device)

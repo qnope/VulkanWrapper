@@ -30,7 +30,7 @@ Allocator::create_image_2D(Width width, Height height, bool mipmap,
         return MipLevel(1);
     }();
 
-    VkImageCreateInfo create_info =
+    const VkImageCreateInfo create_info =
         vk::ImageCreateInfo()
             .setExtent(vk::Extent3D(uint32_t(width), uint32_t(height), 1))
             .setMipLevels(uint32_t(mip_levels))

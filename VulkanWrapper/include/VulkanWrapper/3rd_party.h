@@ -1,8 +1,20 @@
 #pragma once
 
+namespace vk {
+class DispatchLoaderDynamic;
+}
+
+namespace vw {
+vk::DispatchLoaderDynamic &DefaultDispatcher();
+}
+
 #define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
 #define VULKAN_HPP_NO_EXCEPTIONS 1
 #define VULKAN_HPP_ASSERT_ON_RESULT
+
+#ifndef VW_LIB
+#define VULKAN_HPP_DEFAULT_DISPATCHER vw::DefaultDispatcher()
+#endif
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -19,6 +31,7 @@
 #include <ranges>
 #include <set>
 #include <variant>
+#include <numeric>
 #include <vector>
 #include <vulkan/vulkan.hpp>
 
@@ -31,8 +44,7 @@ enum ApiVersion {
     e10 = vk::ApiVersion10,
     e11 = vk::ApiVersion11,
     e12 = vk::ApiVersion12,
-    e13 = vk::ApiVersion13,
-    e14 = vk::ApiVersion14
+    e13 = vk::ApiVersion13
 };
 
 enum class Width {};

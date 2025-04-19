@@ -16,7 +16,7 @@ Window::Window(const SDL_Initializer &initializer, std::string_view name,
     : m_initializer{&initializer}
     , m_width{width}
     , m_height{height} {
-    auto *window = SDL_CreateWindow(name.begin(), int(width), int(height),
+    auto *window = SDL_CreateWindow(name.data(), int(width), int(height),
                                     SDL_WINDOW_VULKAN);
 
     if (window == nullptr) {

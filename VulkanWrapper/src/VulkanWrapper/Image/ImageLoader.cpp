@@ -10,7 +10,7 @@ using static_function = std::integral_constant<decltype(f), f>;
 namespace vw {
 ImageDescription load_image(const std::filesystem::path &path) {
     std::unique_ptr<SDL_Surface, static_function<SDL_DestroySurface>> img{
-        IMG_Load(path.c_str())};
+        IMG_Load(path.string().c_str())};
 
     if (!img) {
         throw ImageNotFoundException{std::source_location::current()};
