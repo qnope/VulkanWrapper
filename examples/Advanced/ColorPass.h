@@ -87,7 +87,8 @@ class ColorSubpass : public vw::Subpass {
         , m_height{height}
         , m_descriptor_set{descriptor_set} {}
 
-    void execute(vk::CommandBuffer cmd_buffer) const noexcept override {
+    void execute(vk::CommandBuffer cmd_buffer,
+                 const vw::Framebuffer &) const noexcept override {
         const auto &meshes = m_mesh_manager.meshes();
         std::span first_descriptor_sets = {&m_descriptor_set, 1};
         for (const auto &mesh : meshes) {
@@ -97,12 +98,32 @@ class ColorSubpass : public vw::Subpass {
 
     const std::vector<vk::AttachmentReference2> &
     color_attachments() const noexcept override {
-        return m_color_attachments;
+        static const std::vector<vk::AttachmentReference2> color_attachments = {
+            vk::AttachmentReference2(0,
+                                     vk::ImageLayout::eColorAttachmentOptimal,
+                                     vk::ImageAspectFlagBits::eColor),
+            vk::AttachmentReference2(1,
+                                     vk::ImageLayout::eColorAttachmentOptimal,
+                                     vk::ImageAspectFlagBits::eColor),
+            vk::AttachmentReference2(2,
+                                     vk::ImageLayout::eColorAttachmentOptimal,
+                                     vk::ImageAspectFlagBits::eColor),
+            vk::AttachmentReference2(3,
+                                     vk::ImageLayout::eColorAttachmentOptimal,
+                                     vk::ImageAspectFlagBits::eColor),
+            vk::AttachmentReference2(4,
+                                     vk::ImageLayout::eColorAttachmentOptimal,
+                                     vk::ImageAspectFlagBits::eColor)};
+        return color_attachments;
     }
 
     const vk::AttachmentReference2 *
     depth_stencil_attachment() const noexcept override {
-        return &m_depth_stencil_attachment;
+        static const vk::AttachmentReference2 depth_stencil_attachment =
+            vk::AttachmentReference2(
+                7, vk::ImageLayout::eDepthStencilReadOnlyOptimal,
+                vk::ImageAspectFlagBits::eDepth);
+        return &depth_stencil_attachment;
     }
 
     vw::SubpassDependencyMask input_dependencies() const noexcept override {
@@ -135,27 +156,4 @@ class ColorSubpass : public vw::Subpass {
     vw::Height m_height;
     vw::MeshRenderer m_mesh_renderer;
     vk::DescriptorSet m_descriptor_set;
-
-    inline static const vk::AttachmentReference2 m_depth_stencil_attachment =
-        vk::AttachmentReference2(7,
-                                 vk::ImageLayout::eDepthStencilReadOnlyOptimal,
-                                 vk::ImageAspectFlagBits::eDepth);
-
-    inline static const std::vector<vk::AttachmentReference2>
-        m_color_attachments = {
-            vk::AttachmentReference2(0,
-                                     vk::ImageLayout::eColorAttachmentOptimal,
-                                     vk::ImageAspectFlagBits::eColor),
-            vk::AttachmentReference2(1,
-                                     vk::ImageLayout::eColorAttachmentOptimal,
-                                     vk::ImageAspectFlagBits::eColor),
-            vk::AttachmentReference2(2,
-                                     vk::ImageLayout::eColorAttachmentOptimal,
-                                     vk::ImageAspectFlagBits::eColor),
-            vk::AttachmentReference2(3,
-                                     vk::ImageLayout::eColorAttachmentOptimal,
-                                     vk::ImageAspectFlagBits::eColor),
-            vk::AttachmentReference2(4,
-                                     vk::ImageLayout::eColorAttachmentOptimal,
-                                     vk::ImageAspectFlagBits::eColor)};
 };

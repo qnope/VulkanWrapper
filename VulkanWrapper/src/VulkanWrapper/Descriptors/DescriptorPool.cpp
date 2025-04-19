@@ -87,7 +87,8 @@ vk::DescriptorSet DescriptorPool::allocate_descriptor_set_from_last_pool() {
 }
 
 DescriptorPoolBuilder::DescriptorPoolBuilder(
-    const Device &device, const std::shared_ptr<DescriptorSetLayout> &layout)
+    const Device &device,
+    const std::shared_ptr<const DescriptorSetLayout> &layout)
     : m_device{&device}
     , m_layout{layout} {}
 

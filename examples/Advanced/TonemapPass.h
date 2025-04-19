@@ -1,7 +1,9 @@
 #pragma once
 
 #include "VulkanWrapper/3rd_party.h"
+#include "VulkanWrapper/Descriptors/DescriptorPool.h"
 #include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
+#include "VulkanWrapper/Image/Framebuffer.h"
 #include "VulkanWrapper/Pipeline/Pipeline.h"
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
 #include "VulkanWrapper/RenderPass/Subpass.h"
@@ -16,15 +18,34 @@ class TonemapPass : public vw::Subpass {
         , m_width{width}
         , m_height{height} {}
 
-    void execute(vk::CommandBuffer cmd_buffer) const noexcept override {
+    void execute(vk::CommandBuffer cmd_buffer,
+                 const vw::Framebuffer &framebuffer) const noexcept override {
+        vw::DescriptorAllocator allocator;
+        allocator.add_input_attachment(0, framebuffer.image_view(0));
+        auto descriptor_set = m_descriptor_pool.allocate_set(allocator);
         cmd_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
                                 m_pipeline->handle());
+        cmd_buffer.bindDescriptorSets(pipeline_bind_point(),
+                                      m_pipeline->layout().handle(), 0,
+                                      descriptor_set, nullptr);
         cmd_buffer.draw(4, 1, 0, 0);
     }
 
     const std::vector<vk::AttachmentReference2> &
     color_attachments() const noexcept override {
-        return m_color_attachments;
+        static const std::vector<vk::AttachmentReference2> color_attachments = {
+            vk::AttachmentReference2(6,
+                                     vk::ImageLayout::eColorAttachmentOptimal,
+                                     vk::ImageAspectFlagBits::eColor)};
+        return color_attachments;
+    }
+
+    const std::vector<vk::AttachmentReference2> &
+    input_attachments() const noexcept override {
+        static const std::vector<vk::AttachmentReference2> input_attachments = {
+            vk::AttachmentReference2(0, vk::ImageLayout::eShaderReadOnlyOptimal,
+                                     vk::ImageAspectFlagBits::eColor)};
+        return input_attachments;
     }
 
     vw::SubpassDependencyMask input_dependencies() const noexcept override {
@@ -73,10 +94,7 @@ class TonemapPass : public vw::Subpass {
         vw::DescriptorSetLayoutBuilder(m_device)
             .with_input_attachment(vk::ShaderStageFlagBits::eFragment)
             .build();
+    mutable vw::DescriptorPool m_descriptor_pool =
+        vw::DescriptorPoolBuilder(m_device, m_layout).build();
     std::optional<vw::Pipeline> m_pipeline;
-
-    inline static const std::vector<vk::AttachmentReference2>
-        m_color_attachments = {vk::AttachmentReference2(
-            6, vk::ImageLayout::eColorAttachmentOptimal,
-            vk::ImageAspectFlagBits::eColor)};
 };

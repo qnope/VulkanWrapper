@@ -44,7 +44,8 @@ class ZPass : public vw::Subpass {
         , m_height{height}
         , m_descriptor_set{descriptor_set} {}
 
-    void execute(vk::CommandBuffer cmd_buffer) const noexcept override {
+    void execute(vk::CommandBuffer cmd_buffer,
+                 const vw::Framebuffer &) const noexcept override {
         const auto &meshes = m_mesh_manager.meshes();
         std::span first_descriptor_sets = {&m_descriptor_set, 1};
         cmd_buffer.bindPipeline(pipeline_bind_point(), m_pipeline->handle());
@@ -54,11 +55,6 @@ class ZPass : public vw::Subpass {
         for (const auto &mesh : meshes) {
             mesh.draw_zpass(cmd_buffer);
         }
-    }
-
-    const std::vector<vk::AttachmentReference2> &
-    color_attachments() const noexcept override {
-        return m_color_attachments;
     }
 
     const vk::AttachmentReference2 *
@@ -97,7 +93,4 @@ class ZPass : public vw::Subpass {
         vk::AttachmentReference2(
             7, vk::ImageLayout::eDepthStencilAttachmentOptimal,
             vk::ImageAspectFlagBits::eDepth);
-
-    inline static const std::vector<vk::AttachmentReference2>
-        m_color_attachments = {};
 };

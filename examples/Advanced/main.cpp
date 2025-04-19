@@ -50,7 +50,7 @@ struct UBOData {
     }();
     glm::mat4 view =
         glm::lookAt(glm::vec3(0.0F, 300.0F, 0.0F),
-                    glm::vec3(1.0F, 300.0F, 0.0F), glm::vec3(0.0F, 1.0F, 0.0F));
+                    glm::vec3(1.0F, 301.0F, 0.0F), glm::vec3(0.0F, 1.0F, 0.0F));
     glm::mat4 model = glm::mat4(1.0);
 };
 
@@ -204,11 +204,12 @@ int main() {
             app.device, mesh_manager, descriptor_set_layout,
             app.swapchain.width(), app.swapchain.height(), descriptor_set);
         auto tonemap_pass = std::make_unique<TonemapPass>(
-             app.device, app.swapchain.width(), app.swapchain.height());
+            app.device, app.swapchain.width(), app.swapchain.height());
 
         auto renderPass =
             vw::RenderPassBuilder(app.device)
-                .add_attachment(color_attachment, vk::ClearColorValue())
+                .add_attachment(color_attachment,
+                                vk::ClearColorValue(1.0f, 1.0f, 1.0f, 1.0f))
                 .add_attachment(data_attachment, vk::ClearColorValue())
                 .add_attachment(data_attachment, vk::ClearColorValue())
                 .add_attachment(data_attachment, vk::ClearColorValue())

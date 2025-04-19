@@ -9,7 +9,7 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
 namespace vw {
 
-vk::DispatchLoaderDynamic &DefaultDispatcher() {
+const vk::detail::DispatchLoaderDynamic &DefaultDispatcher() {
     return VULKAN_HPP_DEFAULT_DISPATCHER;
 }
 

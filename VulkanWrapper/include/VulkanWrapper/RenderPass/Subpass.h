@@ -33,14 +33,18 @@ class Subpass {
     depth_stencil_attachment() const noexcept;
 
     [[nodiscard]] virtual const std::vector<vk::AttachmentReference2> &
-    color_attachments() const noexcept = 0;
+    color_attachments() const noexcept;
+
+    [[nodiscard]] virtual const std::vector<vk::AttachmentReference2> &
+    input_attachments() const noexcept;
 
     [[nodiscard]] virtual SubpassDependencyMask
     input_dependencies() const noexcept = 0;
     [[nodiscard]] virtual SubpassDependencyMask
     output_dependencies() const noexcept = 0;
 
-    virtual void execute(vk::CommandBuffer cmd_buffer) const noexcept = 0;
+    virtual void execute(vk::CommandBuffer cmd_buffer,
+                         const vw::Framebuffer &framebuffer) const noexcept = 0;
 
   protected:
     virtual void initialize(const RenderPass &render_pass) = 0;

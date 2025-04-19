@@ -38,26 +38,21 @@ void RenderPass::execute(vk::CommandBuffer cmd_buffer,
     cmd_buffer.beginRenderPass2(renderPassBeginInfo, subpassInfo);
     for (auto &subpass :
          m_subpasses | std::views::take(m_subpasses.size() - 1)) {
-        subpass->execute(cmd_buffer);
+        subpass->execute(cmd_buffer, framebuffer);
         cmd_buffer.nextSubpass2(subpassInfo, vk::SubpassEndInfo());
     }
-    m_subpasses.back()->execute(cmd_buffer);
+    m_subpasses.back()->execute(cmd_buffer, framebuffer);
     cmd_buffer.endRenderPass2(vk::SubpassEndInfo());
 }
 
-struct SubpassDescription {
-    std::vector<vk::AttachmentReference2> color_attachments;
-    std::optional<vk::AttachmentReference2> depth_attachment;
-};
-
 vk::SubpassDescription2
 subpassToDescription(const std::unique_ptr<Subpass> &subpass) {
-    auto result = vk::SubpassDescription2()
-                      .setPipelineBindPoint(subpass->pipeline_bind_point())
-                      .setColorAttachments(subpass->color_attachments());
-
-    if (const auto *depth = subpass->depth_stencil_attachment())
-        result.setPDepthStencilAttachment(depth);
+    const auto result =
+        vk::SubpassDescription2()
+            .setPipelineBindPoint(subpass->pipeline_bind_point())
+            .setColorAttachments(subpass->color_attachments())
+            .setInputAttachments(subpass->input_attachments())
+            .setPDepthStencilAttachment(subpass->depth_stencil_attachment());
 
     return result;
 }

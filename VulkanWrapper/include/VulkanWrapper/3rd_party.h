@@ -1,11 +1,11 @@
 #pragma once
 
-namespace vk {
+namespace vk::detail {
 class DispatchLoaderDynamic;
 }
 
 namespace vw {
-vk::DispatchLoaderDynamic &DefaultDispatcher();
+const vk::detail::DispatchLoaderDynamic &DefaultDispatcher();
 }
 
 #define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
@@ -27,11 +27,11 @@ vk::DispatchLoaderDynamic &DefaultDispatcher();
 #include <iostream>
 #include <map>
 #include <memory>
+#include <numeric>
 #include <random>
 #include <ranges>
 #include <set>
 #include <variant>
-#include <numeric>
 #include <vector>
 #include <vulkan/vulkan.hpp>
 

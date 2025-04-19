@@ -18,6 +18,8 @@ class Framebuffer : public ObjectWithUniqueHandle<vk::UniqueFramebuffer> {
     [[nodiscard]] Width width() const noexcept;
     [[nodiscard]] Height height() const noexcept;
     [[nodiscard]] vk::Extent2D extent2D() const noexcept;
+    [[nodiscard]] std::shared_ptr<const ImageView>
+    image_view(int index) const noexcept;
 
   private:
     Width m_width;

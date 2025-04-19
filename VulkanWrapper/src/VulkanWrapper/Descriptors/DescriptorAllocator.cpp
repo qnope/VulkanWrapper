@@ -40,6 +40,19 @@ void DescriptorAllocator::add_combined_image(int binding,
                 .setDstArrayElement(0);
 }
 
+void DescriptorAllocator::add_input_attachment(
+    int binding, std::shared_ptr<const ImageView> image_view) {
+    auto &[info, write] = m_imageUpdate.emplace_back();
+    info = vk::DescriptorImageInfo()
+               .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+               .setImageView(image_view->handle());
+    write = vk::WriteDescriptorSet()
+                .setDescriptorCount(1)
+                .setDescriptorType(vk::DescriptorType::eInputAttachment)
+                .setDstBinding(binding)
+                .setDstArrayElement(0);
+}
+
 std::vector<vk::WriteDescriptorSet>
 DescriptorAllocator::get_write_descriptors() const {
     std::vector<vk::WriteDescriptorSet> writers;

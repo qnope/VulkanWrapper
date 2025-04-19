@@ -11,6 +11,8 @@ class DescriptorAllocator {
                             vk::DeviceSize offset, vk::DeviceSize size);
 
     void add_combined_image(int binding, const CombinedImage &image);
+    void add_input_attachment(int binding,
+                              std::shared_ptr<const ImageView> image_view);
 
     [[nodiscard]] std::vector<vk::WriteDescriptorSet>
     get_write_descriptors() const;

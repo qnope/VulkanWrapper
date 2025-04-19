@@ -22,6 +22,11 @@ vk::Extent2D Framebuffer::extent2D() const noexcept {
     return {uint32_t(m_width), uint32_t(m_height)};
 }
 
+std::shared_ptr<const ImageView>
+Framebuffer::image_view(int index) const noexcept {
+    return m_image_views[index];
+}
+
 FramebufferBuilder::FramebufferBuilder(const Device &device,
                                        const RenderPass &renderPass,
                                        Width width, Height height)
