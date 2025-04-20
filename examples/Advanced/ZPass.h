@@ -59,7 +59,11 @@ class ZPass : public vw::Subpass {
 
     const vk::AttachmentReference2 *
     depth_stencil_attachment() const noexcept override {
-        return &m_depth_stencil_attachment;
+        static const vk::AttachmentReference2 depth_stencil_attachment =
+            vk::AttachmentReference2(
+                7, vk::ImageLayout::eDepthStencilAttachmentOptimal,
+                vk::ImageAspectFlagBits::eDepth);
+        return &depth_stencil_attachment;
     }
 
     vw::SubpassDependencyMask input_dependencies() const noexcept override {
@@ -88,9 +92,4 @@ class ZPass : public vw::Subpass {
     vw::Height m_height;
     vk::DescriptorSet m_descriptor_set;
     std::optional<vw::Pipeline> m_pipeline;
-
-    inline static const vk::AttachmentReference2 m_depth_stencil_attachment =
-        vk::AttachmentReference2(
-            7, vk::ImageLayout::eDepthStencilAttachmentOptimal,
-            vk::ImageAspectFlagBits::eDepth);
 };

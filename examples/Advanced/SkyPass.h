@@ -4,57 +4,70 @@
 #include "VulkanWrapper/Descriptors/DescriptorPool.h"
 #include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
 #include "VulkanWrapper/Image/Framebuffer.h"
+#include "VulkanWrapper/Memory/Allocator.h"
+#include "VulkanWrapper/Memory/Buffer.h"
 #include "VulkanWrapper/Pipeline/Pipeline.h"
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
 #include "VulkanWrapper/RenderPass/Subpass.h"
 
-struct TonemapPassTag {};
-const auto tonemap_pass_tag = vw::create_subpass_tag<TonemapPassTag>();
+struct SkyPassTag {};
+const auto sky_pass_tag = vw::create_subpass_tag<SkyPassTag>();
 
-class TonemapPass : public vw::Subpass {
+class SkyPass : public vw::Subpass {
+    struct UBO {
+        glm::mat4 projection;
+        glm::mat4 camera;
+    };
+
   public:
-    TonemapPass(const vw::Device &device, vw::Width width, vw::Height height)
+    SkyPass(const vw::Device &device, const vw::Allocator &allocator,
+            vw::Width width, vw::Height height, const glm::mat4 &projection,
+            const glm::mat4 &camera)
         : m_device{device}
+        , m_allocator{allocator}
         , m_width{width}
-        , m_height{height} {}
+        , m_height{height} {
+        const UBO ubo{projection, camera};
+        m_ubo.copy(std::span{&ubo, 1}, 0);
+
+        vw::DescriptorAllocator alloc;
+        alloc.add_uniform_buffer(0, m_ubo.handle(), 0, sizeof(UBO));
+        m_descriptor_set = m_descriptor_pool.allocate_set(alloc);
+    }
 
     void execute(vk::CommandBuffer cmd_buffer,
-                 const vw::Framebuffer &framebuffer) const noexcept override {
-        vw::DescriptorAllocator allocator;
-        allocator.add_input_attachment(0, framebuffer.image_view(0));
-        allocator.add_input_attachment(1, framebuffer.image_view(5));
-        auto descriptor_set = m_descriptor_pool.allocate_set(allocator);
+                 const vw::Framebuffer &) const noexcept override {
         cmd_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
                                 m_pipeline->handle());
         cmd_buffer.bindDescriptorSets(pipeline_bind_point(),
                                       m_pipeline->layout().handle(), 0,
-                                      descriptor_set, nullptr);
+                                      m_descriptor_set, nullptr);
         cmd_buffer.draw(4, 1, 0, 0);
     }
 
     const std::vector<vk::AttachmentReference2> &
     color_attachments() const noexcept override {
         static const std::vector<vk::AttachmentReference2> color_attachments = {
-            vk::AttachmentReference2(6,
+            vk::AttachmentReference2(5,
                                      vk::ImageLayout::eColorAttachmentOptimal,
                                      vk::ImageAspectFlagBits::eColor)};
         return color_attachments;
     }
 
-    const std::vector<vk::AttachmentReference2> &
-    input_attachments() const noexcept override {
-        static const std::vector<vk::AttachmentReference2> input_attachments = {
-            vk::AttachmentReference2(0, vk::ImageLayout::eShaderReadOnlyOptimal,
-                                     vk::ImageAspectFlagBits::eColor),
-            vk::AttachmentReference2(5, vk::ImageLayout::eShaderReadOnlyOptimal,
-                                     vk::ImageAspectFlagBits::eColor)};
-        return input_attachments;
+    const vk::AttachmentReference2 *
+    depth_stencil_attachment() const noexcept override {
+        static const vk::AttachmentReference2 depth_stencil_attachment =
+            vk::AttachmentReference2(
+                7, vk::ImageLayout::eDepthStencilAttachmentOptimal,
+                vk::ImageAspectFlagBits::eDepth);
+        return &depth_stencil_attachment;
     }
 
     vw::SubpassDependencyMask input_dependencies() const noexcept override {
         vw::SubpassDependencyMask mask;
-        mask.access = vk::AccessFlagBits::eInputAttachmentRead;
-        mask.stage = vk::PipelineStageFlagBits::eFragmentShader;
+        mask.access = vk::AccessFlagBits::eDepthStencilAttachmentRead;
+        mask.stage = vk::PipelineStageFlagBits::eEarlyFragmentTests |
+                     vk::PipelineStageFlagBits::eLateFragmentTests;
         return mask;
     }
 
@@ -70,14 +83,14 @@ class TonemapPass : public vw::Subpass {
         auto vertex = vw::ShaderModule::create_from_spirv_file(
             m_device, "Shaders/quad.spv");
         auto fragment = vw::ShaderModule::create_from_spirv_file(
-            m_device, "Shaders/post-process/tonemap.spv");
+            m_device, "Shaders/post-process/sky.spv");
 
         auto pipelineLayout = vw::PipelineLayoutBuilder(m_device)
                                   .with_descriptor_set_layout(m_layout)
                                   .build();
 
         m_pipeline =
-            vw::GraphicsPipelineBuilder(m_device, render_pass, 3,
+            vw::GraphicsPipelineBuilder(m_device, render_pass, 2,
                                         std::move(pipelineLayout))
                 .add_shader(vk::ShaderStageFlagBits::eVertex, std::move(vertex))
                 .add_shader(vk::ShaderStageFlagBits::eFragment,
@@ -85,20 +98,25 @@ class TonemapPass : public vw::Subpass {
                 .with_fixed_scissor(int32_t(m_width), int32_t(m_height))
                 .with_fixed_viewport(int32_t(m_width), int32_t(m_height))
                 .with_topology(vk::PrimitiveTopology::eTriangleStrip)
+                .with_depth_test(false, vk::CompareOp::eEqual)
                 .add_color_attachment()
                 .build();
     }
 
   private:
     const vw::Device &m_device;
+    const vw::Allocator &m_allocator;
     vw::Width m_width;
     vw::Height m_height;
+    vw::Buffer<UBO, true, vw::UniformBufferUsage> m_ubo =
+        m_allocator.create_buffer<UBO, true, vw::UniformBufferUsage>(1);
     std::shared_ptr<const vw::DescriptorSetLayout> m_layout =
         vw::DescriptorSetLayoutBuilder(m_device)
-            .with_input_attachment(vk::ShaderStageFlagBits::eFragment)
-            .with_input_attachment(vk::ShaderStageFlagBits::eFragment)
+            .with_uniform_buffer(vk::ShaderStageFlagBits::eFragment, 1)
             .build();
+
     mutable vw::DescriptorPool m_descriptor_pool =
         vw::DescriptorPoolBuilder(m_device, m_layout).build();
     std::optional<vw::Pipeline> m_pipeline;
+    vk::DescriptorSet m_descriptor_set;
 };

@@ -1,5 +1,6 @@
 #include "Application.h"
 #include "ColorPass.h"
+#include "SkyPass.h"
 #include "TonemapPass.h"
 #include "ZPass.h"
 #include <VulkanWrapper/3rd_party.h>
@@ -203,6 +204,9 @@ int main() {
         auto color_subpass = std::make_unique<ColorSubpass>(
             app.device, mesh_manager, descriptor_set_layout,
             app.swapchain.width(), app.swapchain.height(), descriptor_set);
+        auto sky_pass = std::make_unique<SkyPass>(
+            app.device, app.allocator, app.swapchain.width(),
+            app.swapchain.height(), UBOData{}.proj, UBOData{}.view);
         auto tonemap_pass = std::make_unique<TonemapPass>(
             app.device, app.swapchain.width(), app.swapchain.height());
 
@@ -214,14 +218,18 @@ int main() {
                 .add_attachment(data_attachment, vk::ClearColorValue())
                 .add_attachment(data_attachment, vk::ClearColorValue())
                 .add_attachment(data_attachment, vk::ClearColorValue())
-                .add_attachment(data_attachment, vk::ClearColorValue())
+                .add_attachment(data_attachment,
+                                vk::ClearColorValue(1.0f, 1.0f, 1.0f, 1.0f))
                 .add_attachment(final_attachment, vk::ClearColorValue())
                 .add_attachment(depth_attachment,
                                 vk::ClearDepthStencilValue(1.0))
                 .add_subpass(z_pass_tag, std::move(depth_subpass))
                 .add_subpass(color_pass_tag, std::move(color_subpass))
+                .add_subpass(sky_pass_tag, std::move(sky_pass))
                 .add_subpass(tonemap_pass_tag, std::move(tonemap_pass))
                 .add_dependency(z_pass_tag, color_pass_tag)
+                .add_dependency(z_pass_tag, sky_pass_tag)
+                .add_dependency(sky_pass_tag, tonemap_pass_tag)
                 .add_dependency(color_pass_tag, tonemap_pass_tag)
                 .build();
 
