@@ -64,7 +64,7 @@ const float cloudiness = 0.5;
 const float PI = 3.14159265359;
 
 // Rayleigh coefficients (approx. atmosphere)
-const vec3 betaRayleigh = vec3(5.5e-6, 13.0e-6, 22.4e-6); // R, G, B
+const vec3 betaRayleigh = vec3(5.8e-6, 13.5e-6, 33.1e-6); // R, G, B
 
 // Mie scattering parameters
 const vec3 betaMie = vec3(21e-6); // Gris blanchâtre
@@ -87,18 +87,16 @@ vec3 getSunDirection(float time01) {
     return normalize(vec3(cos(theta), sin(theta), 0.0));
 }
 
-void main() {
-    // Reconstruction direction caméra
-    vec3 dir = get_view_direction();
+vec3 computeSkyColor(vec3 view_direction) {
     vec3 sunDir = getSunDirection(dateTime);
-    float mu = dot(dir, sunDir); // cos(angle vue / soleil)
+    float mu = dot(view_direction, sunDir); // cos(angle vue / soleil)
 
     // Phases
     float rPhase = rayleighPhase(mu);
     float mPhase = miePhase(mu, g);
 
     // Hauteur de vue influence la teinte (zénith vs horizon)
-    float zenith = clamp(dir.y, 0.0, 1.0);
+    float zenith = clamp(view_direction.y, 0.0, 1.0);
     float horizonFactor = pow(1.0 - zenith, 2.0);
 
     // Intensités
@@ -120,17 +118,24 @@ void main() {
     float sunDisk = smoothstep(sunAngularSize * 0.5, 0.0, acos(mu));
     vec3 sunBody = vec3(1.0, 0.95, 0.8) * sunDisk * 50.0;
 
-    // Nuages via FBM
-    vec2 cloudUV = dir.xz * 0.5 + vec2(0.5); // projection dans le ciel
+    // Radiance
+    return rayleigh * 100000.0 + mie * 300.0 + sunColor + ambientSky * 0.5 + sunBody;
+}
 
-    float cloudNoise = fbm(cloudUV * 20.0);
+void main() {
+    // Reconstruction direction caméra
+    vec3 view_direction = get_view_direction();
+    
+    // Nuages via FBM
+    vec2 cloudUV = view_direction.xz * 0.5 + vec2(0.5); // projection dans le ciel
+
+    float cloudNoise = fbm(cloudUV * 30.0);
     float cloudDensity = smoothstep(0.5, 0.8, cloudNoise); // seuil pour rendre les bords doux
 
     // Teinte blanche des nuages + modulateur léger de ciel
     vec3 cloudColor = mix(vec3(0.0), vec3(1.0), cloudDensity);
 
-    // Radiance totale
-    vec3 color = rayleigh * 100000.0 + mie * 300.0 + sunColor + ambientSky * 0.5 + sunBody;
+    vec3 color = computeSkyColor(view_direction);
 
     color = mix(color, cloudColor, cloudDensity * 0.4);
 
