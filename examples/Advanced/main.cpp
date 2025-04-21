@@ -44,14 +44,14 @@ create_image_views(const vw::Device &device, const vw::Swapchain &swapchain) {
 
 struct UBOData {
     glm::mat4 proj = [] {
-        auto proj = glm::perspective(glm::radians(45.0F), 1024.0F / 800.0F, 1.F,
+        auto proj = glm::perspective(glm::radians(90.0F), 1024.0F / 800.0F, 1.F,
                                      10000.0F);
         proj[1][1] *= -1;
         return proj;
     }();
     glm::mat4 view =
         glm::lookAt(glm::vec3(0.0F, 300.0F, 0.0F),
-                    glm::vec3(1.0F, 301.0F, 0.0F), glm::vec3(0.0F, 1.0F, 0.0F));
+                    glm::vec3(1.0F, 300.9F, 0.0F), glm::vec3(0.0F, 1.0F, 0.0F));
     glm::mat4 model = glm::mat4(1.0);
 };
 
@@ -138,6 +138,18 @@ class AccelerationStructureBuilder {
   private:
 };
 
+float intersectRaySphereFromInside(const glm::vec3 &rayOrigin,
+                                   const glm::vec3 &rayDir, float radius) {
+    float b = glm::dot(rayOrigin, rayDir);
+    float c = glm::dot(rayOrigin, rayOrigin) - radius * radius;
+    float discriminant = b * b - c;
+
+    // On suppose que discriminant est toujours positif puisque le rayon part de
+    // l'intérieur
+    float t = -b + sqrt(discriminant);
+    return t;
+}
+
 int main() {
     try {
         App app;
@@ -170,7 +182,7 @@ int main() {
                 .build();
 
         vw::Model::MeshManager mesh_manager(app.device, app.allocator);
-        mesh_manager.read_file("../../../Models/Sponza/sponza.obj");
+        // mesh_manager.read_file("../../../Models/Sponza/sponza.obj");
         mesh_manager.read_file("../../../Models/cube.obj");
 
         const auto color_attachment =
@@ -207,6 +219,7 @@ int main() {
         auto sky_pass = std::make_unique<SkyPass>(
             app.device, app.allocator, app.swapchain.width(),
             app.swapchain.height(), UBOData{}.proj, UBOData{}.view);
+        auto sky_buffer = sky_pass->get_ubo();
         auto tonemap_pass = std::make_unique<TonemapPass>(
             app.device, app.swapchain.width(), app.swapchain.height());
 
@@ -261,8 +274,19 @@ int main() {
         asBuilder.add_meshes(mesh_manager.meshes());
         auto as = std::move(asBuilder).build();
 
+        float angle = 0.0;
         while (!app.window.is_close_requested()) {
             app.window.update();
+
+            angle = -0;
+
+            if (angle > 360)
+                angle = 0.0;
+
+            std::cout << angle << std::endl;
+
+            SkyPass::UBO ubo{UBOData{}.proj, UBOData{}.view, angle};
+            sky_buffer->copy({&ubo, 1u}, 0);
 
             auto index =
                 app.swapchain.acquire_next_image(imageAvailableSemaphore);

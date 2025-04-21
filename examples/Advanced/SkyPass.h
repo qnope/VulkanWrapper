@@ -14,12 +14,13 @@ struct SkyPassTag {};
 const auto sky_pass_tag = vw::create_subpass_tag<SkyPassTag>();
 
 class SkyPass : public vw::Subpass {
+  public:
     struct UBO {
         glm::mat4 projection;
         glm::mat4 camera;
+        float angle = 0.0;
     };
 
-  public:
     SkyPass(const vw::Device &device, const vw::Allocator &allocator,
             vw::Width width, vw::Height height, const glm::mat4 &projection,
             const glm::mat4 &camera)
@@ -77,6 +78,8 @@ class SkyPass : public vw::Subpass {
         mask.stage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
         return mask;
     }
+
+    auto *get_ubo() { return &m_ubo; }
 
   protected:
     void initialize(const vw::RenderPass &render_pass) override {

@@ -5,9 +5,19 @@ layout(input_attachment_index = 1, set = 0, binding = 1) uniform subpassInput ra
 
 layout(location = 0) out vec4 out_color;
 
-void main() {
-    vec4 base = subpassLoad(base_color);
-    vec4 rad = subpassLoad(radiance);
+vec4 ACESApprox(vec3 x)
+{
+    const float a = 2.51;
+    const float b = 0.03;
+    const float c = 2.43;
+    const float d = 0.59;
+    const float e = 0.14;
+    return vec4(clamp((x*(a*x+b))/(x*(c*x+d)+e), 0.0, 1.0), 1.0);
+}
 
-    out_color = base * rad;
+void main() {
+    vec3 base = subpassLoad(base_color).rgb;
+    vec3 rad = subpassLoad(radiance).rgb;
+
+    out_color = ACESApprox(base * rad);
 }
