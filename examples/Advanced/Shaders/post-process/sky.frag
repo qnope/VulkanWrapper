@@ -24,18 +24,35 @@ vec3 get_view_direction() {
     return normalize(far - near);
 }
 
-const float dateTime = 0.5;
-const float cloudiness = 0.5;
-
 const float PI = 3.14159265359;
-float Hr = 7994;
-float Hm = 1200;
-const vec3 rayleigh = vec3(5.8e-6, 13.5e-6, 33.1e-6);
-const vec3 mie = vec3(21e-6, 21e-6, 21e-6);
+const float Hr = 7994;
+const float Hm = 1200;
+const float Ho = 7994;
+
+const vec3 rayleigh = vec3(5.8, 13.5, 33.1) * 1e-6;
+const vec3 mie = vec3(21, 21, 21) * 1e-6;
+const vec3 ozone = vec3(3.426, 8.298, 0.356) * 0.06 * 1e-5;
+
 const float radiusEarth = 6360e3;
 const float radiusAtmo = 6420e3;
-const vec3 origin_view = vec3(0, radiusEarth + 10, 0);
+const float ZenithH = radiusAtmo - radiusEarth;
+const vec3 origin_view = vec3(0, radiusEarth + 1, 0);
+const float originH = origin_view.y - radiusEarth;
+
 const int STEPS = 16;
+
+const float angular_size = 1.0 / 2.0;
+const float cos_angular_size = cos(radians(angular_size));
+const float cos_angular_bias = cos(radians(0.01));
+
+float intersectRaySphereFromInside(const vec3 rayOrigin,
+                                   const vec3 rayDir, float radius) {
+    float b = dot(rayOrigin, rayDir);
+    float c = dot(rayOrigin, rayOrigin) - radius * radius;
+    float discriminant = b * b - c;
+    float t = -b + sqrt(discriminant);
+    return t;
+}
 
 float rayleigh_phase(vec3 view_dir, vec3 sun_dir) {
     const float mu = dot(view_dir, sun_dir);
@@ -43,95 +60,66 @@ float rayleigh_phase(vec3 view_dir, vec3 sun_dir) {
 }
 
 float mie_phase(vec3 view_dir, vec3 sun_dir) {
-    const float mu = dot(view_dir, sun_dir);
-    const float g = 0.76;
-    return 3.f / (8.f * PI) * ((1.f - g * g) * (1.f + mu * mu)) / ((2.f + g * g) * pow(1.f + g * g - 2.f * g * mu, 1.5f)); 
+    float mu = dot(view_dir, sun_dir);
+    float g = 0.76;
+    float denom = 1.0 + g * g - 2.0 * g * mu;
+    return (1.0 - g * g) / (4.0 * PI * pow(denom, 1.5));
 }
 
-vec3 sigma_r(vec3 position) {
+vec3 sigma_s_rayleigh(vec3 position) {
     const float h = length(position) - radiusEarth;
     return rayleigh * exp(-h / Hr);
 }
 
-vec3 sigma_m(vec3 position) {
+vec3 sigma_s_mie(vec3 position) {
     const float h = length(position) - radiusEarth;
     return mie * exp(-h / Hm);
 }
 
-vec3 integrate_sigma_r(vec3 from, vec3 to) {
-    const vec3 dt = (to - from) / float(STEPS);
+vec3 sigma_a_ozone(vec3 position) {
+    const float h = length(position) - radiusEarth;
+    return ozone * exp(-h / Ho);
+}
+
+vec3 sigma_t(vec3 position)
+{
+    return sigma_s_rayleigh(position) + 
+           1.11 * sigma_s_mie(position) +
+           sigma_a_ozone(position);
+}
+
+vec3 integrate_sigma_t(vec3 from, vec3 to) {
+    const vec3 ds = (to - from) / float(STEPS);
     vec3 accumulation = vec3(0, 0, 0);
 
     for (int i = 0; i < STEPS; ++i) {
-        const vec3 s = from + dt * 0.5;
-        accumulation += sigma_r(s);
-        from += dt;
+        const vec3 s = from + (i + 0.5) * ds;
+        accumulation += sigma_t(s);
     }
 
-    return accumulation * length(dt);
+    return accumulation * length(ds);
 }
 
-vec3 integrate_sigma_m(vec3 from, vec3 to) {
-    const vec3 dt = (to - from) / float(STEPS);
-    vec3 accumulation = vec3(0, 0, 0);
-
-    for (int i = 0; i < STEPS; ++i) {
-        const vec3 s = from + dt * 0.5;
-        accumulation += sigma_m(s);
-        from += dt;
-    }
-
-    return accumulation * length(dt);
-}
-
-vec3 integrate_sigma(vec3 from, vec3 to) {
-    const vec3 dt = (to - from) / float(STEPS);
-    vec3 accumulation = vec3(0, 0, 0);
-
-    for (int i = 0; i < STEPS; ++i) {
-        const vec3 s = from + dt * 0.5;
-        accumulation += sigma_m(s) + sigma_r(s);
-        from += dt;
-    }
-
-    return accumulation * length(dt);
-}
-
-vec3 C(vec3 from, vec3 to) {
-    const vec3 integral = integrate_sigma(from, to);
+vec3 transmittance(vec3 from, vec3 to) {
+    const vec3 integral = integrate_sigma_t(from, to);
     return exp(-integral);
 }
 
-float intersectRaySphereFromInside(const vec3 rayOrigin,
-                                   const vec3 rayDir, float radius) {
-    float b = dot(rayOrigin, rayDir);
-    float c = dot(rayOrigin, rayOrigin) - radius * radius;
-    float discriminant = b * b - c;
+const vec3 TrZenith = exp(-(rayleigh * Hr * (exp(-originH / Hr) - exp(-ZenithH / Hr)) +
+                            mie * Hm * (exp(-originH / Hm) - exp(-ZenithH / Hm)) + 
+                            ozone * Ho * (exp(-originH / Ho) - exp(-ZenithH / Ho))));
 
-    float t = -b + sqrt(discriminant);
-    return t;
-}
+vec3 LSun = PI * vec3(1.0, 0.9, 0.9) / TrZenith;
 
-vec3 Br(vec3 position) {
-    const vec3 sun_dir = normalize(vec3(cos(radians(angle)), sin(radians(angle)), 0.0));
-    const float distance_out_sun =
+vec3 j(vec3 position, vec3 view_dir, vec3 sun_dir) {
+    const float distance_out_atmosphere =
         intersectRaySphereFromInside(position, sun_dir, radiusAtmo);
-    const vec3 to = position + sun_dir * distance_out_sun;
-
-    const vec3 integral = integrate_sigma_r(position, to);
-
-    return exp(-integral);
-}
-
-vec3 Bm(vec3 position) {
-    const vec3 sun_dir = normalize(vec3(cos(radians(angle)), sin(radians(angle)), 0.0));
-    const float distance_out_sun =
-        intersectRaySphereFromInside(position, sun_dir, radiusAtmo);
-    const vec3 to = position + sun_dir * distance_out_sun;
-
-    const vec3 integral = integrate_sigma_m(position, to);
-
-    return exp(-integral);
+    
+    const vec3 out_atmosphere = position + sun_dir * distance_out_atmosphere;
+    const vec3 trToSun = transmittance(position, out_atmosphere);
+    const vec3 rayleigh_diffusion = sigma_s_rayleigh(position) * rayleigh_phase(view_dir, sun_dir);
+    const vec3 mie_diffusion = sigma_s_mie(position) * mie_phase(view_dir, sun_dir);
+    return LSun * trToSun * (rayleigh_diffusion + mie_diffusion);
 }
 
 vec3 compute_radiance(vec3 direction) {
@@ -139,84 +127,34 @@ vec3 compute_radiance(vec3 direction) {
 
     const float distance_out =
         intersectRaySphereFromInside(origin_view, direction, radiusAtmo);
-
     const vec3 view_out = origin_view + direction * distance_out;
-    const float dt = distance_out / STEPS;
-    vec3 origin = origin_view;
+    const float ds = distance_out / STEPS;
 
-    vec3 acc = vec3(0, 0, 0);
+    float cos_theta = dot(direction, sun_dir);
+
+    const float angle = degrees(acos(cos_theta));
+    vec3 acc = vec3(0.0);
+    float disk = 1.0 - smoothstep(angular_size * 0.95, angular_size * 1.05, angle);
+    
+    acc += disk * LSun * transmittance(origin_view, view_out);  
+
     for (int i = 0; i < STEPS; ++i) {
-        const vec3 s = origin + direction * dt * 0.5;
-
-        const vec3 trToSky = C(origin_view, s);
-
-        const vec3 trToSun = Br(s) * Bm(s);
-
-        acc += trToSky * trToSun *
-        ((rayleigh_phase(direction, sun_dir) * sigma_r(s)) + 
-        (mie_phase(direction, sun_dir) * sigma_m(s)));
-        origin += direction * dt;
+        const vec3 s = origin_view + (i + 0.5) * direction * ds;
+        acc += ds * transmittance(origin_view, s) * j(s, direction, sun_dir);
     }
 
-    return acc * dt * 5;
+    return acc;
 }
 
 void main() {
     // Reconstruction direction caméra
     vec3 view_direction = get_view_direction();
 
-    if(view_direction.y < 0)
+    if(view_direction.y < 0) {
+        out_color = vec4(0.1, 0.1, 0.1, 1.0);
         return;
+    }
     vec3 color = compute_radiance(view_direction);
 
     out_color = vec4(color, 1.0);
 }
-
-/*
-void main() {
-    const vec3 sun_dir = normalize(vec3(cos(radians(angle)), sin(radians(angle)), 0.0));
-    vec3 view_direction = get_view_direction();
-    float t1 = intersectRaySphereFromInside(origin_view, view_direction, radiusAtmo);
-    uint numSamples = 16; 
-    uint numSamplesLight = 8; 
-    float segmentLength = t1 / numSamples; 
-    float tCurrent = 0.0; 
-    vec3 sumR = vec3(0.0), sumM = vec3(0.0);  //mie and rayleigh contribution 
-    float opticalDepthR = 0, opticalDepthM = 0; 
-    float mu = dot(view_direction, sun_dir);  //mu in the paper which is the cosine of the angle between the sun direction and the ray direction 
-    float phaseR = rayleigh_phase(view_direction, sun_dir); 
-    float g = 0.76f; 
-    float phaseM = mie_phase(view_direction, sun_dir);
-    for (uint i = 0; i < numSamples; ++i) { 
-        vec3 samplePosition = origin_view + (tCurrent + segmentLength * 0.5) * view_direction; 
-        float height = length(samplePosition) - radiusEarth; 
-        // compute optical depth for light
-        float hr = exp(-height / Hr) * segmentLength; 
-        float hm = exp(-height / Hm) * segmentLength; 
-        opticalDepthR += hr; 
-        opticalDepthM += hm; 
-        // light optical depth
-        float t1Light = intersectRaySphereFromInside(samplePosition, sun_dir, radiusAtmo); 
-        float segmentLengthLight = t1Light / numSamplesLight, tCurrentLight = 0; 
-        float opticalDepthLightR = 0, opticalDepthLightM = 0; 
-        uint j; 
-        for (j = 0; j < numSamplesLight; ++j) { 
-            vec3 samplePositionLight = samplePosition + (tCurrentLight + segmentLengthLight * 0.5) * sun_dir; 
-            float heightLight = length(samplePositionLight) - radiusEarth; 
-            opticalDepthLightR += exp(-heightLight / Hr) * segmentLengthLight; 
-            opticalDepthLightM += exp(-heightLight / Hm) * segmentLengthLight; 
-            tCurrentLight += segmentLengthLight; 
-        } 
-        vec3 tauCam = rayleigh * (opticalDepthR) + mie * (opticalDepthM); 
-        vec3 tauSun = rayleigh * (opticalDepthLightR) + mie * (opticalDepthLightM); 
-        vec3 attenuation = exp(-tauSun) * exp(-tauCam); 
-        sumR += attenuation * hr; 
-        sumM += attenuation * hm; 
-        
-        tCurrent += segmentLength; 
-    } 
- 
-    // We use a magic number here for the intensity of the sun (20). We will make it more
-    // scientific in a future revision of this lesson/code
-    out_color = vec4((sumR * rayleigh * phaseR + sumM * mie * phaseM) * 10, 1.0); 
-}*/

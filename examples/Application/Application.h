@@ -18,7 +18,7 @@ class App {
     vw::SDL_Initializer initializer;
     vw::Window window = vw::WindowBuilder(initializer)
                             .with_title("Coucou")
-                            .sized(vw::Width(1024), vw::Height(800))
+                            .sized(vw::Width(1200), vw::Height(675))
                             .build();
 
     vw::Instance instance =

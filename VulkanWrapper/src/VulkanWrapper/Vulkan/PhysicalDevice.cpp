@@ -20,7 +20,7 @@ convertPhysicalDeviceType(vk::PhysicalDeviceType physicalDeviceType) {
 PhysicalDevice::PhysicalDevice(vk::PhysicalDevice device) noexcept
     : m_type(convertPhysicalDeviceType(device.getProperties().deviceType))
     , m_version{ApiVersion(device.getProperties().apiVersion)}
-    , m_name{&device.getProperties().deviceName[0]}
+    , m_name{device.getProperties().deviceName.data()}
     , m_physicalDevice{device} {}
 
 std::vector<vk::QueueFamilyProperties>
@@ -31,9 +31,10 @@ PhysicalDevice::queueFamilyProperties() const noexcept {
 std::set<std::string> PhysicalDevice::extensions() const noexcept {
     auto extensions =
         m_physicalDevice.enumerateDeviceExtensionProperties().value;
-    auto names = extensions |
-                 std::views::transform(&vk::ExtensionProperties::extensionName) |
-                 std::views::transform([](auto &x) -> std::string {return x.data();});
+    auto names =
+        extensions |
+        std::views::transform(&vk::ExtensionProperties::extensionName) |
+        std::views::transform([](auto &x) -> std::string { return x.data(); });
     return {names.begin(), names.end()};
 }
 

@@ -93,7 +93,6 @@ Instance InstanceBuilder::build() && {
     if (result != vk::Result::eSuccess) {
         std::cout << unsigned(result) << std::endl;
         throw InstanceCreationException{std::source_location::current()};
-        system("pause");
     }
 
     VULKAN_HPP_DEFAULT_DISPATCHER.init(*instance);

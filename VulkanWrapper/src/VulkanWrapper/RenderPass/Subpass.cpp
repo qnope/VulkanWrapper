@@ -2,7 +2,7 @@
 
 namespace vw {
 
-static std::vector<vk::AttachmentReference2> empty_attachments;
+static const std::vector<vk::AttachmentReference2> empty_attachments;
 
 vk::PipelineBindPoint Subpass::pipeline_bind_point() const noexcept {
     return vk::PipelineBindPoint::eGraphics;

@@ -19,5 +19,6 @@ void main() {
     vec3 base = subpassLoad(base_color).rgb;
     vec3 rad = subpassLoad(radiance).rgb;
 
-    out_color = ACESApprox(base * rad);
+    const vec3 exposed =  base * rad;
+    out_color = ACESApprox(exposed);
 }
