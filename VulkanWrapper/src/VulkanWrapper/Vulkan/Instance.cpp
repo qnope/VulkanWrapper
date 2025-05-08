@@ -39,8 +39,8 @@ DeviceFinder Instance::findGpu() const noexcept {
 }
 
 InstanceBuilder &&InstanceBuilder::addPortability() && {
-    // m_extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-    // m_flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
+    m_extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+    m_flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
     return std::move(*this);
 }
 

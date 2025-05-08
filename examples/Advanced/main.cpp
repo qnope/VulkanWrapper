@@ -44,14 +44,14 @@ create_image_views(const vw::Device &device, const vw::Swapchain &swapchain) {
 
 struct UBOData {
     glm::mat4 proj = [] {
-        auto proj = glm::perspective(glm::radians(50.0F), 1600.0F / 900.0F, 1.F,
+        auto proj = glm::perspective(glm::radians(60.0F), 1600.0F / 900.0F, 1.F,
                                      10000.0F);
         proj[1][1] *= -1;
         return proj;
     }();
     glm::mat4 view =
         glm::lookAt(glm::vec3(0.0F, 300.0F, 0.0F),
-                    glm::vec3(1.0F, 300.4F, 0.0F), glm::vec3(0.0F, 1.0F, 0.0F));
+                    glm::vec3(1.0F, 300.5F, 0.0F), glm::vec3(0.0F, 1.0F, 0.0F));
     glm::mat4 model = glm::mat4(1.0);
 };
 
@@ -140,163 +140,10 @@ class AccelerationStructureBuilder {
 
 using namespace glm;
 
-const float PI = 3.14159265359;
-const float Hr = 7994;
-const float Hm = 1200;
-const float Ho = 7994;
-
-const vec3 rayleigh = vec3(5.8, 13.5, 33.1) * 1e-6f;
-const vec3 mie = vec3(21, 21, 21) * 1e-6f;
-const vec3 ozone = vec3(3.426, 8.298, 0.356) * 0.06f * 1e-5f;
-
-const float radiusEarth = 6360e3;
-const float radiusAtmo = 6420e3;
-const float ZenithH = radiusAtmo - radiusEarth;
-const vec3 origin_view = vec3(0, radiusEarth + 10, 0);
-const float originH = origin_view.y - radiusEarth;
-
-const int STEPS = 16;
-
-const float angular_size = 5;
-const float cos_angular_size = cos(radians(angular_size));
-
-float intersectRaySphereFromInside(const vec3 rayOrigin, const vec3 rayDir,
-                                   float radius) {
-    float b = dot(rayOrigin, rayDir);
-    float c = dot(rayOrigin, rayOrigin) - radius * radius;
-    float discriminant = b * b - c;
-    float t = -b + sqrt(discriminant);
-    return t;
-}
-
-float rayleigh_phase(vec3 view_dir, vec3 sun_dir) {
-    const float mu = dot(view_dir, sun_dir);
-    return (3.0 / (16.0 * PI)) * (1.f + mu * mu);
-}
-
-float mie_phase(vec3 view_dir, vec3 sun_dir) {
-    float mu = dot(view_dir, sun_dir);
-    float g = 0.76;
-    float denom = 1.0 + g * g - 2.0 * g * mu;
-    return (1.0 - g * g) / (4.0 * PI * pow(denom, 1.5));
-}
-
-float compute_h(vec3 position) { return length(position) - radiusEarth; }
-
-vec3 sigma_s_rayleigh(vec3 position) {
-    const float h = compute_h(position);
-    return rayleigh * exp(-h / Hr);
-}
-
-vec3 sigma_s_mie(vec3 position) {
-    const float h = compute_h(position);
-    return mie * exp(-h / Hm);
-}
-
-vec3 sigma_a_ozone(vec3 position) {
-    const float h = length(position) - radiusEarth;
-    return ozone * exp(-h / Ho);
-}
-
-vec3 sigma_t(vec3 position) {
-    return sigma_s_rayleigh(position) + 1.11f * sigma_s_mie(position) +
-           sigma_a_ozone(position);
-}
-
-vec3 integrate_sigma_t(vec3 from, vec3 to) {
-    const vec3 ds = (to - from) / float(STEPS);
-    vec3 accumulation = vec3(0, 0, 0);
-
-    for (int i = 0; i < STEPS; ++i) {
-        const vec3 s = from + (float(i) + 0.5f) * ds;
-        accumulation += sigma_t(s);
-    }
-
-    return accumulation * length(ds);
-}
-
-vec3 transmittance(vec3 from, vec3 to) {
-    const vec3 integral = integrate_sigma_t(from, to);
-    return exp(-integral);
-}
-
-// const vec3 TrZenith = exp(-(rayleigh * Hr * (exp(-originH / Hr) -
-// exp(-ZenithH / Hr)) +
-//                           mie * Hm * (exp(-originH / Hm) - exp(-ZenithH /
-//                           Hm)) +
-//                         ozone * Ho * (exp(-originH / Ho) - exp(-ZenithH /
-//                         Ho))));
-
-// vec3 TrZenith = transmittance(origin_view, vec3(0.0, radiusAtmo, 0.0));
-vec3 LSun = vec3(1.0) * 1e9f;
-
 std::ostream &operator<<(std::ostream &s, const vec3 obj) {
     s << "(" << obj.x << ", " << obj.y << ", " << obj.z << ")";
     return s;
 }
-
-vec3 j(vec3 position, vec3 view_dir, vec3 sun_dir) {
-    const float distance_out_atmosphere =
-        intersectRaySphereFromInside(position, sun_dir, radiusAtmo);
-
-    const vec3 out_atmosphere = position + sun_dir * distance_out_atmosphere;
-    const vec3 trToSun = transmittance(position, out_atmosphere);
-    std::cout << "distance out atmosphere: " << distance_out_atmosphere
-              << " ValueTr: " << trToSun << " pos_en_cours: " << position
-              << " hauteur_en_cours: " << compute_h(position)
-              << " distance_origin: " << length(position - origin_view)
-              << std::endl;
-    const vec3 sigma_s = sigma_s_rayleigh(position) + sigma_s_mie(position);
-    const auto phase =
-        sigma_s_mie(position) * mie_phase(view_dir, sun_dir) +
-        sigma_s_rayleigh(position) * rayleigh_phase(view_dir, sun_dir);
-    return phase * LSun * trToSun;
-}
-
-double angle = 0.0;
-
-vec3 compute_radiance(vec3 direction) {
-    const vec3 sun_dir =
-        normalize(vec3(cos(radians(angle)), sin(radians(angle)), 0.0));
-
-    const float c = dot(direction, sun_dir);
-
-    const float distance_out =
-        intersectRaySphereFromInside(origin_view, direction, radiusAtmo);
-
-    const vec3 view_out = origin_view + direction * distance_out;
-    const float ds = distance_out / STEPS;
-    vec3 origin = origin_view;
-
-    vec3 acc = vec3(0.0);
-
-    for (int i = 0; i < STEPS; ++i) {
-        const vec3 s = origin + float(i) * direction * ds;
-        acc += transmittance(origin_view, s) * j(s, direction, sun_dir);
-    }
-
-    return acc * ds;
-}
-/*
-int main() {
-    glm::vec3 origin(0.0, radiusEarth + 1, 0.0);
-    glm::vec3 dir(1.0, 0.0, 0.0);
-    const vec3 sun_dir =
-        normalize(vec3(cos(radians(angle)), sin(radians(angle)), 0.0));
-    auto radiance1 = compute_radiance(dir);
-
-    const float distance_out =
-        intersectRaySphereFromInside(origin_view, dir, radiusAtmo);
-
-    const vec3 view_out = origin_view + dir * distance_out;
-
-    const vec3 t = transmittance(origin, view_out);
-    const auto r2 = LSun * t;
-
-    std::cout << radiance1.x << " " << radiance1.y << " " << radiance1.z
-              << std::endl;
-    std::cout << r2.x << " " << r2.y << " " << r2.z << std::endl;
-}*/
 
 int main() {
     try {
@@ -426,7 +273,7 @@ int main() {
         while (!app.window.is_close_requested()) {
             app.window.update();
 
-            angle += 0.2;
+            angle += 0.01;
 
             if (angle > 360)
                 angle = 0.0;

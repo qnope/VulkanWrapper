@@ -30,7 +30,7 @@ const float Hm = 1200;
 const float Ho = 7994;
 
 const vec3 rayleigh = vec3(5.8, 13.5, 33.1) * 1e-6;
-const vec3 mie = vec3(21, 21, 21) * 1e-6;
+const vec3 mie = vec3(21, 21, 21) * 1e-6 * 1.5;
 const vec3 ozone = vec3(3.426, 8.298, 0.356) * 0.06 * 1e-5;
 
 const float radiusEarth = 6360e3;
@@ -39,9 +39,10 @@ const float ZenithH = radiusAtmo - radiusEarth;
 const vec3 origin_view = vec3(0, radiusEarth + 1, 0);
 const float originH = origin_view.y - radiusEarth;
 
-const int STEPS = 16;
+const int STEPS = 8;
 
-const float angular_size = 1.0 / 2.0;
+const float angular_size = 6 / 2.0;
+const float solid_angle = 2 * PI * (1 - cos(0.5 * radians(angular_size)));
 const float cos_angular_size = cos(radians(angular_size));
 const float cos_angular_bias = cos(radians(0.01));
 
@@ -109,17 +110,18 @@ const vec3 TrZenith = exp(-(rayleigh * Hr * (exp(-originH / Hr) - exp(-ZenithH /
                             mie * Hm * (exp(-originH / Hm) - exp(-ZenithH / Hm)) + 
                             ozone * Ho * (exp(-originH / Ho) - exp(-ZenithH / Ho))));
 
-vec3 LSun = PI * vec3(1.0, 0.9, 0.9) / TrZenith;
+vec3 LSun = (PI * vec3(1.5, 1.5, 1.5) / solid_angle) / TrZenith;
 
 vec3 j(vec3 position, vec3 view_dir, vec3 sun_dir) {
     const float distance_out_atmosphere =
         intersectRaySphereFromInside(position, sun_dir, radiusAtmo);
-    
     const vec3 out_atmosphere = position + sun_dir * distance_out_atmosphere;
+    
     const vec3 trToSun = transmittance(position, out_atmosphere);
     const vec3 rayleigh_diffusion = sigma_s_rayleigh(position) * rayleigh_phase(view_dir, sun_dir);
     const vec3 mie_diffusion = sigma_s_mie(position) * mie_phase(view_dir, sun_dir);
-    return LSun * trToSun * (rayleigh_diffusion + mie_diffusion);
+    
+    return LSun * trToSun * solid_angle * (rayleigh_diffusion + mie_diffusion);
 }
 
 vec3 compute_radiance(vec3 direction) {
@@ -135,9 +137,9 @@ vec3 compute_radiance(vec3 direction) {
     const float angle = degrees(acos(cos_theta));
     vec3 acc = vec3(0.0);
     float disk = 1.0 - smoothstep(angular_size * 0.95, angular_size * 1.05, angle);
-    
-    acc += disk * LSun * transmittance(origin_view, view_out);  
 
+    acc += disk * LSun * transmittance(origin_view, view_out); 
+    
     for (int i = 0; i < STEPS; ++i) {
         const vec3 s = origin_view + (i + 0.5) * direction * ds;
         acc += ds * transmittance(origin_view, s) * j(s, direction, sun_dir);
