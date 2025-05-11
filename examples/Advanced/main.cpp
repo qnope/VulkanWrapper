@@ -273,7 +273,7 @@ int main() {
         while (!app.window.is_close_requested()) {
             app.window.update();
 
-            angle += 0.01;
+            angle += 0.1;
 
             if (angle > 360)
                 angle = 0.0;
