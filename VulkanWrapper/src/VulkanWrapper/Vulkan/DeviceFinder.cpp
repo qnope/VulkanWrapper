@@ -96,8 +96,8 @@ DeviceFinder &&DeviceFinder::with_synchronization_2() && noexcept {
             VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
     }
 
-    m_synchronisation_2_enabled.setSynchronization2(1U);
-    m_features.setPNext(&m_synchronisation_2_enabled);
+    m_features.get<vk::PhysicalDeviceSynchronization2Features>()
+        .setSynchronization2(1U);
     return std::move(*this);
 }
 
@@ -112,6 +112,9 @@ DeviceFinder &&DeviceFinder::with_ray_tracing() && noexcept {
 
     for (auto &information : m_physicalDevicesInformation)
         information.extensions.append_range(extensions);
+
+    m_features.get<vk::PhysicalDeviceAccelerationStructureFeaturesKHR>()
+        .setAccelerationStructure(1U);
 
     return std::move(*this);
 }
@@ -182,7 +185,10 @@ Device DeviceFinder::build() && {
     info.setQueueCreateInfos(queueInfos);
     info.setPEnabledExtensionNames(information.extensions);
 
-    info.setPNext(&m_features);
+    m_features.get<vk::PhysicalDeviceVulkan12Features>().setBufferDeviceAddress(
+        1U);
+
+    info.setPNext(&m_features.get<vk::PhysicalDeviceFeatures2>());
 
     auto [result, device] =
         information.device.device().createDeviceUnique(info);

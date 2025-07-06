@@ -38,7 +38,10 @@ class DeviceFinder {
     };
     std::vector<PhysicalDeviceInformation> m_physicalDevicesInformation;
 
-    vk::PhysicalDeviceFeatures2 m_features;
-    vk::PhysicalDeviceSynchronization2Features m_synchronisation_2_enabled;
+    vk::StructureChain<vk::PhysicalDeviceFeatures2,
+                       vk::PhysicalDeviceSynchronization2Features,
+                       vk::PhysicalDeviceVulkan12Features,
+                       vk::PhysicalDeviceAccelerationStructureFeaturesKHR>
+        m_features;
 };
 } // namespace vw

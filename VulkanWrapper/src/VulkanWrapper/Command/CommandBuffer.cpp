@@ -43,4 +43,14 @@ CommandBufferRecorder::begin_render_pass(const RenderPass &render_pass,
     return RenderPassCommandBufferRecorder{m_commandBuffer};
 }
 
+void CommandBufferRecorder::buildAccelerationStructure(
+    const vk::AccelerationStructureBuildGeometryInfoKHR &buildInfo,
+    std::span<const vk::AccelerationStructureBuildRangeInfoKHR>
+        buildRangeInfos) {
+    assert(buildInfo.geometryCount == buildRangeInfos.size());
+    const auto pBuildRangeInfos = buildRangeInfos.data();
+    m_commandBuffer.buildAccelerationStructuresKHR(1, &buildInfo,
+                                                   &pBuildRangeInfos);
+}
+
 } // namespace vw

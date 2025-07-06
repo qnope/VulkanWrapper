@@ -12,8 +12,9 @@ MipLevel mip_level_from_size(Width width, Height height, Depth depth) {
 }
 } // namespace
 
-Allocator::Allocator(VmaAllocator allocator)
-    : ObjectWithHandle<VmaAllocator>{allocator} {}
+Allocator::Allocator(const Device &device, VmaAllocator allocator)
+    : ObjectWithHandle<VmaAllocator>{allocator}
+    , m_device{&device} {}
 
 IndexBuffer Allocator::allocate_index_buffer(VkDeviceSize size) const {
     return Buffer<unsigned, false, IndexBufferUsage>{allocate_buffer(
@@ -73,7 +74,7 @@ BufferBase Allocator::allocate_buffer(VkDeviceSize size, bool host_visible,
     VkBuffer buffer = nullptr;
     vmaCreateBuffer(handle(), &buffer_info, &allocation_info, &buffer,
                     &allocation, nullptr);
-    return BufferBase{*this, buffer, allocation, size};
+    return BufferBase{*m_device, *this, buffer, allocation, size};
 }
 
 AllocatorBuilder::AllocatorBuilder(const Instance &instance,
@@ -83,7 +84,8 @@ AllocatorBuilder::AllocatorBuilder(const Instance &instance,
 
 Allocator AllocatorBuilder::build() && {
     VmaAllocatorCreateInfo info{};
-    info.flags = VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT;
+    info.flags = VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT |
+                 VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
     info.device = m_device->handle();
     info.instance = m_instance->handle();
     info.physicalDevice = m_device->physical_device();
@@ -92,7 +94,7 @@ Allocator AllocatorBuilder::build() && {
     assert(vk::Result(vmaCreateAllocator(&info, &allocator)) ==
            vk::Result::eSuccess);
 
-    return Allocator{allocator};
+    return Allocator{*m_device, allocator};
 }
 
 } // namespace vw

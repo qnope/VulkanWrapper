@@ -6,22 +6,27 @@
 
 namespace vw {
 
-constexpr VkBufferUsageFlags VertexBufferUsage =
-    VkBufferUsageFlags{vk::BufferUsageFlagBits::eVertexBuffer |
-                       vk::BufferUsageFlagBits::eTransferDst};
+constexpr VkBufferUsageFlags2 VertexBufferUsage = VkBufferUsageFlags2{
+    vk::BufferUsageFlagBits2::eVertexBuffer |
+    vk::BufferUsageFlagBits2::eTransferDst |
+    vk::BufferUsageFlagBits2::eShaderDeviceAddress |
+    vk::BufferUsageFlagBits2::eAccelerationStructureBuildInputReadOnlyKHR};
 
-constexpr VkBufferUsageFlags IndexBufferUsage =
-    VkBufferUsageFlags{vk::BufferUsageFlagBits::eIndexBuffer |
-                       vk::BufferUsageFlagBits::eTransferDst};
+constexpr VkBufferUsageFlags2 IndexBufferUsage = VkBufferUsageFlags2{
+    vk::BufferUsageFlagBits2::eIndexBuffer |
+    vk::BufferUsageFlagBits2::eTransferDst |
+    vk::BufferUsageFlagBits2::eShaderDeviceAddress |
+    vk::BufferUsageFlagBits2::eAccelerationStructureBuildInputReadOnlyKHR};
 
-constexpr VkBufferUsageFlags UniformBufferUsage =
-    VkBufferUsageFlags{vk::BufferUsageFlagBits::eUniformBuffer |
-                       vk::BufferUsageFlagBits::eTransferDst};
+constexpr VkBufferUsageFlags2 UniformBufferUsage =
+    VkBufferUsageFlags2{vk::BufferUsageFlagBits2::eUniformBuffer |
+                        vk::BufferUsageFlagBits2::eTransferDst |
+                        vk::BufferUsageFlagBits2::eShaderDeviceAddress};
 
 class BufferBase : public ObjectWithHandle<vk::Buffer> {
   public:
-    BufferBase(const Allocator &allocator, vk::Buffer buffer,
-               VmaAllocation allocation, VkDeviceSize size);
+    BufferBase(const Device &device, const Allocator &allocator,
+               vk::Buffer buffer, VmaAllocation allocation, VkDeviceSize size);
 
     BufferBase(const BufferBase &) = delete;
     BufferBase &operator=(const BufferBase &) = delete;
@@ -30,20 +35,26 @@ class BufferBase : public ObjectWithHandle<vk::Buffer> {
     BufferBase &operator=(BufferBase &&other) noexcept;
 
     [[nodiscard]] VkDeviceSize size_bytes() const noexcept;
+    [[nodiscard]] vk::DeviceAddress device_address() const noexcept;
 
     void generic_copy(const void *data, VkDeviceSize size, VkDeviceSize offset);
 
     ~BufferBase();
 
   private:
+    const Device *m_device;
     const Allocator *m_allocator;
     VmaAllocation m_allocation;
     VkDeviceSize m_size_in_bytes;
 };
 
-template <typename T, bool HostVisible, VkBufferUsageFlags flags>
+template <typename T, bool HostVisible, VkBufferUsageFlags Flags>
 class Buffer : public BufferBase {
   public:
+    using type = T;
+    static constexpr auto host_visible = HostVisible;
+    static constexpr auto flags = vk::BufferUsageFlags(Flags);
+
     static consteval bool does_support(vk::BufferUsageFlags usage) {
         return (vk::BufferUsageFlags(flags) & usage) == usage;
     }

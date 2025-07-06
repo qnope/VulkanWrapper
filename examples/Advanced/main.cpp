@@ -4,6 +4,7 @@
 #include "TonemapPass.h"
 #include "ZPass.h"
 #include <VulkanWrapper/3rd_party.h>
+#include <VulkanWrapper/AccelerationStructure/AccelerationStructure.h>
 #include <VulkanWrapper/Command/CommandBuffer.h>
 #include <VulkanWrapper/Command/CommandPool.h>
 #include <VulkanWrapper/Descriptors/DescriptorAllocator.h>
@@ -123,21 +124,6 @@ std::vector<vw::Framebuffer> createFramebuffers(
     return framebuffers;
 }
 
-class AccelerationStructure {
-  public:
-  private:
-};
-
-class AccelerationStructureBuilder {
-  public:
-    void add_meshes(const std::vector<vw::Model::Mesh> &meshes) {}
-
-    AccelerationStructure build() && { return AccelerationStructure{}; }
-
-  private:
-  private:
-};
-
 using namespace glm;
 
 std::ostream &operator<<(std::ostream &s, const vec3 obj) {
@@ -177,8 +163,22 @@ int main() {
                 .build();
 
         vw::Model::MeshManager mesh_manager(app.device, app.allocator);
-        // mesh_manager.read_file("../../../Models/Sponza/sponza.obj");
+        mesh_manager.read_file("../../../Models/Sponza/sponza.obj");
         mesh_manager.read_file("../../../Models/cube.obj");
+
+        // --- Acceleration Structure Creation ---
+        // Build BLAS from all meshes
+        vw::AccelerationStructure::BottomLevelAccelerationStructureBuilder
+            blasBuilder(app.device, app.allocator);
+        blasBuilder.add_geometries(mesh_manager.meshes());
+        auto blas = std::move(blasBuilder).build();
+
+        // Build TLAS from the BLAS (single instance, identity transform)
+        vw::AccelerationStructure::TopLevelAccelerationStructureBuilder
+            tlasBuilder(app.device, app.allocator);
+        tlasBuilder.add_instance(blas);
+        auto tlas = std::move(tlasBuilder).build();
+        // --- End Acceleration Structure Creation ---
 
         const auto color_attachment =
             vw::AttachmentBuilder{}
@@ -264,10 +264,6 @@ int main() {
         auto cmd_buffer = mesh_manager.fill_command_buffer();
 
         app.device.graphicsQueue().enqueue_command_buffer(cmd_buffer);
-
-        AccelerationStructureBuilder asBuilder;
-        asBuilder.add_meshes(mesh_manager.meshes());
-        auto as = std::move(asBuilder).build();
 
         float angle = -10.0;
         while (!app.window.is_close_requested()) {

@@ -69,4 +69,6 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Model/Internal/MaterialInfo.h
     VulkanWrapper/Model/Internal/MeshInfo.h
 
+    VulkanWrapper/AccelerationStructure/AccelerationStructure.h
+
 )

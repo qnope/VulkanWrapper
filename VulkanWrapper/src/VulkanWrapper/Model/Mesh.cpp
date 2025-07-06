@@ -45,21 +45,35 @@ void Mesh::draw_zpass(vk::CommandBuffer cmd_buffer) const {
 
 vk::AccelerationStructureGeometryKHR
 Mesh::acceleration_structure_geometry() const noexcept {
-    /* const auto triangles =
-     vk::AccelerationStructureGeometryTrianglesDataKHR()
-                                .setIndexType(vk::IndexType::eUint32)
-                                .setVertexFormat(vk::Format::eR32G32B32Sfloat)
-                                .setVertexStride(sizeof(vw::Vertex3D))
-                                .setMaxVertex();
+    // Create triangle data for acceleration structure
+    vk::AccelerationStructureGeometryTrianglesDataKHR triangles;
+    triangles.setVertexFormat(vk::Format::eR32G32B32Sfloat)
+        .setVertexData(vk::DeviceOrHostAddressConstKHR{
+            m_vertex_buffer->device_address() +
+            m_vertex_offset * sizeof(vw::Vertex3D)})
+        .setVertexStride(sizeof(vw::Vertex3D))
+        .setMaxVertex(static_cast<uint32_t>(
+            m_vertex_buffer->size() / sizeof(vw::Vertex3D) - 1))
+        .setIndexType(vk::IndexType::eUint32)
+        .setIndexData(
+            vk::DeviceOrHostAddressConstKHR{m_index_buffer->device_address() +
+                                            sizeof(uint32_t) * m_first_index})
+        .setTransformData(
+            vk::DeviceOrHostAddressConstKHR{}); // No transform buffer
 
-     const auto data =
-         vk::AccelerationStructureGeometryDataKHR().setTriangles(triangles);
+    // Create geometry data
+    vk::AccelerationStructureGeometryDataKHR geometryData;
+    geometryData.setTriangles(triangles);
 
-     const auto geometry = vk::AccelerationStructureGeometryKHR()
-                               .setGeometry(data)
-                               .setGeometryType(vk::GeometryTypeKHR::eTriangles);
+    // Create acceleration structure geometry
+    vk::AccelerationStructureGeometryKHR geometry;
+    geometry.setGeometryType(vk::GeometryTypeKHR::eTriangles)
+        .setGeometry(geometryData)
+        .setFlags(vk::GeometryFlagBitsKHR::eOpaque);
 
-     return geometry;*/
+    return geometry;
 }
+
+uint32_t Mesh::index_count() const noexcept { return m_indice_count; }
 
 } // namespace vw::Model

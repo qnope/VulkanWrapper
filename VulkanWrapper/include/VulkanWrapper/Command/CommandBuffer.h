@@ -39,6 +39,11 @@ class CommandBufferRecorder {
     begin_render_pass(const RenderPass &render_pass,
                       const vw::Framebuffer &framebuffer);
 
+    void buildAccelerationStructure(
+        const vk::AccelerationStructureBuildGeometryInfoKHR &buildInfo,
+        std::span<const vk::AccelerationStructureBuildRangeInfoKHR>
+            buildRangeInfos);
+
   private:
     vk::CommandBuffer m_commandBuffer;
 };

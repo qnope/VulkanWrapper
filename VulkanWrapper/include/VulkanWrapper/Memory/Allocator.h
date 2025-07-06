@@ -11,7 +11,7 @@ struct AllocatorImpl;
 
 class Allocator : public ObjectWithHandle<VmaAllocator> {
   public:
-    Allocator(VmaAllocator allocator);
+    Allocator(const Device &device, VmaAllocator allocator);
     Allocator(const Allocator &) = delete;
     Allocator(Allocator &&) noexcept = default;
 
@@ -30,11 +30,20 @@ class Allocator : public ObjectWithHandle<VmaAllocator> {
     [[nodiscard]] IndexBuffer allocate_index_buffer(VkDeviceSize size) const;
 
     template <typename T, bool HostVisible, VkBufferUsageFlags Usage>
-    Buffer<T, HostVisible, Usage>
-    create_buffer(VkDeviceSize number_elements) const {
+    [[nodiscard]] Buffer<T, HostVisible, Usage>
+    create_buffer(vk::DeviceSize number_elements) const {
         return {allocate_buffer(number_elements * sizeof(T), HostVisible,
                                 vk::BufferUsageFlags(Usage),
                                 vk::SharingMode::eExclusive)};
+    }
+
+    template <typename BufferType>
+    [[nodiscard]] BufferType
+    create_buffer(vk::DeviceSize number_elements) const {
+        return create_buffer<typename BufferType::type,
+                             BufferType::host_visible,
+                             VkBufferUsageFlags(BufferType::flags)>(
+            number_elements);
     }
 
     [[nodiscard]] std::shared_ptr<const Image>
@@ -48,6 +57,9 @@ class Allocator : public ObjectWithHandle<VmaAllocator> {
     allocate_buffer(VkDeviceSize size, bool host_visible,
                     vk::BufferUsageFlags usage,
                     vk::SharingMode sharing_mode) const;
+
+  private:
+    const Device *m_device;
 };
 
 class AllocatorBuilder {

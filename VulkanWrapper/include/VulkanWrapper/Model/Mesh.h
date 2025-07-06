@@ -27,6 +27,8 @@ class Mesh {
     vk::AccelerationStructureGeometryKHR
     acceleration_structure_geometry() const noexcept;
 
+    [[nodiscard]] uint32_t index_count() const noexcept;
+
   private:
     const Vertex3DBuffer *m_vertex_buffer;
     const FullVertex3DBuffer *m_full_vertex_buffer;
