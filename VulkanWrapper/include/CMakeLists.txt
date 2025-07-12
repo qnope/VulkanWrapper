@@ -31,6 +31,7 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Pipeline/Pipeline.h
     VulkanWrapper/Pipeline/PipelineLayout.h
     VulkanWrapper/Pipeline/MeshRenderer.h
+    VulkanWrapper/Pipeline/RayTracingPipeline.h
 
     VulkanWrapper/RenderPass/Attachment.h
     VulkanWrapper/RenderPass/RenderPass.h

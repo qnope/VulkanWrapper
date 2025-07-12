@@ -40,6 +40,36 @@ void DescriptorAllocator::add_combined_image(int binding,
                 .setDstArrayElement(0);
 }
 
+void DescriptorAllocator::add_combined_image(int binding,
+                                             const std::shared_ptr<const ImageView> &image_view) {
+    auto &[info, write] = m_imageUpdate.emplace_back();
+    info = vk::DescriptorImageInfo()
+               .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+               .setImageView(image_view->handle());
+    write = vk::WriteDescriptorSet()
+                .setDescriptorCount(1)
+                .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+                .setDstBinding(binding)
+                .setDstArrayElement(0);
+}
+
+void DescriptorAllocator::add_combined_image_sampler(int binding,
+                                                     const CombinedImage &image) {
+    add_combined_image(binding, image);
+}
+
+void DescriptorAllocator::add_acceleration_structure(int binding, vk::AccelerationStructureKHR tlas) {
+    auto &[info, write] = m_bufferUpdate.emplace_back();
+    // For acceleration structures, we use the buffer info but set the descriptor type to acceleration structure
+    info = vk::DescriptorBufferInfo(); // Empty buffer info for acceleration structure
+    write = vk::WriteDescriptorSet()
+                .setDescriptorCount(1)
+                .setDescriptorType(vk::DescriptorType::eAccelerationStructureKHR)
+                .setDstBinding(binding)
+                .setDstArrayElement(0)
+                .setPNext(&tlas); // Use pNext to pass the acceleration structure
+}
+
 void DescriptorAllocator::add_input_attachment(
     int binding, std::shared_ptr<const ImageView> image_view) {
     auto &[info, write] = m_imageUpdate.emplace_back();

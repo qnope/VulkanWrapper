@@ -28,6 +28,8 @@ target_precompile_headers(VulkanWrapperCoreLibrary PRIVATE ${CMAKE_CURRENT_SOURC
 add_library(VulkanWrapper::VW ALIAS VulkanWrapperCoreLibrary)
 
 function(VwCompileShader TARGET_NAME SHADER_PATH RELATIVE_OUTPUT_PATH)
+    # Parse additional arguments
+    set(EXTRA_ARGS ${ARGN})
     # Obtenir le chemin du fichier appelant
     get_filename_component(CALLER_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
     set(ABS_SHADER_PATH "${CALLER_DIR}/${SHADER_PATH}")
@@ -54,7 +56,7 @@ function(VwCompileShader TARGET_NAME SHADER_PATH RELATIVE_OUTPUT_PATH)
 
     add_custom_command(
         OUTPUT "${COMPILED_SHADER}"
-        COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} -V "${ABS_SHADER_PATH}" -o "${COMPILED_SHADER}"
+        COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} -V "${ABS_SHADER_PATH}" -o "${COMPILED_SHADER}" ${EXTRA_ARGS}
         DEPENDS "${ABS_SHADER_PATH}"
         COMMENT "Compile Shader : ${COMPILED_SHADER}"
         VERBATIM

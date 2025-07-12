@@ -1,6 +1,7 @@
 #include "Application.h"
 #include "ColorPass.h"
 #include "SkyPass.h"
+#include "SunLightingPass.h"
 #include "TonemapPass.h"
 #include "ZPass.h"
 #include <VulkanWrapper/3rd_party.h>
@@ -218,7 +219,8 @@ int main() {
         auto tonemap_pass = std::make_unique<TonemapPass>(
             app.device, app.swapchain.width(), app.swapchain.height());
 
-        auto renderPass =
+        // Create a temporary render pass to get framebuffers
+        auto tempRenderPass =
             vw::RenderPassBuilder(app.device)
                 .add_attachment(color_attachment,
                                 vk::ClearColorValue(1.0f, 1.0f, 1.0f, 1.0f))
@@ -236,7 +238,7 @@ int main() {
                 .add_subpass(sky_pass_tag, std::move(sky_pass))
                 .add_subpass(tonemap_pass_tag, std::move(tonemap_pass))
                 .add_dependency(z_pass_tag, color_pass_tag)
-                .add_dependency(z_pass_tag, sky_pass_tag)
+                .add_dependency(color_pass_tag, sky_pass_tag)
                 .add_dependency(sky_pass_tag, tonemap_pass_tag)
                 .add_dependency(color_pass_tag, tonemap_pass_tag)
                 .build();
@@ -246,8 +248,62 @@ int main() {
         auto commandBuffers = commandPool.allocate(image_views.size());
 
         const auto framebuffers =
-            createFramebuffers(app.device, app.allocator, renderPass,
+            createFramebuffers(app.device, app.allocator, tempRenderPass,
                                app.swapchain, image_views, depth_buffer_view);
+
+        // Create sun lighting pass after framebuffers are created
+        // We need to get the G-Buffer images from the first framebuffer
+        const auto& first_framebuffer = framebuffers[0];
+        const auto& gbuffer_position = first_framebuffer.image_view(1); // position attachment
+        const auto& gbuffer_normal = first_framebuffer.image_view(2);   // normal attachment
+        const auto& gbuffer_albedo = first_framebuffer.image_view(0);   // albedo attachment (color)
+        const auto& gbuffer_roughness = first_framebuffer.image_view(3); // roughness attachment
+        const auto& gbuffer_metallic = first_framebuffer.image_view(4);  // metallic attachment
+
+        auto sun_lighting_pass = std::make_unique<SunLightingPass>(
+            app.device, app.allocator, app.swapchain.width(), app.swapchain.height(),
+            UBOData{}.proj, UBOData{}.view, UBOData{}.model, tlas,
+            gbuffer_position, gbuffer_normal, gbuffer_albedo, 
+            gbuffer_roughness, gbuffer_metallic);
+
+        // Create new subpasses for the final render pass
+        auto final_depth_subpass = std::make_unique<ZPass>(
+            app.device, mesh_manager, descriptor_set_layout,
+            app.swapchain.width(), app.swapchain.height(), descriptor_set);
+        auto final_color_subpass = std::make_unique<ColorSubpass>(
+            app.device, mesh_manager, descriptor_set_layout,
+            app.swapchain.width(), app.swapchain.height(), descriptor_set);
+        auto final_sky_pass = std::make_unique<SkyPass>(
+            app.device, app.allocator, app.swapchain.width(),
+            app.swapchain.height(), UBOData{}.proj, UBOData{}.view);
+        auto final_tonemap_pass = std::make_unique<TonemapPass>(
+            app.device, app.swapchain.width(), app.swapchain.height());
+
+        // Create the final render pass with sun lighting
+        auto renderPass =
+            vw::RenderPassBuilder(app.device)
+                .add_attachment(color_attachment,
+                                vk::ClearColorValue(1.0f, 1.0f, 1.0f, 1.0f))
+                .add_attachment(data_attachment, vk::ClearColorValue())
+                .add_attachment(data_attachment, vk::ClearColorValue())
+                .add_attachment(data_attachment, vk::ClearColorValue())
+                .add_attachment(data_attachment, vk::ClearColorValue())
+                .add_attachment(data_attachment,
+                                vk::ClearColorValue(1.0f, 1.0f, 1.0f, 1.0f))
+                .add_attachment(final_attachment, vk::ClearColorValue())
+                .add_attachment(depth_attachment,
+                                vk::ClearDepthStencilValue(1.0))
+                .add_subpass(z_pass_tag, std::move(final_depth_subpass))
+                .add_subpass(color_pass_tag, std::move(final_color_subpass))
+                .add_subpass(sun_lighting_pass_tag, std::move(sun_lighting_pass))
+                .add_subpass(sky_pass_tag, std::move(final_sky_pass))
+                .add_subpass(tonemap_pass_tag, std::move(final_tonemap_pass))
+                .add_dependency(z_pass_tag, color_pass_tag)
+                .add_dependency(color_pass_tag, sun_lighting_pass_tag)
+                .add_dependency(sun_lighting_pass_tag, sky_pass_tag)
+                .add_dependency(sky_pass_tag, tonemap_pass_tag)
+                .add_dependency(color_pass_tag, tonemap_pass_tag)
+                .build();
 
         const vk::Extent2D extent(uint32_t(app.swapchain.width()),
                                   uint32_t(app.swapchain.height()));

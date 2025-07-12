@@ -22,7 +22,7 @@ class TonemapPass : public vw::Subpass {
                  const vw::Framebuffer &framebuffer) const noexcept override {
         vw::DescriptorAllocator allocator;
         allocator.add_input_attachment(0, framebuffer.image_view(0));
-        allocator.add_input_attachment(1, framebuffer.image_view(5));
+        allocator.add_input_attachment(1, framebuffer.image_view(5)); // Sun lighting output
         auto descriptor_set = m_descriptor_pool.allocate_set(allocator);
         cmd_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
                                 m_pipeline->handle());

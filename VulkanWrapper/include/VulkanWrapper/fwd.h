@@ -25,6 +25,7 @@ class Surface;
 class ShaderModule;
 class Pipeline;
 class PipelineLayout;
+class RayTracingPipeline;
 
 class Subpass;
 class RenderPass;

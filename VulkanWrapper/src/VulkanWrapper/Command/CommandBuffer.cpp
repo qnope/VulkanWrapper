@@ -53,4 +53,15 @@ void CommandBufferRecorder::buildAccelerationStructure(
                                                    &pBuildRangeInfos);
 }
 
+void CommandBufferRecorder::traceRaysKHR(
+    const vk::StridedDeviceAddressRegionKHR &raygenShaderBindingTable,
+    const vk::StridedDeviceAddressRegionKHR &missShaderBindingTable,
+    const vk::StridedDeviceAddressRegionKHR &hitShaderBindingTable,
+    const vk::StridedDeviceAddressRegionKHR &callableShaderBindingTable,
+    uint32_t width, uint32_t height, uint32_t depth) {
+    m_commandBuffer.traceRaysKHR(raygenShaderBindingTable, missShaderBindingTable,
+                                  hitShaderBindingTable, callableShaderBindingTable,
+                                  width, height, depth);
+}
+
 } // namespace vw

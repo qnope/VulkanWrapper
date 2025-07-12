@@ -23,6 +23,11 @@ constexpr VkBufferUsageFlags2 UniformBufferUsage =
                         vk::BufferUsageFlagBits2::eTransferDst |
                         vk::BufferUsageFlagBits2::eShaderDeviceAddress};
 
+constexpr VkBufferUsageFlags2 StagingBufferUsage =
+    VkBufferUsageFlags2{vk::BufferUsageFlagBits2::eTransferSrc |
+                        vk::BufferUsageFlagBits2::eTransferDst |
+                        vk::BufferUsageFlagBits2::eShaderDeviceAddress};
+
 class BufferBase : public ObjectWithHandle<vk::Buffer> {
   public:
     BufferBase(const Device &device, const Allocator &allocator,

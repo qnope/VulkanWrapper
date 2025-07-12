@@ -48,16 +48,14 @@ Mesh::acceleration_structure_geometry() const noexcept {
     // Create triangle data for acceleration structure
     vk::AccelerationStructureGeometryTrianglesDataKHR triangles;
     triangles.setVertexFormat(vk::Format::eR32G32B32Sfloat)
-        .setVertexData(vk::DeviceOrHostAddressConstKHR{
-            m_vertex_buffer->device_address() +
-            m_vertex_offset * sizeof(vw::Vertex3D)})
+        .setVertexData(
+            vk::DeviceOrHostAddressConstKHR{m_vertex_buffer->device_address()})
         .setVertexStride(sizeof(vw::Vertex3D))
         .setMaxVertex(static_cast<uint32_t>(
             m_vertex_buffer->size() / sizeof(vw::Vertex3D) - 1))
         .setIndexType(vk::IndexType::eUint32)
         .setIndexData(
-            vk::DeviceOrHostAddressConstKHR{m_index_buffer->device_address() +
-                                            sizeof(uint32_t) * m_first_index})
+            vk::DeviceOrHostAddressConstKHR{m_index_buffer->device_address()})
         .setTransformData(
             vk::DeviceOrHostAddressConstKHR{}); // No transform buffer
 
@@ -73,7 +71,5 @@ Mesh::acceleration_structure_geometry() const noexcept {
 
     return geometry;
 }
-
-uint32_t Mesh::index_count() const noexcept { return m_indice_count; }
 
 } // namespace vw::Model
