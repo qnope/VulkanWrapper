@@ -334,16 +334,13 @@ int main() {
 
         app.device.graphicsQueue().enqueue_command_buffer(cmd_buffer);
 
-        float angle = -10.0;
         while (!app.window.is_close_requested()) {
             app.window.update();
 
-            angle += 0.1;
+            float angle = 20;
 
             if (angle > 360)
                 angle = 0.0;
-
-            std::cout << angle << std::endl;
 
             SkyPass::UBO ubo{UBOData{}.proj, UBOData{}.view, angle};
             sky_buffer->copy({&ubo, 1u}, 0);
