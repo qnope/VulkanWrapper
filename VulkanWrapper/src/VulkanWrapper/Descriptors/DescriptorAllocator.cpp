@@ -40,6 +40,19 @@ void DescriptorAllocator::add_combined_image(int binding,
                 .setDstArrayElement(0);
 }
 
+void DescriptorAllocator::add_storage_image(int binding,
+                                            const ImageView &image_view) {
+    auto &[info, write] = m_imageUpdate.emplace_back();
+    info = vk::DescriptorImageInfo()
+               .setImageLayout(vk::ImageLayout::eGeneral)
+               .setImageView(image_view.handle());
+    write = vk::WriteDescriptorSet()
+                .setDescriptorCount(1)
+                .setDescriptorType(vk::DescriptorType::eStorageImage)
+                .setDstBinding(binding)
+                .setDstArrayElement(0);
+}
+
 void DescriptorAllocator::add_acceleration_structure(
     int binding, vk::AccelerationStructureKHR tlas) {
     auto &[accelerationStructure, info, write] =

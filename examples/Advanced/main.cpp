@@ -79,7 +79,8 @@ std::vector<vw::Framebuffer> createFramebuffers(
             vk::Format::eR32G32B32A32Sfloat,
             vk::ImageUsageFlagBits::eColorAttachment |
                 vk::ImageUsageFlagBits::eInputAttachment |
-                vk::ImageUsageFlagBits::eSampled);
+                vk::ImageUsageFlagBits::eSampled |
+                vk::ImageUsageFlagBits::eStorage);
     };
 
     auto create_img_view = [&](auto img) {
@@ -267,11 +268,15 @@ int main() {
         const auto &gbuffer_metallic =
             first_framebuffer.image_view(4); // metallic attachment
 
+        const auto &sun_lighting_output =
+            first_framebuffer.image_view(5); // sun lighting output attachment
+
         auto sun_lighting_pass = std::make_unique<SunLightingPass>(
             app.device, app.allocator, app.swapchain.width(),
             app.swapchain.height(), UBOData{}.proj, UBOData{}.view,
             UBOData{}.model, tlas, gbuffer_position, gbuffer_normal,
-            gbuffer_albedo, gbuffer_roughness, gbuffer_metallic);
+            gbuffer_albedo, gbuffer_roughness, gbuffer_metallic,
+            sun_lighting_output);
 
         // Create new subpasses for the final render pass
         auto final_depth_subpass = std::make_unique<ZPass>(

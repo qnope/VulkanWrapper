@@ -12,6 +12,8 @@ class DescriptorAllocator {
 
     void add_combined_image(int binding, const CombinedImage &image);
 
+    void add_storage_image(int binding, const ImageView &image_view);
+
     void add_input_attachment(int binding,
                               std::shared_ptr<const ImageView> image_view);
 

@@ -38,7 +38,8 @@ class SunLightingPass : public vw::Subpass {
                     const std::shared_ptr<const vw::ImageView> &gbufferNormal,
                     const std::shared_ptr<const vw::ImageView> &gbufferAlbedo,
                     const std::shared_ptr<const vw::ImageView> &gbufferRoughness,
-                    const std::shared_ptr<const vw::ImageView> &gbufferMetallic)
+                    const std::shared_ptr<const vw::ImageView> &gbufferMetallic,
+                    const std::shared_ptr<const vw::ImageView> &outputImage)
         : m_device{device}
         , m_allocator{allocator}
         , m_width{width}
@@ -49,6 +50,7 @@ class SunLightingPass : public vw::Subpass {
         , m_gbufferAlbedo{gbufferAlbedo}
         , m_gbufferRoughness{gbufferRoughness}
         , m_gbufferMetallic{gbufferMetallic}
+        , m_output_image{outputImage}
         , m_sbt_buffer{m_allocator.create_buffer<uint8_t, true, vw::StagingBufferUsage>(1024)} {
         
         const CameraUBO cameraUbo{projection, view, model};
@@ -72,15 +74,27 @@ class SunLightingPass : public vw::Subpass {
         alloc.add_combined_image(6, vw::CombinedImage{m_gbufferRoughness, m_sampler});
         alloc.add_combined_image(7, vw::CombinedImage{m_gbufferMetallic, m_sampler});
         m_descriptor_set = m_descriptor_pool.allocate_set(alloc);
+
+        // Create descriptor set for output image (set 1)
+        vw::DescriptorAllocator output_alloc;
+        output_alloc.add_storage_image(0, *m_output_image);
+        m_output_descriptor_set = m_output_descriptor_pool.allocate_set(output_alloc);
     }
 
     void execute(vk::CommandBuffer cmd_buffer,
-                 const vw::Framebuffer &) const noexcept override {
+                 const vw::Framebuffer &framebuffer) const noexcept override {
         cmd_buffer.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR,
                                 m_pipeline->handle());
+        
+        // Bind descriptor set 0 (G-buffer and acceleration structure)
         cmd_buffer.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR,
                                       m_pipeline->layout().handle(), 0,
                                       m_descriptor_set, nullptr);
+        
+        // Bind descriptor set 1 (output image)
+        cmd_buffer.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR,
+                                      m_pipeline->layout().handle(), 1,
+                                      m_output_descriptor_set, nullptr);
         
         // Dispatch ray tracing
         const uint32_t width = static_cast<uint32_t>(m_width);
@@ -127,6 +141,7 @@ class SunLightingPass : public vw::Subpass {
 
         auto pipelineLayout = vw::PipelineLayoutBuilder(m_device)
                                   .with_descriptor_set_layout(m_layout)
+                                  .with_descriptor_set_layout(m_output_layout)
                                   .build();
 
         m_pipeline.emplace(
@@ -146,6 +161,9 @@ class SunLightingPass : public vw::Subpass {
         const auto group_count = 3; // raygen + closest_hit + miss
         
         const auto sbt_size = handle_size * group_count;
+
+        const auto d  = m_sbt_buffer.device_address();
+
         m_sbt_buffer = m_allocator.create_buffer<uint8_t, true, vw::StagingBufferUsage>(sbt_size);
         
         // Get shader group handles
@@ -203,10 +221,18 @@ class SunLightingPass : public vw::Subpass {
             .with_combined_image_sampler(vk::ShaderStageFlagBits::eRaygenKHR, 1)
             .build();
 
+    std::shared_ptr<const vw::DescriptorSetLayout> m_output_layout =
+        vw::DescriptorSetLayoutBuilder(m_device)
+            .with_storage_image(vk::ShaderStageFlagBits::eRaygenKHR, 1)
+            .build();
+
     mutable vw::DescriptorPool m_descriptor_pool =
         vw::DescriptorPoolBuilder(m_device, m_layout).build();
+    mutable vw::DescriptorPool m_output_descriptor_pool =
+        vw::DescriptorPoolBuilder(m_device, m_output_layout).build();
     std::optional<vw::RayTracingPipeline> m_pipeline;
     vk::DescriptorSet m_descriptor_set;
+    vk::DescriptorSet m_output_descriptor_set;
     
     vk::StridedDeviceAddressRegionKHR m_raygen_sbt_region;
     vk::StridedDeviceAddressRegionKHR m_miss_sbt_region;
@@ -214,4 +240,5 @@ class SunLightingPass : public vw::Subpass {
     vk::StridedDeviceAddressRegionKHR m_callable_sbt_region;
 
     std::shared_ptr<const vw::Sampler> m_sampler = vw::SamplerBuilder(m_device).build();
+    std::shared_ptr<const vw::ImageView> m_output_image;
 }; 

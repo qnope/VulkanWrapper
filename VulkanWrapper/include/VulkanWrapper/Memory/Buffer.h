@@ -36,8 +36,8 @@ class BufferBase : public ObjectWithHandle<vk::Buffer> {
     BufferBase(const BufferBase &) = delete;
     BufferBase &operator=(const BufferBase &) = delete;
 
-    BufferBase(BufferBase &&other) noexcept;
-    BufferBase &operator=(BufferBase &&other) noexcept;
+    BufferBase(BufferBase &&other) noexcept = default;
+    BufferBase &operator=(BufferBase &&other) noexcept = default;
 
     [[nodiscard]] VkDeviceSize size_bytes() const noexcept;
     [[nodiscard]] vk::DeviceAddress device_address() const noexcept;
@@ -47,10 +47,13 @@ class BufferBase : public ObjectWithHandle<vk::Buffer> {
     ~BufferBase();
 
   private:
-    const Device *m_device;
-    const Allocator *m_allocator;
-    VmaAllocation m_allocation;
-    VkDeviceSize m_size_in_bytes;
+    struct Data {
+        const Device *m_device;
+        const Allocator *m_allocator;
+        VmaAllocation m_allocation;
+        VkDeviceSize m_size_in_bytes;
+    };
+    std::unique_ptr<Data> m_data;
 };
 
 template <typename T, bool HostVisible, VkBufferUsageFlags Flags>

@@ -105,6 +105,20 @@ DescriptorSetLayoutBuilder::with_acceleration_structure(vk::ShaderStageFlags sta
     return std::move(*this);
 }
 
+DescriptorSetLayoutBuilder &&
+DescriptorSetLayoutBuilder::with_storage_image(vk::ShaderStageFlags stages,
+                                               int number) && {
+    const auto binding =
+        vk::DescriptorSetLayoutBinding()
+            .setBinding(m_current_binding)
+            .setDescriptorType(vk::DescriptorType::eStorageImage)
+            .setStageFlags(stages)
+            .setDescriptorCount(number);
+    m_current_binding += number;
+    m_bindings.push_back(binding);
+    return std::move(*this);
+}
+
 std::shared_ptr<DescriptorSetLayout> DescriptorSetLayoutBuilder::build() && {
     const auto info =
         vk::DescriptorSetLayoutCreateInfo().setBindings(m_bindings);
