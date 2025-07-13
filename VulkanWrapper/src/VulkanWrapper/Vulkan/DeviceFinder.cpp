@@ -105,7 +105,8 @@ DeviceFinder &&DeviceFinder::with_ray_tracing() && noexcept {
     constexpr std::array extensions = {
         VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
         VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
-        VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME};
+        VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+        VK_KHR_RAY_QUERY_EXTENSION_NAME};
 
     for (const auto &extension : extensions)
         remove_device_not_supporting_extension(extension);
@@ -115,6 +116,9 @@ DeviceFinder &&DeviceFinder::with_ray_tracing() && noexcept {
 
     m_features.get<vk::PhysicalDeviceAccelerationStructureFeaturesKHR>()
         .setAccelerationStructure(1U);
+    m_features.get<vk::PhysicalDeviceRayQueryFeaturesKHR>().setRayQuery(1u);
+    m_features.get<vk::PhysicalDeviceRayTracingPipelineFeaturesKHR>()
+        .setRayTracingPipeline(1U);
 
     return std::move(*this);
 }

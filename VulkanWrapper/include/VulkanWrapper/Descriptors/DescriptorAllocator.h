@@ -11,11 +11,12 @@ class DescriptorAllocator {
                             vk::DeviceSize offset, vk::DeviceSize size);
 
     void add_combined_image(int binding, const CombinedImage &image);
-    void add_combined_image_sampler(int binding, const CombinedImage &image);
-    void add_combined_image(int binding, const std::shared_ptr<const ImageView> &image_view);
+
     void add_input_attachment(int binding,
                               std::shared_ptr<const ImageView> image_view);
-    void add_acceleration_structure(int binding, vk::AccelerationStructureKHR tlas);
+
+    void add_acceleration_structure(int binding,
+                                    vk::AccelerationStructureKHR tlas);
 
     [[nodiscard]] std::vector<vk::WriteDescriptorSet>
     get_write_descriptors() const;
@@ -35,8 +36,16 @@ class DescriptorAllocator {
         bool operator==(const ImageUpdate &) const = default;
     };
 
+    struct AccelerationStructureUpdate {
+        vk::AccelerationStructureKHR accelerationStructure;
+        vk::WriteDescriptorSetAccelerationStructureKHR info;
+        vk::WriteDescriptorSet write;
+        bool operator==(const AccelerationStructureUpdate &) const = default;
+    };
+
     std::vector<BufferUpdate> m_bufferUpdate;
     std::vector<ImageUpdate> m_imageUpdate;
+    std::optional<AccelerationStructureUpdate> m_accelerationStructureUpdate;
 };
 
 } // namespace vw

@@ -10,6 +10,7 @@
 #include "VulkanWrapper/Pipeline/RayTracingPipeline.h"
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
 #include "VulkanWrapper/RenderPass/Subpass.h"
+#include "VulkanWrapper/Image/Sampler.h"
 
 struct SunLightingPassTag {};
 const auto sun_lighting_pass_tag = vw::create_subpass_tag<SunLightingPassTag>();
@@ -65,11 +66,11 @@ class SunLightingPass : public vw::Subpass {
         alloc.add_uniform_buffer(0, m_cameraUbo.handle(), 0, sizeof(CameraUBO));
         alloc.add_uniform_buffer(1, m_sunUbo.handle(), 0, sizeof(SunUBO));
         alloc.add_acceleration_structure(2, tlas.handle());
-        alloc.add_combined_image(3, m_gbufferPosition);
-        alloc.add_combined_image(4, m_gbufferNormal);
-        alloc.add_combined_image(5, m_gbufferAlbedo);
-        alloc.add_combined_image(6, m_gbufferRoughness);
-        alloc.add_combined_image(7, m_gbufferMetallic);
+        alloc.add_combined_image(3, vw::CombinedImage{m_gbufferPosition, m_sampler});
+        alloc.add_combined_image(4, vw::CombinedImage{m_gbufferNormal, m_sampler});
+        alloc.add_combined_image(5, vw::CombinedImage{m_gbufferAlbedo, m_sampler});
+        alloc.add_combined_image(6, vw::CombinedImage{m_gbufferRoughness, m_sampler});
+        alloc.add_combined_image(7, vw::CombinedImage{m_gbufferMetallic, m_sampler});
         m_descriptor_set = m_descriptor_pool.allocate_set(alloc);
     }
 
@@ -211,4 +212,6 @@ class SunLightingPass : public vw::Subpass {
     vk::StridedDeviceAddressRegionKHR m_miss_sbt_region;
     vk::StridedDeviceAddressRegionKHR m_hit_sbt_region;
     vk::StridedDeviceAddressRegionKHR m_callable_sbt_region;
+
+    std::shared_ptr<const vw::Sampler> m_sampler = vw::SamplerBuilder(m_device).build();
 }; 

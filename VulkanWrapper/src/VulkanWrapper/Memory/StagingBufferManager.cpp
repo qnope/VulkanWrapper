@@ -95,7 +95,7 @@ StagingBufferManager::stage_image_from_path(const std::filesystem::path &path,
                           .setImageType(vk::ImageViewType::e2D)
                           .build();
 
-    return {std::move(image), std::move(image_view), m_sampler};
+    return {std::move(image_view), m_sampler};
 }
 
 } // namespace vw

@@ -6,10 +6,9 @@
 
 namespace vw {
 
-CombinedImage::CombinedImage(std::shared_ptr<const Image> image,
-                             std::shared_ptr<const ImageView> image_view,
+CombinedImage::CombinedImage(std::shared_ptr<const ImageView> image_view,
                              std::shared_ptr<const Sampler> sampler)
-    : m_image{std::move(image)}
+    : m_image{image_view->image()}
     , m_image_view{std::move(image_view)}
     , m_sampler{std::move(sampler)} {}
 

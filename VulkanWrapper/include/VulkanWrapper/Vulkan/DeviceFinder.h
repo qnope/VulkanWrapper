@@ -41,7 +41,9 @@ class DeviceFinder {
     vk::StructureChain<vk::PhysicalDeviceFeatures2,
                        vk::PhysicalDeviceSynchronization2Features,
                        vk::PhysicalDeviceVulkan12Features,
-                       vk::PhysicalDeviceAccelerationStructureFeaturesKHR>
+                       vk::PhysicalDeviceAccelerationStructureFeaturesKHR,
+                       vk::PhysicalDeviceRayQueryFeaturesKHR,
+                       vk::PhysicalDeviceRayTracingPipelineFeaturesKHR>
         m_features;
 };
 } // namespace vw

@@ -5,8 +5,7 @@
 namespace vw {
 class CombinedImage {
   public:
-    CombinedImage(std::shared_ptr<const Image> image,
-                  std::shared_ptr<const ImageView> image_view,
+    CombinedImage(std::shared_ptr<const ImageView> image_view,
                   std::shared_ptr<const Sampler> sampler);
 
     [[nodiscard]] vk::Image image() const noexcept;

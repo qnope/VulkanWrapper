@@ -78,7 +78,8 @@ std::vector<vw::Framebuffer> createFramebuffers(
             swapchain.width(), swapchain.height(), false,
             vk::Format::eR32G32B32A32Sfloat,
             vk::ImageUsageFlagBits::eColorAttachment |
-                vk::ImageUsageFlagBits::eInputAttachment);
+                vk::ImageUsageFlagBits::eInputAttachment |
+                vk::ImageUsageFlagBits::eSampled);
     };
 
     auto create_img_view = [&](auto img) {
@@ -92,7 +93,8 @@ std::vector<vw::Framebuffer> createFramebuffers(
             swapchain.width(), swapchain.height(), false,
             vk::Format::eR8G8B8A8Unorm,
             vk::ImageUsageFlagBits::eColorAttachment |
-                vk::ImageUsageFlagBits::eInputAttachment);
+                vk::ImageUsageFlagBits::eInputAttachment |
+                vk::ImageUsageFlagBits::eSampled);
 
         auto img_position = create_img();
         auto img_normal = create_img();
@@ -253,18 +255,23 @@ int main() {
 
         // Create sun lighting pass after framebuffers are created
         // We need to get the G-Buffer images from the first framebuffer
-        const auto& first_framebuffer = framebuffers[0];
-        const auto& gbuffer_position = first_framebuffer.image_view(1); // position attachment
-        const auto& gbuffer_normal = first_framebuffer.image_view(2);   // normal attachment
-        const auto& gbuffer_albedo = first_framebuffer.image_view(0);   // albedo attachment (color)
-        const auto& gbuffer_roughness = first_framebuffer.image_view(3); // roughness attachment
-        const auto& gbuffer_metallic = first_framebuffer.image_view(4);  // metallic attachment
+        const auto &first_framebuffer = framebuffers[0];
+        const auto &gbuffer_position =
+            first_framebuffer.image_view(1); // position attachment
+        const auto &gbuffer_normal =
+            first_framebuffer.image_view(2); // normal attachment
+        const auto &gbuffer_albedo =
+            first_framebuffer.image_view(0); // albedo attachment (color)
+        const auto &gbuffer_roughness =
+            first_framebuffer.image_view(3); // roughness attachment
+        const auto &gbuffer_metallic =
+            first_framebuffer.image_view(4); // metallic attachment
 
         auto sun_lighting_pass = std::make_unique<SunLightingPass>(
-            app.device, app.allocator, app.swapchain.width(), app.swapchain.height(),
-            UBOData{}.proj, UBOData{}.view, UBOData{}.model, tlas,
-            gbuffer_position, gbuffer_normal, gbuffer_albedo, 
-            gbuffer_roughness, gbuffer_metallic);
+            app.device, app.allocator, app.swapchain.width(),
+            app.swapchain.height(), UBOData{}.proj, UBOData{}.view,
+            UBOData{}.model, tlas, gbuffer_position, gbuffer_normal,
+            gbuffer_albedo, gbuffer_roughness, gbuffer_metallic);
 
         // Create new subpasses for the final render pass
         auto final_depth_subpass = std::make_unique<ZPass>(
@@ -295,7 +302,8 @@ int main() {
                                 vk::ClearDepthStencilValue(1.0))
                 .add_subpass(z_pass_tag, std::move(final_depth_subpass))
                 .add_subpass(color_pass_tag, std::move(final_color_subpass))
-                .add_subpass(sun_lighting_pass_tag, std::move(sun_lighting_pass))
+                .add_subpass(sun_lighting_pass_tag,
+                             std::move(sun_lighting_pass))
                 .add_subpass(sky_pass_tag, std::move(final_sky_pass))
                 .add_subpass(tonemap_pass_tag, std::move(final_tonemap_pass))
                 .add_dependency(z_pass_tag, color_pass_tag)

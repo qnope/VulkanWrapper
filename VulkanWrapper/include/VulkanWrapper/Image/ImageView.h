@@ -14,6 +14,8 @@ class ImageView : public ObjectWithUniqueHandle<vk::UniqueImageView> {
     ImageView(const std::shared_ptr<const Image> &image,
               vk::UniqueImageView imageView);
 
+    std::shared_ptr<const Image> image() const noexcept;
+
   private:
     std::shared_ptr<const Image> m_image;
 };

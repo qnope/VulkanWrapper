@@ -10,6 +10,10 @@ ImageView::ImageView(const std::shared_ptr<const Image> &image,
     : ObjectWithUniqueHandle<vk::UniqueImageView>(std::move(imageView))
     , m_image{image} {}
 
+std::shared_ptr<const Image> ImageView::image() const noexcept {
+    return m_image;
+}
+
 ImageViewBuilder::ImageViewBuilder(const Device &device,
                                    std::shared_ptr<const Image> image)
     : m_device{&device}
