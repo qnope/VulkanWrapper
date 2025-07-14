@@ -231,8 +231,7 @@ int main() {
                 .add_attachment(data_attachment, vk::ClearColorValue())
                 .add_attachment(data_attachment, vk::ClearColorValue())
                 .add_attachment(data_attachment, vk::ClearColorValue())
-                .add_attachment(light_attachment,
-                                vk::ClearColorValue(1.0f, 1.0f, 1.0f, 1.0f))
+                .add_attachment(light_attachment, vk::ClearColorValue())
                 .add_attachment(depth_attachment,
                                 vk::ClearDepthStencilValue(1.0))
                 .add_subpass(z_pass_tag, std::move(depth_subpass))
@@ -277,7 +276,7 @@ int main() {
                 vw::CombinedImage{gBuffer.image_view(0), sampler},
                 vw::CombinedImage{gBuffer.image_view(5), sampler}};
 
-            rayTracingPass.execute(commandBuffer, gBuffer.image_view(5));
+            rayTracingPass.execute(commandBuffer, gBuffer);
 
             tonemapRenderPass.execute(commandBuffer, swapchainBuffer, info);
         }

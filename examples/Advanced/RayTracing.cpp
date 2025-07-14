@@ -1,12 +1,15 @@
 #include "RayTracing.h"
 
+#include <VulkanWrapper/Image/Framebuffer.h>
+#include <VulkanWrapper/Image/ImageView.h>
 #include <VulkanWrapper/Memory/Barrier.h>
 
-void RayTracingPass::execute(
-    vk::CommandBuffer buffer,
-    std::shared_ptr<const vw::ImageView> light_buffer) {
+enum { Color, Position, Normal, Tangeant, BiTangeant, Light, Depth };
+
+void RayTracingPass::execute(vk::CommandBuffer command_buffer,
+                             const vw::Framebuffer &framebuffer) {
 
     vw::execute_image_barrier_general_to_sampled(
-        buffer, light_buffer->image(),
+        command_buffer, framebuffer.image_view(Light)->image(),
         vk::PipelineStageFlagBits2::eRayTracingShaderKHR);
 }

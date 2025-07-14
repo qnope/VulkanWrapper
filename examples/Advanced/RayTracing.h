@@ -1,12 +1,12 @@
 #pragma once
 
 #include <vulkan/vulkan.hpp>
-#include <VulkanWrapper/Image/ImageView.h>
+#include <VulkanWrapper/fwd.h>
 
 class RayTracingPass {
   public:
-    void execute(vk::CommandBuffer buffer,
-                 std::shared_ptr<const vw::ImageView> light_buffer);
+    void execute(vk::CommandBuffer command_buffer,
+                 const vw::Framebuffer &framebuffer);
 
   private:
 };
