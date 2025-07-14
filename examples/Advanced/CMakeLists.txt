@@ -20,6 +20,3 @@ VwCompileShader(Main Shaders/post-process/tonemap.frag Shaders/post-process/tone
 VwCompileShader(Main Shaders/post-process/sky.frag Shaders/post-process/sky.spv)
 
 # Ray tracing shaders
-VwCompileShader(Main Shaders/raytracing/sun_lighting.rgen Shaders/raytracing/sun_lighting.spv --target-env vulkan1.2)
-VwCompileShader(Main Shaders/raytracing/closest_hit.rchit Shaders/raytracing/closest_hit.spv --target-env vulkan1.2)
-VwCompileShader(Main Shaders/raytracing/miss.rmiss Shaders/raytracing/miss.spv --target-env vulkan1.2)
