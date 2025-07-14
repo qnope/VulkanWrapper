@@ -51,114 +51,68 @@ RayTracingPipelineBuilder::RayTracingPipelineBuilder(
 RayTracingPipelineBuilder &&
 RayTracingPipelineBuilder::add_ray_generation_shader(
     std::shared_ptr<const ShaderModule> module) && {
-    m_rayGenShaders.push_back(std::move(module));
+    m_stages.emplace_back()
+        .setPName("main")
+        .setModule(module->handle())
+        .setStage(vk::ShaderStageFlagBits::eRaygenKHR);
+
+    m_groups.emplace_back()
+        .setType(vk::RayTracingShaderGroupTypeKHR::eGeneral)
+        .setGeneralShader(m_stages.size() - 1);
+
+    m_all_shaders.push_back(std::move(module));
     return std::move(*this);
 }
 
 RayTracingPipelineBuilder &&RayTracingPipelineBuilder::add_closest_hit_shader(
     std::shared_ptr<const ShaderModule> module) && {
-    m_closestHitShaders.push_back(std::move(module));
+    m_stages.emplace_back()
+        .setPName("main")
+        .setModule(module->handle())
+        .setStage(vk::ShaderStageFlagBits::eClosestHitKHR);
+
+    m_groups.emplace_back()
+        .setType(vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup)
+        .setClosestHitShader(m_stages.size() - 1);
+
+    m_all_shaders.push_back(std::move(module));
     return std::move(*this);
 }
 
 RayTracingPipelineBuilder &&RayTracingPipelineBuilder::add_miss_shader(
     std::shared_ptr<const ShaderModule> module) && {
-    m_missShaders.push_back(std::move(module));
+    m_stages.emplace_back()
+        .setPName("main")
+        .setModule(module->handle())
+        .setStage(vk::ShaderStageFlagBits::eMissKHR);
+
+    m_groups.emplace_back()
+        .setType(vk::RayTracingShaderGroupTypeKHR::eGeneral)
+        .setGeneralShader(m_stages.size() - 1);
+
+    m_all_shaders.push_back(std::move(module));
     return std::move(*this);
 }
 
 RayTracingPipelineBuilder &&RayTracingPipelineBuilder::add_callable_shader(
     std::shared_ptr<const ShaderModule> module) && {
-    m_callableShaders.push_back(std::move(module));
+    m_stages.emplace_back()
+        .setPName("main")
+        .setModule(module->handle())
+        .setStage(vk::ShaderStageFlagBits::eCallableKHR);
+
+    m_groups.emplace_back()
+        .setType(vk::RayTracingShaderGroupTypeKHR::eGeneral)
+        .setGeneralShader(m_stages.size() - 1);
+
+    m_all_shaders.push_back(std::move(module));
     return std::move(*this);
 }
 
-std::vector<vk::PipelineShaderStageCreateInfo>
-RayTracingPipelineBuilder::createShaderStageInfos() const {
-    std::vector<vk::PipelineShaderStageCreateInfo> stages;
-
-    // Add ray generation shaders
-    for (const auto &shader : m_rayGenShaders) {
-        stages.emplace_back()
-            .setStage(vk::ShaderStageFlagBits::eRaygenKHR)
-            .setModule(shader->handle())
-            .setPName("main");
-    }
-
-    // Add closest hit shaders
-    for (const auto &shader : m_closestHitShaders) {
-        stages.emplace_back()
-            .setStage(vk::ShaderStageFlagBits::eClosestHitKHR)
-            .setModule(shader->handle())
-            .setPName("main");
-    }
-
-    // Add miss shaders
-    for (const auto &shader : m_missShaders) {
-        stages.emplace_back()
-            .setStage(vk::ShaderStageFlagBits::eMissKHR)
-            .setModule(shader->handle())
-            .setPName("main");
-    }
-
-    // Add callable shaders
-    for (const auto &shader : m_callableShaders) {
-        stages.emplace_back()
-            .setStage(vk::ShaderStageFlagBits::eCallableKHR)
-            .setModule(shader->handle())
-            .setPName("main");
-    }
-
-    return stages;
-}
-
-std::vector<vk::RayTracingShaderGroupCreateInfoKHR>
-RayTracingPipelineBuilder::createShaderGroupInfos() const {
-    std::vector<vk::RayTracingShaderGroupCreateInfoKHR> groups;
-
-    // Create ray generation group
-    if (!m_rayGenShaders.empty()) {
-        groups.emplace_back()
-            .setType(vk::RayTracingShaderGroupTypeKHR::eGeneral)
-            .setGeneralShader(0) // First shader in the pipeline
-            .setClosestHitShader(VK_SHADER_UNUSED_KHR)
-            .setAnyHitShader(VK_SHADER_UNUSED_KHR)
-            .setIntersectionShader(VK_SHADER_UNUSED_KHR);
-    }
-
-    // Create closest hit group
-    if (!m_closestHitShaders.empty()) {
-        const uint32_t closestHitIndex = m_rayGenShaders.size();
-        groups.emplace_back()
-            .setType(vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup)
-            .setGeneralShader(VK_SHADER_UNUSED_KHR)
-            .setClosestHitShader(closestHitIndex)
-            .setAnyHitShader(VK_SHADER_UNUSED_KHR)
-            .setIntersectionShader(VK_SHADER_UNUSED_KHR);
-    }
-
-    // Create miss group
-    if (!m_missShaders.empty()) {
-        const uint32_t missIndex =
-            m_rayGenShaders.size() + m_closestHitShaders.size();
-        groups.emplace_back()
-            .setType(vk::RayTracingShaderGroupTypeKHR::eGeneral)
-            .setGeneralShader(missIndex)
-            .setClosestHitShader(VK_SHADER_UNUSED_KHR)
-            .setAnyHitShader(VK_SHADER_UNUSED_KHR)
-            .setIntersectionShader(VK_SHADER_UNUSED_KHR);
-    }
-
-    return groups;
-}
-
 RayTracingPipeline RayTracingPipelineBuilder::build() && {
-    const auto shaderStages = createShaderStageInfos();
-    const auto shaderGroups = createShaderGroupInfos();
-
     const auto info = vk::RayTracingPipelineCreateInfoKHR()
-                          .setStages(shaderStages)
-                          .setGroups(shaderGroups)
+                          .setStages(m_stages)
+                          .setGroups(m_groups)
                           .setMaxPipelineRayRecursionDepth(1)
                           .setLayout(m_pipelineLayout.handle());
 

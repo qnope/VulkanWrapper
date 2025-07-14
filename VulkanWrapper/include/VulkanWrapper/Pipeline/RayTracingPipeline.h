@@ -26,7 +26,8 @@ class RayTracingPipeline : public ObjectWithUniqueHandle<vk::UniquePipeline> {
 
     [[nodiscard]] const PipelineLayout &layout() const noexcept;
     [[nodiscard]] vk::DeviceSize get_shader_group_handle_size() const noexcept;
-    [[nodiscard]] std::vector<uint8_t> get_shader_group_handles() const noexcept;
+    [[nodiscard]] std::vector<uint8_t>
+    get_shader_group_handles() const noexcept;
 
   private:
     PipelineLayout m_layout;
@@ -36,32 +37,31 @@ class RayTracingPipeline : public ObjectWithUniqueHandle<vk::UniquePipeline> {
 
 class RayTracingPipelineBuilder {
   public:
-    RayTracingPipelineBuilder(const Device &device, PipelineLayout pipelineLayout);
+    RayTracingPipelineBuilder(const Device &device,
+                              PipelineLayout pipelineLayout);
 
-    RayTracingPipelineBuilder &&add_ray_generation_shader(
-        std::shared_ptr<const ShaderModule> module) &&;
+    RayTracingPipelineBuilder &&
+    add_ray_generation_shader(std::shared_ptr<const ShaderModule> module) &&;
 
-    RayTracingPipelineBuilder &&add_closest_hit_shader(
-        std::shared_ptr<const ShaderModule> module) &&;
+    RayTracingPipelineBuilder &&
+    add_closest_hit_shader(std::shared_ptr<const ShaderModule> module) &&;
 
-    RayTracingPipelineBuilder &&add_miss_shader(
-        std::shared_ptr<const ShaderModule> module) &&;
+    RayTracingPipelineBuilder &&
+    add_miss_shader(std::shared_ptr<const ShaderModule> module) &&;
 
-    RayTracingPipelineBuilder &&add_callable_shader(
-        std::shared_ptr<const ShaderModule> module) &&;
+    RayTracingPipelineBuilder &&
+    add_callable_shader(std::shared_ptr<const ShaderModule> module) &&;
 
     RayTracingPipeline build() &&;
 
   private:
     const Device &m_device;
     PipelineLayout m_pipelineLayout;
-    std::vector<std::shared_ptr<const ShaderModule>> m_rayGenShaders;
-    std::vector<std::shared_ptr<const ShaderModule>> m_closestHitShaders;
-    std::vector<std::shared_ptr<const ShaderModule>> m_missShaders;
-    std::vector<std::shared_ptr<const ShaderModule>> m_callableShaders;
 
-    std::vector<vk::PipelineShaderStageCreateInfo> createShaderStageInfos() const;
-    std::vector<vk::RayTracingShaderGroupCreateInfoKHR> createShaderGroupInfos() const;
+    std::vector<std::shared_ptr<const ShaderModule>> m_all_shaders;
+
+    std::vector<vk::RayTracingShaderGroupCreateInfoKHR> m_groups;
+    std::vector<vk::PipelineShaderStageCreateInfo> m_stages;
 };
 
-} // namespace vw 
+} // namespace vw
