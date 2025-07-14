@@ -82,4 +82,8 @@ void RayTracingPass::execute(vk::CommandBuffer command_buffer,
     // Lancer le pipeline de ray tracing
     command_buffer.traceRaysKHR(raygenSBT, missSBT, hitSBT, callSBT,
                                 int(m_width), int(m_height), 1);
+
+    vw::execute_image_barrier_general_to_sampled(
+        command_buffer, light_buffer->image(),
+        vk::PipelineStageFlagBits2::eRayTracingShaderKHR);
 }
