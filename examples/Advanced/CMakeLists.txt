@@ -4,8 +4,12 @@ add_executable(Main main.cpp
     ZPass.h
     ColorPass.h
     TonemapPass.h
-    SkyPass.h)
+    SkyPass.h
+    RayTracing.h
+    RayTracing.cpp
+)
 target_link_libraries(Main PRIVATE App)
+target_precompile_headers(Main REUSE_FROM VulkanWrapperCoreLibrary)
 
 VwCompileShader(Main Shaders/GBuffer/gbuffer.vert Shaders/GBuffer/gbuffer.spv)
 VwCompileShader(Main Shaders/GBuffer/gbuffer_colored.frag Shaders/GBuffer/gbuffer_colored.spv)

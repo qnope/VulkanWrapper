@@ -17,4 +17,8 @@ void execute_image_barrier_transfer_src_to_dst(
 void execute_image_barrier_transfer_dst_to_sampled(
     vk::CommandBuffer cmd_buffer, const std::shared_ptr<const Image> &image);
 
+void execute_image_barrier_general_to_sampled(
+    vk::CommandBuffer cmd_buffer, const std::shared_ptr<const Image> &image,
+    vk::PipelineStageFlags2 srcStage);
+
 } // namespace vw

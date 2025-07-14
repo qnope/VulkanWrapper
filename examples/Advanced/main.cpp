@@ -1,5 +1,6 @@
 #include "Application.h"
 #include "ColorPass.h"
+#include "RayTracing.h"
 #include "SkyPass.h"
 #include "TonemapPass.h"
 #include "ZPass.h"
@@ -183,7 +184,7 @@ int main() {
         const auto color_attachment =
             vw::AttachmentBuilder{}
                 .with_format(vk::Format::eR8G8B8A8Unorm)
-                .with_final_layout(vk::ImageLayout::eAttachmentOptimal)
+                .with_final_layout(vk::ImageLayout::eShaderReadOnlyOptimal)
                 .build();
 
         const auto data_attachment =
@@ -264,6 +265,8 @@ int main() {
         const vk::Extent2D extent(uint32_t(app.swapchain.width()),
                                   uint32_t(app.swapchain.height()));
 
+        RayTracingPass rayTracingPass;
+
         for (auto [gBuffer, commandBuffer, swapchainBuffer] :
              std::views::zip(gBuffers, commandBuffers, swapchainBuffers)) {
             vw::CommandBufferRecorder recorder(commandBuffer);
@@ -273,6 +276,8 @@ int main() {
             TonemapInformation info{
                 vw::CombinedImage{gBuffer.image_view(0), sampler},
                 vw::CombinedImage{gBuffer.image_view(5), sampler}};
+
+            rayTracingPass.execute(commandBuffer, gBuffer.image_view(5));
 
             tonemapRenderPass.execute(commandBuffer, swapchainBuffer, info);
         }

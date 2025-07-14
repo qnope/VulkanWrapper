@@ -7,7 +7,7 @@ void executeMemoryBarrier(vk::CommandBuffer cmd_buffer,
                           const vk::ImageMemoryBarrier2 &barrier) {
     const auto dependency =
         vk::DependencyInfo().setImageMemoryBarriers(barrier);
-    cmd_buffer.pipelineBarrier2KHR(dependency);
+    cmd_buffer.pipelineBarrier2(dependency);
 }
 
 void execute_image_barrier_undefined_to_transfer_dst(
@@ -28,7 +28,7 @@ void execute_image_barrier_undefined_to_transfer_dst(
     const auto dependency_info =
         vk::DependencyInfo().setImageMemoryBarriers(img_barrier);
 
-    cmd_buffer.pipelineBarrier2KHR(dependency_info);
+    cmd_buffer.pipelineBarrier2(dependency_info);
 }
 
 void execute_image_barrier_transfer_dst_to_sampled(
@@ -48,7 +48,7 @@ void execute_image_barrier_transfer_dst_to_sampled(
     const auto dependency_info =
         vk::DependencyInfo().setImageMemoryBarriers(img_barrier);
 
-    cmd_buffer.pipelineBarrier2KHR(dependency_info);
+    cmd_buffer.pipelineBarrier2(dependency_info);
 }
 
 void execute_image_barrier_transfer_src_to_dst(
@@ -68,7 +68,7 @@ void execute_image_barrier_transfer_src_to_dst(
     const auto dependency_info =
         vk::DependencyInfo().setImageMemoryBarriers(img_barrier);
 
-    cmd_buffer.pipelineBarrier2KHR(dependency_info);
+    cmd_buffer.pipelineBarrier2(dependency_info);
 }
 
 void execute_image_barrier_transfer_dst_to_src(
@@ -89,7 +89,27 @@ void execute_image_barrier_transfer_dst_to_src(
     const auto dependency_info =
         vk::DependencyInfo().setImageMemoryBarriers(img_barrier);
 
-    cmd_buffer.pipelineBarrier2KHR(dependency_info);
+    cmd_buffer.pipelineBarrier2(dependency_info);
+}
+
+void execute_image_barrier_general_to_sampled(
+    vk::CommandBuffer cmd_buffer, const std::shared_ptr<const Image> &image,
+    vk::PipelineStageFlags2 srcStage) {
+    const auto range = image->mip_level_range(MipLevel(0));
+    const auto img_barrier =
+        vk::ImageMemoryBarrier2()
+            .setSubresourceRange(range)
+            .setImage(image->handle())
+            .setSrcAccessMask(vk::AccessFlagBits2::eShaderStorageWrite)
+            .setSrcStageMask(srcStage)
+            .setDstAccessMask(vk::AccessFlagBits2::eShaderRead)
+            .setDstStageMask(vk::PipelineStageFlagBits2::eFragmentShader)
+            .setOldLayout(vk::ImageLayout::eGeneral)
+            .setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+
+    const auto dependency_info =
+        vk::DependencyInfo().setImageMemoryBarriers(img_barrier);
+    cmd_buffer.pipelineBarrier2(dependency_info);
 }
 
 } // namespace vw
