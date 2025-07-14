@@ -1,0 +1,16 @@
+#version 460 core
+#extension GL_EXT_ray_tracing : require
+#extension GL_EXT_nonuniform_qualifier : enable
+
+layout(set = 0, binding = 0) uniform sampler2D depthBuffer;
+layout(set = 0, binding = 1, rgba32f) uniform image2D lightBuffer;
+
+layout(location = 0) rayPayloadEXT vec4 payload;
+
+void main() {
+    ivec2 pixel = ivec2(gl_LaunchIDEXT.xy);
+    float depth = texture(depthBuffer, vec2(pixel) / vec2(gl_LaunchSizeEXT.xy)).r;
+    if (depth != 1.0) {
+        imageStore(lightBuffer, pixel, vec4(1.0, 1.0, 1.0, 1.0));
+    }
+} 

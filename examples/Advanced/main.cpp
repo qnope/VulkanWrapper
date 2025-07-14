@@ -170,7 +170,8 @@ int main() {
         const auto depth_buffer = app.allocator.create_image_2D(
             app.swapchain.width(), app.swapchain.height(), false,
             vk::Format::eD32Sfloat,
-            vk::ImageUsageFlagBits::eDepthStencilAttachment);
+            vk::ImageUsageFlagBits::eDepthStencilAttachment |
+                vk::ImageUsageFlagBits::eSampled);
 
         const auto depth_buffer_view =
             vw::ImageViewBuilder(app.device, depth_buffer)
@@ -208,8 +209,7 @@ int main() {
         const auto depth_attachment =
             vw::AttachmentBuilder{}
                 .with_format(depth_buffer->format())
-                .with_final_layout(
-                    vk::ImageLayout::eDepthStencilAttachmentOptimal)
+                .with_final_layout(vk::ImageLayout::eShaderReadOnlyOptimal)
                 .build();
 
         auto depth_subpass = std::make_unique<ZPass>(
@@ -264,7 +264,9 @@ int main() {
         const vk::Extent2D extent(uint32_t(app.swapchain.width()),
                                   uint32_t(app.swapchain.height()));
 
-        RayTracingPass rayTracingPass;
+        RayTracingPass rayTracingPass(app.device, app.allocator,
+                                      app.swapchain.width(),
+                                      app.swapchain.height());
 
         for (auto [gBuffer, commandBuffer, swapchainBuffer] :
              std::views::zip(gBuffers, commandBuffers, swapchainBuffers)) {
