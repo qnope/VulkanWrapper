@@ -29,7 +29,7 @@ class Framebuffer : public ObjectWithUniqueHandle<vk::UniqueFramebuffer> {
 
 class FramebufferBuilder {
   public:
-    FramebufferBuilder(const Device &device, const RenderPass &renderPass,
+    FramebufferBuilder(const Device &device, const IRenderPass &renderPass,
                        Width width, Height height);
 
     FramebufferBuilder &&

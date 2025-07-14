@@ -1,5 +1,6 @@
 
 add_executable(Main main.cpp
+    RenderPassInformation.h
     ZPass.h
     ColorPass.h
     TonemapPass.h

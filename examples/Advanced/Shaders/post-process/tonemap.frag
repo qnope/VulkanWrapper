@@ -1,8 +1,9 @@
 #version 450
 
-layout(input_attachment_index = 0, set = 0, binding = 0) uniform subpassInput base_color;
-layout(input_attachment_index = 1, set = 0, binding = 1) uniform subpassInput radiance;
+layout(set = 0, binding = 0) uniform sampler2D color;
+layout(set = 0, binding = 1) uniform sampler2D light;
 
+layout(location = 0) in vec2 inPosition;
 layout(location = 0) out vec4 out_color;
 
 vec4 ACESApprox(vec3 x)
@@ -36,8 +37,8 @@ vec3 heatLuminance(float luminance) {
 }
 
 void main() {
-    vec3 base = subpassLoad(base_color).rgb;
-    vec3 rad = subpassLoad(radiance).rgb;
+    vec3 base = texture(color, inPosition * 0.5 + 0.5).rgb;
+    vec3 rad = texture(light, inPosition * 0.5 + 0.5).rgb;
 
     const vec3 exposed = base * rad;
     out_color = ACESApprox(exposed);

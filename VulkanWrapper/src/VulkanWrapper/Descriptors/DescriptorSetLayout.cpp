@@ -73,12 +73,6 @@ DescriptorSetLayoutBuilder::with_combined_image(vk::ShaderStageFlags stages,
     return std::move(*this);
 }
 
-DescriptorSetLayoutBuilder &&
-DescriptorSetLayoutBuilder::with_combined_image_sampler(vk::ShaderStageFlags stages,
-                                                        int number) && {
-    return std::move(*this).with_combined_image(stages, number);
-}
-
 DescriptorSetLayoutBuilder &&DescriptorSetLayoutBuilder::with_input_attachment(
     vk::ShaderStageFlags stages) && {
     const auto binding =
@@ -93,7 +87,8 @@ DescriptorSetLayoutBuilder &&DescriptorSetLayoutBuilder::with_input_attachment(
 }
 
 DescriptorSetLayoutBuilder &&
-DescriptorSetLayoutBuilder::with_acceleration_structure(vk::ShaderStageFlags stages) && {
+DescriptorSetLayoutBuilder::with_acceleration_structure(
+    vk::ShaderStageFlags stages) && {
     const auto binding =
         vk::DescriptorSetLayoutBinding()
             .setBinding(m_current_binding)

@@ -51,7 +51,7 @@ class SunLightingPass : public vw::Subpass {
         , m_gbufferRoughness{gbufferRoughness}
         , m_gbufferMetallic{gbufferMetallic}
         , m_output_image{outputImage}
-        , m_sbt_buffer{m_allocator.create_buffer<uint8_t, true, vw::StagingBufferUsage>(1024)} {
+        , m_sbt_buffer{allocator.create_buffer<uint8_t, true, vw::StagingBufferUsage>(1024)} {
         
         const CameraUBO cameraUbo{projection, view, model};
         m_cameraUbo.copy(std::span{&cameraUbo, 1}, 0);
@@ -83,6 +83,53 @@ class SunLightingPass : public vw::Subpass {
 
     void execute(vk::CommandBuffer cmd_buffer,
                  const vw::Framebuffer &framebuffer) const noexcept override {
+        // This subpass doesn't actually execute ray tracing
+        // Ray tracing will be done outside the render pass
+    }
+
+    const std::vector<vk::AttachmentReference2> &
+    color_attachments() const noexcept override {
+        static const std::vector<vk::AttachmentReference2> color_attachments = {
+            vk::AttachmentReference2(5,
+                                     vk::ImageLayout::eColorAttachmentOptimal,
+                                     vk::ImageAspectFlagBits::eColor)};
+        return color_attachments;
+    }
+
+    const std::vector<vk::AttachmentReference2> &
+    input_attachments() const noexcept override {
+        // Declare input attachments even though we don't use them in the render pass
+        // This is needed to satisfy the pipeline validation
+        static const std::vector<vk::AttachmentReference2> input_attachments = {
+            vk::AttachmentReference2(0, vk::ImageLayout::eShaderReadOnlyOptimal,
+                                     vk::ImageAspectFlagBits::eColor),
+            vk::AttachmentReference2(1, vk::ImageLayout::eShaderReadOnlyOptimal,
+                                     vk::ImageAspectFlagBits::eColor),
+            vk::AttachmentReference2(2, vk::ImageLayout::eShaderReadOnlyOptimal,
+                                     vk::ImageAspectFlagBits::eColor),
+            vk::AttachmentReference2(3, vk::ImageLayout::eShaderReadOnlyOptimal,
+                                     vk::ImageAspectFlagBits::eColor),
+            vk::AttachmentReference2(4, vk::ImageLayout::eShaderReadOnlyOptimal,
+                                     vk::ImageAspectFlagBits::eColor)};
+        return input_attachments;
+    }
+
+    vw::SubpassDependencyMask input_dependencies() const noexcept override {
+        vw::SubpassDependencyMask mask;
+        mask.access = vk::AccessFlagBits::eColorAttachmentRead;
+        mask.stage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+        return mask;
+    }
+
+    vw::SubpassDependencyMask output_dependencies() const noexcept override {
+        vw::SubpassDependencyMask mask;
+        mask.access = vk::AccessFlagBits::eColorAttachmentWrite;
+        mask.stage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+        return mask;
+    }
+
+    // Method to execute ray tracing outside render pass
+    void execute_ray_tracing(vk::CommandBuffer cmd_buffer) const noexcept {
         cmd_buffer.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR,
                                 m_pipeline->handle());
         
@@ -102,29 +149,6 @@ class SunLightingPass : public vw::Subpass {
         cmd_buffer.traceRaysKHR(m_raygen_sbt_region, m_miss_sbt_region, 
                                  m_hit_sbt_region, m_callable_sbt_region,
                                  width, height, 1);
-    }
-
-    const std::vector<vk::AttachmentReference2> &
-    color_attachments() const noexcept override {
-        static const std::vector<vk::AttachmentReference2> color_attachments = {
-            vk::AttachmentReference2(5,
-                                     vk::ImageLayout::eColorAttachmentOptimal,
-                                     vk::ImageAspectFlagBits::eColor)};
-        return color_attachments;
-    }
-
-    vw::SubpassDependencyMask input_dependencies() const noexcept override {
-        vw::SubpassDependencyMask mask;
-        mask.access = vk::AccessFlagBits::eColorAttachmentRead;
-        mask.stage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-        return mask;
-    }
-
-    vw::SubpassDependencyMask output_dependencies() const noexcept override {
-        vw::SubpassDependencyMask mask;
-        mask.access = vk::AccessFlagBits::eColorAttachmentWrite;
-        mask.stage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-        return mask;
     }
 
     auto *get_camera_ubo() { return &m_cameraUbo; }
@@ -162,8 +186,7 @@ class SunLightingPass : public vw::Subpass {
         
         const auto sbt_size = handle_size * group_count;
 
-        const auto d  = m_sbt_buffer.device_address();
-
+        // Create SBT buffer with proper usage flags
         m_sbt_buffer = m_allocator.create_buffer<uint8_t, true, vw::StagingBufferUsage>(sbt_size);
         
         // Get shader group handles

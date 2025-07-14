@@ -28,7 +28,7 @@ Framebuffer::image_view(int index) const noexcept {
 }
 
 FramebufferBuilder::FramebufferBuilder(const Device &device,
-                                       const RenderPass &renderPass,
+                                       const IRenderPass &renderPass,
                                        Width width, Height height)
     : m_device{&device}
     , m_renderPass{renderPass.handle()}

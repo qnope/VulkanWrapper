@@ -16,16 +16,16 @@ template <typename T> SubpassTag create_subpass_tag() {
     return SubpassTag{typeid(T)};
 }
 
-class Subpass {
+class ISubpass {
   public:
-    Subpass() noexcept = default;
+    ISubpass() noexcept = default;
 
-    Subpass(const Subpass &) = delete;
-    Subpass(Subpass &&) = delete;
-    Subpass &operator=(Subpass &&) = delete;
-    Subpass &operator=(const Subpass &) = delete;
+    ISubpass(const ISubpass &) = delete;
+    ISubpass(ISubpass &&) = delete;
+    ISubpass &operator=(ISubpass &&) = delete;
+    ISubpass &operator=(const ISubpass &) = delete;
 
-    virtual ~Subpass() = default;
+    virtual ~ISubpass() = default;
 
     [[nodiscard]] virtual vk::PipelineBindPoint
     pipeline_bind_point() const noexcept;
@@ -43,13 +43,17 @@ class Subpass {
     [[nodiscard]] virtual SubpassDependencyMask
     output_dependencies() const noexcept = 0;
 
-    virtual void execute(vk::CommandBuffer cmd_buffer,
-                         const vw::Framebuffer &framebuffer) const noexcept = 0;
-
   protected:
-    virtual void initialize(const RenderPass &render_pass) = 0;
+    virtual void initialize(const IRenderPass &render_pass) = 0;
 
-    friend class RenderPass;
+    template <typename> friend class RenderPass;
+};
+
+template <typename RenderPassInformation> class Subpass : public ISubpass {
+  public:
+    virtual void execute(vk::CommandBuffer cmd_buffer,
+                         const RenderPassInformation &render_pass_information)
+        const noexcept = 0;
 };
 
 } // namespace vw

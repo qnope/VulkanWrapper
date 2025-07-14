@@ -25,7 +25,7 @@ class Pipeline : public ObjectWithUniqueHandle<vk::UniquePipeline> {
 
 class GraphicsPipelineBuilder {
   public:
-    GraphicsPipelineBuilder(const Device &device, const RenderPass &renderPass,
+    GraphicsPipelineBuilder(const Device &device, const IRenderPass &renderPass,
                             uint32_t subpass_index,
                             PipelineLayout pipelineLayout);
 
@@ -94,7 +94,7 @@ class GraphicsPipelineBuilder {
     createDepthStencilStateInfo() const noexcept;
 
     const Device *m_device;
-    const RenderPass *m_renderPass;
+    const IRenderPass *m_renderPass;
     uint32_t m_subpass_index;
     PipelineLayout m_pipelineLayout;
 

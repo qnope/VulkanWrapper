@@ -1,11 +1,9 @@
 #include "Application.h"
 #include "ColorPass.h"
 #include "SkyPass.h"
-#include "SunLightingPass.h"
 #include "TonemapPass.h"
 #include "ZPass.h"
 #include <VulkanWrapper/3rd_party.h>
-#include <VulkanWrapper/AccelerationStructure/AccelerationStructure.h>
 #include <VulkanWrapper/Command/CommandBuffer.h>
 #include <VulkanWrapper/Command/CommandPool.h>
 #include <VulkanWrapper/Descriptors/DescriptorAllocator.h>
@@ -14,6 +12,7 @@
 #include <VulkanWrapper/Image/CombinedImage.h>
 #include <VulkanWrapper/Image/Framebuffer.h>
 #include <VulkanWrapper/Image/ImageLoader.h>
+#include <VulkanWrapper/Image/Sampler.h>
 #include <VulkanWrapper/Memory/Allocator.h>
 #include <VulkanWrapper/Memory/StagingBufferManager.h>
 #include <VulkanWrapper/Model/Importer.h>
@@ -66,21 +65,21 @@ createUbo(vw::Allocator &allocator) {
     return buffer;
 }
 
-std::vector<vw::Framebuffer> createFramebuffers(
-    vw::Device &device, const vw::Allocator &allocator,
-    const vw::RenderPass &renderPass, const vw::Swapchain &swapchain,
-    const std::vector<std::shared_ptr<const vw::ImageView>> &images,
-    const std::shared_ptr<const vw::ImageView> &depth_buffer) {
+std::vector<vw::Framebuffer>
+createGBuffers(vw::Device &device, const vw::Allocator &allocator,
+               const vw::IRenderPass &renderPass,
+               const vw::Swapchain &swapchain,
+               const std::shared_ptr<const vw::ImageView> &depth_buffer) {
     std::vector<vw::Framebuffer> framebuffers;
 
-    auto create_img = [&]() {
-        return allocator.create_image_2D(
-            swapchain.width(), swapchain.height(), false,
-            vk::Format::eR32G32B32A32Sfloat,
-            vk::ImageUsageFlagBits::eColorAttachment |
-                vk::ImageUsageFlagBits::eInputAttachment |
-                vk::ImageUsageFlagBits::eSampled |
-                vk::ImageUsageFlagBits::eStorage);
+    constexpr auto usageFlags = vk::ImageUsageFlagBits::eColorAttachment |
+                                vk::ImageUsageFlagBits::eInputAttachment |
+                                vk::ImageUsageFlagBits::eSampled;
+
+    auto create_img = [&](vk::ImageUsageFlags otherFlags = {}) {
+        return allocator.create_image_2D(swapchain.width(), swapchain.height(),
+                                         false, vk::Format::eR32G32B32A32Sfloat,
+                                         usageFlags | otherFlags);
     };
 
     auto create_img_view = [&](auto img) {
@@ -89,19 +88,16 @@ std::vector<vw::Framebuffer> createFramebuffers(
             .build();
     };
 
-    for (const auto &imageView : images) {
+    for (int i = 0; i < swapchain.number_images(); ++i) {
         auto img_color = allocator.create_image_2D(
             swapchain.width(), swapchain.height(), false,
-            vk::Format::eR8G8B8A8Unorm,
-            vk::ImageUsageFlagBits::eColorAttachment |
-                vk::ImageUsageFlagBits::eInputAttachment |
-                vk::ImageUsageFlagBits::eSampled);
+            vk::Format::eR8G8B8A8Unorm, usageFlags);
 
         auto img_position = create_img();
         auto img_normal = create_img();
         auto img_tangeant = create_img();
         auto img_biTangeant = create_img();
-        auto img_light = create_img();
+        auto img_light = create_img(vk::ImageUsageFlagBits::eStorage);
 
         auto img_view_color = create_img_view(img_color);
         auto img_view_position = create_img_view(img_position);
@@ -119,7 +115,6 @@ std::vector<vw::Framebuffer> createFramebuffers(
                 .add_attachment(img_view_tangeant)
                 .add_attachment(img_view_biTangeant)
                 .add_attachment(img_view_light)
-                .add_attachment(imageView)
                 .add_attachment(depth_buffer)
                 .build();
         framebuffers.push_back(std::move(framebuffer));
@@ -128,12 +123,25 @@ std::vector<vw::Framebuffer> createFramebuffers(
     return framebuffers;
 }
 
-using namespace glm;
+std::vector<vw::Framebuffer> createSwapchainFramebuffer(
+    vw::Device &device, const vw::IRenderPass &renderPass,
+    const std::vector<std::shared_ptr<const vw::ImageView>> &image_views,
+    const vw::Swapchain &swapchain) {
+    std::vector<vw::Framebuffer> framebuffers;
 
-std::ostream &operator<<(std::ostream &s, const vec3 obj) {
-    s << "(" << obj.x << ", " << obj.y << ", " << obj.z << ")";
-    return s;
+    for (const auto &image_view : image_views) {
+        auto framebuffer =
+            vw::FramebufferBuilder(device, renderPass, swapchain.width(),
+                                   swapchain.height())
+                .add_attachment(image_view)
+                .build();
+        framebuffers.push_back(std::move(framebuffer));
+    }
+
+    return framebuffers;
 }
+
+using namespace glm;
 
 int main() {
     try {
@@ -144,6 +152,8 @@ int main() {
                 .build();
 
         auto uniform_buffer = createUbo(app.allocator);
+
+        auto sampler = vw::SamplerBuilder(app.device).build();
 
         auto descriptor_pool =
             vw::DescriptorPoolBuilder(app.device, descriptor_set_layout)
@@ -170,20 +180,6 @@ int main() {
         mesh_manager.read_file("../../../Models/Sponza/sponza.obj");
         mesh_manager.read_file("../../../Models/cube.obj");
 
-        // --- Acceleration Structure Creation ---
-        // Build BLAS from all meshes
-        vw::AccelerationStructure::BottomLevelAccelerationStructureBuilder
-            blasBuilder(app.device, app.allocator);
-        blasBuilder.add_geometries(mesh_manager.meshes());
-        auto blas = std::move(blasBuilder).build();
-
-        // Build TLAS from the BLAS (single instance, identity transform)
-        vw::AccelerationStructure::TopLevelAccelerationStructureBuilder
-            tlasBuilder(app.device, app.allocator);
-        tlasBuilder.add_instance(blas);
-        auto tlas = std::move(tlasBuilder).build();
-        // --- End Acceleration Structure Creation ---
-
         const auto color_attachment =
             vw::AttachmentBuilder{}
                 .with_format(vk::Format::eR8G8B8A8Unorm)
@@ -194,6 +190,12 @@ int main() {
             vw::AttachmentBuilder{}
                 .with_format(vk::Format::eR32G32B32A32Sfloat)
                 .with_final_layout(vk::ImageLayout::eAttachmentOptimal)
+                .build();
+
+        const auto light_attachment =
+            vw::AttachmentBuilder{}
+                .with_format(vk::Format::eR32G32B32A32Sfloat)
+                .with_final_layout(vk::ImageLayout::eGeneral)
                 .build();
 
         const auto final_attachment =
@@ -219,11 +221,8 @@ int main() {
             app.device, app.allocator, app.swapchain.width(),
             app.swapchain.height(), UBOData{}.proj, UBOData{}.view);
         auto sky_buffer = sky_pass->get_ubo();
-        auto tonemap_pass = std::make_unique<TonemapPass>(
-            app.device, app.swapchain.width(), app.swapchain.height());
 
-        // Create a temporary render pass to get framebuffers
-        auto tempRenderPass =
+        auto geometrySkyRenderPass =
             vw::RenderPassBuilder(app.device)
                 .add_attachment(color_attachment,
                                 vk::ClearColorValue(1.0f, 1.0f, 1.0f, 1.0f))
@@ -231,100 +230,51 @@ int main() {
                 .add_attachment(data_attachment, vk::ClearColorValue())
                 .add_attachment(data_attachment, vk::ClearColorValue())
                 .add_attachment(data_attachment, vk::ClearColorValue())
-                .add_attachment(data_attachment,
+                .add_attachment(light_attachment,
                                 vk::ClearColorValue(1.0f, 1.0f, 1.0f, 1.0f))
-                .add_attachment(final_attachment, vk::ClearColorValue())
                 .add_attachment(depth_attachment,
                                 vk::ClearDepthStencilValue(1.0))
                 .add_subpass(z_pass_tag, std::move(depth_subpass))
                 .add_subpass(color_pass_tag, std::move(color_subpass))
                 .add_subpass(sky_pass_tag, std::move(sky_pass))
-                .add_subpass(tonemap_pass_tag, std::move(tonemap_pass))
                 .add_dependency(z_pass_tag, color_pass_tag)
-                .add_dependency(color_pass_tag, sky_pass_tag)
-                .add_dependency(sky_pass_tag, tonemap_pass_tag)
-                .add_dependency(color_pass_tag, tonemap_pass_tag)
-                .build();
+                .add_dependency(z_pass_tag, sky_pass_tag)
+                .build<GBufferInformation>();
+
+        auto tonemap_pass = std::make_unique<TonemapPass>(
+            app.device, app.swapchain.width(), app.swapchain.height());
+
+        auto tonemapRenderPass =
+            vw::RenderPassBuilder(app.device)
+                .add_attachment(final_attachment, vk::ClearColorValue())
+                .add_subpass(tonemap_pass_tag, std::move(tonemap_pass))
+                .build<TonemapInformation>();
 
         auto commandPool = vw::CommandPoolBuilder(app.device).build();
         auto image_views = create_image_views(app.device, app.swapchain);
         auto commandBuffers = commandPool.allocate(image_views.size());
 
-        const auto framebuffers =
-            createFramebuffers(app.device, app.allocator, tempRenderPass,
-                               app.swapchain, image_views, depth_buffer_view);
+        const auto gBuffers =
+            createGBuffers(app.device, app.allocator, geometrySkyRenderPass,
+                           app.swapchain, depth_buffer_view);
 
-        // Create sun lighting pass after framebuffers are created
-        // We need to get the G-Buffer images from the first framebuffer
-        const auto &first_framebuffer = framebuffers[0];
-        const auto &gbuffer_position =
-            first_framebuffer.image_view(1); // position attachment
-        const auto &gbuffer_normal =
-            first_framebuffer.image_view(2); // normal attachment
-        const auto &gbuffer_albedo =
-            first_framebuffer.image_view(0); // albedo attachment (color)
-        const auto &gbuffer_roughness =
-            first_framebuffer.image_view(3); // roughness attachment
-        const auto &gbuffer_metallic =
-            first_framebuffer.image_view(4); // metallic attachment
-
-        const auto &sun_lighting_output =
-            first_framebuffer.image_view(5); // sun lighting output attachment
-
-        auto sun_lighting_pass = std::make_unique<SunLightingPass>(
-            app.device, app.allocator, app.swapchain.width(),
-            app.swapchain.height(), UBOData{}.proj, UBOData{}.view,
-            UBOData{}.model, tlas, gbuffer_position, gbuffer_normal,
-            gbuffer_albedo, gbuffer_roughness, gbuffer_metallic,
-            sun_lighting_output);
-
-        // Create new subpasses for the final render pass
-        auto final_depth_subpass = std::make_unique<ZPass>(
-            app.device, mesh_manager, descriptor_set_layout,
-            app.swapchain.width(), app.swapchain.height(), descriptor_set);
-        auto final_color_subpass = std::make_unique<ColorSubpass>(
-            app.device, mesh_manager, descriptor_set_layout,
-            app.swapchain.width(), app.swapchain.height(), descriptor_set);
-        auto final_sky_pass = std::make_unique<SkyPass>(
-            app.device, app.allocator, app.swapchain.width(),
-            app.swapchain.height(), UBOData{}.proj, UBOData{}.view);
-        auto final_tonemap_pass = std::make_unique<TonemapPass>(
-            app.device, app.swapchain.width(), app.swapchain.height());
-
-        // Create the final render pass with sun lighting
-        auto renderPass =
-            vw::RenderPassBuilder(app.device)
-                .add_attachment(color_attachment,
-                                vk::ClearColorValue(1.0f, 1.0f, 1.0f, 1.0f))
-                .add_attachment(data_attachment, vk::ClearColorValue())
-                .add_attachment(data_attachment, vk::ClearColorValue())
-                .add_attachment(data_attachment, vk::ClearColorValue())
-                .add_attachment(data_attachment, vk::ClearColorValue())
-                .add_attachment(data_attachment,
-                                vk::ClearColorValue(1.0f, 1.0f, 1.0f, 1.0f))
-                .add_attachment(final_attachment, vk::ClearColorValue())
-                .add_attachment(depth_attachment,
-                                vk::ClearDepthStencilValue(1.0))
-                .add_subpass(z_pass_tag, std::move(final_depth_subpass))
-                .add_subpass(color_pass_tag, std::move(final_color_subpass))
-                .add_subpass(sun_lighting_pass_tag,
-                             std::move(sun_lighting_pass))
-                .add_subpass(sky_pass_tag, std::move(final_sky_pass))
-                .add_subpass(tonemap_pass_tag, std::move(final_tonemap_pass))
-                .add_dependency(z_pass_tag, color_pass_tag)
-                .add_dependency(color_pass_tag, sun_lighting_pass_tag)
-                .add_dependency(sun_lighting_pass_tag, sky_pass_tag)
-                .add_dependency(sky_pass_tag, tonemap_pass_tag)
-                .add_dependency(color_pass_tag, tonemap_pass_tag)
-                .build();
+        const auto swapchainBuffers = createSwapchainFramebuffer(
+            app.device, tonemapRenderPass, image_views, app.swapchain);
 
         const vk::Extent2D extent(uint32_t(app.swapchain.width()),
                                   uint32_t(app.swapchain.height()));
 
-        for (auto [framebuffer, commandBuffer] :
-             std::views::zip(framebuffers, commandBuffers)) {
+        for (auto [gBuffer, commandBuffer, swapchainBuffer] :
+             std::views::zip(gBuffers, commandBuffers, swapchainBuffers)) {
             vw::CommandBufferRecorder recorder(commandBuffer);
-            renderPass.execute(commandBuffer, framebuffer);
+            geometrySkyRenderPass.execute(commandBuffer, gBuffer,
+                                          GBufferInformation{&gBuffer});
+
+            TonemapInformation info{
+                vw::CombinedImage{gBuffer.image_view(0), sampler},
+                vw::CombinedImage{gBuffer.image_view(5), sampler}};
+
+            tonemapRenderPass.execute(commandBuffer, swapchainBuffer, info);
         }
 
         auto renderFinishedSemaphore = vw::SemaphoreBuilder(app.device).build();
@@ -334,13 +284,9 @@ int main() {
 
         app.device.graphicsQueue().enqueue_command_buffer(cmd_buffer);
 
+        float angle = 90.0;
         while (!app.window.is_close_requested()) {
             app.window.update();
-
-            float angle = 20;
-
-            if (angle > 360)
-                angle = 0.0;
 
             SkyPass::UBO ubo{UBOData{}.proj, UBOData{}.view, angle};
             sky_buffer->copy({&ubo, 1u}, 0);

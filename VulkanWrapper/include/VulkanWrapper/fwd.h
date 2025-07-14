@@ -18,6 +18,13 @@ class Sampler;
 class CombinedImage;
 class Framebuffer;
 
+class ISubpass;
+class IRenderPass;
+
+template <typename> class Subpass;
+
+template <typename> class RenderPass;
+
 class SwapchainBuilder;
 class Swapchain;
 class Surface;
@@ -26,9 +33,6 @@ class ShaderModule;
 class Pipeline;
 class PipelineLayout;
 class RayTracingPipeline;
-
-class Subpass;
-class RenderPass;
 
 class Semaphore;
 class Fence;

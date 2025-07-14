@@ -1,5 +1,6 @@
 #pragma once
 
+#include "RenderPassInformation.h"
 #include "VulkanWrapper/3rd_party.h"
 #include "VulkanWrapper/Descriptors/DescriptorPool.h"
 #include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
@@ -13,7 +14,7 @@
 struct SkyPassTag {};
 const auto sky_pass_tag = vw::create_subpass_tag<SkyPassTag>();
 
-class SkyPass : public vw::Subpass {
+class SkyPass : public vw::Subpass<GBufferInformation> {
   public:
     struct UBO {
         glm::mat4 projection;
@@ -37,7 +38,7 @@ class SkyPass : public vw::Subpass {
     }
 
     void execute(vk::CommandBuffer cmd_buffer,
-                 const vw::Framebuffer &) const noexcept override {
+                 const GBufferInformation &) const noexcept override {
         cmd_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
                                 m_pipeline->handle());
         cmd_buffer.bindDescriptorSets(pipeline_bind_point(),
@@ -59,7 +60,7 @@ class SkyPass : public vw::Subpass {
     depth_stencil_attachment() const noexcept override {
         static const vk::AttachmentReference2 depth_stencil_attachment =
             vk::AttachmentReference2(
-                7, vk::ImageLayout::eDepthStencilAttachmentOptimal,
+                6, vk::ImageLayout::eDepthStencilAttachmentOptimal,
                 vk::ImageAspectFlagBits::eDepth);
         return &depth_stencil_attachment;
     }
@@ -82,7 +83,7 @@ class SkyPass : public vw::Subpass {
     auto *get_ubo() { return &m_ubo; }
 
   protected:
-    void initialize(const vw::RenderPass &render_pass) override {
+    void initialize(const vw::IRenderPass &render_pass) override {
         auto vertex = vw::ShaderModule::create_from_spirv_file(
             m_device, "Shaders/quad.spv");
         auto fragment = vw::ShaderModule::create_from_spirv_file(

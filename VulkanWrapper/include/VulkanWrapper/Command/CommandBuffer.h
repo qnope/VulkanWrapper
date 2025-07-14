@@ -36,7 +36,7 @@ class CommandBufferRecorder {
     ~CommandBufferRecorder();
 
     RenderPassCommandBufferRecorder
-    begin_render_pass(const RenderPass &render_pass,
+    begin_render_pass(const IRenderPass &render_pass,
                       const vw::Framebuffer &framebuffer);
 
     void buildAccelerationStructure(

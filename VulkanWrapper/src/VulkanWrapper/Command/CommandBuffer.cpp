@@ -25,7 +25,7 @@ CommandBufferRecorder::~CommandBufferRecorder() {
 }
 
 RenderPassCommandBufferRecorder
-CommandBufferRecorder::begin_render_pass(const RenderPass &render_pass,
+CommandBufferRecorder::begin_render_pass(const IRenderPass &render_pass,
                                          const Framebuffer &framebuffer) {
     const auto &clear_values = render_pass.clear_values();
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "RenderPassInformation.h"
 #include "VulkanWrapper/3rd_party.h"
 #include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
 #include "VulkanWrapper/Model/MeshManager.h"
@@ -11,7 +12,7 @@ struct ZPassTag {};
 inline const auto z_pass_tag = vw::create_subpass_tag<ZPassTag>();
 
 inline vw::Pipeline create_zpass_pipeline(
-    const vw::Device &device, const vw::RenderPass &render_pass,
+    const vw::Device &device, const vw::IRenderPass &render_pass,
     std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
     vw::Width width, vw::Height height) {
     auto vertex_shader = vw::ShaderModule::create_from_spirv_file(
@@ -32,7 +33,7 @@ inline vw::Pipeline create_zpass_pipeline(
         .build();
 }
 
-class ZPass : public vw::Subpass {
+class ZPass : public vw::Subpass<GBufferInformation> {
   public:
     ZPass(const vw::Device &device, const vw::Model::MeshManager &mesh_manager,
           std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
@@ -45,7 +46,7 @@ class ZPass : public vw::Subpass {
         , m_descriptor_set{descriptor_set} {}
 
     void execute(vk::CommandBuffer cmd_buffer,
-                 const vw::Framebuffer &) const noexcept override {
+                 const GBufferInformation &) const noexcept override {
         const auto &meshes = m_mesh_manager.meshes();
         std::span first_descriptor_sets = {&m_descriptor_set, 1};
         cmd_buffer.bindPipeline(pipeline_bind_point(), m_pipeline->handle());
@@ -61,7 +62,7 @@ class ZPass : public vw::Subpass {
     depth_stencil_attachment() const noexcept override {
         static const vk::AttachmentReference2 depth_stencil_attachment =
             vk::AttachmentReference2(
-                7, vk::ImageLayout::eDepthStencilAttachmentOptimal,
+                6, vk::ImageLayout::eDepthStencilAttachmentOptimal,
                 vk::ImageAspectFlagBits::eDepth);
         return &depth_stencil_attachment;
     }
@@ -79,7 +80,7 @@ class ZPass : public vw::Subpass {
     }
 
   protected:
-    void initialize(const vw::RenderPass &render_pass) override {
+    void initialize(const vw::IRenderPass &render_pass) override {
         m_pipeline = create_zpass_pipeline(
             m_device, render_pass, m_uniform_buffer_layout, m_width, m_height);
     }

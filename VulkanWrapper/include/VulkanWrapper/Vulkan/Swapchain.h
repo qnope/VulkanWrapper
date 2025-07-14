@@ -18,6 +18,8 @@ class Swapchain : public ObjectWithUniqueHandle<vk::UniqueSwapchainKHR> {
     [[nodiscard]] std::span<const std::shared_ptr<const Image>>
     images() const noexcept;
 
+    [[nodiscard]] int number_images() const noexcept;
+
     [[nodiscard]] uint64_t
     acquire_next_image(const Semaphore &semaphore) const noexcept;
 

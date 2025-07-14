@@ -7,46 +7,17 @@
 
 namespace vw {
 
-RenderPass::RenderPass(vk::UniqueRenderPass render_pass,
-                       std::vector<vk::AttachmentDescription2> attachments,
-                       std::vector<vk::ClearValue> clear_values,
-                       std::vector<std::unique_ptr<Subpass>> subpasses)
+IRenderPass::IRenderPass(vk::UniqueRenderPass render_pass,
+                         std::vector<vk::ClearValue> clear_values)
     : ObjectWithUniqueHandle<vk::UniqueRenderPass>{std::move(render_pass)}
-    , m_attachments{std::move(attachments)}
-    , m_clear_values{std::move(clear_values)}
-    , m_subpasses{std::move(subpasses)} {
-    for (auto &subpass : m_subpasses)
-        subpass->initialize(*this);
-}
+    , m_clear_values{std::move(clear_values)} {}
 
-const std::vector<vk::ClearValue> &RenderPass::clear_values() const noexcept {
+const std::vector<vk::ClearValue> &IRenderPass::clear_values() const noexcept {
     return m_clear_values;
 }
 
-void RenderPass::execute(vk::CommandBuffer cmd_buffer,
-                         const Framebuffer &framebuffer) {
-    const auto renderPassBeginInfo =
-        vk::RenderPassBeginInfo()
-            .setRenderPass(handle())
-            .setFramebuffer(framebuffer.handle())
-            .setRenderArea(vk::Rect2D(vk::Offset2D(), framebuffer.extent2D()))
-            .setClearValues(m_clear_values);
-
-    const auto subpassInfo =
-        vk::SubpassBeginInfo().setContents(vk::SubpassContents::eInline);
-
-    cmd_buffer.beginRenderPass2(renderPassBeginInfo, subpassInfo);
-    for (auto &subpass :
-         m_subpasses | std::views::take(m_subpasses.size() - 1)) {
-        subpass->execute(cmd_buffer, framebuffer);
-        cmd_buffer.nextSubpass2(subpassInfo, vk::SubpassEndInfo());
-    }
-    m_subpasses.back()->execute(cmd_buffer, framebuffer);
-    cmd_buffer.endRenderPass2(vk::SubpassEndInfo());
-}
-
 vk::SubpassDescription2
-subpassToDescription(const std::unique_ptr<Subpass> &subpass) {
+subpassToDescription(const std::unique_ptr<ISubpass> &subpass) {
     const auto result =
         vk::SubpassDescription2()
             .setPipelineBindPoint(subpass->pipeline_bind_point())
@@ -70,14 +41,14 @@ RenderPassBuilder::add_attachment(vk::AttachmentDescription2 attachment,
 
 RenderPassBuilder &&
 RenderPassBuilder::add_subpass(SubpassTag tag,
-                               std::unique_ptr<Subpass> subpass) && {
+                               std::unique_ptr<ISubpass> subpass) && {
     m_subpasses.emplace_back(tag, std::move(subpass));
     return std::move(*this);
 }
 
-RenderPass RenderPassBuilder::build() && {
+vk::UniqueRenderPass RenderPassBuilder::build_underlying() {
     using namespace std::views;
-    auto subpasses = m_subpasses | values | as_rvalue | to<std::vector>;
+    auto subpasses = m_subpasses | values;
     const auto vkSubpassDescriptions =
         subpasses | transform(subpassToDescription) | to<std::vector>;
 
@@ -92,8 +63,8 @@ RenderPass RenderPassBuilder::build() && {
     if (result != vk::Result::eSuccess) {
         throw RenderPassCreationException{std::source_location::current()};
     }
-    return RenderPass{std::move(renderPass), std::move(m_attachments),
-                      std::move(m_clear_values), std::move(subpasses)};
+
+    return std::move(renderPass);
 }
 
 RenderPassBuilder &&RenderPassBuilder::add_dependency(SubpassTag src,

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "RenderPassInformation.h"
 #include "VulkanWrapper/3rd_party.h"
 #include "VulkanWrapper/Descriptors/DescriptorPool.h"
 #include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
@@ -11,7 +12,7 @@
 struct TonemapPassTag {};
 const auto tonemap_pass_tag = vw::create_subpass_tag<TonemapPassTag>();
 
-class TonemapPass : public vw::Subpass {
+class TonemapPass : public vw::Subpass<TonemapInformation> {
   public:
     TonemapPass(const vw::Device &device, vw::Width width, vw::Height height)
         : m_device{device}
@@ -19,10 +20,10 @@ class TonemapPass : public vw::Subpass {
         , m_height{height} {}
 
     void execute(vk::CommandBuffer cmd_buffer,
-                 const vw::Framebuffer &framebuffer) const noexcept override {
+                 const TonemapInformation &info) const noexcept override {
         vw::DescriptorAllocator allocator;
-        allocator.add_input_attachment(0, framebuffer.image_view(0));
-        allocator.add_input_attachment(1, framebuffer.image_view(5)); // Sun lighting output
+        allocator.add_combined_image(0, info.color);
+        allocator.add_combined_image(1, info.light); // Sun lighting output
         auto descriptor_set = m_descriptor_pool.allocate_set(allocator);
         cmd_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
                                 m_pipeline->handle());
@@ -35,25 +36,15 @@ class TonemapPass : public vw::Subpass {
     const std::vector<vk::AttachmentReference2> &
     color_attachments() const noexcept override {
         static const std::vector<vk::AttachmentReference2> color_attachments = {
-            vk::AttachmentReference2(6,
+            vk::AttachmentReference2(0,
                                      vk::ImageLayout::eColorAttachmentOptimal,
                                      vk::ImageAspectFlagBits::eColor)};
         return color_attachments;
     }
 
-    const std::vector<vk::AttachmentReference2> &
-    input_attachments() const noexcept override {
-        static const std::vector<vk::AttachmentReference2> input_attachments = {
-            vk::AttachmentReference2(0, vk::ImageLayout::eShaderReadOnlyOptimal,
-                                     vk::ImageAspectFlagBits::eColor),
-            vk::AttachmentReference2(5, vk::ImageLayout::eShaderReadOnlyOptimal,
-                                     vk::ImageAspectFlagBits::eColor)};
-        return input_attachments;
-    }
-
     vw::SubpassDependencyMask input_dependencies() const noexcept override {
         vw::SubpassDependencyMask mask;
-        mask.access = vk::AccessFlagBits::eInputAttachmentRead;
+        mask.access = vk::AccessFlagBits::eShaderRead;
         mask.stage = vk::PipelineStageFlagBits::eFragmentShader;
         return mask;
     }
@@ -66,7 +57,7 @@ class TonemapPass : public vw::Subpass {
     }
 
   protected:
-    void initialize(const vw::RenderPass &render_pass) override {
+    void initialize(const vw::IRenderPass &render_pass) override {
         auto vertex = vw::ShaderModule::create_from_spirv_file(
             m_device, "Shaders/quad.spv");
         auto fragment = vw::ShaderModule::create_from_spirv_file(
@@ -77,7 +68,7 @@ class TonemapPass : public vw::Subpass {
                                   .build();
 
         m_pipeline =
-            vw::GraphicsPipelineBuilder(m_device, render_pass, 3,
+            vw::GraphicsPipelineBuilder(m_device, render_pass, 0,
                                         std::move(pipelineLayout))
                 .add_shader(vk::ShaderStageFlagBits::eVertex, std::move(vertex))
                 .add_shader(vk::ShaderStageFlagBits::eFragment,
@@ -95,8 +86,8 @@ class TonemapPass : public vw::Subpass {
     vw::Height m_height;
     std::shared_ptr<const vw::DescriptorSetLayout> m_layout =
         vw::DescriptorSetLayoutBuilder(m_device)
-            .with_input_attachment(vk::ShaderStageFlagBits::eFragment)
-            .with_input_attachment(vk::ShaderStageFlagBits::eFragment)
+            .with_combined_image(vk::ShaderStageFlagBits::eFragment, 1)
+            .with_combined_image(vk::ShaderStageFlagBits::eFragment, 1)
             .build();
     mutable vw::DescriptorPool m_descriptor_pool =
         vw::DescriptorPoolBuilder(m_device, m_layout).build();

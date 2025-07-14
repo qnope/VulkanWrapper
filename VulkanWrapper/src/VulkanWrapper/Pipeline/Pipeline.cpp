@@ -15,7 +15,7 @@ Pipeline::Pipeline(vk::UniquePipeline pipeline,
 const PipelineLayout &Pipeline::layout() const noexcept { return m_layout; }
 
 GraphicsPipelineBuilder::GraphicsPipelineBuilder(const Device &device,
-                                                 const RenderPass &renderPass,
+                                                 const IRenderPass &renderPass,
                                                  uint32_t subpass_index,
                                                  PipelineLayout pipelineLayout)
     : m_device{&device}

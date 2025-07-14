@@ -33,17 +33,14 @@ class DescriptorSetLayoutBuilder {
     DescriptorSetLayoutBuilder &&
     with_combined_image(vk::ShaderStageFlags stages, int number) &&;
 
-    DescriptorSetLayoutBuilder &&with_combined_image_sampler(vk::ShaderStageFlags stages,
-                                                            int number) &&;
-
     DescriptorSetLayoutBuilder &&
     with_input_attachment(vk::ShaderStageFlags stages) &&;
 
     DescriptorSetLayoutBuilder &&
     with_acceleration_structure(vk::ShaderStageFlags stages) &&;
 
-    DescriptorSetLayoutBuilder &&
-    with_storage_image(vk::ShaderStageFlags stages, int number) &&;
+    DescriptorSetLayoutBuilder &&with_storage_image(vk::ShaderStageFlags stages,
+                                                    int number) &&;
 
     std::shared_ptr<DescriptorSetLayout> build() &&;
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "RenderPassInformation.h"
 #include "VulkanWrapper/3rd_party.h"
 #include "VulkanWrapper/Model/Material/ColoredMaterialManager.h"
 #include "VulkanWrapper/Model/Material/TexturedMaterialManager.h"
@@ -10,7 +11,7 @@
 #include "VulkanWrapper/RenderPass/Subpass.h"
 
 inline vw::Pipeline create_pipeline(
-    const vw::Device &device, const vw::RenderPass &render_pass,
+    const vw::Device &device, const vw::IRenderPass &render_pass,
     std::shared_ptr<const vw::ShaderModule> vertex,
     std::shared_ptr<const vw::ShaderModule> fragment,
     std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
@@ -39,7 +40,7 @@ inline vw::Pipeline create_pipeline(
 }
 
 inline vw::MeshRenderer create_renderer(
-    const vw::Device &device, const vw::RenderPass &render_pass,
+    const vw::Device &device, const vw::IRenderPass &render_pass,
     const vw::Model::MeshManager &mesh_manager,
     const std::shared_ptr<const vw::DescriptorSetLayout> &uniform_buffer_layout,
     vw::Width width, vw::Height height) {
@@ -74,7 +75,7 @@ inline vw::MeshRenderer create_renderer(
 struct ColorPassTag {};
 const auto color_pass_tag = vw::create_subpass_tag<ColorPassTag>();
 
-class ColorSubpass : public vw::Subpass {
+class ColorSubpass : public vw::Subpass<GBufferInformation> {
   public:
     ColorSubpass(
         const vw::Device &device, const vw::Model::MeshManager &mesh_manager,
@@ -87,8 +88,9 @@ class ColorSubpass : public vw::Subpass {
         , m_height{height}
         , m_descriptor_set{descriptor_set} {}
 
-    void execute(vk::CommandBuffer cmd_buffer,
-                 const vw::Framebuffer &) const noexcept override {
+    void
+    execute(vk::CommandBuffer cmd_buffer,
+            const GBufferInformation &information) const noexcept override {
         const auto &meshes = m_mesh_manager.meshes();
         std::span first_descriptor_sets = {&m_descriptor_set, 1};
         for (const auto &mesh : meshes) {
@@ -121,7 +123,7 @@ class ColorSubpass : public vw::Subpass {
     depth_stencil_attachment() const noexcept override {
         static const vk::AttachmentReference2 depth_stencil_attachment =
             vk::AttachmentReference2(
-                7, vk::ImageLayout::eDepthStencilReadOnlyOptimal,
+                6, vk::ImageLayout::eDepthStencilReadOnlyOptimal,
                 vk::ImageAspectFlagBits::eDepth);
         return &depth_stencil_attachment;
     }
@@ -142,7 +144,7 @@ class ColorSubpass : public vw::Subpass {
     }
 
   protected:
-    void initialize(const vw::RenderPass &render_pass) override {
+    void initialize(const vw::IRenderPass &render_pass) override {
         m_mesh_renderer =
             create_renderer(m_device, render_pass, m_mesh_manager,
                             m_uniform_buffer_layout, m_width, m_height);

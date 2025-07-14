@@ -32,6 +32,8 @@ Swapchain::images() const noexcept {
     return m_images;
 }
 
+int Swapchain::number_images() const noexcept { return m_images.size(); }
+
 uint64_t
 Swapchain::acquire_next_image(const Semaphore &semaphore) const noexcept {
     return m_device->handle()
