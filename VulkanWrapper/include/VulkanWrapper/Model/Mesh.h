@@ -27,6 +27,9 @@ class Mesh {
     vk::AccelerationStructureGeometryKHR
     acceleration_structure_geometry() const noexcept;
 
+    vk::AccelerationStructureBuildRangeInfoKHR
+    acceleration_structure_range_info() const noexcept;
+
     [[nodiscard]] uint32_t index_count() const noexcept {
         return m_indice_count;
     }

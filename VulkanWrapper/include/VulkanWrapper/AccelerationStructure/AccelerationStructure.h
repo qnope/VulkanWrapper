@@ -87,7 +87,8 @@ class BottomLevelAccelerationStructureBuilder {
     Device *m_device;
     const Allocator *m_allocator;
     std::vector<vk::AccelerationStructureGeometryKHR> m_geometries;
-    std::vector<uint32_t> m_maxPrimitiveCounts;
+    std::vector<vk::AccelerationStructureBuildRangeInfoKHR> m_range_info;
+    std::vector<uint32_t> m_primitive_count;
 };
 
 class TopLevelAccelerationStructureBuilder {

@@ -17,7 +17,9 @@ VkDeviceSize BufferBase::size_bytes() const noexcept {
 vk::DeviceAddress BufferBase::device_address() const noexcept {
     vk::BufferDeviceAddressInfoKHR addressInfo;
     addressInfo.setBuffer(handle());
-    return m_data->m_device->handle().getBufferAddress(addressInfo);
+    auto result = m_data->m_device->handle().getBufferAddress(addressInfo);
+    assert(result != 0);
+    return result;
 }
 
 void BufferBase::generic_copy(const void *data, VkDeviceSize size,

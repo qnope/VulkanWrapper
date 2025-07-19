@@ -41,10 +41,11 @@ BottomLevelAccelerationStructureBuilder::
 
 BottomLevelAccelerationStructureBuilder &
 BottomLevelAccelerationStructureBuilder::add_geometry(const Model::Mesh &mesh) {
-    auto geometry = mesh.acceleration_structure_geometry();
+    const auto geometry = mesh.acceleration_structure_geometry();
+    const auto range_info = mesh.acceleration_structure_range_info();
     m_geometries.push_back(geometry);
-    m_maxPrimitiveCounts.push_back(mesh.index_count() /
-                                   3); // Assuming triangles
+    m_range_info.push_back(range_info);
+    m_primitive_count.push_back(range_info.primitiveCount);
     return *this;
 }
 
@@ -66,28 +67,35 @@ BottomLevelAccelerationStructureBuilder::build() && {
 
     // Create acceleration structure geometry info
 
-    vk::AccelerationStructureBuildGeometryInfoKHR buildGeometryInfo;
-    buildGeometryInfo.setType(vk::AccelerationStructureTypeKHR::eBottomLevel)
-        .setFlags(vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace)
-        .setMode(vk::BuildAccelerationStructureModeKHR::eBuild)
-        .setGeometries(m_geometries);
+    auto buildGeometryInfo =
+        vk::AccelerationStructureBuildGeometryInfoKHR()
+            .setType(vk::AccelerationStructureTypeKHR::eBottomLevel)
+            .setFlags(
+                vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace)
+            .setMode(vk::BuildAccelerationStructureModeKHR::eBuild)
+            .setGeometries(m_geometries);
 
     // Get build sizes
     vk::AccelerationStructureBuildSizesInfoKHR buildSizesInfo =
         m_device->handle().getAccelerationStructureBuildSizesKHR(
             vk::AccelerationStructureBuildTypeKHR::eDevice, buildGeometryInfo,
-            m_maxPrimitiveCounts);
+            m_primitive_count);
+
+    // Create scratch buffer for building
+    auto scratchBuffer = m_allocator->create_buffer<ScratchBuffer>(
+        buildSizesInfo.buildScratchSize);
 
     // Create buffer for acceleration structure
     auto buffer = m_allocator->create_buffer<AccelerationStructureBuffer>(
         buildSizesInfo.accelerationStructureSize);
 
     // Create acceleration structure
-    vk::AccelerationStructureCreateInfoKHR createInfo;
-    createInfo.setBuffer(buffer.handle())
-        .setOffset(0)
-        .setSize(buildSizesInfo.accelerationStructureSize)
-        .setType(vk::AccelerationStructureTypeKHR::eBottomLevel);
+    const auto createInfo =
+        vk::AccelerationStructureCreateInfoKHR()
+            .setBuffer(buffer.handle())
+            .setOffset(0)
+            .setSize(buildSizesInfo.accelerationStructureSize)
+            .setType(vk::AccelerationStructureTypeKHR::eBottomLevel);
 
     auto [result, accelerationStructure] =
         m_device->handle().createAccelerationStructureKHRUnique(createInfo);
@@ -97,14 +105,11 @@ BottomLevelAccelerationStructureBuilder::build() && {
     }
 
     // Get device address
-    vk::AccelerationStructureDeviceAddressInfoKHR addressInfo;
-    addressInfo.setAccelerationStructure(accelerationStructure.get());
+    const auto addressInfo =
+        vk::AccelerationStructureDeviceAddressInfoKHR()
+            .setAccelerationStructure(accelerationStructure.get());
     vk::DeviceAddress deviceAddress =
         m_device->handle().getAccelerationStructureAddressKHR(addressInfo);
-
-    // Create scratch buffer for building
-    auto scratchBuffer = m_allocator->create_buffer<ScratchBuffer>(
-        buildSizesInfo.buildScratchSize);
 
     // Build acceleration structure
     vk::AccelerationStructureBuildGeometryInfoKHR buildInfo;
@@ -114,18 +119,7 @@ BottomLevelAccelerationStructureBuilder::build() && {
         .setSrcAccelerationStructure(VK_NULL_HANDLE)
         .setDstAccelerationStructure(accelerationStructure.get())
         .setGeometries(m_geometries)
-        .setScratchData(
-            vk::DeviceOrHostAddressKHR{scratchBuffer.device_address()});
-
-    std::vector<vk::AccelerationStructureBuildRangeInfoKHR> buildRangeInfos;
-    for (auto primitiveCount : m_maxPrimitiveCounts) {
-        vk::AccelerationStructureBuildRangeInfoKHR buildRangeInfo;
-        buildRangeInfo.setPrimitiveCount(primitiveCount)
-            .setPrimitiveOffset(0)
-            .setFirstVertex(0)
-            .setTransformOffset(0);
-        buildRangeInfos.push_back(buildRangeInfo);
-    }
+        .setScratchData(scratchBuffer.device_address());
 
     // Create command buffer for building
     auto commandPool = CommandPoolBuilder(*m_device).build();
@@ -133,7 +127,7 @@ BottomLevelAccelerationStructureBuilder::build() && {
 
     {
         CommandBufferRecorder recorder(commandBuffer);
-        recorder.buildAccelerationStructure(buildInfo, buildRangeInfos);
+        recorder.buildAccelerationStructure(buildInfo, m_range_info);
     }
     // Submit command buffer
     m_device->graphicsQueue().enqueue_command_buffer(commandBuffer);
@@ -204,8 +198,7 @@ TopLevelAccelerationStructure TopLevelAccelerationStructureBuilder::build() && {
 
     // Create geometry for top-level acceleration structure
     vk::AccelerationStructureGeometryInstancesDataKHR instancesData;
-    instancesData.setArrayOfPointers(VK_FALSE).setData(
-        vk::DeviceOrHostAddressConstKHR{instanceBuffer.device_address()});
+    instancesData.setData(instanceBuffer.device_address());
 
     vk::AccelerationStructureGeometryDataKHR geometryData;
     geometryData.setInstances(instancesData);
@@ -220,14 +213,14 @@ TopLevelAccelerationStructure TopLevelAccelerationStructureBuilder::build() && {
     buildGeometryInfo.setType(vk::AccelerationStructureTypeKHR::eTopLevel)
         .setFlags(vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace)
         .setMode(vk::BuildAccelerationStructureModeKHR::eBuild)
-        .setGeometryCount(1)
-        .setPGeometries(&geometry);
+        .setGeometries(geometry);
 
     // Get build sizes
+    uint32_t instance_count = m_instances.size();
     vk::AccelerationStructureBuildSizesInfoKHR buildSizesInfo =
         m_device->handle().getAccelerationStructureBuildSizesKHR(
             vk::AccelerationStructureBuildTypeKHR::eDevice, buildGeometryInfo,
-            {static_cast<uint32_t>(m_instances.size())});
+            instance_count);
 
     // Create buffer for acceleration structure
     auto buffer = m_allocator->create_buffer<AccelerationStructureBuffer>(
@@ -264,10 +257,8 @@ TopLevelAccelerationStructure TopLevelAccelerationStructureBuilder::build() && {
         .setMode(vk::BuildAccelerationStructureModeKHR::eBuild)
         .setSrcAccelerationStructure(VK_NULL_HANDLE)
         .setDstAccelerationStructure(accelerationStructure.get())
-        .setGeometryCount(1)
-        .setPGeometries(&geometry)
-        .setScratchData(
-            vk::DeviceOrHostAddressKHR{scratchBuffer.device_address()});
+        .setGeometries(geometry)
+        .setScratchData(scratchBuffer.device_address());
 
     vk::AccelerationStructureBuildRangeInfoKHR buildRangeInfo;
     buildRangeInfo.setPrimitiveCount(static_cast<uint32_t>(m_instances.size()))
