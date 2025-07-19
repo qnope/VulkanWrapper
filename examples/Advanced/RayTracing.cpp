@@ -43,8 +43,9 @@ RayTracingPass::RayTracingPass(const vw::Device &device,
 
     // Créer le pipeline de ray tracing
     m_pipeline = std::make_shared<vw::RayTracingPipeline>(
-        vw::RayTracingPipelineBuilder(device, std::move(pipeline_layout))
-            .add_ray_generation_shader(raygen)
+        vw::RayTracingPipelineBuilder(device, allocator,
+                                      std::move(pipeline_layout))
+            .set_ray_generation_shader(raygen)
             .add_miss_shader(miss)
             .build());
 }
@@ -68,19 +69,14 @@ void RayTracingPass::execute(vk::CommandBuffer command_buffer,
                                       m_pipeline->layout().handle(), 0,
                                       {m_descriptor_set}, {});
 
-    // Préparer les tables de shaders
-    auto handles = m_pipeline->get_shader_group_handles();
-    auto group_size = m_pipeline->get_shader_group_handle_size();
     vk::DeviceAddress base_addr = 0; // À compléter selon l'API wrapper
-    vk::StridedDeviceAddressRegionKHR raygenSBT{base_addr, group_size,
-                                                group_size};
-    vk::StridedDeviceAddressRegionKHR missSBT{base_addr + group_size,
-                                              group_size, group_size};
-    vk::StridedDeviceAddressRegionKHR hitSBT{};
-    vk::StridedDeviceAddressRegionKHR callSBT{};
+
+    const auto shader_binding_table = m_pipeline->get_shader_binding_table();
 
     // Lancer le pipeline de ray tracing
-    command_buffer.traceRaysKHR(raygenSBT, missSBT, hitSBT, callSBT,
+    command_buffer.traceRaysKHR(shader_binding_table.generation_region,
+                                shader_binding_table.miss_region,
+                                shader_binding_table.closest_hit_region, {},
                                 int(m_width), int(m_height), 1);
 
     vw::execute_image_barrier_general_to_sampled(
