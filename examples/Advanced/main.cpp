@@ -53,7 +53,7 @@ struct UBOData {
     }();
     glm::mat4 view =
         glm::lookAt(glm::vec3(0.0F, 300.0F, 0.0F),
-                    glm::vec3(1.0F, 300.5F, 0.0F), glm::vec3(0.0F, 1.0F, 0.0F));
+                    glm::vec3(1.0F, 299.5F, 0.0F), glm::vec3(0.0F, 1.0F, 0.0F));
     glm::mat4 model = glm::mat4(1.0);
 };
 
@@ -191,7 +191,7 @@ int main() {
         const auto data_attachment =
             vw::AttachmentBuilder{}
                 .with_format(vk::Format::eR32G32B32A32Sfloat)
-                .with_final_layout(vk::ImageLayout::eAttachmentOptimal)
+                .with_final_layout(vk::ImageLayout::eShaderReadOnlyOptimal)
                 .build();
 
         const auto light_attachment =
@@ -264,7 +264,7 @@ int main() {
         const vk::Extent2D extent(uint32_t(app.swapchain.width()),
                                   uint32_t(app.swapchain.height()));
 
-        RayTracingPass rayTracingPass(app.device, app.allocator,
+        RayTracingPass rayTracingPass(app.device, app.allocator, mesh_manager,
                                       app.swapchain.width(),
                                       app.swapchain.height());
 

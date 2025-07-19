@@ -100,6 +100,12 @@ DescriptorAllocator::get_write_descriptors() const {
         writers.push_back(writer);
     }
 
+    if (m_accelerationStructureUpdate) {
+        auto writer = m_accelerationStructureUpdate->write;
+        writer.setPNext(&m_accelerationStructureUpdate->info);
+        writers.push_back(writer);
+    }
+
     return writers;
 }
 } // namespace vw

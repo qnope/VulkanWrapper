@@ -22,3 +22,4 @@ VwCompileShader(Main Shaders/post-process/sky.frag Shaders/post-process/sky.spv)
 # Ray tracing shaders
 VwCompileShader(Main Shaders/RayTracing/raygen.rgen Shaders/RayTracing/raygen.rgen.spv --target-env vulkan1.2)
 VwCompileShader(Main Shaders/RayTracing/miss.rmiss Shaders/RayTracing/miss.rmiss.spv --target-env vulkan1.2)
+VwCompileShader(Main Shaders/RayTracing/hit.rchit Shaders/RayTracing/hit.rchit.spv --target-env vulkan1.2)

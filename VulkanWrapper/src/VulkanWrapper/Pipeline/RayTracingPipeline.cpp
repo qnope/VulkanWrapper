@@ -116,7 +116,7 @@ RayTracingPipelineBuilder::create_groups() const {
     for (const auto &module : m_closest_hit_shaders) {
         groups.emplace_back()
             .setType(vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup)
-            .setClosestHitShader(groups.size());
+            .setClosestHitShader(groups.size() - 1);
     }
 
     for (const auto &module : m_miss_shaders) {

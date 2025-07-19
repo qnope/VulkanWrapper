@@ -6,14 +6,16 @@ namespace vw ::Model {
 Mesh::Mesh(const Vertex3DBuffer *vertex_buffer,
            const FullVertex3DBuffer *full_vertex_buffer,
            const IndexBuffer *index_buffer, Material::Material material,
-           uint32_t indice_count, int vertex_offset, int first_index)
+           uint32_t indice_count, int vertex_offset, int first_index,
+           int vertices_count)
     : m_vertex_buffer{vertex_buffer}
     , m_full_vertex_buffer{full_vertex_buffer}
     , m_index_buffer{index_buffer}
     , m_material{material}
     , m_indice_count{indice_count}
     , m_vertex_offset{vertex_offset}
-    , m_first_index{first_index} {}
+    , m_first_index{first_index}
+    , m_vertices_count{vertices_count} {}
 
 Material::MaterialTypeTag Mesh::material_type_tag() const noexcept {
     return m_material.material_type;
@@ -48,14 +50,15 @@ Mesh::acceleration_structure_geometry() const noexcept {
     // Create triangle data for acceleration structure
     vk::AccelerationStructureGeometryTrianglesDataKHR triangles;
     triangles.setVertexFormat(vk::Format::eR32G32B32Sfloat)
-        .setVertexData(
-            vk::DeviceOrHostAddressConstKHR{m_vertex_buffer->device_address()})
+        .setVertexData(vk::DeviceOrHostAddressConstKHR{
+            vk::DeviceAddress(m_vertex_buffer->device_address() +
+                              m_vertex_offset * sizeof(vw::Vertex3D))})
         .setVertexStride(sizeof(vw::Vertex3D))
-        .setMaxVertex(static_cast<uint32_t>(
-            m_vertex_buffer->size() / sizeof(vw::Vertex3D) - 1))
+        .setMaxVertex(m_vertices_count - 1)
         .setIndexType(vk::IndexType::eUint32)
-        .setIndexData(
-            vk::DeviceOrHostAddressConstKHR{m_index_buffer->device_address()})
+        .setIndexData(vk::DeviceOrHostAddressConstKHR{
+            vk::DeviceAddress(m_index_buffer->device_address() +
+                              m_first_index * sizeof(uint32_t))})
         .setTransformData(
             vk::DeviceOrHostAddressConstKHR{}); // No transform buffer
 

@@ -14,7 +14,7 @@ class Mesh {
          const FullVertex3DBuffer *full_vertex_buffer,
          const IndexBuffer *index_buffer,
          Material::Material descriptor_material, uint32_t indice_count,
-         int vertex_offset, int first_index);
+         int vertex_offset, int first_index, int vertices_count);
 
     [[nodiscard]] Material::MaterialTypeTag material_type_tag() const noexcept;
 
@@ -40,5 +40,6 @@ class Mesh {
     uint32_t m_indice_count;
     int m_vertex_offset;
     int m_first_index;
+    int m_vertices_count;
 };
 } // namespace vw::Model

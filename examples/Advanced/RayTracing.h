@@ -2,18 +2,21 @@
 
 #include <memory>
 #include <vulkan/vulkan.hpp>
+#include <VulkanWrapper/AccelerationStructure/AccelerationStructure.h>
 #include <VulkanWrapper/Descriptors/DescriptorAllocator.h>
 #include <VulkanWrapper/Descriptors/DescriptorPool.h>
 #include <VulkanWrapper/Descriptors/DescriptorSetLayout.h>
 #include <VulkanWrapper/fwd.h>
 #include <VulkanWrapper/Image/Image.h>
 #include <VulkanWrapper/Image/ImageView.h>
+#include <VulkanWrapper/Model/MeshManager.h>
 #include <VulkanWrapper/Pipeline/RayTracingPipeline.h>
 
 class RayTracingPass {
   public:
-    RayTracingPass(const vw::Device &device, vw::Allocator &allocator,
-                   vw::Width width, vw::Height height);
+    RayTracingPass(vw::Device &device, vw::Allocator &allocator,
+                   const vw::Model::MeshManager &mesh_manager, vw::Width width,
+                   vw::Height height);
     void execute(vk::CommandBuffer command_buffer,
                  const vw::Framebuffer &framebuffer);
 
@@ -28,4 +31,7 @@ class RayTracingPass {
     vk::DescriptorSet m_descriptor_set;
 
     std::shared_ptr<const vw::Sampler> m_sampler;
+
+    vw::AccelerationStructure::BottomLevelAccelerationStructure m_bottom;
+    vw::AccelerationStructure::TopLevelAccelerationStructure m_top;
 };

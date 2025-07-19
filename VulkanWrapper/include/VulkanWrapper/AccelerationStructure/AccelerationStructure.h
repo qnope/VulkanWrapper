@@ -78,7 +78,7 @@ class BottomLevelAccelerationStructureBuilder {
 
     BottomLevelAccelerationStructureBuilder &
     add_geometry(const Model::Mesh &mesh);
-    BottomLevelAccelerationStructureBuilder &
+    BottomLevelAccelerationStructureBuilder &&
     add_geometries(std::span<const Model::Mesh> meshes);
 
     BottomLevelAccelerationStructure build() &&;
@@ -95,11 +95,12 @@ class TopLevelAccelerationStructureBuilder {
     TopLevelAccelerationStructureBuilder(Device &device,
                                          const Allocator &allocator);
 
-    TopLevelAccelerationStructureBuilder &
+    TopLevelAccelerationStructureBuilder &&
     add_instance(const BottomLevelAccelerationStructure &blas,
                  const glm::mat4 &transform = glm::mat4(1.0f),
                  uint32_t instanceId = 0, uint32_t mask = 0xFF,
                  uint32_t hitGroupIndex = 0);
+
     TopLevelAccelerationStructureBuilder &
     add_instances(std::span<const BottomLevelAccelerationStructure> blases,
                   std::span<const glm::mat4> transforms = {});

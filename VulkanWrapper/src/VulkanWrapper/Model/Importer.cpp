@@ -67,7 +67,7 @@ void import_model(const std::filesystem::path &path,
         mesh_manager.m_meshes.emplace_back(
             vertex_buffer, full_vertex_buffer, index_buffer,
             real_material[mesh.material_index], mesh.indices.size(),
-            vertex_offset, first_index);
+            vertex_offset, first_index, mesh.vertices.size());
 
         mesh_manager.m_staging_buffer_manager.fill_buffer<Vertex3D>(
             mesh.vertices, *vertex_buffer, vertex_offset);

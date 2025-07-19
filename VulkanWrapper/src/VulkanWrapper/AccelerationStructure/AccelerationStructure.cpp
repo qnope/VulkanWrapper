@@ -48,13 +48,13 @@ BottomLevelAccelerationStructureBuilder::add_geometry(const Model::Mesh &mesh) {
     return *this;
 }
 
-BottomLevelAccelerationStructureBuilder &
+BottomLevelAccelerationStructureBuilder &&
 BottomLevelAccelerationStructureBuilder::add_geometries(
     std::span<const Model::Mesh> meshes) {
     for (const auto &mesh : meshes) {
         add_geometry(mesh);
     }
-    return *this;
+    return std::move(*this);
 }
 
 BottomLevelAccelerationStructure
@@ -151,7 +151,7 @@ TopLevelAccelerationStructureBuilder::TopLevelAccelerationStructureBuilder(
     : m_device(&device)
     , m_allocator(&allocator) {}
 
-TopLevelAccelerationStructureBuilder &
+TopLevelAccelerationStructureBuilder &&
 TopLevelAccelerationStructureBuilder::add_instance(
     const BottomLevelAccelerationStructure &blas, const glm::mat4 &transform,
     uint32_t instanceId, uint32_t mask, uint32_t hitGroupIndex) {
@@ -173,7 +173,7 @@ TopLevelAccelerationStructureBuilder::add_instance(
         .setAccelerationStructureReference(blas.device_address());
 
     m_instances.push_back(instance);
-    return *this;
+    return std::move(*this);
 }
 
 TopLevelAccelerationStructureBuilder &
