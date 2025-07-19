@@ -52,8 +52,8 @@ struct UBOData {
         return proj;
     }();
     glm::mat4 view =
-        glm::lookAt(glm::vec3(0.0F, 300.0F, 0.0F),
-                    glm::vec3(1.0F, 299.5F, 0.0F), glm::vec3(0.0F, 1.0F, 0.0F));
+        glm::lookAt(glm::vec3(300.0F, 500.0F, 0.0F),
+                    glm::vec3(1.0F, 300.5F, 0.0F), glm::vec3(0.0F, 1.0F, 0.0F));
     glm::mat4 model = glm::mat4(1.0);
 };
 
