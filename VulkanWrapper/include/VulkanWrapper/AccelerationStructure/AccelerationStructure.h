@@ -31,19 +31,17 @@ class BottomLevelAccelerationStructure
     BottomLevelAccelerationStructure(
         const Device &device, const Allocator &allocator,
         vk::UniqueAccelerationStructureKHR accelerationStructure,
-        vk::DeviceAddress deviceAddress, AccelerationStructureBuffer buffer,
-        vk::DeviceSize size);
+        AccelerationStructureBuffer buffer, vk::DeviceSize size);
 
-    [[nodiscard]] vk::DeviceAddress device_address() const noexcept {
-        return m_deviceAddress;
-    }
+    [[nodiscard]] vk::DeviceAddress device_address() const noexcept;
+
     [[nodiscard]] const AccelerationStructureBuffer &buffer() const noexcept {
         return m_buffer;
     }
     [[nodiscard]] vk::DeviceSize size() const noexcept { return m_size; }
 
   private:
-    vk::DeviceAddress m_deviceAddress;
+    const Device *m_device;
     AccelerationStructureBuffer m_buffer;
     vk::DeviceSize m_size;
 };

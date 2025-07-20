@@ -27,6 +27,8 @@ RayTracingPass::RayTracingPass(vw::Device &device, vw::Allocator &allocator,
                                       vk::ShaderStageFlagBits::eRaygenKHR, 1)
                                   .with_acceleration_structure(
                                       vk::ShaderStageFlagBits::eRaygenKHR)
+                                  .with_uniform_buffer(
+                                      vk::ShaderStageFlagBits::eRaygenKHR, 1)
                                   .build()}
     , m_descriptor_pool{vw::DescriptorPoolBuilder(device,
                                                   m_descriptor_set_layout)
@@ -67,7 +69,8 @@ RayTracingPass::RayTracingPass(vw::Device &device, vw::Allocator &allocator,
 }
 
 void RayTracingPass::execute(vk::CommandBuffer command_buffer,
-                             const vw::Framebuffer &framebuffer) {
+                             const vw::Framebuffer &framebuffer,
+                             vk::Buffer handle) {
     // Récupérer les vues du depth et du light buffer
     auto light_buffer = framebuffer.image_view(Light); // Light
     auto position_buffer = framebuffer.image_view(Position);
@@ -80,6 +83,7 @@ void RayTracingPass::execute(vk::CommandBuffer command_buffer,
                                  vw::CombinedImage(position_buffer, m_sampler));
     allocator.add_storage_image(2, *light_buffer);
     allocator.add_acceleration_structure(3, m_top.handle());
+    allocator.add_uniform_buffer(4, handle, 0, sizeof(glm::mat4) * 2);
     m_descriptor_set = m_descriptor_pool.allocate_set(allocator);
 
     // Bind pipeline et descriptor set

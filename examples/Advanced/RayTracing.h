@@ -18,7 +18,7 @@ class RayTracingPass {
                    const vw::Model::MeshManager &mesh_manager, vw::Width width,
                    vw::Height height);
     void execute(vk::CommandBuffer command_buffer,
-                 const vw::Framebuffer &framebuffer);
+                 const vw::Framebuffer &framebuffer, vk::Buffer handle);
 
   private:
     vw::Width m_width;

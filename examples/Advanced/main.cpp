@@ -44,19 +44,6 @@ create_image_views(const vw::Device &device, const vw::Swapchain &swapchain) {
     return result;
 }
 
-struct UBOData {
-    glm::mat4 proj = [] {
-        auto proj = glm::perspective(glm::radians(60.0F), 1600.0F / 900.0F, 1.F,
-                                     10000.0F);
-        proj[1][1] *= -1;
-        return proj;
-    }();
-    glm::mat4 view =
-        glm::lookAt(glm::vec3(300.0F, 500.0F, 0.0F),
-                    glm::vec3(1.0F, 300.5F, 0.0F), glm::vec3(0.0F, 1.0F, 0.0F));
-    glm::mat4 model = glm::mat4(1.0);
-};
-
 vw::Buffer<UBOData, true, vw::UniformBufferUsage>
 createUbo(vw::Allocator &allocator) {
     auto buffer =
@@ -179,7 +166,7 @@ int main() {
                 .build();
 
         vw::Model::MeshManager mesh_manager(app.device, app.allocator);
-        mesh_manager.read_file("../../../Models/Sponza/sponza.obj");
+        // mesh_manager.read_file("../../../Models/Sponza/sponza.obj");
         mesh_manager.read_file("../../../Models/cube.obj");
 
         const auto color_attachment =
@@ -236,9 +223,9 @@ int main() {
                                 vk::ClearDepthStencilValue(1.0))
                 .add_subpass(z_pass_tag, std::move(depth_subpass))
                 .add_subpass(color_pass_tag, std::move(color_subpass))
-                .add_subpass(sky_pass_tag, std::move(sky_pass))
+                //.add_subpass(sky_pass_tag, std::move(sky_pass))
                 .add_dependency(z_pass_tag, color_pass_tag)
-                .add_dependency(z_pass_tag, sky_pass_tag)
+                //.add_dependency(z_pass_tag, sky_pass_tag)
                 .build<GBufferInformation>();
 
         auto tonemap_pass = std::make_unique<TonemapPass>(
@@ -278,7 +265,8 @@ int main() {
                 vw::CombinedImage{gBuffer.image_view(0), sampler},
                 vw::CombinedImage{gBuffer.image_view(5), sampler}};
 
-            rayTracingPass.execute(commandBuffer, gBuffer);
+            rayTracingPass.execute(commandBuffer, gBuffer,
+                                   uniform_buffer.handle());
 
             tonemapRenderPass.execute(commandBuffer, swapchainBuffer, info);
         }

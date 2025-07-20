@@ -42,4 +42,5 @@ void main() {
 
     const vec3 exposed = base * rad;
     out_color = ACESApprox(exposed);
+    out_color.rgb = rad;
 }

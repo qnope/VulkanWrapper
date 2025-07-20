@@ -14,13 +14,20 @@ using AccelerationStructureCreationException =
 BottomLevelAccelerationStructure::BottomLevelAccelerationStructure(
     const Device &device, const Allocator &allocator,
     vk::UniqueAccelerationStructureKHR accelerationStructure,
-    vk::DeviceAddress deviceAddress, AccelerationStructureBuffer buffer,
-    vk::DeviceSize size)
+    AccelerationStructureBuffer buffer, vk::DeviceSize size)
     : ObjectWithUniqueHandle<vk::UniqueAccelerationStructureKHR>(
           std::move(accelerationStructure))
-    , m_deviceAddress(deviceAddress)
+    , m_device(&device)
     , m_buffer(std::move(buffer))
     , m_size(size) {}
+
+vk::DeviceAddress
+BottomLevelAccelerationStructure::device_address() const noexcept {
+    // Get device address
+    const auto addressInfo = vk::AccelerationStructureDeviceAddressInfoKHR()
+                                 .setAccelerationStructure(handle());
+    return m_device->handle().getAccelerationStructureAddressKHR(addressInfo);
+}
 
 TopLevelAccelerationStructure::TopLevelAccelerationStructure(
     const Device &device, const Allocator &allocator,
@@ -104,13 +111,6 @@ BottomLevelAccelerationStructureBuilder::build() && {
             std::source_location::current()};
     }
 
-    // Get device address
-    const auto addressInfo =
-        vk::AccelerationStructureDeviceAddressInfoKHR()
-            .setAccelerationStructure(accelerationStructure.get());
-    vk::DeviceAddress deviceAddress =
-        m_device->handle().getAccelerationStructureAddressKHR(addressInfo);
-
     // Build acceleration structure
     vk::AccelerationStructureBuildGeometryInfoKHR buildInfo;
     buildInfo.setType(vk::AccelerationStructureTypeKHR::eBottomLevel)
@@ -136,8 +136,7 @@ BottomLevelAccelerationStructureBuilder::build() && {
 
     return BottomLevelAccelerationStructure(
         *m_device, *m_allocator, std::move(accelerationStructure),
-        deviceAddress, std::move(buffer),
-        buildSizesInfo.accelerationStructureSize);
+        std::move(buffer), buildSizesInfo.accelerationStructureSize);
 }
 
 TopLevelAccelerationStructureBuilder::TopLevelAccelerationStructureBuilder(
@@ -200,8 +199,7 @@ TopLevelAccelerationStructure TopLevelAccelerationStructureBuilder::build() && {
     vk::AccelerationStructureGeometryInstancesDataKHR instancesData;
     instancesData.setData(instanceBuffer.device_address());
 
-    vk::AccelerationStructureGeometryDataKHR geometryData;
-    geometryData.setInstances(instancesData);
+    vk::AccelerationStructureGeometryDataKHR geometryData(instancesData);
 
     vk::AccelerationStructureGeometryKHR geometry;
     geometry.setGeometryType(vk::GeometryTypeKHR::eInstances)
