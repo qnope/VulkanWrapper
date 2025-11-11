@@ -18,7 +18,7 @@ class App {
     vw::SDL_Initializer initializer;
     vw::Window window = vw::WindowBuilder(initializer)
                             .with_title("Vulkan Wrapper")
-                            .sized(vw::Width(1200), vw::Height(675))
+                            .sized(vw::Width(800), vw::Height(600))
                             .build();
 
     vw::Instance instance =

@@ -15,6 +15,7 @@
 #include <VulkanWrapper/Image/ImageLoader.h>
 #include <VulkanWrapper/Image/Sampler.h>
 #include <VulkanWrapper/Memory/Allocator.h>
+#include <VulkanWrapper/Memory/Barrier.h>
 #include <VulkanWrapper/Memory/StagingBufferManager.h>
 #include <VulkanWrapper/Model/Importer.h>
 #include <VulkanWrapper/Model/Material/ColoredMaterialManager.h>
@@ -31,6 +32,839 @@
 #include <VulkanWrapper/Synchronization/Semaphore.h>
 #include <VulkanWrapper/Utils/exceptions.h>
 #include <VulkanWrapper/Vulkan/Queue.h>
+
+/*
+ * Vulkan Example - Basic hardware accelerated ray tracing example
+ *  * Copyright (C) 2019-2025 by Sascha Willems - www.saschawillems.de
+ *  * This code is licensed under the MIT license (MIT)
+ * (http://opensource.org/licenses/MIT)
+ */
+
+// Holds data for a ray tracing scratch buffer that is used as a temporary
+// storage
+struct RayTracingScratchBuffer {
+    uint64_t deviceAddress = 0;
+    std::optional<vw::AccelerationStructure::ScratchBuffer> handle;
+};
+
+// Ray tracing acceleration structure
+struct AccelerationStructure {
+    vk::UniqueAccelerationStructureKHR handle;
+    uint64_t deviceAddress = 0;
+    vk::DeviceMemory memory;
+    std::optional<vw::AccelerationStructure::AccelerationStructureBuffer>
+        buffer;
+};
+
+class VulkanExample {
+  public:
+    vw::Device &device;
+    vw::Allocator &allocator;
+    vw::Swapchain &swapchain;
+
+    vw::Queue queue = device.graphicsQueue();
+    vw::CommandPool pool = vw::CommandPoolBuilder(device).build();
+
+    vk::PhysicalDeviceRayTracingPipelinePropertiesKHR
+        rayTracingPipelineProperties{};
+    vk::PhysicalDeviceAccelerationStructureFeaturesKHR
+        accelerationStructureFeatures{};
+
+    AccelerationStructure bottomLevelAS{};
+    AccelerationStructure topLevelAS{};
+
+    std::optional<vw::Buffer<vw::Vertex3D, true, vw::VertexBufferUsage>>
+        vertexBuffer;
+    std::optional<vw::Buffer<uint32_t, true, vw::IndexBufferUsage>> indexBuffer;
+    uint32_t indexCount{0};
+    std::optional<vw::Buffer<VkTransformMatrixKHR, true,
+                             VkBufferUsageFlags(
+                                 vk::BufferUsageFlagBits2::eStorageBuffer)>>
+        transformBuffer;
+    std::vector<vk::RayTracingShaderGroupCreateInfoKHR> shaderGroups{};
+
+    std::optional<vw::ShaderBindingTableBuffer> raygenShaderBindingTable;
+    std::optional<vw::ShaderBindingTableBuffer> missShaderBindingTable;
+    std::optional<vw::ShaderBindingTableBuffer> hitShaderBindingTable;
+
+    struct StorageImage {
+        std::shared_ptr<const vw::Image> image;
+        std::shared_ptr<const vw::ImageView> view;
+        vk::Format format;
+    } storageImage{};
+
+    struct UniformData {
+        glm::mat4 viewInverse;
+        glm::mat4 projInverse;
+    } uniformData;
+
+    using UniformBuffer = vw::Buffer<UniformData, true, vw::UniformBufferUsage>;
+
+    std::optional<UniformBuffer> uniformBuffer;
+
+    vk::UniquePipeline pipeline{VK_NULL_HANDLE};
+    vk::UniquePipelineLayout pipelineLayout{};
+    vk::UniqueDescriptorSetLayout descriptorSetLayout{};
+    vk::UniqueDescriptorPool descriptorPool;
+    vk::DescriptorSet descriptorSet;
+    std::optional<vw::CommandPool> commandPool;
+    std::vector<vk::CommandBuffer> drawCmdBuffers;
+
+    glm::mat4 projectionMatrix;
+    glm::mat4 viewMatrix;
+
+    VulkanExample(vw::Device &device, vw::Allocator &allocator,
+                  vw::Swapchain &swapchain)
+        : device{device}
+        , allocator{allocator}
+        , swapchain(swapchain) {
+        projectionMatrix =
+            glm::perspective(60.0f, 800.0f / 600.0f, 0.1f, 512.f);
+        viewMatrix =
+            glm::lookAt(glm::vec3(3.0f, 4.0f, 2.f), glm::vec3(0.0f, 0.0f, 0.0f),
+                        glm::vec3(0.0f, 1.0f, 0.0f));
+    }
+
+    /*
+            Create a scratch buffer to hold temporary data for a ray tracing
+       acceleration structure
+    */
+    RayTracingScratchBuffer createScratchBuffer(vk::DeviceSize size) {
+        RayTracingScratchBuffer scratchBuffer{};
+
+        scratchBuffer.handle =
+            allocator.create_buffer<vw::AccelerationStructure::ScratchBuffer>(
+                size);
+
+        scratchBuffer.deviceAddress = scratchBuffer.handle->device_address();
+
+        return scratchBuffer;
+    }
+
+    void createAccelerationStructureBuffer(
+        AccelerationStructure &accelerationStructure,
+        vk::AccelerationStructureBuildSizesInfoKHR buildSizeInfo) {
+
+        accelerationStructure.buffer = allocator.create_buffer<
+            vw::AccelerationStructure::AccelerationStructureBuffer>(
+            buildSizeInfo.accelerationStructureSize);
+    }
+
+    /*
+            Gets the device address from a buffer that's required for some of
+       the buffers used for ray tracing
+    */
+    uint64_t getBufferDeviceAddress(const auto &buffer) {
+        return buffer->device_address();
+    }
+
+    /*
+            Set up a storage image that the ray generation shader will be
+       writing to
+    */
+    void createStorageImage() {
+        storageImage.image =
+            allocator.create_image_2D(swapchain.width(), swapchain.height(),
+                                      false, vk::Format::eR32G32B32A32Sfloat,
+                                      vk::ImageUsageFlagBits::eStorage |
+                                          vk::ImageUsageFlagBits::eTransferSrc);
+
+        storageImage.view = vw::ImageViewBuilder(device, storageImage.image)
+                                .setImageType(vk::ImageViewType::e2D)
+                                .build();
+
+        vk::CommandBuffer cmdBuffer = pool.allocate(1).front();
+        std::ignore = cmdBuffer.begin(vk::CommandBufferBeginInfo());
+        vw::execute_image_barrier_undefined_to_general(cmdBuffer,
+                                                       storageImage.image);
+        std::ignore = cmdBuffer.end();
+        queue.enqueue_command_buffer(cmdBuffer);
+        queue.submit({}, {}, {}).wait();
+    }
+
+    /*
+            Create the bottom level acceleration structure contains the scene's
+       actual geometry (vertices, triangles)
+    */
+    void createBottomLevelAccelerationStructure() {
+        std::vector<vw::Vertex3D> vertices = {
+            {{1.0f, 1.0f, 0.0f}}, {{-1.0f, 1.0f, 0.0f}}, {{0.0f, -1.0f, 0.0f}}};
+
+        // Setup indices
+        std::vector<uint32_t> indices = {0, 1, 2};
+        indexCount = static_cast<uint32_t>(indices.size());
+
+        // Setup identity transform matrix
+        VkTransformMatrixKHR transformMatrix = {1.0f, 0.0f, 0.0f, 0.0f,
+                                                0.0f, 1.0f, 0.0f, 0.0f,
+                                                0.0f, 0.0f, 1.0f, 0.0f};
+
+        vertexBuffer =
+            allocator.create_buffer<vw::Vertex3D, true, vw::VertexBufferUsage>(
+                vertices.size());
+        vertexBuffer->copy(vertices, 0);
+
+        indexBuffer =
+            allocator.create_buffer<uint32_t, true, vw::IndexBufferUsage>(
+                indices.size());
+        indexBuffer->copy(indices, 0);
+
+        transformBuffer = allocator.create_buffer<VkTransformMatrixKHR, true,
+                                                  vw::VertexBufferUsage>(1);
+        transformBuffer->copy(
+            std::span<const VkTransformMatrixKHR>(&transformMatrix, 1), 0);
+
+        // Transform buffer
+
+        vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress{};
+        vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress{};
+        vk::DeviceOrHostAddressConstKHR transformBufferDeviceAddress{};
+
+        vertexBufferDeviceAddress.deviceAddress =
+            getBufferDeviceAddress(vertexBuffer);
+        indexBufferDeviceAddress.deviceAddress =
+            getBufferDeviceAddress(indexBuffer);
+        transformBufferDeviceAddress.deviceAddress =
+            getBufferDeviceAddress(transformBuffer);
+
+        // Build
+        vk::AccelerationStructureGeometryKHR accelerationStructureGeometry{};
+        accelerationStructureGeometry.flags = vk::GeometryFlagBitsKHR::eOpaque;
+        accelerationStructureGeometry.geometryType =
+            vk::GeometryTypeKHR::eTriangles;
+        accelerationStructureGeometry.geometry.triangles.vertexFormat =
+            vk::Format::eR32G32B32Sfloat;
+        accelerationStructureGeometry.geometry.triangles.vertexData =
+            vertexBufferDeviceAddress;
+        accelerationStructureGeometry.geometry.triangles.maxVertex = 2;
+        accelerationStructureGeometry.geometry.triangles.vertexStride =
+            sizeof(vw::Vertex3D);
+        accelerationStructureGeometry.geometry.triangles.indexType =
+            vk::IndexType::eUint32;
+        accelerationStructureGeometry.geometry.triangles.indexData =
+            indexBufferDeviceAddress;
+        accelerationStructureGeometry.geometry.triangles.transformData
+            .deviceAddress = 0;
+        accelerationStructureGeometry.geometry.triangles.transformData
+            .hostAddress = nullptr;
+        accelerationStructureGeometry.geometry.triangles.transformData =
+            transformBufferDeviceAddress;
+
+        // Get size info
+        vk::AccelerationStructureBuildGeometryInfoKHR
+            accelerationStructureBuildGeometryInfo{};
+        accelerationStructureBuildGeometryInfo.type =
+            vk::AccelerationStructureTypeKHR::eBottomLevel;
+        accelerationStructureBuildGeometryInfo.flags =
+            vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
+        accelerationStructureBuildGeometryInfo.setGeometries(
+            accelerationStructureGeometry);
+
+        const uint32_t numTriangles = 1;
+
+        auto accelerationStructureBuildSizesInfo =
+            device.handle().getAccelerationStructureBuildSizesKHR(
+                vk::AccelerationStructureBuildTypeKHR::eDevice,
+                accelerationStructureBuildGeometryInfo, numTriangles);
+
+        createAccelerationStructureBuffer(bottomLevelAS,
+                                          accelerationStructureBuildSizesInfo);
+
+        vk::AccelerationStructureCreateInfoKHR
+            accelerationStructureCreateInfo{};
+
+        accelerationStructureCreateInfo.buffer = bottomLevelAS.buffer->handle();
+        accelerationStructureCreateInfo.size =
+            accelerationStructureBuildSizesInfo.accelerationStructureSize;
+        accelerationStructureCreateInfo.type =
+            vk::AccelerationStructureTypeKHR::eBottomLevel;
+
+        bottomLevelAS.handle = device.handle()
+                                   .createAccelerationStructureKHRUnique(
+                                       accelerationStructureCreateInfo)
+                                   .value;
+
+        // Create a small scratch buffer used during build of the bottom level
+        // acceleration structure
+        RayTracingScratchBuffer scratchBuffer = createScratchBuffer(
+            accelerationStructureBuildSizesInfo.buildScratchSize);
+
+        vk::AccelerationStructureBuildGeometryInfoKHR
+            accelerationBuildGeometryInfo{};
+        accelerationBuildGeometryInfo.type =
+            vk::AccelerationStructureTypeKHR::eBottomLevel;
+        accelerationBuildGeometryInfo.flags =
+            vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
+        accelerationBuildGeometryInfo.mode =
+            vk::BuildAccelerationStructureModeKHR::eBuild;
+        accelerationBuildGeometryInfo.dstAccelerationStructure =
+            *bottomLevelAS.handle;
+        accelerationBuildGeometryInfo.setGeometries(
+            accelerationStructureGeometry);
+        accelerationBuildGeometryInfo.scratchData.deviceAddress =
+            scratchBuffer.deviceAddress;
+
+        vk::AccelerationStructureBuildRangeInfoKHR
+            accelerationStructureBuildRangeInfo{};
+        accelerationStructureBuildRangeInfo.primitiveCount = numTriangles;
+        accelerationStructureBuildRangeInfo.primitiveOffset = 0;
+        accelerationStructureBuildRangeInfo.firstVertex = 0;
+        accelerationStructureBuildRangeInfo.transformOffset = 0;
+        std::vector<vk::AccelerationStructureBuildRangeInfoKHR *>
+            accelerationBuildStructureRangeInfos = {
+                &accelerationStructureBuildRangeInfo};
+
+        // Build the acceleration structure on the device via a one-time command
+        // buffer submission Some implementations may support acceleration
+        // structure building on the host
+        // (VkPhysicalDeviceAccelerationStructureFeaturesKHR->accelerationStructureHostCommands),
+        // but we prefer device builds
+        vk::CommandBuffer commandBuffer = pool.allocate(1).front();
+
+        std::ignore = commandBuffer.begin(vk::CommandBufferBeginInfo());
+
+        commandBuffer.buildAccelerationStructuresKHR(
+            accelerationBuildGeometryInfo,
+            accelerationBuildStructureRangeInfos);
+
+        std::ignore = commandBuffer.end();
+        queue.enqueue_command_buffer(commandBuffer);
+        queue.submit({}, {}, {});
+
+        vk::AccelerationStructureDeviceAddressInfoKHR
+            accelerationDeviceAddressInfo{};
+
+        accelerationDeviceAddressInfo.accelerationStructure =
+            *bottomLevelAS.handle;
+        bottomLevelAS.deviceAddress =
+            device.handle().getAccelerationStructureAddressKHR(
+                accelerationDeviceAddressInfo);
+    }
+
+    /*
+            The top level acceleration structure contains the scene's object
+       instances
+    */
+    void createTopLevelAccelerationStructure() {
+        VkTransformMatrixKHR transformMatrix = {1.0f, 0.0f, 0.0f, 0.0f,
+                                                0.0f, 1.0f, 0.0f, 0.0f,
+                                                0.0f, 0.0f, 1.0f, 0.0f};
+
+        vk::AccelerationStructureInstanceKHR instance{};
+        instance.transform = transformMatrix;
+        instance.instanceCustomIndex = 0;
+        instance.mask = 0xFF;
+        instance.instanceShaderBindingTableRecordOffset = 0;
+        instance.setFlags(
+            vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable);
+        instance.accelerationStructureReference = bottomLevelAS.deviceAddress;
+
+        constexpr auto InstanceBufferUsage = VkBufferUsageFlags2(
+            vk::BufferUsageFlagBits2::
+                eAccelerationStructureBuildInputReadOnlyKHR |
+            vk::BufferUsageFlagBits2::eShaderDeviceAddress);
+        // Buffer for instance data
+        auto instancesBuffer =
+            allocator.create_buffer<vk::AccelerationStructureInstanceKHR, true,
+                                    InstanceBufferUsage>(1);
+        instancesBuffer.copy(std::span(&instance, 1), 0);
+
+        vk::DeviceOrHostAddressConstKHR instanceDataDeviceAddress{};
+        instanceDataDeviceAddress.deviceAddress =
+            instancesBuffer.device_address();
+
+        vk::AccelerationStructureGeometryKHR accelerationStructureGeometry{};
+
+        vk::AccelerationStructureGeometryInstancesDataKHR instances;
+        instances.arrayOfPointers = VK_FALSE;
+        instances.data = instanceDataDeviceAddress;
+
+        accelerationStructureGeometry.geometryType =
+            vk::GeometryTypeKHR::eInstances;
+        accelerationStructureGeometry.flags = vk::GeometryFlagBitsKHR::eOpaque;
+        accelerationStructureGeometry.geometry.instances = instances;
+
+        // Get size info
+        /*
+        The pSrcAccelerationStructure, dstAccelerationStructure, and mode
+        members of pBuildInfo are ignored. Any VkDeviceOrHostAddressKHR members
+        of pBuildInfo are ignored by this command, except that the hostAddress
+        member of VkAccelerationStructureGeometryTrianglesDataKHR::transformData
+        will be examined to check if it is NULL.*
+        */
+        vk::AccelerationStructureBuildGeometryInfoKHR
+            accelerationStructureBuildGeometryInfo{};
+
+        accelerationStructureBuildGeometryInfo.type =
+            vk::AccelerationStructureTypeKHR::eTopLevel;
+        accelerationStructureBuildGeometryInfo.flags =
+            vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
+        accelerationStructureBuildGeometryInfo.setGeometries(
+            accelerationStructureGeometry);
+
+        uint32_t primitive_count = 1;
+
+        auto accelerationStructureBuildSizesInfo =
+            device.handle().getAccelerationStructureBuildSizesKHR(
+                vk::AccelerationStructureBuildTypeKHR::eDevice,
+                accelerationStructureBuildGeometryInfo,
+                std::span(&primitive_count, 1));
+
+        createAccelerationStructureBuffer(topLevelAS,
+                                          accelerationStructureBuildSizesInfo);
+
+        vk::AccelerationStructureCreateInfoKHR
+            accelerationStructureCreateInfo{};
+        accelerationStructureCreateInfo.buffer = topLevelAS.buffer->handle();
+        accelerationStructureCreateInfo.size =
+            accelerationStructureBuildSizesInfo.accelerationStructureSize;
+        accelerationStructureCreateInfo.type =
+            vk::AccelerationStructureTypeKHR::eTopLevel;
+        topLevelAS.handle = device.handle()
+                                .createAccelerationStructureKHRUnique(
+                                    accelerationStructureCreateInfo)
+                                .value;
+
+        // Create a small scratch buffer used during build of the top level
+        // acceleration structure
+        RayTracingScratchBuffer scratchBuffer = createScratchBuffer(
+            accelerationStructureBuildSizesInfo.buildScratchSize);
+
+        vk::AccelerationStructureBuildGeometryInfoKHR
+            accelerationBuildGeometryInfo{};
+
+        accelerationBuildGeometryInfo.type =
+            vk::AccelerationStructureTypeKHR::eTopLevel;
+        accelerationBuildGeometryInfo.flags =
+            vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
+        accelerationBuildGeometryInfo.mode =
+            vk::BuildAccelerationStructureModeKHR::eBuild;
+
+        accelerationBuildGeometryInfo.dstAccelerationStructure =
+            *topLevelAS.handle;
+        accelerationBuildGeometryInfo.setGeometries(
+            accelerationStructureGeometry);
+        accelerationBuildGeometryInfo.scratchData.deviceAddress =
+            scratchBuffer.deviceAddress;
+
+        vk::AccelerationStructureBuildRangeInfoKHR
+            accelerationStructureBuildRangeInfo{};
+        accelerationStructureBuildRangeInfo.primitiveCount = 1;
+        accelerationStructureBuildRangeInfo.primitiveOffset = 0;
+        accelerationStructureBuildRangeInfo.firstVertex = 0;
+        accelerationStructureBuildRangeInfo.transformOffset = 0;
+        std::vector<vk::AccelerationStructureBuildRangeInfoKHR *>
+            accelerationBuildStructureRangeInfos = {
+                &accelerationStructureBuildRangeInfo};
+
+        // Build the acceleration structure on the device via a one-time command
+        // buffer submission Some implementations may support acceleration
+        // structure building on the host
+        // (VkPhysicalDeviceAccelerationStructureFeaturesKHR->accelerationStructureHostCommands),
+        // but we prefer device builds
+        auto commandBuffer = pool.allocate(1).front();
+        std::ignore = commandBuffer.begin(vk::CommandBufferBeginInfo());
+        commandBuffer.buildAccelerationStructuresKHR(
+            accelerationBuildGeometryInfo,
+            accelerationBuildStructureRangeInfos);
+        std::ignore = commandBuffer.end();
+        queue.enqueue_command_buffer(commandBuffer);
+        queue.submit({}, {}, {}).wait();
+
+        vk::AccelerationStructureDeviceAddressInfoKHR
+            accelerationDeviceAddressInfo{};
+
+        accelerationDeviceAddressInfo.accelerationStructure =
+            *topLevelAS.handle;
+        topLevelAS.deviceAddress =
+            device.handle().getAccelerationStructureAddressKHR(
+                accelerationDeviceAddressInfo);
+    }
+
+    /*
+            Create the Shader Binding Tables that binds the programs and
+       top-level acceleration structure
+
+                 SBT Layout used in this sample:
+
+                          /-----------\
+                          | raygen    |
+                          |-----------|
+                          | miss      |
+                          |-----------|
+                          | hit       |
+                          \-----------/
+
+     */
+    void createShaderBindingTable() {
+        rayTracingPipelineProperties =
+            device.physical_device()
+                .getProperties2<
+                    vk::PhysicalDeviceProperties2,
+                    vk::PhysicalDeviceRayTracingPipelinePropertiesKHR>()
+                .get<vk::PhysicalDeviceRayTracingPipelinePropertiesKHR>();
+
+        const uint32_t handleSize =
+            rayTracingPipelineProperties.shaderGroupHandleSize;
+        const uint32_t handleSizeAligned =
+            std::max(rayTracingPipelineProperties.shaderGroupHandleSize,
+                     rayTracingPipelineProperties
+                         .shaderGroupHandleAlignment); // use aligned size
+        const uint32_t groupCount = static_cast<uint32_t>(shaderGroups.size());
+        const uint32_t sbtSize = groupCount * handleSizeAligned;
+
+        std::vector<std::byte> shaderHandleStorage =
+            device.handle()
+                .getRayTracingShaderGroupHandlesKHR<std::byte>(
+                    *pipeline, 0, groupCount, sbtSize)
+                .value;
+
+        raygenShaderBindingTable =
+            allocator.create_buffer<vw::ShaderBindingTableBuffer>(handleSize);
+        missShaderBindingTable =
+            allocator.create_buffer<vw::ShaderBindingTableBuffer>(handleSize);
+        hitShaderBindingTable =
+            allocator.create_buffer<vw::ShaderBindingTableBuffer>(handleSize);
+
+        raygenShaderBindingTable->copy(
+            std::span(shaderHandleStorage.data(), handleSize), 0);
+        missShaderBindingTable->copy(
+            std::span(shaderHandleStorage.data() + handleSizeAligned,
+                      handleSize),
+            0);
+        hitShaderBindingTable->copy(
+            std::span(shaderHandleStorage.data() + handleSizeAligned * 2,
+                      handleSize),
+            0);
+    }
+
+    /*
+            Create the descriptor sets used for the ray tracing dispatch
+    */
+    void createDescriptorSets() {
+        // Pool
+        std::vector<vk::DescriptorPoolSize> poolSizes = {
+            {vk::DescriptorType::eAccelerationStructureKHR, 1},
+            {vk::DescriptorType::eStorageImage, 1},
+            {vk::DescriptorType::eUniformBuffer, 1}};
+        vk::DescriptorPoolCreateInfo descriptorPoolCreateInfo;
+        descriptorPoolCreateInfo.setPoolSizes(poolSizes).setMaxSets(10);
+
+        descriptorPool =
+            device.handle()
+                .createDescriptorPoolUnique(descriptorPoolCreateInfo)
+                .value;
+
+        vk::DescriptorSetAllocateInfo allocInfo;
+        allocInfo.setDescriptorPool(*descriptorPool)
+            .setSetLayouts(*descriptorSetLayout);
+
+        // Sets per frame, just like the buffers themselves
+        // Acceleration structure and storage image does not need to be
+        // duplicated per frame, we use the same for each descriptor to keep
+        // things simple
+
+        for (auto i = 0; i < 1; i++) {
+            descriptorSet =
+                device.handle().allocateDescriptorSets(allocInfo)->front();
+
+            // The fragment shader needs access to the ray tracing acceleration
+            // structure, so we pass it as a descriptor
+
+            vk::WriteDescriptorSetAccelerationStructureKHR
+                descriptorAccelerationStructureInfo{};
+            descriptorAccelerationStructureInfo.setAccelerationStructures(
+                *topLevelAS.handle);
+
+            vk::WriteDescriptorSet accelerationStructureWrite{};
+            // The specialized acceleration structure descriptor has to be
+            // chained
+            accelerationStructureWrite.pNext =
+                &descriptorAccelerationStructureInfo;
+            accelerationStructureWrite.dstSet = descriptorSet;
+            accelerationStructureWrite.dstBinding = 0;
+            accelerationStructureWrite.descriptorCount = 1;
+            accelerationStructureWrite.descriptorType =
+                vk::DescriptorType::eAccelerationStructureKHR;
+
+            vk::DescriptorImageInfo storageImageDescriptor{};
+            storageImageDescriptor.imageView = storageImage.view->handle();
+            storageImageDescriptor.imageLayout = vk::ImageLayout::eGeneral;
+
+            vk::WriteDescriptorSet resultImageWrite;
+            resultImageWrite.setDescriptorCount(1)
+                .setDescriptorType(vk::DescriptorType::eStorageImage)
+                .setImageInfo(storageImageDescriptor)
+                .setDstSet(descriptorSet)
+                .setDstBinding(1);
+
+            vk::DescriptorBufferInfo bufferInfoDescriptor;
+            bufferInfoDescriptor.setBuffer(uniformBuffer->handle())
+                .setOffset(0)
+                .setRange(sizeof(UniformData));
+
+            vk::WriteDescriptorSet uniformBufferWrite;
+            uniformBufferWrite.setDescriptorCount(1)
+                .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+                .setBufferInfo(bufferInfoDescriptor)
+                .setDstSet(descriptorSet)
+                .setDstBinding(2);
+
+            std::vector<vk::WriteDescriptorSet> writeDescriptorSets = {
+                accelerationStructureWrite, resultImageWrite,
+                uniformBufferWrite};
+
+            device.handle().updateDescriptorSets(writeDescriptorSets, nullptr);
+        }
+    }
+
+    /*
+            Create our ray tracing pipeline
+    */
+    void createRayTracingPipeline() {
+        vk::DescriptorSetLayoutBinding accelerationStructureLayoutBinding{};
+        accelerationStructureLayoutBinding.binding = 0;
+        accelerationStructureLayoutBinding.descriptorType =
+            vk::DescriptorType::eAccelerationStructureKHR;
+        accelerationStructureLayoutBinding.descriptorCount = 1;
+        accelerationStructureLayoutBinding.stageFlags =
+            vk::ShaderStageFlagBits::eRaygenKHR;
+
+        vk::DescriptorSetLayoutBinding resultImageLayoutBinding{};
+        resultImageLayoutBinding.binding = 1;
+        resultImageLayoutBinding.descriptorType =
+            vk::DescriptorType::eStorageImage;
+        resultImageLayoutBinding.descriptorCount = 1;
+        resultImageLayoutBinding.stageFlags =
+            vk::ShaderStageFlagBits::eRaygenKHR;
+
+        vk::DescriptorSetLayoutBinding uniformBufferBinding{};
+        uniformBufferBinding.binding = 2;
+        uniformBufferBinding.descriptorType =
+            vk::DescriptorType::eUniformBuffer;
+        uniformBufferBinding.descriptorCount = 1;
+        uniformBufferBinding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
+
+        std::vector<vk::DescriptorSetLayoutBinding> bindings(
+            {accelerationStructureLayoutBinding, resultImageLayoutBinding,
+             uniformBufferBinding});
+
+        vk::DescriptorSetLayoutCreateInfo descriptorSetlayoutCI{};
+        descriptorSetlayoutCI.setBindings(bindings);
+        descriptorSetLayout =
+            device.handle()
+                .createDescriptorSetLayoutUnique(descriptorSetlayoutCI)
+                .value;
+
+        vk::PipelineLayoutCreateInfo pipelineLayoutCI{};
+        pipelineLayoutCI.setSetLayouts(*descriptorSetLayout);
+        pipelineLayout =
+            device.handle().createPipelineLayoutUnique(pipelineLayoutCI).value;
+
+        /*
+                Setup ray tracing shader groups
+        */
+        std::vector<vk::PipelineShaderStageCreateInfo> shaderStages;
+
+        auto raygen = vw::ShaderModule::create_from_spirv_file(
+            device, "Shaders/RayTracing/raygen.rgen.spv");
+        auto miss = vw::ShaderModule::create_from_spirv_file(
+            device, "Shaders/RayTracing/miss.rmiss.spv");
+        auto hit = vw::ShaderModule::create_from_spirv_file(
+            device, "Shaders/RayTracing/hit.rchit.spv");
+
+        // Ray generation group
+        {
+            auto &stage = shaderStages.emplace_back();
+
+            stage.setStage(vk::ShaderStageFlagBits::eRaygenKHR)
+                .setPName("main")
+                .setModule(raygen->handle());
+
+            auto &group = shaderGroups.emplace_back();
+            group.setType(vk::RayTracingShaderGroupTypeKHR::eGeneral)
+                .setGeneralShader(0)
+                .setClosestHitShader(vk::ShaderUnusedKHR)
+                .setIntersectionShader(vk::ShaderUnusedKHR)
+                .setAnyHitShader(vk::ShaderUnusedKHR);
+        }
+
+        // Miss group
+        {
+            auto &stage = shaderStages.emplace_back();
+
+            stage.setStage(vk::ShaderStageFlagBits::eMissKHR)
+                .setPName("main")
+                .setModule(miss->handle());
+
+            auto &group = shaderGroups.emplace_back();
+            group.setType(vk::RayTracingShaderGroupTypeKHR::eGeneral)
+                .setGeneralShader(1)
+                .setClosestHitShader(vk::ShaderUnusedKHR)
+                .setIntersectionShader(vk::ShaderUnusedKHR)
+                .setAnyHitShader(vk::ShaderUnusedKHR);
+        }
+
+        // Closest hit group
+        {
+            auto &stage = shaderStages.emplace_back();
+
+            stage.setStage(vk::ShaderStageFlagBits::eClosestHitKHR)
+                .setPName("main")
+                .setModule(hit->handle());
+
+            auto &group = shaderGroups.emplace_back();
+            group.setType(vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup)
+                .setGeneralShader(vk::ShaderUnusedKHR)
+                .setClosestHitShader(2)
+                .setIntersectionShader(vk::ShaderUnusedKHR)
+                .setAnyHitShader(vk::ShaderUnusedKHR);
+        }
+
+        /*
+                Create the ray tracing pipeline
+        */
+        vk::RayTracingPipelineCreateInfoKHR rayTracingPipelineCI{};
+        rayTracingPipelineCI.setStages(shaderStages)
+            .setGroups(shaderGroups)
+            .setLayout(*pipelineLayout)
+            .setMaxPipelineRayRecursionDepth(1);
+
+        pipeline = device.handle()
+                       .createRayTracingPipelineKHRUnique(nullptr, nullptr,
+                                                          rayTracingPipelineCI)
+                       .value;
+    }
+
+    /*
+            Create the uniform buffer used to pass matrices to the ray tracing
+       ray generation shader
+    */
+    void createUniformBuffer() {
+        uniformBuffer =
+            allocator.create_buffer<UniformData, true, vw::UniformBufferUsage>(
+                1);
+        uniformBuffer->copy(std::span(&uniformData, 1), 0);
+    }
+
+    void updateUniformBuffers() {
+        uniformData.projInverse = glm::inverse(projectionMatrix);
+        uniformData.viewInverse = glm::inverse(viewMatrix);
+        uniformBuffer->copy(std::span(&uniformData, 1), 0);
+    }
+
+    void prepare() {
+        // Create the acceleration structures used to render the ray traced
+        // scene
+        createBottomLevelAccelerationStructure();
+        createTopLevelAccelerationStructure();
+
+        createStorageImage();
+        createUniformBuffer();
+        createRayTracingPipeline();
+        createShaderBindingTable();
+        createDescriptorSets();
+        commandPool = vw::CommandPoolBuilder(device).build();
+        drawCmdBuffers = commandPool->allocate(3);
+
+        buildCommandBuffer(0);
+        buildCommandBuffer(1);
+        buildCommandBuffer(2);
+    }
+
+    void buildCommandBuffer(int currentImageIndex) {
+        vk::CommandBuffer cmdBuffer = drawCmdBuffers[currentImageIndex];
+
+        vk::CommandBufferBeginInfo cmdBufInfo;
+        std::ignore = cmdBuffer.begin(cmdBufInfo);
+        vk::ImageSubresourceRange subresourceRange = {
+            vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
+
+        /*
+                Setup the buffer regions pointing to the shaders in our shader
+           binding table
+        */
+
+        const uint32_t handleSizeAligned =
+            std::max(rayTracingPipelineProperties.shaderGroupHandleSize,
+                     rayTracingPipelineProperties
+                         .shaderGroupHandleAlignment); // aligned size
+
+        VkStridedDeviceAddressRegionKHR raygenShaderSbtEntry{};
+        raygenShaderSbtEntry.deviceAddress =
+            raygenShaderBindingTable->device_address();
+        raygenShaderSbtEntry.stride = handleSizeAligned;
+        raygenShaderSbtEntry.size = handleSizeAligned;
+
+        VkStridedDeviceAddressRegionKHR missShaderSbtEntry{};
+        missShaderSbtEntry.deviceAddress =
+            missShaderBindingTable->device_address();
+        missShaderSbtEntry.stride = handleSizeAligned;
+        missShaderSbtEntry.size = handleSizeAligned;
+
+        VkStridedDeviceAddressRegionKHR hitShaderSbtEntry{};
+        hitShaderSbtEntry.deviceAddress =
+            hitShaderBindingTable->device_address();
+        hitShaderSbtEntry.stride = handleSizeAligned;
+        hitShaderSbtEntry.size = handleSizeAligned;
+
+        VkStridedDeviceAddressRegionKHR callableShaderSbtEntry{};
+
+        /*
+                Dispatch the ray tracing commands
+        */
+        cmdBuffer.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR,
+                               *pipeline);
+        cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR,
+                                     *pipelineLayout, 0, descriptorSet,
+                                     nullptr);
+
+        cmdBuffer.traceRaysKHR(raygenShaderSbtEntry, missShaderSbtEntry,
+                               hitShaderSbtEntry, callableShaderSbtEntry, 800,
+                               600, 1);
+
+        /*
+                Copy ray tracing output to swap chain image
+        */
+
+        auto swapchainImage = swapchain.images()[currentImageIndex];
+
+        vw::execute_image_transition(cmdBuffer, swapchainImage,
+                                     vk::ImageLayout::eUndefined,
+                                     vk::ImageLayout::eTransferDstOptimal);
+
+        // Prepare ray tracing output image as transfer source
+        vw::execute_image_transition(cmdBuffer, storageImage.image,
+                                     vk::ImageLayout::eGeneral,
+                                     vk::ImageLayout::eTransferSrcOptimal);
+
+        vk::ImageBlit copyRegion{};
+        copyRegion.setSrcSubresource(
+            {vk::ImageAspectFlagBits::eColor, 0, 0, 1});
+        copyRegion.srcOffsets =
+            std::array{vk::Offset3D{0, 0, 0}, vk::Offset3D(800, 600, 1)};
+        copyRegion.dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+        copyRegion.dstOffsets =
+            std::array{vk::Offset3D{0, 0, 0}, vk::Offset3D(800, 600, 1)};
+        cmdBuffer.blitImage(
+            storageImage.image->handle(), vk::ImageLayout::eTransferSrcOptimal,
+            swapchainImage->handle(), vk::ImageLayout::eTransferDstOptimal,
+            copyRegion, vk::Filter::eLinear);
+
+        // Transition swap chain image back for presentation
+        vw::execute_image_transition(cmdBuffer, swapchainImage,
+                                     vk::ImageLayout::eTransferDstOptimal,
+                                     vk::ImageLayout::ePresentSrcKHR);
+
+        // Transition ray tracing output image back to general layout
+
+        vw::execute_image_transition(cmdBuffer, storageImage.image,
+                                     vk::ImageLayout::eTransferSrcOptimal,
+                                     vk::ImageLayout::eGeneral);
+
+        std::ignore = cmdBuffer.end();
+    }
+};
 
 std::vector<std::shared_ptr<const vw::ImageView>>
 create_image_views(const vw::Device &device, const vw::Swapchain &swapchain) {
@@ -134,7 +968,7 @@ using namespace glm;
 int main() {
     try {
         App app;
-        auto descriptor_set_layout =
+        /*$ auto descriptor_set_layout =
             vw::DescriptorSetLayoutBuilder(app.device)
                 .with_uniform_buffer(vk::ShaderStageFlagBits::eVertex, 1)
                 .build();
@@ -271,19 +1105,24 @@ int main() {
             tonemapRenderPass.execute(commandBuffer, swapchainBuffer, info);
         }
 
-        auto renderFinishedSemaphore = vw::SemaphoreBuilder(app.device).build();
-        auto imageAvailableSemaphore = vw::SemaphoreBuilder(app.device).build();
-
         auto cmd_buffer = mesh_manager.fill_command_buffer();
 
         app.device.graphicsQueue().enqueue_command_buffer(cmd_buffer);
-
         float angle = 90.0;
+        */
+
+        auto renderFinishedSemaphore = vw::SemaphoreBuilder(app.device).build();
+        auto imageAvailableSemaphore = vw::SemaphoreBuilder(app.device).build();
+
+        VulkanExample example(app.device, app.allocator, app.swapchain);
+
+        example.prepare();
+
         while (!app.window.is_close_requested()) {
             app.window.update();
 
-            SkyPass::UBO ubo{UBOData{}.proj, UBOData{}.view, angle};
-            sky_buffer->copy({&ubo, 1u}, 0);
+            // SkyPass::UBO ubo{UBOData{}.proj, UBOData{}.view, angle};
+            // sky_buffer->copy({&ubo, 1u}, 0);
 
             auto index =
                 app.swapchain.acquire_next_image(imageAvailableSemaphore);
@@ -297,11 +1136,13 @@ int main() {
                 renderFinishedSemaphore.handle();
 
             app.device.graphicsQueue().enqueue_command_buffer(
-                commandBuffers[index]);
+                example.drawCmdBuffers[index]);
 
             auto fence = app.device.graphicsQueue().submit(
                 {&waitStage, 1}, {&image_available_handle, 1},
                 {&render_finished_handle, 1});
+
+            fence.wait();
 
             app.device.presentQueue().present(app.swapchain, index,
                                               renderFinishedSemaphore);

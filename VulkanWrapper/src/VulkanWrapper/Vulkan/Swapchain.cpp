@@ -51,7 +51,8 @@ SwapchainBuilder::SwapchainBuilder(const Device &device, vk::SurfaceKHR surface,
         .setImageColorSpace(vk::ColorSpaceKHR::eSrgbNonlinear)
         .setImageFormat(vk::Format::eB8G8R8A8Srgb)
         .setPresentMode(vk::PresentModeKHR::eFifo)
-        .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
+        .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment |
+                       vk::ImageUsageFlagBits::eTransferDst)
         .setImageArrayLayers(1)
         .setImageSharingMode(vk::SharingMode::eExclusive)
         .setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)

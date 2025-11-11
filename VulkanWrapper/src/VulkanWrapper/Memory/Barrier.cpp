@@ -31,6 +31,26 @@ void execute_image_barrier_undefined_to_transfer_dst(
     cmd_buffer.pipelineBarrier2(dependency_info);
 }
 
+void execute_image_barrier_undefined_to_general(
+    vk::CommandBuffer cmd_buffer, const std::shared_ptr<const Image> &image) {
+    const auto range = image->full_range();
+    const auto img_barrier =
+        vk::ImageMemoryBarrier2()
+            .setSubresourceRange(range)
+            .setSrcAccessMask(vk::AccessFlagBits2::eNone)
+            .setSrcStageMask(vk::PipelineStageFlagBits2::eNone)
+            .setDstAccessMask(vk::AccessFlagBits2::eShaderStorageWrite)
+            .setDstStageMask(vk::PipelineStageFlagBits2::eRayTracingShaderKHR)
+            .setOldLayout(vk::ImageLayout::eUndefined)
+            .setNewLayout(vk::ImageLayout::eGeneral)
+            .setImage(image->handle());
+
+    const auto dependency_info =
+        vk::DependencyInfo().setImageMemoryBarriers(img_barrier);
+
+    cmd_buffer.pipelineBarrier2(dependency_info);
+}
+
 void execute_image_barrier_transfer_dst_to_sampled(
     vk::CommandBuffer cmd_buffer, const std::shared_ptr<const Image> &image) {
     const auto range = image->full_range();
@@ -106,6 +126,29 @@ void execute_image_barrier_general_to_sampled(
             .setDstStageMask(vk::PipelineStageFlagBits2::eFragmentShader)
             .setOldLayout(vk::ImageLayout::eGeneral)
             .setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+
+    const auto dependency_info =
+        vk::DependencyInfo().setImageMemoryBarriers(img_barrier);
+    cmd_buffer.pipelineBarrier2(dependency_info);
+}
+
+void execute_image_transition(vk::CommandBuffer cmd_buffer,
+                              const std::shared_ptr<const Image> &image,
+                              vk::ImageLayout oldLayout,
+                              vk::ImageLayout newLayout) {
+    const auto range = image->full_range();
+    const auto img_barrier =
+        vk::ImageMemoryBarrier2()
+            .setSubresourceRange(range)
+            .setImage(image->handle())
+            .setOldLayout(oldLayout)
+            .setNewLayout(newLayout)
+            .setSrcAccessMask(vk::AccessFlagBits2::eMemoryWrite |
+                              vk::AccessFlagBits2::eMemoryRead)
+            .setDstAccessMask(vk::AccessFlagBits2::eMemoryRead |
+                              vk::AccessFlagBits2::eMemoryWrite)
+            .setSrcStageMask(vk::PipelineStageFlagBits2::eAllCommands)
+            .setDstStageMask(vk::PipelineStageFlagBits2::eAllCommands);
 
     const auto dependency_info =
         vk::DependencyInfo().setImageMemoryBarriers(img_barrier);

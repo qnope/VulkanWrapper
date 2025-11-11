@@ -150,12 +150,8 @@ TopLevelAccelerationStructureBuilder::add_instance(
     uint32_t instanceId, uint32_t mask, uint32_t hitGroupIndex) {
 
     auto transform_values = vk::TransformMatrixKHR{}.setMatrix(
-        {std::array{transform[0][0], transform[1][0], transform[2][0],
-                    transform[3][0]},
-         std::array{transform[0][1], transform[1][1], transform[2][1],
-                    transform[3][1]},
-         std::array{transform[0][2], transform[1][2], transform[2][2],
-                    transform[3][2]}});
+        {std::array{1.0f, 0.0f, 0.0f, 0.0f}, std::array{0.0f, 1.0f, 0.0f, 0.0f},
+         std::array{0.0f, 0.0f, 1.0f, 0.0f}});
 
     vk::AccelerationStructureInstanceKHR instance;
     instance.setTransform(transform_values)
@@ -173,7 +169,6 @@ TopLevelAccelerationStructureBuilder &
 TopLevelAccelerationStructureBuilder::add_instances(
     std::span<const BottomLevelAccelerationStructure> blases,
     std::span<const glm::mat4> transforms) {
-
     for (size_t i = 0; i < blases.size(); ++i) {
         glm::mat4 transform =
             (i < transforms.size()) ? transforms[i] : glm::mat4(1.0f);

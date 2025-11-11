@@ -29,7 +29,7 @@ class Allocator : public ObjectWithHandle<VmaAllocator> {
 
     [[nodiscard]] IndexBuffer allocate_index_buffer(VkDeviceSize size) const;
 
-    template <typename T, bool HostVisible, VkBufferUsageFlags Usage>
+    template <typename T, bool HostVisible, VkBufferUsageFlags2 Usage>
     [[nodiscard]] Buffer<T, HostVisible, Usage>
     create_buffer(vk::DeviceSize number_elements) const {
         return {allocate_buffer(number_elements * sizeof(T), HostVisible,

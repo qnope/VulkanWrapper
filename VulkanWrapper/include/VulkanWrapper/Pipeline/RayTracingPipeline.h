@@ -15,8 +15,8 @@ using ShaderBindingTableBuffer =
 
 struct ShaderBindingTable {
     vk::StridedDeviceAddressRegionKHR generation_region;
-    vk::StridedDeviceAddressRegionKHR closest_hit_region;
     vk::StridedDeviceAddressRegionKHR miss_region;
+    vk::StridedDeviceAddressRegionKHR closest_hit_region;
 };
 
 using RayTracingPipelineCreationException =
@@ -26,10 +26,12 @@ class RayTracingPipeline : public ObjectWithUniqueHandle<vk::UniquePipeline> {
     friend class RayTracingPipelineBuilder;
 
   public:
-    RayTracingPipeline(vk::UniquePipeline pipeline,
-                       PipelineLayout pipeline_layout,
-                       ShaderBindingTableBuffer shader_binding_table_buffer,
-                       ShaderBindingTable shader_binding_table) noexcept;
+    RayTracingPipeline(
+        vk::UniquePipeline pipeline, PipelineLayout pipeline_layout,
+        ShaderBindingTableBuffer shader_binding_table_buffer_gen,
+        ShaderBindingTableBuffer shader_binding_table_buffer_miss,
+        ShaderBindingTableBuffer shader_binding_table_buffer_hit,
+        ShaderBindingTable shader_binding_table) noexcept;
 
     [[nodiscard]] const PipelineLayout &layout() const noexcept;
 
@@ -37,7 +39,9 @@ class RayTracingPipeline : public ObjectWithUniqueHandle<vk::UniquePipeline> {
 
   private:
     PipelineLayout m_layout;
-    ShaderBindingTableBuffer m_shader_binding_table_buffer;
+    ShaderBindingTableBuffer m_shader_binding_table_buffer_ray_gen;
+    ShaderBindingTableBuffer m_shader_binding_table_buffer_miss;
+    ShaderBindingTableBuffer m_shader_binding_table_buffer_hit;
     ShaderBindingTable m_shader_binding_table;
 };
 
@@ -61,7 +65,8 @@ class RayTracingPipelineBuilder {
     std::vector<vk::PipelineShaderStageCreateInfo> create_stages() const;
     std::vector<vk::RayTracingShaderGroupCreateInfoKHR> create_groups() const;
 
-    std::tuple<ShaderBindingTable, ShaderBindingTableBuffer>
+    std::tuple<ShaderBindingTable, ShaderBindingTableBuffer,
+               ShaderBindingTableBuffer, ShaderBindingTableBuffer>
     create_shader_binding_table(vk::Pipeline pipeline) const;
 
   private:
