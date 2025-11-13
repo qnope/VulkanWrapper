@@ -119,9 +119,9 @@ class VulkanExample {
         , allocator{allocator}
         , swapchain(swapchain) {
         projectionMatrix =
-            glm::perspective(60.0f, 800.0f / 600.0f, 0.1f, 512.f);
+            glm::perspective(glm::radians(60.0f), 800.0f / 600.0f, 0.1f, 512.f);
         viewMatrix =
-            glm::lookAt(glm::vec3(3.0f, 4.0f, 2.f), glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::lookAt(glm::vec3(.0f, .0f, 2.f), glm::vec3(0.0f, 0.0f, 0.0f),
                         glm::vec3(0.0f, 1.0f, 0.0f));
     }
 
@@ -770,6 +770,7 @@ class VulkanExample {
         buildCommandBuffer(0);
         buildCommandBuffer(1);
         buildCommandBuffer(2);
+        updateUniformBuffers();
     }
 
     void buildCommandBuffer(int currentImageIndex) {
