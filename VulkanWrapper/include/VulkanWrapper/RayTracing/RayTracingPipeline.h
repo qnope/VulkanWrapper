@@ -36,6 +36,8 @@ class RayTracingPipeline : public ObjectWithUniqueHandle<vk::UniquePipeline> {
     [[nodiscard]] std::span<const ShaderBindingTableHandle>
     closest_hit_handles() const;
 
+    [[nodiscard]] vk::PipelineLayout handle_layout() const;
+
   private:
     PipelineLayout m_layout;
     uint32_t m_number_miss_shader;

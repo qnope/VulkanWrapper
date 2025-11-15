@@ -30,7 +30,7 @@ RayTracingPipeline::RayTracingPipeline(
     std::vector<std::byte> shaderHandleStorage =
         device.handle()
             .getRayTracingShaderGroupHandlesKHR<std::byte>(
-                *pipeline, 0, groupCount, handleSize * groupCount)
+                handle(), 0, groupCount, handleSize * groupCount)
             .value;
 
     assert(shaderHandleStorage.size() % handleSize == 0);
@@ -55,6 +55,10 @@ std::span<const ShaderBindingTableHandle>
 RayTracingPipeline::closest_hit_handles() const {
     return std::span(m_handles.data() + 1 + m_number_miss_shader,
                      m_number_miss_shader);
+}
+
+vk::PipelineLayout RayTracingPipeline::handle_layout() const {
+    return m_layout.handle();
 }
 
 RayTracingPipelineBuilder::RayTracingPipelineBuilder(

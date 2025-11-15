@@ -82,7 +82,6 @@ class VulkanExample {
                              VkBufferUsageFlags(
                                  vk::BufferUsageFlagBits2::eStorageBuffer)>>
         transformBuffer;
-    std::vector<vk::RayTracingShaderGroupCreateInfoKHR> shaderGroups{};
 
     std::optional<vw::Buffer<std::byte, true, vw::rt::ShaderBindingTableUsage>>
         raygenShaderBindingTable;
@@ -106,8 +105,8 @@ class VulkanExample {
 
     std::optional<UniformBuffer> uniformBuffer;
 
-    vk::UniquePipeline pipeline{VK_NULL_HANDLE};
-    vk::UniquePipelineLayout pipelineLayout{};
+    std::optional<vw::rt::RayTracingPipeline> pipeline;
+    std::optional<vw::PipelineLayout> pipelineLayout;
     vk::UniqueDescriptorSetLayout descriptorSetLayout{};
     vk::UniqueDescriptorPool descriptorPool;
     vk::DescriptorSet descriptorSet;
@@ -514,13 +513,13 @@ class VulkanExample {
             std::max(rayTracingPipelineProperties.shaderGroupHandleSize,
                      rayTracingPipelineProperties
                          .shaderGroupHandleAlignment); // use aligned size
-        const uint32_t groupCount = static_cast<uint32_t>(shaderGroups.size());
+        const uint32_t groupCount = 3;
         const uint32_t sbtSize = groupCount * handleSizeAligned;
 
         std::vector<std::byte> shaderHandleStorage =
             device.handle()
                 .getRayTracingShaderGroupHandlesKHR<std::byte>(
-                    *pipeline, 0, groupCount, sbtSize)
+                    pipeline->handle(), 0, groupCount, sbtSize)
                 .value;
 
         raygenShaderBindingTable = allocator.create_buffer<
@@ -680,67 +679,15 @@ class VulkanExample {
         auto hit = vw::ShaderModule::create_from_spirv_file(
             device, "Shaders/RayTracing/hit.rchit.spv");
 
-        // Ray generation group
-        {
-            auto &stage = shaderStages.emplace_back();
-
-            stage.setStage(vk::ShaderStageFlagBits::eRaygenKHR)
-                .setPName("main")
-                .setModule(raygen->handle());
-
-            auto &group = shaderGroups.emplace_back();
-            group.setType(vk::RayTracingShaderGroupTypeKHR::eGeneral)
-                .setGeneralShader(0)
-                .setClosestHitShader(vk::ShaderUnusedKHR)
-                .setIntersectionShader(vk::ShaderUnusedKHR)
-                .setAnyHitShader(vk::ShaderUnusedKHR);
-        }
-
-        // Miss group
-        {
-            auto &stage = shaderStages.emplace_back();
-
-            stage.setStage(vk::ShaderStageFlagBits::eMissKHR)
-                .setPName("main")
-                .setModule(miss->handle());
-
-            auto &group = shaderGroups.emplace_back();
-            group.setType(vk::RayTracingShaderGroupTypeKHR::eGeneral)
-                .setGeneralShader(1)
-                .setClosestHitShader(vk::ShaderUnusedKHR)
-                .setIntersectionShader(vk::ShaderUnusedKHR)
-                .setAnyHitShader(vk::ShaderUnusedKHR);
-        }
-
-        // Closest hit group
-        {
-            auto &stage = shaderStages.emplace_back();
-
-            stage.setStage(vk::ShaderStageFlagBits::eClosestHitKHR)
-                .setPName("main")
-                .setModule(hit->handle());
-
-            auto &group = shaderGroups.emplace_back();
-            group.setType(vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup)
-                .setGeneralShader(vk::ShaderUnusedKHR)
-                .setClosestHitShader(2)
-                .setIntersectionShader(vk::ShaderUnusedKHR)
-                .setAnyHitShader(vk::ShaderUnusedKHR);
-        }
-
         /*
                 Create the ray tracing pipeline
         */
-        vk::RayTracingPipelineCreateInfoKHR rayTracingPipelineCI{};
-        rayTracingPipelineCI.setStages(shaderStages)
-            .setGroups(shaderGroups)
-            .setLayout(*pipelineLayout)
-            .setMaxPipelineRayRecursionDepth(1);
-
-        pipeline = device.handle()
-                       .createRayTracingPipelineKHRUnique(nullptr, nullptr,
-                                                          rayTracingPipelineCI)
-                       .value;
+        pipeline = vw::rt::RayTracingPipelineBuilder(device, allocator,
+                                                     std::move(*pipelineLayout))
+                       .set_ray_generation_shader(raygen)
+                       .add_miss_shader(miss)
+                       .add_closest_hit_shader(hit)
+                       .build();
     }
 
     /*
@@ -822,10 +769,10 @@ class VulkanExample {
                 Dispatch the ray tracing commands
         */
         cmdBuffer.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR,
-                               *pipeline);
+                               pipeline->handle());
         cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR,
-                                     *pipelineLayout, 0, descriptorSet,
-                                     nullptr);
+                                     pipeline->handle_layout(), 0,
+                                     descriptorSet, nullptr);
 
         cmdBuffer.traceRaysKHR(raygenShaderSbtEntry, missShaderSbtEntry,
                                hitShaderSbtEntry, callableShaderSbtEntry, 800,
