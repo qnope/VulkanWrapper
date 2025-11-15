@@ -24,7 +24,6 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Pipeline/Pipeline.cpp
     VulkanWrapper/Pipeline/PipelineLayout.cpp
     VulkanWrapper/Pipeline/MeshRenderer.cpp
-    VulkanWrapper/Pipeline/RayTracingPipeline.cpp
 
     VulkanWrapper/RenderPass/Attachment.cpp
     VulkanWrapper/RenderPass/RenderPass.cpp
@@ -60,4 +59,6 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Model/Internal/MeshInfo.cpp
 
     VulkanWrapper/AccelerationStructure/AccelerationStructure.cpp
+    VulkanWrapper/RayTracing/ShaderBindingTable.cpp
+    VulkanWrapper/RayTracing/RayTracingPipeline.cpp
 )

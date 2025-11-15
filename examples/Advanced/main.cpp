@@ -25,6 +25,7 @@
 #include <VulkanWrapper/Pipeline/Pipeline.h>
 #include <VulkanWrapper/Pipeline/PipelineLayout.h>
 #include <VulkanWrapper/Pipeline/ShaderModule.h>
+#include <VulkanWrapper/RayTracing/ShaderBindingTable.h>
 #include <VulkanWrapper/RenderPass/Attachment.h>
 #include <VulkanWrapper/RenderPass/RenderPass.h>
 #include <VulkanWrapper/RenderPass/Subpass.h>
@@ -83,9 +84,12 @@ class VulkanExample {
         transformBuffer;
     std::vector<vk::RayTracingShaderGroupCreateInfoKHR> shaderGroups{};
 
-    std::optional<vw::ShaderBindingTableBuffer> raygenShaderBindingTable;
-    std::optional<vw::ShaderBindingTableBuffer> missShaderBindingTable;
-    std::optional<vw::ShaderBindingTableBuffer> hitShaderBindingTable;
+    std::optional<vw::Buffer<std::byte, true, vw::rt::ShaderBindingTableUsage>>
+        raygenShaderBindingTable;
+    std::optional<vw::Buffer<std::byte, true, vw::rt::ShaderBindingTableUsage>>
+        missShaderBindingTable;
+    std::optional<vw::Buffer<std::byte, true, vw::rt::ShaderBindingTableUsage>>
+        hitShaderBindingTable;
 
     struct StorageImage {
         std::shared_ptr<const vw::Image> image;
@@ -519,12 +523,15 @@ class VulkanExample {
                     *pipeline, 0, groupCount, sbtSize)
                 .value;
 
-        raygenShaderBindingTable =
-            allocator.create_buffer<vw::ShaderBindingTableBuffer>(handleSize);
-        missShaderBindingTable =
-            allocator.create_buffer<vw::ShaderBindingTableBuffer>(handleSize);
-        hitShaderBindingTable =
-            allocator.create_buffer<vw::ShaderBindingTableBuffer>(handleSize);
+        raygenShaderBindingTable = allocator.create_buffer<
+            vw::Buffer<std::byte, true, vw::rt::ShaderBindingTableUsage>>(
+            handleSize);
+        missShaderBindingTable = allocator.create_buffer<
+            vw::Buffer<std::byte, true, vw::rt::ShaderBindingTableUsage>>(
+            handleSize);
+        hitShaderBindingTable = allocator.create_buffer<
+            vw::Buffer<std::byte, true, vw::rt::ShaderBindingTableUsage>>(
+            handleSize);
 
         raygenShaderBindingTable->copy(
             std::span(shaderHandleStorage.data(), handleSize), 0);

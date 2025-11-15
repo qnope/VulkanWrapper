@@ -1,5 +1,6 @@
 #include "VulkanWrapper/Memory/Allocator.h"
 
+#include "VulkanWrapper/Utils/Alignment.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 #include "VulkanWrapper/Vulkan/Instance.h"
 #include <vk_mem_alloc.h>
@@ -72,8 +73,9 @@ BufferBase Allocator::allocate_buffer(VkDeviceSize size, bool host_visible,
 
     VmaAllocation allocation = nullptr;
     VkBuffer buffer = nullptr;
-    vmaCreateBuffer(handle(), &buffer_info, &allocation_info, &buffer,
-                    &allocation, nullptr);
+    vmaCreateBufferWithAlignment(handle(), &buffer_info, &allocation_info,
+                                 DefaultBufferAlignment, &buffer, &allocation,
+                                 nullptr);
     return BufferBase{*m_device, *this, buffer, allocation, size};
 }
 

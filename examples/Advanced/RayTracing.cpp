@@ -59,9 +59,9 @@ RayTracingPass::RayTracingPass(vw::Device &device, vw::Allocator &allocator,
             .build();
 
     // Créer le pipeline de ray tracing
-    m_pipeline = std::make_shared<vw::RayTracingPipeline>(
-        vw::RayTracingPipelineBuilder(device, allocator,
-                                      std::move(pipeline_layout))
+    m_pipeline = std::make_shared<vw::rt::RayTracingPipeline>(
+        vw::rt::RayTracingPipelineBuilder(device, allocator,
+                                          std::move(pipeline_layout))
             .set_ray_generation_shader(raygen)
             .add_miss_shader(miss)
             .add_closest_hit_shader(hit)
@@ -93,13 +93,7 @@ void RayTracingPass::execute(vk::CommandBuffer command_buffer,
                                       m_pipeline->layout().handle(), 0,
                                       {m_descriptor_set}, {});
 
-    const auto shader_binding_table = m_pipeline->get_shader_binding_table();
-
-    // Lancer le pipeline de ray tracing
-    command_buffer.traceRaysKHR(shader_binding_table.generation_region,
-                                shader_binding_table.miss_region,
-                                shader_binding_table.closest_hit_region, {},
-                                int(m_width), int(m_height), 1);
+    // const auto shader_binding_table = m_pipeline->get_shader_binding_table();
 
     vw::execute_image_barrier_general_to_sampled(
         command_buffer, light_buffer->image(),

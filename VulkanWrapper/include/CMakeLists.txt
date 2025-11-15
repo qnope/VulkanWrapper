@@ -6,6 +6,7 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Utils/exceptions.h
     VulkanWrapper/Utils/ObjectWithHandle.h
     VulkanWrapper/Utils/IdentifierTag.h
+    VulkanWrapper/Utils/Alignment.h
 
     VulkanWrapper/Window/SDL_Initializer.h
     VulkanWrapper/Window/Window.h
@@ -31,7 +32,6 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Pipeline/Pipeline.h
     VulkanWrapper/Pipeline/PipelineLayout.h
     VulkanWrapper/Pipeline/MeshRenderer.h
-    VulkanWrapper/Pipeline/RayTracingPipeline.h
 
     VulkanWrapper/RenderPass/Attachment.h
     VulkanWrapper/RenderPass/RenderPass.h
@@ -72,4 +72,6 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
 
     VulkanWrapper/AccelerationStructure/AccelerationStructure.h
 
+    VulkanWrapper/RayTracing/ShaderBindingTable.h
+    VulkanWrapper/RayTracing/RayTracingPipeline.h
 )

@@ -1,22 +1,19 @@
 #pragma once
 
 #include "VulkanWrapper/fwd.h"
-#include "VulkanWrapper/Memory/Buffer.h"
 #include "VulkanWrapper/Pipeline/PipelineLayout.h"
 #include "VulkanWrapper/Utils/exceptions.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
 
-namespace vw {
+namespace vw::rt {
 
-using ShaderBindingTableBuffer =
-    Buffer<std::byte, true,
-           VkBufferUsageFlags(vk::BufferUsageFlagBits::eShaderBindingTableKHR |
-                              vk::BufferUsageFlagBits::eShaderDeviceAddress)>;
+constexpr uint64_t ShaderBindingTableHandleSizeAlignment = 64;
+struct ShaderBindingTableHandle {
+    ShaderBindingTableHandle(std::span<const std::byte> data) {
+        std::ranges::copy(data, handle.begin());
+    }
 
-struct ShaderBindingTable {
-    vk::StridedDeviceAddressRegionKHR generation_region;
-    vk::StridedDeviceAddressRegionKHR miss_region;
-    vk::StridedDeviceAddressRegionKHR closest_hit_region;
+    std::array<std::byte, ShaderBindingTableHandleSizeAlignment> handle{};
 };
 
 using RayTracingPipelineCreationException =
@@ -25,24 +22,25 @@ using RayTracingPipelineCreationException =
 class RayTracingPipeline : public ObjectWithUniqueHandle<vk::UniquePipeline> {
     friend class RayTracingPipelineBuilder;
 
-  public:
-    RayTracingPipeline(
-        vk::UniquePipeline pipeline, PipelineLayout pipeline_layout,
-        ShaderBindingTableBuffer shader_binding_table_buffer_gen,
-        ShaderBindingTableBuffer shader_binding_table_buffer_miss,
-        ShaderBindingTableBuffer shader_binding_table_buffer_hit,
-        ShaderBindingTable shader_binding_table) noexcept;
+    RayTracingPipeline(const Device &device, vk::UniquePipeline pipeline,
+                       PipelineLayout pipeline_layout,
+                       uint32_t number_miss_shader,
+                       uint32_t number_close_hit_shader) noexcept;
 
+  public:
     [[nodiscard]] const PipelineLayout &layout() const noexcept;
 
-    [[nodiscard]] ShaderBindingTable get_shader_binding_table() const noexcept;
+    [[nodiscard]] ShaderBindingTableHandle ray_generation_handle() const;
+    [[nodiscard]] std::span<const ShaderBindingTableHandle>
+    miss_handles() const;
+    [[nodiscard]] std::span<const ShaderBindingTableHandle>
+    closest_hit_handles() const;
 
   private:
     PipelineLayout m_layout;
-    ShaderBindingTableBuffer m_shader_binding_table_buffer_ray_gen;
-    ShaderBindingTableBuffer m_shader_binding_table_buffer_miss;
-    ShaderBindingTableBuffer m_shader_binding_table_buffer_hit;
-    ShaderBindingTable m_shader_binding_table;
+    uint32_t m_number_miss_shader;
+    uint32_t m_number_close_hit_shader;
+    std::vector<ShaderBindingTableHandle> m_handles;
 };
 
 class RayTracingPipelineBuilder {
@@ -65,18 +63,14 @@ class RayTracingPipelineBuilder {
     std::vector<vk::PipelineShaderStageCreateInfo> create_stages() const;
     std::vector<vk::RayTracingShaderGroupCreateInfoKHR> create_groups() const;
 
-    std::tuple<ShaderBindingTable, ShaderBindingTableBuffer,
-               ShaderBindingTableBuffer, ShaderBindingTableBuffer>
-    create_shader_binding_table(vk::Pipeline pipeline) const;
-
   private:
     const Device &m_device;
     const Allocator &m_allocator;
     PipelineLayout m_pipelineLayout;
 
     std::shared_ptr<const ShaderModule> m_ray_generation_shader;
-    std::vector<std::shared_ptr<const ShaderModule>> m_closest_hit_shaders;
     std::vector<std::shared_ptr<const ShaderModule>> m_miss_shaders;
+    std::vector<std::shared_ptr<const ShaderModule>> m_closest_hit_shaders;
 };
 
-} // namespace vw
+} // namespace vw::rt

@@ -10,7 +10,7 @@
 #include <VulkanWrapper/Image/Image.h>
 #include <VulkanWrapper/Image/ImageView.h>
 #include <VulkanWrapper/Model/MeshManager.h>
-#include <VulkanWrapper/Pipeline/RayTracingPipeline.h>
+#include <VulkanWrapper/RayTracing/RayTracingPipeline.h>
 
 class RayTracingPass {
   public:
@@ -25,7 +25,7 @@ class RayTracingPass {
     vw::Height m_height;
     const vw::Device *m_device;
 
-    std::shared_ptr<vw::RayTracingPipeline> m_pipeline;
+    std::shared_ptr<vw::rt::RayTracingPipeline> m_pipeline;
     std::shared_ptr<vw::DescriptorSetLayout> m_descriptor_set_layout;
     vw::DescriptorPool m_descriptor_pool;
     vk::DescriptorSet m_descriptor_set;
