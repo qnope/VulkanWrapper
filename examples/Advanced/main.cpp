@@ -497,9 +497,10 @@ class VulkanExample {
         shaderBindingTable.emplace(allocator,
                                    pipeline->ray_generation_handle());
 
-        shaderBindingTable->add_miss_record(pipeline->miss_handles().front());
+        shaderBindingTable->add_miss_record(pipeline->miss_handles().front(),
+                                            glm::vec3(.0, .0, .0));
         shaderBindingTable->add_hit_record(
-            pipeline->closest_hit_handles().front());
+            pipeline->closest_hit_handles().front(), glm::vec3(1.0, 1.0, 0.5));
     }
 
     /*

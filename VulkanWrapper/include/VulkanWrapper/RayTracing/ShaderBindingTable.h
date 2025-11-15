@@ -5,10 +5,7 @@
 
 namespace vw::rt {
 
-constexpr uint64_t ShaderBindingTableUserDataSize = 256;
-
-constexpr uint64_t ShaderBindingTableHandleRecordSize =
-    ShaderBindingTableHandleSizeAlignment + ShaderBindingTableUserDataSize;
+constexpr uint64_t ShaderBindingTableHandleRecordSize = 256;
 
 constexpr uint64_t MaximumRecordInShaderBindingTable = 4'096;
 
@@ -16,13 +13,20 @@ constexpr auto ShaderBindingTableUsage =
     VkBufferUsageFlags(vk::BufferUsageFlagBits::eShaderBindingTableKHR |
                        vk::BufferUsageFlagBits::eShaderDeviceAddress);
 
-struct ShaderBindingTableUserData {
-    std::array<std::byte, ShaderBindingTableUserDataSize> data{};
-};
-
 struct alignas(ShaderBindingTableHandleSizeAlignment) ShaderBindingTableRecord {
-    ShaderBindingTableHandle handle;
-    ShaderBindingTableUserData user_data{};
+    ShaderBindingTableRecord(std::span<const std::byte> handle) {
+        std::ranges::copy(handle, data.begin());
+    }
+
+    ShaderBindingTableRecord(std::span<const std::byte> handle,
+                             const auto &object) {
+        static_assert(sizeof(object) + ShaderBindingTableHandleSizeAlignment <
+                      256);
+        std::ranges::copy(handle, data.begin());
+        std::memcpy(data.data() + handle.size(), &object, sizeof(object));
+    }
+
+    std::array<std::byte, ShaderBindingTableHandleRecordSize> data{};
 };
 
 class ShaderBindingTable {
@@ -30,9 +34,18 @@ class ShaderBindingTable {
     ShaderBindingTable(const Allocator &allocator,
                        const ShaderBindingTableHandle &raygen_handle);
 
-    void add_miss_record(const ShaderBindingTableHandle &handle);
+    void add_miss_record(const ShaderBindingTableHandle &handle,
+                         const auto &...object) {
+        ShaderBindingTableRecord record{handle, object...};
+        m_sbt_ray_generation_and_miss_buffer.copy(record,
+                                                  m_number_raygen_miss++);
+    }
 
-    void add_hit_record(const ShaderBindingTableHandle &handle);
+    void add_hit_record(const ShaderBindingTableHandle &handle,
+                        const auto &...object) {
+        ShaderBindingTableRecord record{handle, object...};
+        m_sbt_closest_hit_buffer.copy(record, m_number_hit++);
+    }
 
     [[nodiscard]] vk::StridedDeviceAddressRegionKHR raygen_region() const;
     [[nodiscard]] vk::StridedDeviceAddressRegionKHR miss_region() const;

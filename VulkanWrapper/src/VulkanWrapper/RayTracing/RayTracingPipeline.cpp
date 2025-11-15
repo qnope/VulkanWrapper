@@ -35,7 +35,8 @@ RayTracingPipeline::RayTracingPipeline(
 
     assert(shaderHandleStorage.size() % handleSize == 0);
     for (int i = 0; i < shaderHandleStorage.size(); i += handleSize)
-        m_handles.emplace_back(std::span(&shaderHandleStorage[i], handleSize));
+        m_handles.emplace_back(&shaderHandleStorage[i],
+                               &shaderHandleStorage[i] + handleSize);
 }
 
 const PipelineLayout &RayTracingPipeline::layout() const noexcept {

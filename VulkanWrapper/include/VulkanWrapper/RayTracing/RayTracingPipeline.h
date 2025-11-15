@@ -8,13 +8,7 @@
 namespace vw::rt {
 
 constexpr uint64_t ShaderBindingTableHandleSizeAlignment = 32;
-struct ShaderBindingTableHandle {
-    ShaderBindingTableHandle(std::span<const std::byte> data) {
-        std::ranges::copy(data, handle.begin());
-    }
-
-    std::array<std::byte, ShaderBindingTableHandleSizeAlignment> handle{};
-};
+using ShaderBindingTableHandle = std::vector<std::byte>;
 
 using RayTracingPipelineCreationException =
     TaggedException<struct RayTracingPipelineCreationTag>;
