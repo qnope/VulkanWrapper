@@ -7,7 +7,7 @@
 
 namespace vw::rt {
 
-constexpr uint64_t ShaderBindingTableHandleSizeAlignment = 64;
+constexpr uint64_t ShaderBindingTableHandleSizeAlignment = 32;
 struct ShaderBindingTableHandle {
     ShaderBindingTableHandle(std::span<const std::byte> data) {
         std::ranges::copy(data, handle.begin());
