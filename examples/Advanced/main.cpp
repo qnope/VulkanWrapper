@@ -83,13 +83,6 @@ class VulkanExample {
                                  vk::BufferUsageFlagBits2::eStorageBuffer)>>
         transformBuffer;
 
-    std::optional<vw::Buffer<std::byte, true, vw::rt::ShaderBindingTableUsage>>
-        raygenShaderBindingTable;
-    std::optional<vw::Buffer<std::byte, true, vw::rt::ShaderBindingTableUsage>>
-        missShaderBindingTable;
-    std::optional<vw::Buffer<std::byte, true, vw::rt::ShaderBindingTableUsage>>
-        hitShaderBindingTable;
-
     struct StorageImage {
         std::shared_ptr<const vw::Image> image;
         std::shared_ptr<const vw::ImageView> view;
@@ -112,6 +105,7 @@ class VulkanExample {
     vk::DescriptorSet descriptorSet;
     std::optional<vw::CommandPool> commandPool;
     std::vector<vk::CommandBuffer> drawCmdBuffers;
+    std::optional<vw::rt::ShaderBindingTable> shaderBindingTable;
 
     glm::mat4 projectionMatrix;
     glm::mat4 viewMatrix;
@@ -500,48 +494,12 @@ class VulkanExample {
 
      */
     void createShaderBindingTable() {
-        rayTracingPipelineProperties =
-            device.physical_device()
-                .getProperties2<
-                    vk::PhysicalDeviceProperties2,
-                    vk::PhysicalDeviceRayTracingPipelinePropertiesKHR>()
-                .get<vk::PhysicalDeviceRayTracingPipelinePropertiesKHR>();
+        shaderBindingTable.emplace(allocator,
+                                   pipeline->ray_generation_handle());
 
-        const uint32_t handleSize =
-            rayTracingPipelineProperties.shaderGroupHandleSize;
-        const uint32_t handleSizeAligned =
-            std::max(rayTracingPipelineProperties.shaderGroupHandleSize,
-                     rayTracingPipelineProperties
-                         .shaderGroupHandleAlignment); // use aligned size
-        const uint32_t groupCount = 3;
-        const uint32_t sbtSize = groupCount * handleSizeAligned;
-
-        std::vector<std::byte> shaderHandleStorage =
-            device.handle()
-                .getRayTracingShaderGroupHandlesKHR<std::byte>(
-                    pipeline->handle(), 0, groupCount, sbtSize)
-                .value;
-
-        raygenShaderBindingTable = allocator.create_buffer<
-            vw::Buffer<std::byte, true, vw::rt::ShaderBindingTableUsage>>(
-            handleSize);
-        missShaderBindingTable = allocator.create_buffer<
-            vw::Buffer<std::byte, true, vw::rt::ShaderBindingTableUsage>>(
-            handleSize);
-        hitShaderBindingTable = allocator.create_buffer<
-            vw::Buffer<std::byte, true, vw::rt::ShaderBindingTableUsage>>(
-            handleSize);
-
-        raygenShaderBindingTable->copy(
-            std::span(shaderHandleStorage.data(), handleSize), 0);
-        missShaderBindingTable->copy(
-            std::span(shaderHandleStorage.data() + handleSizeAligned,
-                      handleSize),
-            0);
-        hitShaderBindingTable->copy(
-            std::span(shaderHandleStorage.data() + handleSizeAligned * 2,
-                      handleSize),
-            0);
+        shaderBindingTable->add_miss_record(pipeline->miss_handles().front());
+        shaderBindingTable->add_hit_record(
+            pipeline->closest_hit_handles().front());
     }
 
     /*
@@ -745,23 +703,9 @@ class VulkanExample {
                      rayTracingPipelineProperties
                          .shaderGroupHandleAlignment); // aligned size
 
-        VkStridedDeviceAddressRegionKHR raygenShaderSbtEntry{};
-        raygenShaderSbtEntry.deviceAddress =
-            raygenShaderBindingTable->device_address();
-        raygenShaderSbtEntry.stride = handleSizeAligned;
-        raygenShaderSbtEntry.size = handleSizeAligned;
-
-        VkStridedDeviceAddressRegionKHR missShaderSbtEntry{};
-        missShaderSbtEntry.deviceAddress =
-            missShaderBindingTable->device_address();
-        missShaderSbtEntry.stride = handleSizeAligned;
-        missShaderSbtEntry.size = handleSizeAligned;
-
-        VkStridedDeviceAddressRegionKHR hitShaderSbtEntry{};
-        hitShaderSbtEntry.deviceAddress =
-            hitShaderBindingTable->device_address();
-        hitShaderSbtEntry.stride = handleSizeAligned;
-        hitShaderSbtEntry.size = handleSizeAligned;
+        auto raygenShaderSbtEntry = shaderBindingTable->raygen_region();
+        auto missShaderSbtEntry = shaderBindingTable->miss_region();
+        auto hitShaderSbtEntry = shaderBindingTable->hit_region();
 
         VkStridedDeviceAddressRegionKHR callableShaderSbtEntry{};
 

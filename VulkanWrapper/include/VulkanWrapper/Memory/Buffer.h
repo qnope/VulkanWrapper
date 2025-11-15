@@ -77,6 +77,12 @@ class Buffer : public BufferBase {
                                  offset * sizeof(T));
     }
 
+    void copy(const T &object, std::size_t offset)
+        requires(HostVisible)
+    {
+        BufferBase::generic_copy(&object, sizeof(T), offset * sizeof(T));
+    }
+
     template <typename U>
     void generic_copy(std::span<const U> span, std::size_t offset) {
         BufferBase::generic_copy(span.data(), span.size_bytes(),
