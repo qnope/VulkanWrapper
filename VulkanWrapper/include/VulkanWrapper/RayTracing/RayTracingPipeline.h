@@ -7,7 +7,7 @@
 
 namespace vw::rt {
 
-constexpr uint64_t ShaderBindingTableHandleSizeAlignment = 32;
+constexpr uint64_t ShaderBindingTableHandleSizeAlignment = 64;
 using ShaderBindingTableHandle = std::vector<std::byte>;
 
 using RayTracingPipelineCreationException =

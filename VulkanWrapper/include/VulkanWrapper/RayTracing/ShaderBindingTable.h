@@ -21,7 +21,7 @@ struct alignas(ShaderBindingTableHandleSizeAlignment) ShaderBindingTableRecord {
     ShaderBindingTableRecord(std::span<const std::byte> handle,
                              const auto &object) {
         static_assert(sizeof(object) + ShaderBindingTableHandleSizeAlignment <
-                      256);
+                      ShaderBindingTableHandleRecordSize);
         std::ranges::copy(handle, data.begin());
         std::memcpy(data.data() + handle.size(), &object, sizeof(object));
     }
