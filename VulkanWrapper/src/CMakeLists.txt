@@ -59,6 +59,6 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Model/Internal/MeshInfo.cpp
 
     VulkanWrapper/AccelerationStructure/AccelerationStructure.cpp
-    VulkanWrapper/RayTracing/ShaderBindingTable.cpp
-    VulkanWrapper/RayTracing/RayTracingPipeline.cpp
 )
+
+add_subdirectory(VulkanWrapper)

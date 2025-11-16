@@ -71,7 +71,6 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Model/Internal/MeshInfo.h
 
     VulkanWrapper/AccelerationStructure/AccelerationStructure.h
-
-    VulkanWrapper/RayTracing/ShaderBindingTable.h
-    VulkanWrapper/RayTracing/RayTracingPipeline.h
 )
+
+add_subdirectory(VulkanWrapper)
