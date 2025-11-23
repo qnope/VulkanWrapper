@@ -49,13 +49,14 @@ class BottomLevelAccelerationStructureList {
                        vk::BufferUsageFlagBits::eStorageBuffer |
                        vk::BufferUsageFlagBits::eShaderDeviceAddress)>;
 
-    AccelerationStructureBufferList &acceleration_structure_buffer_list();
-    ScratchBufferList &scratch_buffer_list();
+    AccelerationStructureBufferList::BufferInfo
+    allocate_acceleration_structure_buffer(vk::DeviceSize size);
+    ScratchBufferList::BufferInfo allocate_scratch_buffer(vk::DeviceSize size);
 
     void add(BottomLevelAccelerationStructure &&blas);
 
-    vk::CommandBuffer allocate_command_buffer();
-    void submit_and_wait(vk::CommandBuffer command_buffer);
+    vk::CommandBuffer command_buffer();
+    void submit_and_wait();
 
   private:
     AccelerationStructureBufferList m_acceleration_structure_buffer_list;
@@ -64,6 +65,7 @@ class BottomLevelAccelerationStructureList {
         m_all_bottom_level_acceleration_structure;
 
     CommandPool m_command_pool;
+    vk::CommandBuffer m_command_buffer;
     const Device &m_device;
 };
 

@@ -241,6 +241,7 @@ class VulkanExample {
 
         bottomLevelASAddress = blas.device_address();
         m_blasList.add(std::move(blas));
+        m_blasList.submit_and_wait();
     }
 
     /*

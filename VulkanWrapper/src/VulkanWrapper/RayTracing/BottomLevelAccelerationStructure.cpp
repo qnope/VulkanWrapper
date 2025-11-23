@@ -1,4 +1,5 @@
 #include "VulkanWrapper/RayTracing/BottomLevelAccelerationStructure.h"
+
 #include "VulkanWrapper/Command/CommandPool.h"
 #include "VulkanWrapper/Memory/Allocator.h"
 #include "VulkanWrapper/Vulkan/Device.h"
@@ -11,8 +12,8 @@ BottomLevelAccelerationStructure::BottomLevelAccelerationStructure(
     vk::UniqueAccelerationStructureKHR acceleration_structure,
     vk::DeviceAddress address)
     : ObjectWithUniqueHandle<vk::UniqueAccelerationStructureKHR>(
-          std::move(acceleration_structure)),
-      m_device_address(address) {}
+          std::move(acceleration_structure))
+    , m_device_address(address) {}
 
 vk::DeviceAddress
 BottomLevelAccelerationStructure::device_address() const noexcept {
@@ -21,18 +22,25 @@ BottomLevelAccelerationStructure::device_address() const noexcept {
 
 BottomLevelAccelerationStructureList::BottomLevelAccelerationStructureList(
     const Device &device, const Allocator &allocator)
-    : m_acceleration_structure_buffer_list(allocator),
-      m_scratch_buffer_list(allocator),
-      m_command_pool(CommandPoolBuilder(device).build()), m_device(device) {}
-
-BottomLevelAccelerationStructureList::AccelerationStructureBufferList &
-BottomLevelAccelerationStructureList::acceleration_structure_buffer_list() {
-    return m_acceleration_structure_buffer_list;
+    : m_acceleration_structure_buffer_list(allocator)
+    , m_scratch_buffer_list(allocator)
+    , m_command_pool(CommandPoolBuilder(device).build())
+    , m_command_buffer(m_command_pool.allocate(1).front())
+    , m_device(device) {
+    std::ignore = m_command_buffer.begin(vk::CommandBufferBeginInfo().setFlags(
+        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 }
 
-BottomLevelAccelerationStructureList::ScratchBufferList &
-BottomLevelAccelerationStructureList::scratch_buffer_list() {
-    return m_scratch_buffer_list;
+BottomLevelAccelerationStructureList::AccelerationStructureBufferList::BufferInfo
+BottomLevelAccelerationStructureList::allocate_acceleration_structure_buffer(
+    vk::DeviceSize size) {
+    return m_acceleration_structure_buffer_list.create_buffer(size);
+}
+
+BottomLevelAccelerationStructureList::ScratchBufferList::BufferInfo
+BottomLevelAccelerationStructureList::allocate_scratch_buffer(
+    vk::DeviceSize size) {
+    return m_scratch_buffer_list.create_buffer(size);
 }
 
 void BottomLevelAccelerationStructureList::add(
@@ -40,15 +48,14 @@ void BottomLevelAccelerationStructureList::add(
     m_all_bottom_level_acceleration_structure.emplace_back(std::move(blas));
 }
 
-vk::CommandBuffer
-BottomLevelAccelerationStructureList::allocate_command_buffer() {
-    return m_command_pool.allocate(1).front();
+vk::CommandBuffer BottomLevelAccelerationStructureList::command_buffer() {
+    return m_command_buffer;
 }
 
-void BottomLevelAccelerationStructureList::submit_and_wait(
-    vk::CommandBuffer command_buffer) {
+void BottomLevelAccelerationStructureList::submit_and_wait() {
+    std::ignore = m_command_buffer.end();
     auto &queue = const_cast<Device &>(m_device).graphicsQueue();
-    queue.enqueue_command_buffer(command_buffer);
+    queue.enqueue_command_buffer(m_command_buffer);
     queue.submit({}, {}, {});
     m_device.wait_idle();
 }
@@ -86,7 +93,7 @@ BottomLevelAccelerationStructure BottomLevelAccelerationStructureBuilder::build(
             vk::AccelerationStructureBuildTypeKHR::eDevice, build_info,
             max_primitive_counts);
 
-    auto buffer_info = list.acceleration_structure_buffer_list().create_buffer(
+    auto buffer_info = list.allocate_acceleration_structure_buffer(
         build_sizes.accelerationStructureSize);
 
     vk::AccelerationStructureCreateInfoKHR create_info;
@@ -106,23 +113,16 @@ BottomLevelAccelerationStructure BottomLevelAccelerationStructureBuilder::build(
         m_device.handle().getAccelerationStructureAddressKHR(address_info);
 
     auto scratch_buffer =
-        list.scratch_buffer_list().create_buffer(build_sizes.buildScratchSize);
+        list.allocate_scratch_buffer(build_sizes.buildScratchSize);
 
     build_info.setDstAccelerationStructure(*acceleration_structure);
     build_info.setScratchData(scratch_buffer.buffer->device_address() +
                               scratch_buffer.offset);
 
-    auto command_buffer = list.allocate_command_buffer();
-
-    command_buffer.begin(vk::CommandBufferBeginInfo().setFlags(
-        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+    auto command_buffer = list.command_buffer();
 
     const auto *p_ranges = m_ranges.data();
     command_buffer.buildAccelerationStructuresKHR(1, &build_info, &p_ranges);
-
-    command_buffer.end();
-
-    list.submit_and_wait(command_buffer);
 
     return BottomLevelAccelerationStructure(std::move(acceleration_structure),
                                             address);
