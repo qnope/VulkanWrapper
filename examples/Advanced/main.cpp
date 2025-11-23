@@ -26,8 +26,8 @@
 #include <VulkanWrapper/Pipeline/PipelineLayout.h>
 #include <VulkanWrapper/Pipeline/ShaderModule.h>
 #include <VulkanWrapper/RayTracing/BottomLevelAccelerationStructure.h>
-#include <VulkanWrapper/RayTracing/TopLevelAccelerationStructure.h>
 #include <VulkanWrapper/RayTracing/ShaderBindingTable.h>
+#include <VulkanWrapper/RayTracing/TopLevelAccelerationStructure.h>
 #include <VulkanWrapper/RenderPass/Attachment.h>
 #include <VulkanWrapper/RenderPass/RenderPass.h>
 #include <VulkanWrapper/RenderPass/Subpass.h>
@@ -78,6 +78,9 @@ class VulkanExample {
     std::optional<vw::Buffer<vw::Vertex3D, true, vw::VertexBufferUsage>>
         vertexBuffer;
     std::optional<vw::Buffer<uint32_t, true, vw::IndexBufferUsage>> indexBuffer;
+
+    std::optional<vw::Model::MeshManager> mesh_manager;
+
     uint32_t indexCount{0};
 
     struct StorageImage {
@@ -235,8 +238,7 @@ class VulkanExample {
         accelerationStructureBuildRangeInfo.transformOffset = 0;
 
         auto &blas = vw::rt::as::BottomLevelAccelerationStructureBuilder(device)
-                         .add_geometry(accelerationStructureGeometry,
-                                       accelerationStructureBuildRangeInfo)
+                         .add_mesh(mesh_manager->meshes().front())
                          .build_into(m_blasList);
 
         m_blasList.submit_and_wait();
@@ -248,10 +250,9 @@ class VulkanExample {
     */
     void createTopLevelAccelerationStructure() {
         // Create transformation matrix
-        glm::mat4 transform = glm::mat4(1.0f, 0.0f, 0.0f, 0.0f,
-                                        0.0f, 1.0f, 0.0f, 0.0f,
-                                        0.0f, 0.0f, 1.0f, 0.0f,
-                                        2.0f, 1.0f, -3.0f, 1.0f);
+        glm::mat4 transform =
+            glm::mat4(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+                      0.0f, 1.0f, 0.0f, 2.0f, 1.0f, -3.0f, 1.0f);
 
         // Get BLAS device address
         vk::DeviceAddress blasAddress = m_blasList.device_addresses().back();
@@ -332,7 +333,8 @@ class VulkanExample {
             vk::WriteDescriptorSetAccelerationStructureKHR
                 descriptorAccelerationStructureInfo{};
             vk::AccelerationStructureKHR handle = topLevelAS->handle();
-            descriptorAccelerationStructureInfo.setAccelerationStructures(handle);
+            descriptorAccelerationStructureInfo.setAccelerationStructures(
+                handle);
 
             vk::WriteDescriptorSet accelerationStructureWrite{};
             // The specialized acceleration structure descriptor has to be
@@ -459,9 +461,19 @@ class VulkanExample {
         uniformBuffer->copy(std::span(&uniformData, 1), 0);
     }
 
+    void createMeshManager() {
+        mesh_manager.emplace(device, allocator);
+        // mesh_manager.read_file("../../../Models/Sponza/sponza.obj");
+        mesh_manager->read_file("../../../Models/cube.obj");
+        auto cmd_buffer = mesh_manager->fill_command_buffer();
+        queue.enqueue_command_buffer(cmd_buffer);
+        queue.submit({}, {}, {});
+    }
+
     void prepare() {
         // Create the acceleration structures used to render the ray traced
         // scene
+        createMeshManager();
         createBottomLevelAccelerationStructure();
         createTopLevelAccelerationStructure();
 
@@ -576,7 +588,7 @@ createUbo(vw::Allocator &allocator) {
     auto buffer =
         allocator.create_buffer<UBOData, true, vw::UniformBufferUsage>(1);
     UBOData data;
-    buffer.copy({&data, 1}, 0);
+    buffer.copy(data, 0);
     return buffer;
 }
 
@@ -691,10 +703,6 @@ int main() {
             vw::ImageViewBuilder(app.device, depth_buffer)
                 .setImageType(vk::ImageViewType::e2D)
                 .build();
-
-        vw::Model::MeshManager mesh_manager(app.device, app.allocator);
-        // mesh_manager.read_file("../../../Models/Sponza/sponza.obj");
-        mesh_manager.read_file("../../../Models/cube.obj");
 
         const auto color_attachment =
             vw::AttachmentBuilder{}
