@@ -17,84 +17,63 @@ using ScratchBuffer =
            VkBufferUsageFlags(vk::BufferUsageFlagBits::eStorageBuffer |
                               vk::BufferUsageFlagBits::eShaderDeviceAddress)>;
 
-class BottomLevelAccelerationStructure {};
-
-class BottomLevelAccelerationStructureBuilder {
+class BottomLevelAccelerationStructure
+    : public ObjectWithUniqueHandle<vk::UniqueAccelerationStructureKHR> {
   public:
-    BottomLevelAccelerationStructureBuilder(const Device &device,
-                                            const Allocator &allocator);
+    BottomLevelAccelerationStructure(
+        vk::UniqueAccelerationStructureKHR acceleration_structure,
+        vk::DeviceAddress address);
+
+    [[nodiscard]] vk::DeviceAddress device_address() const noexcept;
 
   private:
-    const Device &device;
-    const Allocator &allocator;
+    vk::DeviceAddress m_device_address;
 };
 
 class BottomLevelAccelerationStructureList {
   public:
+    BottomLevelAccelerationStructureList(const Allocator &allocator);
+
+    using AccelerationStructureBufferList =
+        BufferList<std::byte, false,
+                   VkBufferUsageFlags(vk::BufferUsageFlagBits::
+                                          eAccelerationStructureStorageKHR |
+                                      vk::BufferUsageFlagBits::
+                                          eShaderDeviceAddress)>;
+
+    using ScratchBufferList =
+        BufferList<std::byte, false,
+                   VkBufferUsageFlags(
+                       vk::BufferUsageFlagBits::eStorageBuffer |
+                       vk::BufferUsageFlagBits::eShaderDeviceAddress)>;
+
+    AccelerationStructureBufferList &acceleration_structure_buffer_list();
+    ScratchBufferList &scratch_buffer_list();
+
+    void add(BottomLevelAccelerationStructure &&blas);
+
   private:
+    AccelerationStructureBufferList m_acceleration_structure_buffer_list;
+    ScratchBufferList m_scratch_buffer_list;
     std::vector<BottomLevelAccelerationStructure>
         m_all_bottom_level_acceleration_structure;
 };
 
-/*
- *         vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress{};
-        vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress{};
+class BottomLevelAccelerationStructureBuilder {
+  public:
+    BottomLevelAccelerationStructureBuilder(const Device &device);
 
-     vertexBufferDeviceAddress.deviceAddress =
-         getBufferDeviceAddress(vertexBuffer);
-     indexBufferDeviceAddress.deviceAddress =
-         getBufferDeviceAddress(indexBuffer);
+    BottomLevelAccelerationStructureBuilder &
+    add_geometry(const vk::AccelerationStructureGeometryKHR &geometry,
+                 const vk::AccelerationStructureBuildRangeInfoKHR &offset);
 
-     // Build
-     vk::AccelerationStructureGeometryKHR accelerationStructureGeometry{};
-     accelerationStructureGeometry.flags = vk::GeometryFlagBitsKHR::eOpaque;
-     accelerationStructureGeometry.geometryType =
-         vk::GeometryTypeKHR::eTriangles;
-     accelerationStructureGeometry.geometry.triangles.vertexFormat =
-         vk::Format::eR32G32B32Sfloat;
-     accelerationStructureGeometry.geometry.triangles.vertexData =
-         vertexBufferDeviceAddress;
-     accelerationStructureGeometry.geometry.triangles.maxVertex = 2;
-     accelerationStructureGeometry.geometry.triangles.vertexStride =
-         sizeof(vw::Vertex3D);
-     accelerationStructureGeometry.geometry.triangles.indexType =
-         vk::IndexType::eUint32;
-     accelerationStructureGeometry.geometry.triangles.indexData =
-         indexBufferDeviceAddress;
+    BottomLevelAccelerationStructure
+    build(BottomLevelAccelerationStructureList &list);
 
-     // Get size info
-     vk::AccelerationStructureBuildGeometryInfoKHR
-         accelerationStructureBuildGeometryInfo{};
-     accelerationStructureBuildGeometryInfo.type =
-         vk::AccelerationStructureTypeKHR::eBottomLevel;
-     accelerationStructureBuildGeometryInfo.flags =
-         vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
-     accelerationStructureBuildGeometryInfo.setGeometries(
-         accelerationStructureGeometry);
-
-     const uint32_t numTriangles = 1;
-
-     auto accelerationStructureBuildSizesInfo =
-         device.handle().getAccelerationStructureBuildSizesKHR(
-             vk::AccelerationStructureBuildTypeKHR::eDevice,
-             accelerationStructureBuildGeometryInfo, numTriangles);
-
-     createAccelerationStructureBuffer(bottomLevelAS,
-                                       accelerationStructureBuildSizesInfo);
-
-     vk::AccelerationStructureCreateInfoKHR
-         accelerationStructureCreateInfo{};
-
-     accelerationStructureCreateInfo.buffer = bottomLevelAS.buffer->handle();
-     accelerationStructureCreateInfo.size =
-         accelerationStructureBuildSizesInfo.accelerationStructureSize;
-     accelerationStructureCreateInfo.type =
-         vk::AccelerationStructureTypeKHR::eBottomLevel;
-
-     bottomLevelAS.handle = device.handle()
-                                .createAccelerationStructureKHRUnique(
-                                    accelerationStructureCreateInfo)
-                                .value;
-*/
+  private:
+    const Device &m_device;
+    std::vector<vk::AccelerationStructureGeometryKHR> m_geometries;
+    std::vector<vk::AccelerationStructureBuildRangeInfoKHR> m_ranges;
+};
 
 } // namespace vw::rt::as
