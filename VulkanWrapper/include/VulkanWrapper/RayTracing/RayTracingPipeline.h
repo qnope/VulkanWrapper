@@ -56,8 +56,10 @@ class RayTracingPipelineBuilder {
     RayTracingPipeline build() &&;
 
   private:
-    std::vector<vk::PipelineShaderStageCreateInfo> create_stages() const;
-    std::vector<vk::RayTracingShaderGroupCreateInfoKHR> create_groups() const;
+    [[nodiscard]] std::vector<vk::PipelineShaderStageCreateInfo>
+    create_stages() const;
+    [[nodiscard]] std::vector<vk::RayTracingShaderGroupCreateInfoKHR>
+    create_groups() const;
 
   private:
     const Device &m_device;

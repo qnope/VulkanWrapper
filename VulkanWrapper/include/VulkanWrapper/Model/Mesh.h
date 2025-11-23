@@ -24,10 +24,10 @@ class Mesh {
 
     void draw_zpass(vk::CommandBuffer cmd_buffer) const;
 
-    vk::AccelerationStructureGeometryKHR
+    [[nodiscard]] vk::AccelerationStructureGeometryKHR
     acceleration_structure_geometry() const noexcept;
 
-    vk::AccelerationStructureBuildRangeInfoKHR
+    [[nodiscard]] vk::AccelerationStructureBuildRangeInfoKHR
     acceleration_structure_range_info() const noexcept;
 
     [[nodiscard]] uint32_t index_count() const noexcept {
