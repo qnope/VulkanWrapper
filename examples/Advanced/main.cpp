@@ -260,10 +260,11 @@ class VulkanExample {
         auto commandBuffer = pool.allocate(1).front();
         std::ignore = commandBuffer.begin(vk::CommandBufferBeginInfo());
 
-        topLevelAS = vw::rt::as::TopLevelAccelerationStructureBuilder(device)
-                         .add_bottom_level_acceleration_structure_address(
-                             blasAddress, transform)
-                         .build(allocator, commandBuffer);
+        topLevelAS =
+            vw::rt::as::TopLevelAccelerationStructureBuilder(device, allocator)
+                .add_bottom_level_acceleration_structure_address(blasAddress,
+                                                                 transform)
+                .build(commandBuffer);
 
         std::ignore = commandBuffer.end();
         queue.enqueue_command_buffer(commandBuffer);

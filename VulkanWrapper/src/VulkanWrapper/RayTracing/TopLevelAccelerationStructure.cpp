@@ -8,16 +8,11 @@ namespace vw::rt::as {
 
 TopLevelAccelerationStructure::TopLevelAccelerationStructure(
     vk::UniqueAccelerationStructureKHR acceleration_structure,
-    vk::DeviceAddress address,
-    std::unique_ptr<AccelerationStructureBuffer> buffer,
-    std::unique_ptr<InstanceBuffer> instance_buffer,
-    std::unique_ptr<ScratchBuffer> scratch_buffer)
+    vk::DeviceAddress address, AccelerationStructureBuffer buffer)
     : ObjectWithUniqueHandle<vk::UniqueAccelerationStructureKHR>(
           std::move(acceleration_structure))
     , m_device_address(address)
-    , m_buffer(std::move(buffer))
-    , m_instance_buffer(std::move(instance_buffer))
-    , m_scratch_buffer(std::move(scratch_buffer)) {}
+    , m_buffer(std::move(buffer)) {}
 
 vk::DeviceAddress
 TopLevelAccelerationStructure::device_address() const noexcept {
@@ -25,8 +20,9 @@ TopLevelAccelerationStructure::device_address() const noexcept {
 }
 
 TopLevelAccelerationStructureBuilder::TopLevelAccelerationStructureBuilder(
-    const Device &device)
-    : m_device(device) {}
+    const Device &device, const Allocator &allocator)
+    : m_device(device)
+    , m_allocator(allocator) {}
 
 TopLevelAccelerationStructureBuilder &TopLevelAccelerationStructureBuilder::
     add_bottom_level_acceleration_structure_address(
@@ -55,14 +51,13 @@ TopLevelAccelerationStructureBuilder &TopLevelAccelerationStructureBuilder::
 }
 
 TopLevelAccelerationStructure
-TopLevelAccelerationStructureBuilder::build(const Allocator &allocator,
-                                            vk::CommandBuffer command_buffer) {
+TopLevelAccelerationStructureBuilder::build(vk::CommandBuffer command_buffer) {
     // Create instance buffer
-    auto instance_buffer = std::make_unique<InstanceBuffer>(
-        allocator.create_buffer<InstanceBuffer>(m_instances.size()));
+    auto instance_buffer =
+        m_allocator.create_buffer<InstanceBuffer>(m_instances.size());
 
     // Upload instances to buffer
-    instance_buffer->copy(m_instances, 0);
+    instance_buffer.copy(m_instances, 0);
 
     // Build geometry info
     vk::AccelerationStructureGeometryKHR geometry;
@@ -71,7 +66,7 @@ TopLevelAccelerationStructureBuilder::build(const Allocator &allocator,
 
     vk::AccelerationStructureGeometryInstancesDataKHR instances_data;
     instances_data.setArrayOfPointers(false);
-    instances_data.setData(instance_buffer->device_address());
+    instances_data.setData(instance_buffer.device_address());
     geometry.geometry.setInstances(instances_data);
 
     vk::AccelerationStructureBuildGeometryInfoKHR build_info;
@@ -90,13 +85,12 @@ TopLevelAccelerationStructureBuilder::build(const Allocator &allocator,
             primitive_count);
 
     // Allocate acceleration structure buffer
-    auto as_buffer = std::make_unique<AccelerationStructureBuffer>(
-        allocator.create_buffer<AccelerationStructureBuffer>(
-            build_sizes.accelerationStructureSize));
+    auto as_buffer = m_allocator.create_buffer<AccelerationStructureBuffer>(
+        build_sizes.accelerationStructureSize);
 
     // Create acceleration structure
     vk::AccelerationStructureCreateInfoKHR create_info;
-    create_info.setBuffer(as_buffer->handle());
+    create_info.setBuffer(as_buffer.handle());
     create_info.setOffset(0);
     create_info.setSize(build_sizes.accelerationStructureSize);
     create_info.setType(vk::AccelerationStructureTypeKHR::eTopLevel);
@@ -113,12 +107,12 @@ TopLevelAccelerationStructureBuilder::build(const Allocator &allocator,
         m_device.handle().getAccelerationStructureAddressKHR(address_info);
 
     // Allocate scratch buffer
-    auto scratch_buffer = std::make_unique<ScratchBuffer>(
-        allocator.create_buffer<ScratchBuffer>(build_sizes.buildScratchSize));
+    auto scratch_buffer =
+        m_allocator.create_buffer<ScratchBuffer>(build_sizes.buildScratchSize);
 
     // Build acceleration structure
     build_info.setDstAccelerationStructure(*acceleration_structure);
-    build_info.setScratchData(scratch_buffer->device_address());
+    build_info.setScratchData(scratch_buffer.device_address());
 
     vk::AccelerationStructureBuildRangeInfoKHR range_info;
     range_info.setPrimitiveCount(primitive_count);
@@ -127,11 +121,10 @@ TopLevelAccelerationStructureBuilder::build(const Allocator &allocator,
     range_info.setTransformOffset(0);
 
     const auto *p_range = &range_info;
-    command_buffer.buildAccelerationStructuresKHR(1, &build_info, &p_range);
+    command_buffer.buildAccelerationStructuresKHR(build_info, p_range);
 
-    return TopLevelAccelerationStructure(
-        std::move(acceleration_structure), address, std::move(as_buffer),
-        std::move(instance_buffer), std::move(scratch_buffer));
+    return TopLevelAccelerationStructure(std::move(acceleration_structure),
+                                         address, std::move(as_buffer));
 }
 
 } // namespace vw::rt::as

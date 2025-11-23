@@ -31,33 +31,29 @@ class TopLevelAccelerationStructure
   public:
     TopLevelAccelerationStructure(
         vk::UniqueAccelerationStructureKHR acceleration_structure,
-        vk::DeviceAddress address,
-        std::unique_ptr<AccelerationStructureBuffer> buffer,
-        std::unique_ptr<InstanceBuffer> instance_buffer,
-        std::unique_ptr<ScratchBuffer> scratch_buffer);
+        vk::DeviceAddress address, AccelerationStructureBuffer buffer);
 
     [[nodiscard]] vk::DeviceAddress device_address() const noexcept;
 
   private:
     vk::DeviceAddress m_device_address;
-    std::unique_ptr<AccelerationStructureBuffer> m_buffer;
-    std::unique_ptr<InstanceBuffer> m_instance_buffer;
-    std::unique_ptr<ScratchBuffer> m_scratch_buffer;
+    AccelerationStructureBuffer m_buffer;
 };
 
 class TopLevelAccelerationStructureBuilder {
   public:
-    TopLevelAccelerationStructureBuilder(const Device &device);
+    TopLevelAccelerationStructureBuilder(const Device &device,
+                                         const Allocator &allocator);
 
     TopLevelAccelerationStructureBuilder &
     add_bottom_level_acceleration_structure_address(vk::DeviceAddress address,
                                                     const glm::mat4 &transform);
 
-    TopLevelAccelerationStructure build(const Allocator &allocator,
-                                        vk::CommandBuffer command_buffer);
+    TopLevelAccelerationStructure build(vk::CommandBuffer command_buffer);
 
   private:
     const Device &m_device;
+    const Allocator &m_allocator;
     std::vector<vk::AccelerationStructureInstanceKHR> m_instances;
 };
 
