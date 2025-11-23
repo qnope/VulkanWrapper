@@ -78,6 +78,8 @@ class BottomLevelAccelerationStructureBuilder {
     add_geometry(const vk::AccelerationStructureGeometryKHR &geometry,
                  const vk::AccelerationStructureBuildRangeInfoKHR &offset);
 
+    BottomLevelAccelerationStructureBuilder &add_mesh(const Model::Mesh &mesh);
+
     BottomLevelAccelerationStructure &
     build_into(BottomLevelAccelerationStructureList &list);
 

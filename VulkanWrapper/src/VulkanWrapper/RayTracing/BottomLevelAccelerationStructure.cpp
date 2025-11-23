@@ -1,4 +1,5 @@
 #include "VulkanWrapper/RayTracing/BottomLevelAccelerationStructure.h"
+#include "VulkanWrapper/Model/Mesh.h"
 
 #include "VulkanWrapper/Command/CommandPool.h"
 #include "VulkanWrapper/Memory/Allocator.h"
@@ -82,6 +83,12 @@ BottomLevelAccelerationStructureBuilder::add_geometry(
     m_geometries.push_back(geometry);
     m_ranges.push_back(offset);
     return *this;
+}
+
+BottomLevelAccelerationStructureBuilder &
+BottomLevelAccelerationStructureBuilder::add_mesh(const Model::Mesh &mesh) {
+    return add_geometry(mesh.acceleration_structure_geometry(),
+                        mesh.acceleration_structure_range_info());
 }
 
 BottomLevelAccelerationStructure &
