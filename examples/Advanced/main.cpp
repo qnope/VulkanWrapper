@@ -26,6 +26,7 @@
 #include <VulkanWrapper/Pipeline/PipelineLayout.h>
 #include <VulkanWrapper/Pipeline/ShaderModule.h>
 #include <VulkanWrapper/RayTracing/BottomLevelAccelerationStructure.h>
+#include <VulkanWrapper/RayTracing/TopLevelAccelerationStructure.h>
 #include <VulkanWrapper/RayTracing/ShaderBindingTable.h>
 #include <VulkanWrapper/RenderPass/Attachment.h>
 #include <VulkanWrapper/RenderPass/RenderPass.h>
@@ -72,7 +73,7 @@ class VulkanExample {
         accelerationStructureFeatures{};
 
     vw::rt::as::BottomLevelAccelerationStructureList m_blasList;
-    AccelerationStructure topLevelAS{};
+    std::optional<vw::rt::as::TopLevelAccelerationStructure> topLevelAS;
 
     std::optional<vw::Buffer<vw::Vertex3D, true, vw::VertexBufferUsage>>
         vertexBuffer;
@@ -242,144 +243,31 @@ class VulkanExample {
     }
 
     /*
-            The top level acceleration structure contains the scene's object
-       instances
+        The top level acceleration structure contains the scene's object
+        instances
     */
     void createTopLevelAccelerationStructure() {
-        VkTransformMatrixKHR transformMatrix = {1.0f, 0.0f, 0.0f, 2.0f,
-                                                0.0f, 1.0f, 0.0f, 1.0f,
-                                                0.0f, 0.0f, 1.0f, -3.0f};
+        // Create transformation matrix
+        glm::mat4 transform = glm::mat4(1.0f, 0.0f, 0.0f, 0.0f,
+                                        0.0f, 1.0f, 0.0f, 0.0f,
+                                        0.0f, 0.0f, 1.0f, 0.0f,
+                                        2.0f, 1.0f, -3.0f, 1.0f);
 
-        vk::AccelerationStructureInstanceKHR instance{};
-        instance.transform = transformMatrix;
-        instance.instanceCustomIndex = 0;
-        instance.mask = 0xFF;
-        instance.instanceShaderBindingTableRecordOffset = 0;
-        instance.setFlags(
-            vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable);
-        instance.accelerationStructureReference =
-            m_blasList.device_addresses().back();
+        // Get BLAS device address
+        vk::DeviceAddress blasAddress = m_blasList.device_addresses().back();
 
-        constexpr auto InstanceBufferUsage = VkBufferUsageFlags2(
-            vk::BufferUsageFlagBits2::
-                eAccelerationStructureBuildInputReadOnlyKHR |
-            vk::BufferUsageFlagBits2::eShaderDeviceAddress);
-        // Buffer for instance data
-        auto instancesBuffer =
-            allocator.create_buffer<vk::AccelerationStructureInstanceKHR, true,
-                                    InstanceBufferUsage>(1);
-        instancesBuffer.copy(std::span(&instance, 1), 0);
-
-        vk::DeviceOrHostAddressConstKHR instanceDataDeviceAddress{};
-        instanceDataDeviceAddress.deviceAddress =
-            instancesBuffer.device_address();
-
-        vk::AccelerationStructureGeometryKHR accelerationStructureGeometry{};
-
-        vk::AccelerationStructureGeometryInstancesDataKHR instances;
-        instances.arrayOfPointers = VK_FALSE;
-        instances.data = instanceDataDeviceAddress;
-
-        accelerationStructureGeometry.geometryType =
-            vk::GeometryTypeKHR::eInstances;
-        accelerationStructureGeometry.flags = vk::GeometryFlagBitsKHR::eOpaque;
-        accelerationStructureGeometry.geometry.instances = instances;
-
-        // Get size info
-        /*
-        The pSrcAccelerationStructure, dstAccelerationStructure, and mode
-        members of pBuildInfo are ignored. Any VkDeviceOrHostAddressKHR members
-        of pBuildInfo are ignored by this command, except that the hostAddress
-        member of VkAccelerationStructureGeometryTrianglesDataKHR::transformData
-        will be examined to check if it is NULL.*
-        */
-        vk::AccelerationStructureBuildGeometryInfoKHR
-            accelerationStructureBuildGeometryInfo{};
-
-        accelerationStructureBuildGeometryInfo.type =
-            vk::AccelerationStructureTypeKHR::eTopLevel;
-        accelerationStructureBuildGeometryInfo.flags =
-            vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
-        accelerationStructureBuildGeometryInfo.setGeometries(
-            accelerationStructureGeometry);
-
-        uint32_t primitive_count = 1;
-
-        auto accelerationStructureBuildSizesInfo =
-            device.handle().getAccelerationStructureBuildSizesKHR(
-                vk::AccelerationStructureBuildTypeKHR::eDevice,
-                accelerationStructureBuildGeometryInfo,
-                std::span(&primitive_count, 1));
-
-        createAccelerationStructureBuffer(topLevelAS,
-                                          accelerationStructureBuildSizesInfo);
-
-        vk::AccelerationStructureCreateInfoKHR
-            accelerationStructureCreateInfo{};
-        accelerationStructureCreateInfo.buffer = topLevelAS.buffer->handle();
-        accelerationStructureCreateInfo.size =
-            accelerationStructureBuildSizesInfo.accelerationStructureSize;
-        accelerationStructureCreateInfo.type =
-            vk::AccelerationStructureTypeKHR::eTopLevel;
-        topLevelAS.handle = device.handle()
-                                .createAccelerationStructureKHRUnique(
-                                    accelerationStructureCreateInfo)
-                                .value;
-
-        // Create a small scratch buffer used during build of the top level
-        // acceleration structure
-        RayTracingScratchBuffer scratchBuffer = createScratchBuffer(
-            accelerationStructureBuildSizesInfo.buildScratchSize);
-
-        vk::AccelerationStructureBuildGeometryInfoKHR
-            accelerationBuildGeometryInfo{};
-
-        accelerationBuildGeometryInfo.type =
-            vk::AccelerationStructureTypeKHR::eTopLevel;
-        accelerationBuildGeometryInfo.flags =
-            vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
-        accelerationBuildGeometryInfo.mode =
-            vk::BuildAccelerationStructureModeKHR::eBuild;
-
-        accelerationBuildGeometryInfo.dstAccelerationStructure =
-            *topLevelAS.handle;
-        accelerationBuildGeometryInfo.setGeometries(
-            accelerationStructureGeometry);
-        accelerationBuildGeometryInfo.scratchData.deviceAddress =
-            scratchBuffer.deviceAddress;
-
-        vk::AccelerationStructureBuildRangeInfoKHR
-            accelerationStructureBuildRangeInfo{};
-        accelerationStructureBuildRangeInfo.primitiveCount = 1;
-        accelerationStructureBuildRangeInfo.primitiveOffset = 0;
-        accelerationStructureBuildRangeInfo.firstVertex = 0;
-        accelerationStructureBuildRangeInfo.transformOffset = 0;
-        std::vector<vk::AccelerationStructureBuildRangeInfoKHR *>
-            accelerationBuildStructureRangeInfos = {
-                &accelerationStructureBuildRangeInfo};
-
-        // Build the acceleration structure on the device via a one-time command
-        // buffer submission Some implementations may support acceleration
-        // structure building on the host
-        // (VkPhysicalDeviceAccelerationStructureFeaturesKHR->accelerationStructureHostCommands),
-        // but we prefer device builds
+        // Build TLAS using the builder
         auto commandBuffer = pool.allocate(1).front();
         std::ignore = commandBuffer.begin(vk::CommandBufferBeginInfo());
-        commandBuffer.buildAccelerationStructuresKHR(
-            accelerationBuildGeometryInfo,
-            accelerationBuildStructureRangeInfos);
+
+        topLevelAS = vw::rt::as::TopLevelAccelerationStructureBuilder(device)
+                         .add_bottom_level_acceleration_structure_address(
+                             blasAddress, transform)
+                         .build(allocator, commandBuffer);
+
         std::ignore = commandBuffer.end();
         queue.enqueue_command_buffer(commandBuffer);
         queue.submit({}, {}, {}).wait();
-
-        vk::AccelerationStructureDeviceAddressInfoKHR
-            accelerationDeviceAddressInfo{};
-
-        accelerationDeviceAddressInfo.accelerationStructure =
-            *topLevelAS.handle;
-        topLevelAS.deviceAddress =
-            device.handle().getAccelerationStructureAddressKHR(
-                accelerationDeviceAddressInfo);
     }
 
     /*
@@ -442,8 +330,8 @@ class VulkanExample {
 
             vk::WriteDescriptorSetAccelerationStructureKHR
                 descriptorAccelerationStructureInfo{};
-            descriptorAccelerationStructureInfo.setAccelerationStructures(
-                *topLevelAS.handle);
+            vk::AccelerationStructureKHR handle = topLevelAS->handle();
+            descriptorAccelerationStructureInfo.setAccelerationStructures(handle);
 
             vk::WriteDescriptorSet accelerationStructureWrite{};
             // The specialized acceleration structure descriptor has to be
