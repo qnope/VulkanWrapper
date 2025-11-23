@@ -1,13 +1,39 @@
 #pragma once
 
 #include "VulkanWrapper/fwd.h"
+#include "VulkanWrapper/Memory/BufferList.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
 
 namespace vw::rt::as {
-class BottomLevel
-    : public ObjectWithUniqueHandle<vk::UniqueAccelerationStructureKHR> {
+
+using AccelerationStructureBuffer =
+    Buffer<std::byte, false,
+           VkBufferUsageFlags(
+               vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR |
+               vk::BufferUsageFlagBits::eShaderDeviceAddress)>;
+
+using ScratchBuffer =
+    Buffer<std::byte, false,
+           VkBufferUsageFlags(vk::BufferUsageFlagBits::eStorageBuffer |
+                              vk::BufferUsageFlagBits::eShaderDeviceAddress)>;
+
+class BottomLevelAccelerationStructure {};
+
+class BottomLevelAccelerationStructureBuilder {
+  public:
+    BottomLevelAccelerationStructureBuilder(const Device &device,
+                                            const Allocator &allocator);
+
+  private:
+    const Device &device;
+    const Allocator &allocator;
+};
+
+class BottomLevelAccelerationStructureList {
   public:
   private:
+    std::vector<BottomLevelAccelerationStructure>
+        m_all_bottom_level_acceleration_structure;
 };
 
 /*
@@ -71,12 +97,4 @@ class BottomLevel
                                 .value;
 */
 
-class BottomLevelBuilder {
-  public:
-    BottomLevelBuilder(const Device &device, const Allocator &allocator);
-
-  private:
-    const Device &device;
-    const Allocator &allocator;
-};
 } // namespace vw::rt::as

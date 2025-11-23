@@ -25,6 +25,7 @@
 #include <VulkanWrapper/Pipeline/Pipeline.h>
 #include <VulkanWrapper/Pipeline/PipelineLayout.h>
 #include <VulkanWrapper/Pipeline/ShaderModule.h>
+#include <VulkanWrapper/RayTracing/BottomLevelAccelerationStructure.h>
 #include <VulkanWrapper/RayTracing/ShaderBindingTable.h>
 #include <VulkanWrapper/RenderPass/Attachment.h>
 #include <VulkanWrapper/RenderPass/RenderPass.h>
@@ -45,7 +46,7 @@
 // storage
 struct RayTracingScratchBuffer {
     uint64_t deviceAddress = 0;
-    std::optional<vw::AccelerationStructure::ScratchBuffer> handle;
+    std::optional<vw::rt::as::ScratchBuffer> handle;
 };
 
 // Ray tracing acceleration structure
@@ -53,8 +54,7 @@ struct AccelerationStructure {
     vk::UniqueAccelerationStructureKHR handle;
     uint64_t deviceAddress = 0;
     vk::DeviceMemory memory;
-    std::optional<vw::AccelerationStructure::AccelerationStructureBuffer>
-        buffer;
+    std::optional<vw::rt::as::AccelerationStructureBuffer> buffer;
 };
 
 class VulkanExample {
@@ -128,8 +128,7 @@ class VulkanExample {
         RayTracingScratchBuffer scratchBuffer{};
 
         scratchBuffer.handle =
-            allocator.create_buffer<vw::AccelerationStructure::ScratchBuffer>(
-                size);
+            allocator.create_buffer<vw::rt::as::ScratchBuffer>(size);
 
         scratchBuffer.deviceAddress = scratchBuffer.handle->device_address();
 
@@ -140,9 +139,9 @@ class VulkanExample {
         AccelerationStructure &accelerationStructure,
         vk::AccelerationStructureBuildSizesInfoKHR buildSizeInfo) {
 
-        accelerationStructure.buffer = allocator.create_buffer<
-            vw::AccelerationStructure::AccelerationStructureBuffer>(
-            buildSizeInfo.accelerationStructureSize);
+        accelerationStructure.buffer =
+            allocator.create_buffer<vw::rt::as::AccelerationStructureBuffer>(
+                buildSizeInfo.accelerationStructureSize);
     }
 
     /*

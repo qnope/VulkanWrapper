@@ -57,8 +57,6 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
 
     VulkanWrapper/Model/Internal/MaterialInfo.cpp
     VulkanWrapper/Model/Internal/MeshInfo.cpp
-
-    VulkanWrapper/AccelerationStructure/AccelerationStructure.cpp
 )
 
 add_subdirectory(VulkanWrapper)
