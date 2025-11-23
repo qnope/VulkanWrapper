@@ -53,7 +53,8 @@ class BottomLevelAccelerationStructureList {
     allocate_acceleration_structure_buffer(vk::DeviceSize size);
     ScratchBufferList::BufferInfo allocate_scratch_buffer(vk::DeviceSize size);
 
-    void add(BottomLevelAccelerationStructure &&blas);
+    BottomLevelAccelerationStructure &add(BottomLevelAccelerationStructure &&blas);
+    [[nodiscard]] std::vector<vk::DeviceAddress> device_addresses() const;
 
     vk::CommandBuffer command_buffer();
     void submit_and_wait();
@@ -77,8 +78,8 @@ class BottomLevelAccelerationStructureBuilder {
     add_geometry(const vk::AccelerationStructureGeometryKHR &geometry,
                  const vk::AccelerationStructureBuildRangeInfoKHR &offset);
 
-    BottomLevelAccelerationStructure
-    build(BottomLevelAccelerationStructureList &list);
+    BottomLevelAccelerationStructure &
+    build_into(BottomLevelAccelerationStructureList &list);
 
   private:
     const Device &m_device;

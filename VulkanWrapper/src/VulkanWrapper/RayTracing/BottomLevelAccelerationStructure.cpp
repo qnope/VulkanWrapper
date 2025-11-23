@@ -43,9 +43,20 @@ BottomLevelAccelerationStructureList::allocate_scratch_buffer(
     return m_scratch_buffer_list.create_buffer(size);
 }
 
-void BottomLevelAccelerationStructureList::add(
+BottomLevelAccelerationStructure &BottomLevelAccelerationStructureList::add(
     BottomLevelAccelerationStructure &&blas) {
-    m_all_bottom_level_acceleration_structure.emplace_back(std::move(blas));
+    return m_all_bottom_level_acceleration_structure.emplace_back(
+        std::move(blas));
+}
+
+std::vector<vk::DeviceAddress>
+BottomLevelAccelerationStructureList::device_addresses() const {
+    std::vector<vk::DeviceAddress> addresses;
+    addresses.reserve(m_all_bottom_level_acceleration_structure.size());
+    for (const auto &blas : m_all_bottom_level_acceleration_structure) {
+        addresses.push_back(blas.device_address());
+    }
+    return addresses;
 }
 
 vk::CommandBuffer BottomLevelAccelerationStructureList::command_buffer() {
@@ -73,7 +84,8 @@ BottomLevelAccelerationStructureBuilder::add_geometry(
     return *this;
 }
 
-BottomLevelAccelerationStructure BottomLevelAccelerationStructureBuilder::build(
+BottomLevelAccelerationStructure &
+BottomLevelAccelerationStructureBuilder::build_into(
     BottomLevelAccelerationStructureList &list) {
     vk::AccelerationStructureBuildGeometryInfoKHR build_info;
     build_info.setType(vk::AccelerationStructureTypeKHR::eBottomLevel);
@@ -124,8 +136,8 @@ BottomLevelAccelerationStructure BottomLevelAccelerationStructureBuilder::build(
     const auto *p_ranges = m_ranges.data();
     command_buffer.buildAccelerationStructuresKHR(1, &build_info, &p_ranges);
 
-    return BottomLevelAccelerationStructure(std::move(acceleration_structure),
-                                            address);
+    return list.add(BottomLevelAccelerationStructure(
+        std::move(acceleration_structure), address));
 }
 
 } // namespace vw::rt::as

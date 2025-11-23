@@ -72,7 +72,6 @@ class VulkanExample {
         accelerationStructureFeatures{};
 
     vw::rt::as::BottomLevelAccelerationStructureList m_blasList;
-    uint64_t bottomLevelASAddress = 0;
     AccelerationStructure topLevelAS{};
 
     std::optional<vw::Buffer<vw::Vertex3D, true, vw::VertexBufferUsage>>
@@ -234,13 +233,11 @@ class VulkanExample {
         accelerationStructureBuildRangeInfo.firstVertex = 0;
         accelerationStructureBuildRangeInfo.transformOffset = 0;
 
-        auto blas = vw::rt::as::BottomLevelAccelerationStructureBuilder(device)
-                        .add_geometry(accelerationStructureGeometry,
-                                      accelerationStructureBuildRangeInfo)
-                        .build(m_blasList);
+        auto &blas = vw::rt::as::BottomLevelAccelerationStructureBuilder(device)
+                         .add_geometry(accelerationStructureGeometry,
+                                       accelerationStructureBuildRangeInfo)
+                         .build_into(m_blasList);
 
-        bottomLevelASAddress = blas.device_address();
-        m_blasList.add(std::move(blas));
         m_blasList.submit_and_wait();
     }
 
@@ -260,7 +257,8 @@ class VulkanExample {
         instance.instanceShaderBindingTableRecordOffset = 0;
         instance.setFlags(
             vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable);
-        instance.accelerationStructureReference = bottomLevelASAddress;
+        instance.accelerationStructureReference =
+            m_blasList.device_addresses().back();
 
         constexpr auto InstanceBufferUsage = VkBufferUsageFlags2(
             vk::BufferUsageFlagBits2::
