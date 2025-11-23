@@ -78,10 +78,6 @@ class VulkanExample {
         vertexBuffer;
     std::optional<vw::Buffer<uint32_t, true, vw::IndexBufferUsage>> indexBuffer;
     uint32_t indexCount{0};
-    std::optional<vw::Buffer<VkTransformMatrixKHR, true,
-                             VkBufferUsageFlags(
-                                 vk::BufferUsageFlagBits2::eStorageBuffer)>>
-        transformBuffer;
 
     struct StorageImage {
         std::shared_ptr<const vw::Image> image;
@@ -117,6 +113,8 @@ class VulkanExample {
         , swapchain(swapchain) {
         projectionMatrix =
             glm::perspective(glm::radians(60.0f), 800.0f / 600.0f, 0.1f, 512.f);
+        projectionMatrix[1][1] *= -1;
+
         viewMatrix =
             glm::lookAt(glm::vec3(.0f, .0f, 2.f), glm::vec3(0.0f, 0.0f, 0.0f),
                         glm::vec3(0.0f, 1.0f, 0.0f));
@@ -192,9 +190,6 @@ class VulkanExample {
         indexCount = static_cast<uint32_t>(indices.size());
 
         // Setup identity transform matrix
-        VkTransformMatrixKHR transformMatrix = {1.0f, 0.0f, 0.0f, 0.0f,
-                                                0.0f, 1.0f, 0.0f, 0.0f,
-                                                0.0f, 0.0f, 1.0f, 0.0f};
 
         vertexBuffer =
             allocator.create_buffer<vw::Vertex3D, true, vw::VertexBufferUsage>(
@@ -206,23 +201,13 @@ class VulkanExample {
                 indices.size());
         indexBuffer->copy(indices, 0);
 
-        transformBuffer = allocator.create_buffer<VkTransformMatrixKHR, true,
-                                                  vw::VertexBufferUsage>(1);
-        transformBuffer->copy(
-            std::span<const VkTransformMatrixKHR>(&transformMatrix, 1), 0);
-
-        // Transform buffer
-
         vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress{};
         vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress{};
-        vk::DeviceOrHostAddressConstKHR transformBufferDeviceAddress{};
 
         vertexBufferDeviceAddress.deviceAddress =
             getBufferDeviceAddress(vertexBuffer);
         indexBufferDeviceAddress.deviceAddress =
             getBufferDeviceAddress(indexBuffer);
-        transformBufferDeviceAddress.deviceAddress =
-            getBufferDeviceAddress(transformBuffer);
 
         // Build
         vk::AccelerationStructureGeometryKHR accelerationStructureGeometry{};
@@ -240,12 +225,6 @@ class VulkanExample {
             vk::IndexType::eUint32;
         accelerationStructureGeometry.geometry.triangles.indexData =
             indexBufferDeviceAddress;
-        accelerationStructureGeometry.geometry.triangles.transformData
-            .deviceAddress = 0;
-        accelerationStructureGeometry.geometry.triangles.transformData
-            .hostAddress = nullptr;
-        accelerationStructureGeometry.geometry.triangles.transformData =
-            transformBufferDeviceAddress;
 
         // Get size info
         vk::AccelerationStructureBuildGeometryInfoKHR
@@ -343,9 +322,9 @@ class VulkanExample {
        instances
     */
     void createTopLevelAccelerationStructure() {
-        VkTransformMatrixKHR transformMatrix = {1.0f, 0.0f, 0.0f, 0.0f,
-                                                0.0f, 1.0f, 0.0f, 0.0f,
-                                                0.0f, 0.0f, 1.0f, 0.0f};
+        VkTransformMatrixKHR transformMatrix = {1.0f, 0.0f, 0.0f, 2.0f,
+                                                0.0f, 1.0f, 0.0f, 1.0f,
+                                                0.0f, 0.0f, 1.0f, -3.0f};
 
         vk::AccelerationStructureInstanceKHR instance{};
         instance.transform = transformMatrix;
