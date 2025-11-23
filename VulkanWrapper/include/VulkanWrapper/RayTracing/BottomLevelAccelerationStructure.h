@@ -1,8 +1,9 @@
 #pragma once
 
-#include "VulkanWrapper/fwd.h"
+#include "VulkanWrapper/Command/CommandPool.h"
 #include "VulkanWrapper/Memory/BufferList.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
+#include "VulkanWrapper/fwd.h"
 
 namespace vw::rt::as {
 
@@ -32,7 +33,8 @@ class BottomLevelAccelerationStructure
 
 class BottomLevelAccelerationStructureList {
   public:
-    BottomLevelAccelerationStructureList(const Allocator &allocator);
+    BottomLevelAccelerationStructureList(const Device &device,
+                                         const Allocator &allocator);
 
     using AccelerationStructureBufferList =
         BufferList<std::byte, false,
@@ -52,11 +54,17 @@ class BottomLevelAccelerationStructureList {
 
     void add(BottomLevelAccelerationStructure &&blas);
 
+    vk::CommandBuffer allocate_command_buffer();
+    void submit_and_wait(vk::CommandBuffer command_buffer);
+
   private:
     AccelerationStructureBufferList m_acceleration_structure_buffer_list;
     ScratchBufferList m_scratch_buffer_list;
     std::vector<BottomLevelAccelerationStructure>
         m_all_bottom_level_acceleration_structure;
+
+    CommandPool m_command_pool;
+    const Device &m_device;
 };
 
 class BottomLevelAccelerationStructureBuilder {

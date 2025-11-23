@@ -71,7 +71,8 @@ class VulkanExample {
     vk::PhysicalDeviceAccelerationStructureFeaturesKHR
         accelerationStructureFeatures{};
 
-    AccelerationStructure bottomLevelAS{};
+    vw::rt::as::BottomLevelAccelerationStructureList m_blasList;
+    uint64_t bottomLevelASAddress = 0;
     AccelerationStructure topLevelAS{};
 
     std::optional<vw::Buffer<vw::Vertex3D, true, vw::VertexBufferUsage>>
@@ -110,7 +111,8 @@ class VulkanExample {
                   vw::Swapchain &swapchain)
         : device{device}
         , allocator{allocator}
-        , swapchain(swapchain) {
+        , swapchain(swapchain)
+        , m_blasList(device, allocator) {
         projectionMatrix =
             glm::perspective(glm::radians(60.0f), 800.0f / 600.0f, 0.1f, 512.f);
         projectionMatrix[1][1] *= -1;
@@ -225,95 +227,20 @@ class VulkanExample {
         accelerationStructureGeometry.geometry.triangles.indexData =
             indexBufferDeviceAddress;
 
-        // Get size info
-        vk::AccelerationStructureBuildGeometryInfoKHR
-            accelerationStructureBuildGeometryInfo{};
-        accelerationStructureBuildGeometryInfo.type =
-            vk::AccelerationStructureTypeKHR::eBottomLevel;
-        accelerationStructureBuildGeometryInfo.flags =
-            vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
-        accelerationStructureBuildGeometryInfo.setGeometries(
-            accelerationStructureGeometry);
-
-        const uint32_t numTriangles = 1;
-
-        auto accelerationStructureBuildSizesInfo =
-            device.handle().getAccelerationStructureBuildSizesKHR(
-                vk::AccelerationStructureBuildTypeKHR::eDevice,
-                accelerationStructureBuildGeometryInfo, numTriangles);
-
-        createAccelerationStructureBuffer(bottomLevelAS,
-                                          accelerationStructureBuildSizesInfo);
-
-        vk::AccelerationStructureCreateInfoKHR
-            accelerationStructureCreateInfo{};
-
-        accelerationStructureCreateInfo.buffer = bottomLevelAS.buffer->handle();
-        accelerationStructureCreateInfo.size =
-            accelerationStructureBuildSizesInfo.accelerationStructureSize;
-        accelerationStructureCreateInfo.type =
-            vk::AccelerationStructureTypeKHR::eBottomLevel;
-
-        bottomLevelAS.handle = device.handle()
-                                   .createAccelerationStructureKHRUnique(
-                                       accelerationStructureCreateInfo)
-                                   .value;
-
-        // Create a small scratch buffer used during build of the bottom level
-        // acceleration structure
-        RayTracingScratchBuffer scratchBuffer = createScratchBuffer(
-            accelerationStructureBuildSizesInfo.buildScratchSize);
-
-        vk::AccelerationStructureBuildGeometryInfoKHR
-            accelerationBuildGeometryInfo{};
-        accelerationBuildGeometryInfo.type =
-            vk::AccelerationStructureTypeKHR::eBottomLevel;
-        accelerationBuildGeometryInfo.flags =
-            vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
-        accelerationBuildGeometryInfo.mode =
-            vk::BuildAccelerationStructureModeKHR::eBuild;
-        accelerationBuildGeometryInfo.dstAccelerationStructure =
-            *bottomLevelAS.handle;
-        accelerationBuildGeometryInfo.setGeometries(
-            accelerationStructureGeometry);
-        accelerationBuildGeometryInfo.scratchData.deviceAddress =
-            scratchBuffer.deviceAddress;
-
         vk::AccelerationStructureBuildRangeInfoKHR
             accelerationStructureBuildRangeInfo{};
-        accelerationStructureBuildRangeInfo.primitiveCount = numTriangles;
+        accelerationStructureBuildRangeInfo.primitiveCount = 1;
         accelerationStructureBuildRangeInfo.primitiveOffset = 0;
         accelerationStructureBuildRangeInfo.firstVertex = 0;
         accelerationStructureBuildRangeInfo.transformOffset = 0;
-        std::vector<vk::AccelerationStructureBuildRangeInfoKHR *>
-            accelerationBuildStructureRangeInfos = {
-                &accelerationStructureBuildRangeInfo};
 
-        // Build the acceleration structure on the device via a one-time command
-        // buffer submission Some implementations may support acceleration
-        // structure building on the host
-        // (VkPhysicalDeviceAccelerationStructureFeaturesKHR->accelerationStructureHostCommands),
-        // but we prefer device builds
-        vk::CommandBuffer commandBuffer = pool.allocate(1).front();
+        auto blas = vw::rt::as::BottomLevelAccelerationStructureBuilder(device)
+                        .add_geometry(accelerationStructureGeometry,
+                                      accelerationStructureBuildRangeInfo)
+                        .build(m_blasList);
 
-        std::ignore = commandBuffer.begin(vk::CommandBufferBeginInfo());
-
-        commandBuffer.buildAccelerationStructuresKHR(
-            accelerationBuildGeometryInfo,
-            accelerationBuildStructureRangeInfos);
-
-        std::ignore = commandBuffer.end();
-        queue.enqueue_command_buffer(commandBuffer);
-        queue.submit({}, {}, {});
-
-        vk::AccelerationStructureDeviceAddressInfoKHR
-            accelerationDeviceAddressInfo{};
-
-        accelerationDeviceAddressInfo.accelerationStructure =
-            *bottomLevelAS.handle;
-        bottomLevelAS.deviceAddress =
-            device.handle().getAccelerationStructureAddressKHR(
-                accelerationDeviceAddressInfo);
+        bottomLevelASAddress = blas.device_address();
+        m_blasList.add(std::move(blas));
     }
 
     /*
@@ -332,7 +259,7 @@ class VulkanExample {
         instance.instanceShaderBindingTableRecordOffset = 0;
         instance.setFlags(
             vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable);
-        instance.accelerationStructureReference = bottomLevelAS.deviceAddress;
+        instance.accelerationStructureReference = bottomLevelASAddress;
 
         constexpr auto InstanceBufferUsage = VkBufferUsageFlags2(
             vk::BufferUsageFlagBits2::
