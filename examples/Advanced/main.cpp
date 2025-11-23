@@ -186,57 +186,6 @@ class VulkanExample {
        actual geometry (vertices, triangles)
     */
     void createBottomLevelAccelerationStructure() {
-        std::vector<vw::Vertex3D> vertices = {
-            {{1.0f, 1.0f, 0.0f}}, {{-1.0f, 1.0f, 0.0f}}, {{0.0f, -1.0f, 0.0f}}};
-
-        // Setup indices
-        std::vector<uint32_t> indices = {0, 1, 2};
-        indexCount = static_cast<uint32_t>(indices.size());
-
-        // Setup identity transform matrix
-
-        vertexBuffer =
-            allocator.create_buffer<vw::Vertex3D, true, vw::VertexBufferUsage>(
-                vertices.size());
-        vertexBuffer->copy(vertices, 0);
-
-        indexBuffer =
-            allocator.create_buffer<uint32_t, true, vw::IndexBufferUsage>(
-                indices.size());
-        indexBuffer->copy(indices, 0);
-
-        vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress{};
-        vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress{};
-
-        vertexBufferDeviceAddress.deviceAddress =
-            getBufferDeviceAddress(vertexBuffer);
-        indexBufferDeviceAddress.deviceAddress =
-            getBufferDeviceAddress(indexBuffer);
-
-        // Build
-        vk::AccelerationStructureGeometryKHR accelerationStructureGeometry{};
-        accelerationStructureGeometry.flags = vk::GeometryFlagBitsKHR::eOpaque;
-        accelerationStructureGeometry.geometryType =
-            vk::GeometryTypeKHR::eTriangles;
-        accelerationStructureGeometry.geometry.triangles.vertexFormat =
-            vk::Format::eR32G32B32Sfloat;
-        accelerationStructureGeometry.geometry.triangles.vertexData =
-            vertexBufferDeviceAddress;
-        accelerationStructureGeometry.geometry.triangles.maxVertex = 2;
-        accelerationStructureGeometry.geometry.triangles.vertexStride =
-            sizeof(vw::Vertex3D);
-        accelerationStructureGeometry.geometry.triangles.indexType =
-            vk::IndexType::eUint32;
-        accelerationStructureGeometry.geometry.triangles.indexData =
-            indexBufferDeviceAddress;
-
-        vk::AccelerationStructureBuildRangeInfoKHR
-            accelerationStructureBuildRangeInfo{};
-        accelerationStructureBuildRangeInfo.primitiveCount = 1;
-        accelerationStructureBuildRangeInfo.primitiveOffset = 0;
-        accelerationStructureBuildRangeInfo.firstVertex = 0;
-        accelerationStructureBuildRangeInfo.transformOffset = 0;
-
         auto &blas = vw::rt::as::BottomLevelAccelerationStructureBuilder(device)
                          .add_mesh(mesh_manager->meshes().front())
                          .build_into(m_blasList);
