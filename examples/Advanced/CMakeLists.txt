@@ -3,11 +3,8 @@ add_executable(Main main.cpp
     RenderPassInformation.h
     ZPass.h
     ColorPass.h
-    TonemapPass.h
-    SkyPass.h
-    RayTracing.h
-    RayTracing.cpp
 )
+
 target_link_libraries(Main PRIVATE App)
 target_precompile_headers(Main REUSE_FROM VulkanWrapperCoreLibrary)
 

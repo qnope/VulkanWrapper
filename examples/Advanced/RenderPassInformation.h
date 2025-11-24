@@ -1,10 +1,23 @@
 #pragma once
 
+#include <memory>
+#include <vector>
 #include <VulkanWrapper/fwd.h>
 #include <VulkanWrapper/Image/CombinedImage.h>
+#include <VulkanWrapper/Image/ImageView.h>
+
+struct GBuffer {
+    std::shared_ptr<const vw::ImageView> color;
+    std::shared_ptr<const vw::ImageView> position;
+    std::shared_ptr<const vw::ImageView> normal;
+    std::shared_ptr<const vw::ImageView> tangeant;
+    std::shared_ptr<const vw::ImageView> biTangeant;
+    std::shared_ptr<const vw::ImageView> light;
+    std::shared_ptr<const vw::ImageView> depth;
+};
 
 struct GBufferInformation {
-    const vw::Framebuffer *framebuffer;
+    const GBuffer *gbuffer;
 };
 
 struct TonemapInformation {
@@ -14,13 +27,16 @@ struct TonemapInformation {
 
 struct UBOData {
     glm::mat4 proj = [] {
-        auto proj = glm::perspective(glm::radians(60.0F), 1600.0F / 900.0F, 1.F,
-                                     10000.0F);
+        auto proj =
+            glm::perspective(glm::radians(60.0f), 800.0f / 600.0f, 0.1f, 512.f);
+
         proj[1][1] *= -1;
         return proj;
     }();
     glm::mat4 view =
-        glm::lookAt(glm::vec3(3.0F, 4.0F, 2.0F), glm::vec3(.0F, 0.F, 0.0F),
-                    glm::vec3(0.0F, 1.0F, 0.0F));
-    glm::mat4 model = glm::mat4(1.0);
+        glm::lookAt(glm::vec3(.0f, .0f, 2.f), glm::vec3(0.0f, 0.0f, 0.0f),
+                    glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 model =
+        glm::mat4(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+                  1.0f, 0.0f, 2.0f, 1.0f, -3.0f, 1.0f);
 };

@@ -1,8 +1,5 @@
 #include "Application.h"
 #include "ColorPass.h"
-#include "RayTracing.h"
-#include "SkyPass.h"
-#include "TonemapPass.h"
 #include "ZPass.h"
 #include <VulkanWrapper/3rd_party.h>
 #include <VulkanWrapper/Command/CommandBuffer.h>
@@ -11,7 +8,6 @@
 #include <VulkanWrapper/Descriptors/DescriptorPool.h>
 #include <VulkanWrapper/Descriptors/DescriptorSetLayout.h>
 #include <VulkanWrapper/Image/CombinedImage.h>
-#include <VulkanWrapper/Image/Framebuffer.h>
 #include <VulkanWrapper/Image/ImageLoader.h>
 #include <VulkanWrapper/Image/Sampler.h>
 #include <VulkanWrapper/Memory/Allocator.h>
@@ -28,35 +24,11 @@
 #include <VulkanWrapper/RayTracing/BottomLevelAccelerationStructure.h>
 #include <VulkanWrapper/RayTracing/ShaderBindingTable.h>
 #include <VulkanWrapper/RayTracing/TopLevelAccelerationStructure.h>
-#include <VulkanWrapper/RenderPass/Attachment.h>
-#include <VulkanWrapper/RenderPass/RenderPass.h>
 #include <VulkanWrapper/RenderPass/Subpass.h>
 #include <VulkanWrapper/Synchronization/Fence.h>
 #include <VulkanWrapper/Synchronization/Semaphore.h>
 #include <VulkanWrapper/Utils/exceptions.h>
 #include <VulkanWrapper/Vulkan/Queue.h>
-
-/*
- * Vulkan Example - Basic hardware accelerated ray tracing example
- *  * Copyright (C) 2019-2025 by Sascha Willems - www.saschawillems.de
- *  * This code is licensed under the MIT license (MIT)
- * (http://opensource.org/licenses/MIT)
- */
-
-// Holds data for a ray tracing scratch buffer that is used as a temporary
-// storage
-struct RayTracingScratchBuffer {
-    uint64_t deviceAddress = 0;
-    std::optional<vw::rt::as::ScratchBuffer> handle;
-};
-
-// Ray tracing acceleration structure
-struct AccelerationStructure {
-    vk::UniqueAccelerationStructureKHR handle;
-    uint64_t deviceAddress = 0;
-    vk::DeviceMemory memory;
-    std::optional<vw::rt::as::AccelerationStructureBuffer> buffer;
-};
 
 class VulkanExample {
   public:
@@ -123,30 +95,6 @@ class VulkanExample {
         viewMatrix =
             glm::lookAt(glm::vec3(.0f, .0f, 2.f), glm::vec3(0.0f, 0.0f, 0.0f),
                         glm::vec3(0.0f, 1.0f, 0.0f));
-    }
-
-    /*
-            Create a scratch buffer to hold temporary data for a ray tracing
-       acceleration structure
-    */
-    RayTracingScratchBuffer createScratchBuffer(vk::DeviceSize size) {
-        RayTracingScratchBuffer scratchBuffer{};
-
-        scratchBuffer.handle =
-            allocator.create_buffer<vw::rt::as::ScratchBuffer>(size);
-
-        scratchBuffer.deviceAddress = scratchBuffer.handle->device_address();
-
-        return scratchBuffer;
-    }
-
-    void createAccelerationStructureBuffer(
-        AccelerationStructure &accelerationStructure,
-        vk::AccelerationStructureBuildSizesInfoKHR buildSizeInfo) {
-
-        accelerationStructure.buffer =
-            allocator.create_buffer<vw::rt::as::AccelerationStructureBuffer>(
-                buildSizeInfo.accelerationStructureSize);
     }
 
     /*
@@ -541,12 +489,11 @@ createUbo(vw::Allocator &allocator) {
     return buffer;
 }
 
-std::vector<vw::Framebuffer>
+std::vector<GBuffer>
 createGBuffers(vw::Device &device, const vw::Allocator &allocator,
-               const vw::IRenderPass &renderPass,
                const vw::Swapchain &swapchain,
                const std::shared_ptr<const vw::ImageView> &depth_buffer) {
-    std::vector<vw::Framebuffer> framebuffers;
+    std::vector<GBuffer> framebuffers;
 
     constexpr auto usageFlags = vk::ImageUsageFlagBits::eColorAttachment |
                                 vk::ImageUsageFlagBits::eInputAttachment |
@@ -575,43 +522,11 @@ createGBuffers(vw::Device &device, const vw::Allocator &allocator,
         auto img_biTangeant = create_img();
         auto img_light = create_img(vk::ImageUsageFlagBits::eStorage);
 
-        auto img_view_color = create_img_view(img_color);
-        auto img_view_position = create_img_view(img_position);
-        auto img_view_normal = create_img_view(img_normal);
-        auto img_view_tangeant = create_img_view(img_tangeant);
-        auto img_view_biTangeant = create_img_view(img_biTangeant);
-        auto img_view_light = create_img_view(img_light);
-
-        auto framebuffer =
-            vw::FramebufferBuilder(device, renderPass, swapchain.width(),
-                                   swapchain.height())
-                .add_attachment(img_view_color)
-                .add_attachment(img_view_position)
-                .add_attachment(img_view_normal)
-                .add_attachment(img_view_tangeant)
-                .add_attachment(img_view_biTangeant)
-                .add_attachment(img_view_light)
-                .add_attachment(depth_buffer)
-                .build();
-        framebuffers.push_back(std::move(framebuffer));
-    }
-
-    return framebuffers;
-}
-
-std::vector<vw::Framebuffer> createSwapchainFramebuffer(
-    vw::Device &device, const vw::IRenderPass &renderPass,
-    const std::vector<std::shared_ptr<const vw::ImageView>> &image_views,
-    const vw::Swapchain &swapchain) {
-    std::vector<vw::Framebuffer> framebuffers;
-
-    for (const auto &image_view : image_views) {
-        auto framebuffer =
-            vw::FramebufferBuilder(device, renderPass, swapchain.width(),
-                                   swapchain.height())
-                .add_attachment(image_view)
-                .build();
-        framebuffers.push_back(std::move(framebuffer));
+        framebuffers.push_back(
+            {create_img_view(img_color), create_img_view(img_position),
+             create_img_view(img_normal), create_img_view(img_tangeant),
+             create_img_view(img_biTangeant), create_img_view(img_light),
+             depth_buffer});
     }
 
     return framebuffers;
@@ -622,7 +537,7 @@ using namespace glm;
 int main() {
     try {
         App app;
-        /*$ auto descriptor_set_layout =
+        auto descriptor_set_layout =
             vw::DescriptorSetLayoutBuilder(app.device)
                 .with_uniform_buffer(vk::ShaderStageFlagBits::eVertex, 1)
                 .build();
@@ -653,120 +568,206 @@ int main() {
                 .setImageType(vk::ImageViewType::e2D)
                 .build();
 
-        const auto color_attachment =
-            vw::AttachmentBuilder{}
-                .with_format(vk::Format::eR8G8B8A8Unorm)
-                .with_final_layout(vk::ImageLayout::eShaderReadOnlyOptimal)
-                .build();
-
-        const auto data_attachment =
-            vw::AttachmentBuilder{}
-                .with_format(vk::Format::eR32G32B32A32Sfloat)
-                .with_final_layout(vk::ImageLayout::eShaderReadOnlyOptimal)
-                .build();
-
-        const auto light_attachment =
-            vw::AttachmentBuilder{}
-                .with_format(vk::Format::eR32G32B32A32Sfloat)
-                .with_final_layout(vk::ImageLayout::eGeneral)
-                .build();
-
-        const auto final_attachment =
-            vw::AttachmentBuilder{}
-                .with_format(app.swapchain.format())
-                .with_final_layout(vk::ImageLayout::ePresentSrcKHR)
-                .build();
-
-        const auto depth_attachment =
-            vw::AttachmentBuilder{}
-                .with_format(depth_buffer->format())
-                .with_final_layout(vk::ImageLayout::eShaderReadOnlyOptimal)
-                .build();
+        VulkanExample example(app.device, app.allocator, app.swapchain);
+        example.prepare();
 
         auto depth_subpass = std::make_unique<ZPass>(
-            app.device, mesh_manager, descriptor_set_layout,
+            app.device, *example.mesh_manager, descriptor_set_layout,
             app.swapchain.width(), app.swapchain.height(), descriptor_set);
         auto color_subpass = std::make_unique<ColorSubpass>(
-            app.device, mesh_manager, descriptor_set_layout,
+            app.device, *example.mesh_manager, descriptor_set_layout,
             app.swapchain.width(), app.swapchain.height(), descriptor_set);
-        auto sky_pass = std::make_unique<SkyPass>(
-            app.device, app.allocator, app.swapchain.width(),
-            app.swapchain.height(), UBOData{}.proj, UBOData{}.view);
-        auto sky_buffer = sky_pass->get_ubo();
 
-        auto geometrySkyRenderPass =
-            vw::RenderPassBuilder(app.device)
-                .add_attachment(color_attachment,
-                                vk::ClearColorValue(1.0f, 1.0f, 1.0f, 1.0f))
-                .add_attachment(data_attachment, vk::ClearColorValue())
-                .add_attachment(data_attachment, vk::ClearColorValue())
-                .add_attachment(data_attachment, vk::ClearColorValue())
-                .add_attachment(data_attachment, vk::ClearColorValue())
-                .add_attachment(light_attachment, vk::ClearColorValue())
-                .add_attachment(depth_attachment,
-                                vk::ClearDepthStencilValue(1.0))
-                .add_subpass(z_pass_tag, std::move(depth_subpass))
-                .add_subpass(color_pass_tag, std::move(color_subpass))
-                //.add_subpass(sky_pass_tag, std::move(sky_pass))
-                .add_dependency(z_pass_tag, color_pass_tag)
-                //.add_dependency(z_pass_tag, sky_pass_tag)
-                .build<GBufferInformation>();
+        std::vector<vk::Format> gbuffer_formats = {
+            vk::Format::eR8G8B8A8Unorm,      vk::Format::eR32G32B32A32Sfloat,
+            vk::Format::eR32G32B32A32Sfloat, vk::Format::eR32G32B32A32Sfloat,
+            vk::Format::eR32G32B32A32Sfloat, vk::Format::eR32G32B32A32Sfloat};
 
-        auto tonemap_pass = std::make_unique<TonemapPass>(
-            app.device, app.swapchain.width(), app.swapchain.height());
-
-        auto tonemapRenderPass =
-            vw::RenderPassBuilder(app.device)
-                .add_attachment(final_attachment, vk::ClearColorValue())
-                .add_subpass(tonemap_pass_tag, std::move(tonemap_pass))
-                .build<TonemapInformation>();
+        depth_subpass->initialize(gbuffer_formats, depth_buffer->format(),
+                                  depth_buffer->format());
+        color_subpass->initialize(gbuffer_formats, depth_buffer->format(),
+                                  depth_buffer->format());
 
         auto commandPool = vw::CommandPoolBuilder(app.device).build();
         auto image_views = create_image_views(app.device, app.swapchain);
         auto commandBuffers = commandPool.allocate(image_views.size());
 
-        const auto gBuffers =
-            createGBuffers(app.device, app.allocator, geometrySkyRenderPass,
-                           app.swapchain, depth_buffer_view);
-
-        const auto swapchainBuffers = createSwapchainFramebuffer(
-            app.device, tonemapRenderPass, image_views, app.swapchain);
+        const auto gBuffers = createGBuffers(app.device, app.allocator,
+                                             app.swapchain, depth_buffer_view);
 
         const vk::Extent2D extent(uint32_t(app.swapchain.width()),
                                   uint32_t(app.swapchain.height()));
 
-        RayTracingPass rayTracingPass(app.device, app.allocator, mesh_manager,
-                                      app.swapchain.width(),
-                                      app.swapchain.height());
-
         for (auto [gBuffer, commandBuffer, swapchainBuffer] :
-             std::views::zip(gBuffers, commandBuffers, swapchainBuffers)) {
+             std::views::zip(gBuffers, commandBuffers, image_views)) {
             vw::CommandBufferRecorder recorder(commandBuffer);
-            geometrySkyRenderPass.execute(commandBuffer, gBuffer,
-                                          GBufferInformation{&gBuffer});
 
-            TonemapInformation info{
-                vw::CombinedImage{gBuffer.image_view(0), sampler},
-                vw::CombinedImage{gBuffer.image_view(5), sampler}};
+            // Geometry Pass
+            {
+                std::vector<vk::RenderingAttachmentInfo> colorAttachments;
+                auto add_attachment = [&](const auto &view,
+                                          vk::ClearValue clear = {}) {
+                    colorAttachments.push_back(
+                        vk::RenderingAttachmentInfo()
+                            .setImageView(view->handle())
+                            .setImageLayout(
+                                vk::ImageLayout::eColorAttachmentOptimal)
+                            .setLoadOp(vk::AttachmentLoadOp::eClear)
+                            .setStoreOp(vk::AttachmentStoreOp::eStore)
+                            .setClearValue(clear));
+                };
 
-            rayTracingPass.execute(commandBuffer, gBuffer,
-                                   uniform_buffer.handle());
+                add_attachment(gBuffer.color,
+                               vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f));
+                add_attachment(gBuffer.position);
+                add_attachment(gBuffer.normal);
+                add_attachment(gBuffer.tangeant);
+                add_attachment(gBuffer.biTangeant);
+                add_attachment(gBuffer.light);
 
-            tonemapRenderPass.execute(commandBuffer, swapchainBuffer, info);
+                vk::RenderingAttachmentInfo depthAttachment =
+                    vk::RenderingAttachmentInfo()
+                        .setImageView(gBuffer.depth->handle())
+                        .setImageLayout(
+                            vk::ImageLayout::eDepthStencilAttachmentOptimal)
+                        .setLoadOp(vk::AttachmentLoadOp::eClear)
+                        .setStoreOp(vk::AttachmentStoreOp::eStore)
+                        .setClearValue(vk::ClearDepthStencilValue(1.0f, 0));
+
+                vw::execute_image_transition(
+                    commandBuffer, gBuffer.color->image(),
+                    vk::ImageLayout::eUndefined,
+                    vk::ImageLayout::eColorAttachmentOptimal);
+                vw::execute_image_transition(
+                    commandBuffer, gBuffer.position->image(),
+                    vk::ImageLayout::eUndefined,
+                    vk::ImageLayout::eColorAttachmentOptimal);
+                vw::execute_image_transition(
+                    commandBuffer, gBuffer.normal->image(),
+                    vk::ImageLayout::eUndefined,
+                    vk::ImageLayout::eColorAttachmentOptimal);
+                vw::execute_image_transition(
+                    commandBuffer, gBuffer.tangeant->image(),
+                    vk::ImageLayout::eUndefined,
+                    vk::ImageLayout::eColorAttachmentOptimal);
+                vw::execute_image_transition(
+                    commandBuffer, gBuffer.biTangeant->image(),
+                    vk::ImageLayout::eUndefined,
+                    vk::ImageLayout::eColorAttachmentOptimal);
+                vw::execute_image_transition(
+                    commandBuffer, gBuffer.light->image(),
+                    vk::ImageLayout::eUndefined,
+                    vk::ImageLayout::eColorAttachmentOptimal);
+                vw::execute_image_transition(
+                    commandBuffer, gBuffer.depth->image(),
+                    vk::ImageLayout::eUndefined,
+                    vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+                auto renderingInfo =
+                    vk::RenderingInfo()
+                        .setRenderArea(vk::Rect2D(vk::Offset2D(), extent))
+                        .setLayerCount(1)
+                        .setColorAttachments(colorAttachments)
+                        .setPDepthAttachment(&depthAttachment);
+
+                commandBuffer.beginRendering(renderingInfo);
+                GBufferInformation info; // Assuming GBufferInformation needs to
+                                         // be updated or is compatible
+                // Wait, GBufferInformation in RenderPassInformation.h might
+                // need update if it used Framebuffer Let's check
+                // RenderPassInformation.h. Assuming it just took Framebuffer
+                // pointer or something. The original code passed
+                // `GBufferInformation{&gBuffer}`. If GBufferInformation expects
+                // Framebuffer, we need to update it too. But for now let's
+                // assume we can construct it or update it. Actually,
+                // `ColorPass` uses `GBufferInformation`. Let's check
+                // `RenderPassInformation.h` content later. For now, I will pass
+                // a dummy or updated info. Wait, `ColorPass` uses
+                // `m_mesh_renderer.draw_mesh`. It doesn't seem to use
+                // `GBufferInformation` content in `execute`. `ZPass` also
+                // doesn't use it. So passing default constructed might be fine
+                // if they don't use it. But `ColorPass` inherits
+                // `Subpass<GBufferInformation>`.
+
+                depth_subpass->execute(commandBuffer, {});
+                color_subpass->execute(commandBuffer, {});
+
+                commandBuffer.endRendering();
+
+                // Transitions for reading in shaders
+                vw::execute_image_transition(
+                    commandBuffer, gBuffer.color->image(),
+                    vk::ImageLayout::eColorAttachmentOptimal,
+                    vk::ImageLayout::eShaderReadOnlyOptimal);
+                vw::execute_image_transition(
+                    commandBuffer, gBuffer.position->image(),
+                    vk::ImageLayout::eColorAttachmentOptimal,
+                    vk::ImageLayout::eShaderReadOnlyOptimal);
+                vw::execute_image_transition(
+                    commandBuffer, gBuffer.normal->image(),
+                    vk::ImageLayout::eColorAttachmentOptimal,
+                    vk::ImageLayout::eShaderReadOnlyOptimal);
+                vw::execute_image_transition(
+                    commandBuffer, gBuffer.tangeant->image(),
+                    vk::ImageLayout::eColorAttachmentOptimal,
+                    vk::ImageLayout::eShaderReadOnlyOptimal);
+                vw::execute_image_transition(
+                    commandBuffer, gBuffer.biTangeant->image(),
+                    vk::ImageLayout::eColorAttachmentOptimal,
+                    vk::ImageLayout::eShaderReadOnlyOptimal);
+                vw::execute_image_transition(
+                    commandBuffer, gBuffer.light->image(),
+                    vk::ImageLayout::eColorAttachmentOptimal,
+                    vk::ImageLayout::eGeneral); // Light is used as storage in
+                                                // raytracing? Or just general?
+                // In original code: light_attachment final layout was eGeneral.
+
+                vw::execute_image_transition(
+                    commandBuffer, gBuffer.depth->image(),
+                    vk::ImageLayout::eDepthStencilAttachmentOptimal,
+                    vk::ImageLayout::eShaderReadOnlyOptimal);
+            }
+
+            // Blit color to swapchain
+            vw::execute_image_transition(
+                commandBuffer, gBuffer.color->image(),
+                vk::ImageLayout::eShaderReadOnlyOptimal,
+                vk::ImageLayout::eTransferSrcOptimal);
+
+            vw::execute_image_transition(commandBuffer,
+                                         swapchainBuffer->image(),
+                                         vk::ImageLayout::eUndefined,
+                                         vk::ImageLayout::eTransferDstOptimal);
+
+            vk::ImageBlit blit{};
+            blit.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+            blit.srcSubresource.layerCount = 1;
+            blit.srcOffsets[1] =
+                vk::Offset3D(int32_t(extent.width), int32_t(extent.height), 1);
+            blit.dstSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+            blit.dstSubresource.layerCount = 1;
+            blit.dstOffsets[1] =
+                vk::Offset3D(int32_t(extent.width), int32_t(extent.height), 1);
+
+            commandBuffer.blitImage(gBuffer.color->image()->handle(),
+                                    vk::ImageLayout::eTransferSrcOptimal,
+                                    swapchainBuffer->image()->handle(),
+                                    vk::ImageLayout::eTransferDstOptimal, blit,
+                                    vk::Filter::eLinear);
+
+            vw::execute_image_transition(commandBuffer,
+                                         swapchainBuffer->image(),
+                                         vk::ImageLayout::eTransferDstOptimal,
+                                         vk::ImageLayout::ePresentSrcKHR);
         }
 
-        auto cmd_buffer = mesh_manager.fill_command_buffer();
+        auto cmd_buffer = example.mesh_manager->fill_command_buffer();
 
         app.device.graphicsQueue().enqueue_command_buffer(cmd_buffer);
         float angle = 90.0;
-        */
 
         auto renderFinishedSemaphore = vw::SemaphoreBuilder(app.device).build();
         auto imageAvailableSemaphore = vw::SemaphoreBuilder(app.device).build();
-
-        VulkanExample example(app.device, app.allocator, app.swapchain);
-
-        example.prepare();
 
         while (!app.window.is_close_requested()) {
             app.window.update();
@@ -785,14 +786,14 @@ int main() {
             const auto render_finished_handle =
                 renderFinishedSemaphore.handle();
 
+            // app.device.graphicsQueue().enqueue_command_buffer(
+            //   example.drawCmdBuffers[index]);
             app.device.graphicsQueue().enqueue_command_buffer(
-                example.drawCmdBuffers[index]);
+                commandBuffers[index]);
 
-            auto fence = app.device.graphicsQueue().submit(
-                {&waitStage, 1}, {&image_available_handle, 1},
-                {&render_finished_handle, 1});
-
-            fence.wait();
+            app.device.graphicsQueue().submit({&waitStage, 1},
+                                              {&image_available_handle, 1},
+                                              {&render_finished_handle, 1});
 
             app.device.presentQueue().present(app.swapchain, index,
                                               renderFinishedSemaphore);

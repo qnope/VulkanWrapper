@@ -12,7 +12,7 @@ struct ZPassTag {};
 inline const auto z_pass_tag = vw::create_subpass_tag<ZPassTag>();
 
 inline vw::Pipeline create_zpass_pipeline(
-    const vw::Device &device, const vw::IRenderPass &render_pass,
+    const vw::Device &device, vk::Format depth_format,
     std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
     vw::Width width, vw::Height height) {
     auto vertex_shader = vw::ShaderModule::create_from_spirv_file(
@@ -23,8 +23,8 @@ inline vw::Pipeline create_zpass_pipeline(
             .with_descriptor_set_layout(uniform_buffer_layout)
             .build();
 
-    return vw::GraphicsPipelineBuilder(device, render_pass, 0,
-                                       std::move(pipeline_layout))
+    return vw::GraphicsPipelineBuilder(device, std::move(pipeline_layout))
+        .set_depth_format(depth_format)
         .add_vertex_binding<vw::Vertex3D>()
         .add_shader(vk::ShaderStageFlagBits::eVertex, std::move(vertex_shader))
         .with_fixed_scissor(int32_t(width), int32_t(height))
@@ -58,31 +58,14 @@ class ZPass : public vw::Subpass<GBufferInformation> {
         }
     }
 
-    const vk::AttachmentReference2 *
-    depth_stencil_attachment() const noexcept override {
-        static const vk::AttachmentReference2 depth_stencil_attachment =
-            vk::AttachmentReference2(
-                6, vk::ImageLayout::eDepthStencilAttachmentOptimal,
-                vk::ImageAspectFlagBits::eDepth);
-        return &depth_stencil_attachment;
-    }
 
-    vw::SubpassDependencyMask input_dependencies() const noexcept override {
-        return {};
-    }
 
-    vw::SubpassDependencyMask output_dependencies() const noexcept override {
-        vw::SubpassDependencyMask mask;
-        mask.access = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-        mask.stage = vk::PipelineStageFlagBits::eEarlyFragmentTests |
-                     vk::PipelineStageFlagBits::eLateFragmentTests;
-        return mask;
-    }
-
-  protected:
-    void initialize(const vw::IRenderPass &render_pass) override {
-        m_pipeline = create_zpass_pipeline(
-            m_device, render_pass, m_uniform_buffer_layout, m_width, m_height);
+  public:
+    void initialize(std::span<const vk::Format>, vk::Format depth_format,
+                    vk::Format) override {
+        m_pipeline = create_zpass_pipeline(m_device, depth_format,
+                                           m_uniform_buffer_layout, m_width,
+                                           m_height);
     }
 
   private:
