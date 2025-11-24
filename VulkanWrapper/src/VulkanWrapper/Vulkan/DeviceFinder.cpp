@@ -160,6 +160,13 @@ Device DeviceFinder::build() && {
         information.extensions.push_back("VK_KHR_portability_subset");
     }
 
+    if (std::ranges::find(information.availableExtensions,
+                          VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME) !=
+        information.availableExtensions.end()) {
+        information.extensions.push_back(
+            VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
+    }
+
     vk::DeviceCreateInfo info;
     std::vector<vk::DeviceQueueCreateInfo> queueInfos;
 
@@ -191,6 +198,8 @@ Device DeviceFinder::build() && {
 
     m_features.get<vk::PhysicalDeviceVulkan12Features>().setBufferDeviceAddress(
         1U);
+    m_features.get<vk::PhysicalDeviceDynamicRenderingFeatures>()
+        .setDynamicRendering(1U);
 
     info.setPNext(&m_features.get<vk::PhysicalDeviceFeatures2>());
 

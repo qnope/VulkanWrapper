@@ -25,8 +25,7 @@ class Pipeline : public ObjectWithUniqueHandle<vk::UniquePipeline> {
 
 class GraphicsPipelineBuilder {
   public:
-    GraphicsPipelineBuilder(const Device &device, const IRenderPass &renderPass,
-                            uint32_t subpass_index,
+    GraphicsPipelineBuilder(const Device &device,
                             PipelineLayout pipelineLayout);
 
     GraphicsPipelineBuilder &&
@@ -38,7 +37,9 @@ class GraphicsPipelineBuilder {
     GraphicsPipelineBuilder &&with_fixed_viewport(int width, int height) &&;
     GraphicsPipelineBuilder &&with_fixed_scissor(int width, int height) &&;
 
-    GraphicsPipelineBuilder &&add_color_attachment() &&;
+    GraphicsPipelineBuilder &&add_color_attachment(vk::Format format) &&;
+    GraphicsPipelineBuilder &&set_depth_format(vk::Format format) &&;
+    GraphicsPipelineBuilder &&set_stencil_format(vk::Format format) &&;
 
     template <Vertex V> GraphicsPipelineBuilder &&add_vertex_binding() && {
         const auto binding = m_input_binding_descriptions.size();
@@ -94,8 +95,6 @@ class GraphicsPipelineBuilder {
     createDepthStencilStateInfo() const noexcept;
 
     const Device *m_device;
-    const IRenderPass *m_renderPass;
-    uint32_t m_subpass_index;
     PipelineLayout m_pipelineLayout;
 
     std::map<vk::ShaderStageFlagBits, std::shared_ptr<const ShaderModule>>
@@ -105,6 +104,9 @@ class GraphicsPipelineBuilder {
     std::optional<vk::Viewport> m_viewport;
     std::optional<vk::Rect2D> m_scissor;
     std::vector<vk::PipelineColorBlendAttachmentState> m_colorAttachmentStates;
+    std::vector<vk::Format> m_colorAttachmentFormats;
+    vk::Format m_depthFormat = vk::Format::eUndefined;
+    vk::Format m_stencilFormat = vk::Format::eUndefined;
 
     std::vector<vk::VertexInputBindingDescription> m_input_binding_descriptions;
     std::vector<vk::VertexInputAttributeDescription>

@@ -14,7 +14,7 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
 
     VulkanWrapper/Image/Image.cpp
     VulkanWrapper/Image/ImageView.cpp
-    VulkanWrapper/Image/Framebuffer.cpp
+
     VulkanWrapper/Image/ImageLoader.cpp
     VulkanWrapper/Image/Sampler.cpp
     VulkanWrapper/Image/CombinedImage.cpp
@@ -25,8 +25,7 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Pipeline/PipelineLayout.cpp
     VulkanWrapper/Pipeline/MeshRenderer.cpp
 
-    VulkanWrapper/RenderPass/Attachment.cpp
-    VulkanWrapper/RenderPass/RenderPass.cpp
+
     VulkanWrapper/RenderPass/Subpass.cpp
 
     VulkanWrapper/Command/CommandPool.cpp

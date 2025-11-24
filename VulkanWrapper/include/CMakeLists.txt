@@ -22,7 +22,7 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
 
     VulkanWrapper/Image/Image.h
     VulkanWrapper/Image/ImageView.h
-    VulkanWrapper/Image/Framebuffer.h
+
     VulkanWrapper/Image/ImageLoader.h
     VulkanWrapper/Image/Sampler.h
     VulkanWrapper/Image/CombinedImage.h
@@ -33,8 +33,7 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Pipeline/PipelineLayout.h
     VulkanWrapper/Pipeline/MeshRenderer.h
 
-    VulkanWrapper/RenderPass/Attachment.h
-    VulkanWrapper/RenderPass/RenderPass.h
+
     VulkanWrapper/RenderPass/Subpass.h
 
     VulkanWrapper/Command/CommandPool.h

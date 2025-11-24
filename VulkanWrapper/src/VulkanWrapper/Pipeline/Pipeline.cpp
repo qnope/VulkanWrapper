@@ -2,7 +2,7 @@
 
 #include "VulkanWrapper/Pipeline/PipelineLayout.h"
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
-#include "VulkanWrapper/RenderPass/RenderPass.h"
+
 #include "VulkanWrapper/Vulkan/Device.h"
 
 namespace vw {
@@ -15,12 +15,8 @@ Pipeline::Pipeline(vk::UniquePipeline pipeline,
 const PipelineLayout &Pipeline::layout() const noexcept { return m_layout; }
 
 GraphicsPipelineBuilder::GraphicsPipelineBuilder(const Device &device,
-                                                 const IRenderPass &renderPass,
-                                                 uint32_t subpass_index,
                                                  PipelineLayout pipelineLayout)
     : m_device{&device}
-    , m_renderPass{&renderPass}
-    , m_subpass_index{subpass_index}
     , m_pipelineLayout{std::move(pipelineLayout)} {}
 
 GraphicsPipelineBuilder &&GraphicsPipelineBuilder::add_shader(
@@ -49,7 +45,8 @@ GraphicsPipelineBuilder::with_fixed_scissor(int width, int height) && {
     return std::move(*this);
 }
 
-GraphicsPipelineBuilder &&GraphicsPipelineBuilder::add_color_attachment() && {
+GraphicsPipelineBuilder &&
+GraphicsPipelineBuilder::add_color_attachment(vk::Format format) && {
     const auto colorBlendAttachment =
         vk::PipelineColorBlendAttachmentState()
             .setBlendEnable(0U)
@@ -58,6 +55,19 @@ GraphicsPipelineBuilder &&GraphicsPipelineBuilder::add_color_attachment() && {
                                vk::ColorComponentFlagBits::eG |
                                vk::ColorComponentFlagBits::eR);
     m_colorAttachmentStates.push_back(colorBlendAttachment);
+    m_colorAttachmentFormats.push_back(format);
+    return std::move(*this);
+}
+
+GraphicsPipelineBuilder &&
+GraphicsPipelineBuilder::set_depth_format(vk::Format format) && {
+    m_depthFormat = format;
+    return std::move(*this);
+}
+
+GraphicsPipelineBuilder &&
+GraphicsPipelineBuilder::set_stencil_format(vk::Format format) && {
+    m_stencilFormat = format;
     return std::move(*this);
 }
 
@@ -87,10 +97,14 @@ Pipeline GraphicsPipelineBuilder::build() && {
     const auto inputAssemblyStateInfo = createInputAssemblyStateInfo();
     const auto rasterizationStateInfo = createRasterizationStateInfo();
 
+    auto renderingInfo = vk::PipelineRenderingCreateInfo()
+                             .setColorAttachmentFormats(m_colorAttachmentFormats)
+                             .setDepthAttachmentFormat(m_depthFormat)
+                             .setStencilAttachmentFormat(m_stencilFormat);
+
     const auto info = vk::GraphicsPipelineCreateInfo()
+                          .setPNext(&renderingInfo)
                           .setStages(shaderStageInfos)
-                          .setSubpass(m_subpass_index)
-                          .setRenderPass(m_renderPass->handle())
                           .setPDynamicState(&dynamicStateInfo)
                           .setPViewportState(&viewportStateInfo)
                           .setPColorBlendState(&colorBlendStateInfo)

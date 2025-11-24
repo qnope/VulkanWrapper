@@ -2,6 +2,8 @@
 
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Utils/IdentifierTag.h"
+#include <vulkan/vulkan.hpp>
+#include <span>
 
 namespace vw {
 
@@ -29,24 +31,11 @@ class ISubpass {
 
     [[nodiscard]] virtual vk::PipelineBindPoint
     pipeline_bind_point() const noexcept;
-    [[nodiscard]] virtual const vk::AttachmentReference2 *
-    depth_stencil_attachment() const noexcept;
-
-    [[nodiscard]] virtual const std::vector<vk::AttachmentReference2> &
-    color_attachments() const noexcept;
-
-    [[nodiscard]] virtual const std::vector<vk::AttachmentReference2> &
-    input_attachments() const noexcept;
-
-    [[nodiscard]] virtual SubpassDependencyMask
-    input_dependencies() const noexcept = 0;
-    [[nodiscard]] virtual SubpassDependencyMask
-    output_dependencies() const noexcept = 0;
 
   protected:
-    virtual void initialize(const IRenderPass &render_pass) = 0;
-
-    template <typename> friend class RenderPass;
+    virtual void initialize(std::span<const vk::Format> color_attachment_formats,
+                            vk::Format depth_attachment_format,
+                            vk::Format stencil_attachment_format) = 0;
 };
 
 template <typename RenderPassInformation> class Subpass : public ISubpass {
