@@ -122,8 +122,8 @@ class ColorSubpass : public vw::Subpass {
         return attachments;
     }
 
-    std::optional<vk::RenderingAttachmentInfo>
-    depth_attachment_information() const noexcept override {
+    vk::RenderingAttachmentInfo
+    depth_attachment_information() const override {
         return vk::RenderingAttachmentInfo()
             .setImageLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
             .setLoadOp(vk::AttachmentLoadOp::eLoad)

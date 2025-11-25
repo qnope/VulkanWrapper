@@ -2,10 +2,13 @@
 
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Utils/IdentifierTag.h"
+#include "VulkanWrapper/Utils/exceptions.h"
 #include <vulkan/vulkan.hpp>
 #include <span>
 
 namespace vw {
+
+using SubpassNotManagingDepthException = TaggedException<struct SubpassNotManagingDepthTag>;
 
 struct SubpassDependencyMask {
     vk::PipelineStageFlags stage = vk::PipelineStageFlagBits::eNone;
@@ -37,8 +40,8 @@ class Subpass {
     virtual std::vector<vk::RenderingAttachmentInfo>
     color_attachment_information() const noexcept = 0;
 
-    virtual std::optional<vk::RenderingAttachmentInfo>
-    depth_attachment_information() const noexcept = 0;
+    virtual vk::RenderingAttachmentInfo
+    depth_attachment_information() const;
 };
 
 } // namespace vw

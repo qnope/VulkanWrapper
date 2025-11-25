@@ -52,8 +52,10 @@ void Rendering::execute(vk::CommandBuffer cmd_buffer) const {
                                  .setLayerCount(1)
                                  .setColorAttachments(attachmentInfos);
 
-        auto depthInfo = subpassInfo.subpass->depth_attachment_information();
-        if (depthInfo && subpassInfo.depth_attachment) {
+        vk::RenderingAttachmentInfo depthInfo;
+
+        if (subpassInfo.depth_attachment) {
+            depthInfo = subpassInfo.subpass->depth_attachment_information();
 
             // Get current layout or default to Undefined
             auto &oldLayout = imageLayouts[subpassInfo.depth_attachment];
@@ -61,13 +63,13 @@ void Rendering::execute(vk::CommandBuffer cmd_buffer) const {
             execute_image_transition(
                 cmd_buffer, subpassInfo.depth_attachment->image(),
                 oldLayout.value_or(vk::ImageLayout::eUndefined),
-                depthInfo->imageLayout);
+                depthInfo.imageLayout);
 
             // Update tracked layout
-            oldLayout = depthInfo->imageLayout;
+            oldLayout = depthInfo.imageLayout;
 
-            depthInfo->setImageView(subpassInfo.depth_attachment->handle());
-            renderingInfo.setPDepthAttachment(&*depthInfo);
+            depthInfo.setImageView(subpassInfo.depth_attachment->handle());
+            renderingInfo.setPDepthAttachment(&depthInfo);
         }
 
         cmd_buffer.beginRendering(renderingInfo);
