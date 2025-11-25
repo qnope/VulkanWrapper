@@ -123,6 +123,20 @@ DeviceFinder &&DeviceFinder::with_ray_tracing() && noexcept {
     return std::move(*this);
 }
 
+DeviceFinder &&DeviceFinder::with_dynamic_rendering() && noexcept {
+    remove_device_not_supporting_extension(
+        VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
+
+    for (auto &information : m_physicalDevicesInformation) {
+        information.extensions.push_back(
+            VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
+    }
+
+    m_features.get<vk::PhysicalDeviceDynamicRenderingFeatures>()
+        .setDynamicRendering(1U);
+    return std::move(*this);
+}
+
 std::optional<PhysicalDevice> DeviceFinder::get() && noexcept {
     if (m_physicalDevicesInformation.empty()) {
         return {};
@@ -160,13 +174,6 @@ Device DeviceFinder::build() && {
         information.extensions.push_back("VK_KHR_portability_subset");
     }
 
-    if (std::ranges::find(information.availableExtensions,
-                          VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME) !=
-        information.availableExtensions.end()) {
-        information.extensions.push_back(
-            VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
-    }
-
     vk::DeviceCreateInfo info;
     std::vector<vk::DeviceQueueCreateInfo> queueInfos;
 
@@ -198,8 +205,6 @@ Device DeviceFinder::build() && {
 
     m_features.get<vk::PhysicalDeviceVulkan12Features>().setBufferDeviceAddress(
         1U);
-    m_features.get<vk::PhysicalDeviceDynamicRenderingFeatures>()
-        .setDynamicRendering(1U);
 
     info.setPNext(&m_features.get<vk::PhysicalDeviceFeatures2>());
 

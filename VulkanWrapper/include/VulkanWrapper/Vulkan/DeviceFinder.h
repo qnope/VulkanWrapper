@@ -15,6 +15,7 @@ class DeviceFinder {
     DeviceFinder &&with_presentation(vk::SurfaceKHR surface) && noexcept;
     DeviceFinder &&with_synchronization_2() && noexcept;
     DeviceFinder &&with_ray_tracing() && noexcept;
+    DeviceFinder &&with_dynamic_rendering() && noexcept;
 
     Device build() &&;
     std::optional<PhysicalDevice> get() && noexcept;

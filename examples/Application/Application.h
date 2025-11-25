@@ -37,6 +37,7 @@ class App {
                             .with_presentation(surface.handle())
                             .with_synchronization_2()
                             .with_ray_tracing()
+                            .with_dynamic_rendering()
                             .build();
 
     vw::Allocator allocator = vw::AllocatorBuilder(instance, device).build();
