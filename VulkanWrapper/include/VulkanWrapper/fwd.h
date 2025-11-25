@@ -18,12 +18,7 @@ class Sampler;
 class CombinedImage;
 class Framebuffer;
 
-class ISubpass;
-class IRenderPass;
-
-template <typename> class Subpass;
-
-template <typename> class RenderPass;
+class Subpass;
 
 class SwapchainBuilder;
 class Swapchain;

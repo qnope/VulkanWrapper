@@ -77,35 +77,32 @@ inline vw::MeshRenderer create_renderer(
 struct ColorPassTag {};
 const auto color_pass_tag = vw::create_subpass_tag<ColorPassTag>();
 
-class ColorSubpass : public vw::Subpass<GBufferInformation> {
+class ColorSubpass : public vw::Subpass {
   public:
     ColorSubpass(
         const vw::Device &device, const vw::Model::MeshManager &mesh_manager,
         std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
-        vw::Width width, vw::Height height, vk::DescriptorSet descriptor_set)
+        vw::Width width, vw::Height height, vk::DescriptorSet descriptor_set,
+        std::span<const vk::Format> color_formats, vk::Format depth_format,
+        vk::Format)
         : m_device{device}
         , m_mesh_manager{mesh_manager}
         , m_uniform_buffer_layout{uniform_buffer_layout}
         , m_width{width}
         , m_height{height}
-        , m_descriptor_set{descriptor_set} {}
+        , m_descriptor_set{descriptor_set} {
+        m_mesh_renderer = create_renderer(
+            m_device, color_formats, depth_format, m_mesh_manager,
+            m_uniform_buffer_layout, m_width, m_height);
+    }
 
     void
-    execute(vk::CommandBuffer cmd_buffer,
-            const GBufferInformation &information) const noexcept override {
+    execute(vk::CommandBuffer cmd_buffer) const noexcept override {
         const auto &meshes = m_mesh_manager.meshes();
         std::span first_descriptor_sets = {&m_descriptor_set, 1};
         for (const auto &mesh : meshes) {
             m_mesh_renderer.draw_mesh(cmd_buffer, mesh, first_descriptor_sets);
         }
-    }
-
-  public:
-    void initialize(std::span<const vk::Format> color_formats,
-                    vk::Format depth_format, vk::Format) override {
-        m_mesh_renderer = create_renderer(
-            m_device, color_formats, depth_format, m_mesh_manager,
-            m_uniform_buffer_layout, m_width, m_height);
     }
 
   private:

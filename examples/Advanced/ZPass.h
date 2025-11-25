@@ -33,20 +33,25 @@ inline vw::Pipeline create_zpass_pipeline(
         .build();
 }
 
-class ZPass : public vw::Subpass<GBufferInformation> {
+class ZPass : public vw::Subpass {
   public:
     ZPass(const vw::Device &device, const vw::Model::MeshManager &mesh_manager,
           std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
-          vw::Width width, vw::Height height, vk::DescriptorSet descriptor_set)
+          vw::Width width, vw::Height height, vk::DescriptorSet descriptor_set,
+          std::span<const vk::Format>, vk::Format depth_format,
+          vk::Format)
         : m_device{device}
         , m_mesh_manager{mesh_manager}
         , m_uniform_buffer_layout{uniform_buffer_layout}
         , m_width{width}
         , m_height{height}
-        , m_descriptor_set{descriptor_set} {}
+        , m_descriptor_set{descriptor_set} {
+        m_pipeline = create_zpass_pipeline(m_device, depth_format,
+                                           m_uniform_buffer_layout, m_width,
+                                           m_height);
+    }
 
-    void execute(vk::CommandBuffer cmd_buffer,
-                 const GBufferInformation &) const noexcept override {
+    void execute(vk::CommandBuffer cmd_buffer) const noexcept override {
         const auto &meshes = m_mesh_manager.meshes();
         std::span first_descriptor_sets = {&m_descriptor_set, 1};
         cmd_buffer.bindPipeline(pipeline_bind_point(), m_pipeline->handle());
@@ -56,16 +61,6 @@ class ZPass : public vw::Subpass<GBufferInformation> {
         for (const auto &mesh : meshes) {
             mesh.draw_zpass(cmd_buffer);
         }
-    }
-
-
-
-  public:
-    void initialize(std::span<const vk::Format>, vk::Format depth_format,
-                    vk::Format) override {
-        m_pipeline = create_zpass_pipeline(m_device, depth_format,
-                                           m_uniform_buffer_layout, m_width,
-                                           m_height);
     }
 
   private:

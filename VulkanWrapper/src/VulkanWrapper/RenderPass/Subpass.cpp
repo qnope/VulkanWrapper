@@ -2,7 +2,7 @@
 
 namespace vw {
 
-vk::PipelineBindPoint ISubpass::pipeline_bind_point() const noexcept {
+vk::PipelineBindPoint Subpass::pipeline_bind_point() const noexcept {
     return vk::PipelineBindPoint::eGraphics;
 }
 

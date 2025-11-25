@@ -571,22 +571,19 @@ int main() {
         VulkanExample example(app.device, app.allocator, app.swapchain);
         example.prepare();
 
-        auto depth_subpass = std::make_unique<ZPass>(
-            app.device, *example.mesh_manager, descriptor_set_layout,
-            app.swapchain.width(), app.swapchain.height(), descriptor_set);
-        auto color_subpass = std::make_unique<ColorSubpass>(
-            app.device, *example.mesh_manager, descriptor_set_layout,
-            app.swapchain.width(), app.swapchain.height(), descriptor_set);
-
         std::vector<vk::Format> gbuffer_formats = {
             vk::Format::eR8G8B8A8Unorm,      vk::Format::eR32G32B32A32Sfloat,
             vk::Format::eR32G32B32A32Sfloat, vk::Format::eR32G32B32A32Sfloat,
             vk::Format::eR32G32B32A32Sfloat, vk::Format::eR32G32B32A32Sfloat};
 
-        depth_subpass->initialize(gbuffer_formats, depth_buffer->format(),
-                                  depth_buffer->format());
-        color_subpass->initialize(gbuffer_formats, depth_buffer->format(),
-                                  depth_buffer->format());
+        auto depth_subpass = std::make_unique<ZPass>(
+            app.device, *example.mesh_manager, descriptor_set_layout,
+            app.swapchain.width(), app.swapchain.height(), descriptor_set,
+            gbuffer_formats, depth_buffer->format(), depth_buffer->format());
+        auto color_subpass = std::make_unique<ColorSubpass>(
+            app.device, *example.mesh_manager, descriptor_set_layout,
+            app.swapchain.width(), app.swapchain.height(), descriptor_set,
+            gbuffer_formats, depth_buffer->format(), depth_buffer->format());
 
         auto commandPool = vw::CommandPoolBuilder(app.device).build();
         auto image_views = create_image_views(app.device, app.swapchain);
@@ -689,8 +686,8 @@ int main() {
                 // if they don't use it. But `ColorPass` inherits
                 // `Subpass<GBufferInformation>`.
 
-                depth_subpass->execute(commandBuffer, {});
-                color_subpass->execute(commandBuffer, {});
+                depth_subpass->execute(commandBuffer);
+                color_subpass->execute(commandBuffer);
 
                 commandBuffer.endRendering();
 
