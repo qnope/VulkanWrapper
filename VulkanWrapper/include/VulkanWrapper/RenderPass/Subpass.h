@@ -33,6 +33,12 @@ class Subpass {
     pipeline_bind_point() const noexcept;
 
     virtual void execute(vk::CommandBuffer cmd_buffer) const noexcept = 0;
+
+    virtual std::vector<vk::RenderingAttachmentInfo>
+    color_attachment_information() const noexcept = 0;
+
+    virtual std::optional<vk::RenderingAttachmentInfo>
+    depth_attachment_information() const noexcept = 0;
 };
 
 } // namespace vw

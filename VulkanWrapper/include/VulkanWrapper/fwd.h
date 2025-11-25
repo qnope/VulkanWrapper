@@ -38,6 +38,9 @@ enum class QueueType;
 
 class DescriptorSetLayout;
 
+class Rendering;
+class RenderingBuilder;
+
 namespace Model {
 class Mesh;
 namespace Internal {

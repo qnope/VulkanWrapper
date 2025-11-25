@@ -63,6 +63,21 @@ class ZPass : public vw::Subpass {
         }
     }
 
+    std::vector<vk::RenderingAttachmentInfo>
+    color_attachment_information() const noexcept override {
+        // ZPass doesn't use color attachments, only depth
+        return {};
+    }
+
+    std::optional<vk::RenderingAttachmentInfo>
+    depth_attachment_information() const noexcept override {
+        return vk::RenderingAttachmentInfo()
+            .setImageLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+            .setLoadOp(vk::AttachmentLoadOp::eClear)
+            .setStoreOp(vk::AttachmentStoreOp::eStore)
+            .setClearValue(vk::ClearDepthStencilValue(1.0f, 0));
+    }
+
   private:
     const vw::Device &m_device;
     const vw::Model::MeshManager &m_mesh_manager;

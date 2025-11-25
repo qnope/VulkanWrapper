@@ -105,6 +105,31 @@ class ColorSubpass : public vw::Subpass {
         }
     }
 
+    std::vector<vk::RenderingAttachmentInfo>
+    color_attachment_information() const noexcept override {
+        std::vector<vk::RenderingAttachmentInfo> attachments;
+        
+        // 6 color attachments for GBuffer
+        for (int i = 0; i < 6; ++i) {
+            attachments.push_back(
+                vk::RenderingAttachmentInfo()
+                    .setImageLayout(vk::ImageLayout::eColorAttachmentOptimal)
+                    .setLoadOp(vk::AttachmentLoadOp::eClear)
+                    .setStoreOp(vk::AttachmentStoreOp::eStore)
+                    .setClearValue(vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f)));
+        }
+        
+        return attachments;
+    }
+
+    std::optional<vk::RenderingAttachmentInfo>
+    depth_attachment_information() const noexcept override {
+        return vk::RenderingAttachmentInfo()
+            .setImageLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+            .setLoadOp(vk::AttachmentLoadOp::eLoad)
+            .setStoreOp(vk::AttachmentStoreOp::eStore);
+    }
+
   private:
     const vw::Device &m_device;
     const vw::Model::MeshManager &m_mesh_manager;

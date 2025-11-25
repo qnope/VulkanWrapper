@@ -27,6 +27,7 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
 
 
     VulkanWrapper/RenderPass/Subpass.cpp
+    VulkanWrapper/RenderPass/Rendering.cpp
 
     VulkanWrapper/Command/CommandPool.cpp
     VulkanWrapper/Command/CommandBuffer.cpp
