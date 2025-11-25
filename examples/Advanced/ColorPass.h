@@ -74,9 +74,6 @@ inline vw::MeshRenderer create_renderer(
     return renderer;
 }
 
-struct ColorPassTag {};
-const auto color_pass_tag = vw::create_subpass_tag<ColorPassTag>();
-
 class ColorSubpass : public vw::Subpass {
   public:
     ColorSubpass(
@@ -96,8 +93,7 @@ class ColorSubpass : public vw::Subpass {
             m_uniform_buffer_layout, m_width, m_height);
     }
 
-    void
-    execute(vk::CommandBuffer cmd_buffer) const noexcept override {
+    void execute(vk::CommandBuffer cmd_buffer) const noexcept override {
         const auto &meshes = m_mesh_manager.meshes();
         std::span first_descriptor_sets = {&m_descriptor_set, 1};
         for (const auto &mesh : meshes) {
@@ -108,7 +104,7 @@ class ColorSubpass : public vw::Subpass {
     std::vector<vk::RenderingAttachmentInfo>
     color_attachment_information() const noexcept override {
         std::vector<vk::RenderingAttachmentInfo> attachments;
-        
+
         // 6 color attachments for GBuffer
         for (int i = 0; i < 6; ++i) {
             attachments.push_back(
@@ -116,14 +112,14 @@ class ColorSubpass : public vw::Subpass {
                     .setImageLayout(vk::ImageLayout::eColorAttachmentOptimal)
                     .setLoadOp(vk::AttachmentLoadOp::eClear)
                     .setStoreOp(vk::AttachmentStoreOp::eStore)
-                    .setClearValue(vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f)));
+                    .setClearValue(
+                        vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f)));
         }
-        
+
         return attachments;
     }
 
-    vk::RenderingAttachmentInfo
-    depth_attachment_information() const override {
+    vk::RenderingAttachmentInfo depth_attachment_information() const override {
         return vk::RenderingAttachmentInfo()
             .setImageLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
             .setLoadOp(vk::AttachmentLoadOp::eLoad)

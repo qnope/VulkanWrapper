@@ -8,9 +8,6 @@
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
 #include "VulkanWrapper/RenderPass/Subpass.h"
 
-struct ZPassTag {};
-inline const auto z_pass_tag = vw::create_subpass_tag<ZPassTag>();
-
 inline vw::Pipeline create_zpass_pipeline(
     const vw::Device &device, vk::Format depth_format,
     std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
@@ -38,17 +35,15 @@ class ZPass : public vw::Subpass {
     ZPass(const vw::Device &device, const vw::Model::MeshManager &mesh_manager,
           std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
           vw::Width width, vw::Height height, vk::DescriptorSet descriptor_set,
-          std::span<const vk::Format>, vk::Format depth_format,
-          vk::Format)
+          std::span<const vk::Format>, vk::Format depth_format, vk::Format)
         : m_device{device}
         , m_mesh_manager{mesh_manager}
         , m_uniform_buffer_layout{uniform_buffer_layout}
         , m_width{width}
         , m_height{height}
         , m_descriptor_set{descriptor_set} {
-        m_pipeline = create_zpass_pipeline(m_device, depth_format,
-                                           m_uniform_buffer_layout, m_width,
-                                           m_height);
+        m_pipeline = create_zpass_pipeline(
+            m_device, depth_format, m_uniform_buffer_layout, m_width, m_height);
     }
 
     void execute(vk::CommandBuffer cmd_buffer) const noexcept override {
@@ -69,8 +64,7 @@ class ZPass : public vw::Subpass {
         return {};
     }
 
-    vk::RenderingAttachmentInfo
-    depth_attachment_information() const override {
+    vk::RenderingAttachmentInfo depth_attachment_information() const override {
         return vk::RenderingAttachmentInfo()
             .setImageLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
             .setLoadOp(vk::AttachmentLoadOp::eClear)
