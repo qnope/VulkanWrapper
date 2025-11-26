@@ -1,8 +1,4 @@
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
-#include "VulkanWrapper/Image/Image.h"
-#include "VulkanWrapper/Memory/Buffer.h"
-#include "VulkanWrapper/RayTracing/BottomLevelAccelerationStructure.h"
-#include "VulkanWrapper/RayTracing/TopLevelAccelerationStructure.h"
 
 namespace vw::Barrier {
 
@@ -10,9 +6,9 @@ void ResourceTracker::track(const ResourceState &state) {
     std::visit([this](auto &&arg) {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, ImageState>) {
-            track_image(arg.image, arg.layout, arg.stage, arg.access);
+            track_image(arg.image, arg.subresourceRange, arg.layout, arg.stage, arg.access);
         } else if constexpr (std::is_same_v<T, BufferState>) {
-            track_buffer(arg.buffer, arg.stage, arg.access);
+            track_buffer(arg.buffer, arg.offset, arg.size, arg.stage, arg.access);
         } else if constexpr (std::is_same_v<T, AccelerationStructureState>) {
             track_acceleration_structure(arg.handle, arg.stage, arg.access);
         }
@@ -23,25 +19,26 @@ void ResourceTracker::request(const ResourceState &state) {
     std::visit([this](auto &&arg) {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, ImageState>) {
-            request_image(arg.image, arg.layout, arg.stage, arg.access);
+            request_image(arg.image, arg.subresourceRange, arg.layout, arg.stage, arg.access);
         } else if constexpr (std::is_same_v<T, BufferState>) {
-            request_buffer(arg.buffer, arg.stage, arg.access);
+            request_buffer(arg.buffer, arg.offset, arg.size, arg.stage, arg.access);
         } else if constexpr (std::is_same_v<T, AccelerationStructureState>) {
             request_acceleration_structure(arg.handle, arg.stage, arg.access);
         }
     }, state);
 }
 
-void ResourceTracker::track_image(const Image &image, vk::ImageLayout initialLayout,
+void ResourceTracker::track_image(vk::Image image, vk::ImageSubresourceRange subresourceRange,
+                            vk::ImageLayout initialLayout,
                             vk::PipelineStageFlags2 stage,
                             vk::AccessFlags2 access) {
-    m_image_states[image.handle()] = {initialLayout, stage, access};
+    m_image_states[{image, subresourceRange}] = {initialLayout, stage, access};
 }
 
-void ResourceTracker::track_buffer(const BufferBase &buffer,
+void ResourceTracker::track_buffer(vk::Buffer buffer, vk::DeviceSize offset, vk::DeviceSize size,
                             vk::PipelineStageFlags2 stage,
                             vk::AccessFlags2 access) {
-    m_buffer_states[buffer.handle()] = {stage, access};
+    m_buffer_states[{buffer, offset, size}] = {stage, access};
 }
 
 void ResourceTracker::track_acceleration_structure(vk::AccelerationStructureKHR handle,
@@ -50,10 +47,11 @@ void ResourceTracker::track_acceleration_structure(vk::AccelerationStructureKHR 
     m_as_states[handle] = {stage, access};
 }
 
-void ResourceTracker::request_image(const Image &image, vk::ImageLayout layout,
+void ResourceTracker::request_image(vk::Image image, vk::ImageSubresourceRange subresourceRange,
+                              vk::ImageLayout layout,
                               vk::PipelineStageFlags2 stage,
                               vk::AccessFlags2 access) {
-    auto &currentState = m_image_states.try_emplace(image.handle()).first->second;
+    auto &currentState = m_image_states.try_emplace({image, subresourceRange}).first->second;
 
     if (currentState.layout != layout || currentState.stage != stage ||
         currentState.access != access ||
@@ -66,8 +64,8 @@ void ResourceTracker::request_image(const Image &image, vk::ImageLayout layout,
         barrier.dstAccessMask = access;
         barrier.oldLayout = currentState.layout;
         barrier.newLayout = layout;
-        barrier.image = image.handle();
-        barrier.subresourceRange = image.full_range();
+        barrier.image = image;
+        barrier.subresourceRange = subresourceRange;
         
         m_pending_image_barriers.push_back(barrier);
 
@@ -77,10 +75,10 @@ void ResourceTracker::request_image(const Image &image, vk::ImageLayout layout,
     }
 }
 
-void ResourceTracker::request_buffer(const BufferBase &buffer,
+void ResourceTracker::request_buffer(vk::Buffer buffer, vk::DeviceSize offset, vk::DeviceSize size,
                               vk::PipelineStageFlags2 stage,
                               vk::AccessFlags2 access) {
-    auto &currentState = m_buffer_states.try_emplace(buffer.handle()).first->second;
+    auto &currentState = m_buffer_states.try_emplace({buffer, offset, size}).first->second;
     
     // Check if current state has any write access
     const bool currentHasWrite = (currentState.access & (vk::AccessFlagBits2::eMemoryWrite | 
@@ -107,9 +105,9 @@ void ResourceTracker::request_buffer(const BufferBase &buffer,
         barrier.srcAccessMask = currentState.access;
         barrier.dstStageMask = stage;
         barrier.dstAccessMask = access;
-        barrier.buffer = buffer.handle();
-        barrier.offset = 0;
-        barrier.size = buffer.size_bytes();
+        barrier.buffer = buffer;
+        barrier.offset = offset;
+        barrier.size = size;
 
         m_pending_buffer_barriers.push_back(barrier);
     }
