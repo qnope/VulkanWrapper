@@ -6,31 +6,51 @@
 
 namespace vw {
 
-void ResourceTracker::track(const Image &image, vk::ImageLayout initialLayout,
+void ResourceTracker::track(const ResourceState &state) {
+    std::visit([this](auto &&arg) {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T, ImageState>) {
+            track_image(arg.image, arg.layout, arg.stage, arg.access);
+        } else if constexpr (std::is_same_v<T, BufferState>) {
+            track_buffer(arg.buffer, arg.stage, arg.access);
+        } else if constexpr (std::is_same_v<T, AccelerationStructureState>) {
+            track_acceleration_structure(arg.handle, arg.stage, arg.access);
+        }
+    }, state);
+}
+
+void ResourceTracker::request(const ResourceState &state) {
+    std::visit([this](auto &&arg) {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T, ImageState>) {
+            request_image(arg.image, arg.layout, arg.stage, arg.access);
+        } else if constexpr (std::is_same_v<T, BufferState>) {
+            request_buffer(arg.buffer, arg.stage, arg.access);
+        } else if constexpr (std::is_same_v<T, AccelerationStructureState>) {
+            request_acceleration_structure(arg.handle, arg.stage, arg.access);
+        }
+    }, state);
+}
+
+void ResourceTracker::track_image(const Image &image, vk::ImageLayout initialLayout,
                             vk::PipelineStageFlags2 stage,
                             vk::AccessFlags2 access) {
     m_image_states[image.handle()] = {initialLayout, stage, access};
 }
 
-void ResourceTracker::track(const BufferBase &buffer,
+void ResourceTracker::track_buffer(const BufferBase &buffer,
                             vk::PipelineStageFlags2 stage,
                             vk::AccessFlags2 access) {
     m_buffer_states[buffer.handle()] = {stage, access};
 }
 
-void ResourceTracker::track(
-    const rt::as::BottomLevelAccelerationStructure &blas,
-    vk::PipelineStageFlags2 stage, vk::AccessFlags2 access) {
-    m_as_states[blas.handle()] = {stage, access};
-}
-
-void ResourceTracker::track(const rt::as::TopLevelAccelerationStructure &tlas,
+void ResourceTracker::track_acceleration_structure(vk::AccelerationStructureKHR handle,
                             vk::PipelineStageFlags2 stage,
                             vk::AccessFlags2 access) {
-    m_as_states[tlas.handle()] = {stage, access};
+    m_as_states[handle] = {stage, access};
 }
 
-void ResourceTracker::request(const Image &image, vk::ImageLayout layout,
+void ResourceTracker::request_image(const Image &image, vk::ImageLayout layout,
                               vk::PipelineStageFlags2 stage,
                               vk::AccessFlags2 access) {
     auto &currentState = m_image_states.try_emplace(image.handle()).first->second;
@@ -57,7 +77,7 @@ void ResourceTracker::request(const Image &image, vk::ImageLayout layout,
     }
 }
 
-void ResourceTracker::request(const BufferBase &buffer,
+void ResourceTracker::request_buffer(const BufferBase &buffer,
                               vk::PipelineStageFlags2 stage,
                               vk::AccessFlags2 access) {
     auto &currentState = m_buffer_states.try_emplace(buffer.handle()).first->second;
@@ -97,7 +117,6 @@ void ResourceTracker::request(const BufferBase &buffer,
     currentState.access = access;
 }
 
-
 void ResourceTracker::request_acceleration_structure(vk::AccelerationStructureKHR handle,
                                                      vk::PipelineStageFlags2 stage,
                                                      vk::AccessFlags2 access) {
@@ -129,18 +148,6 @@ void ResourceTracker::request_acceleration_structure(vk::AccelerationStructureKH
     }
     currentState.stage = stage;
     currentState.access = access;
-}
-
-void ResourceTracker::request(
-    const rt::as::BottomLevelAccelerationStructure &blas,
-    vk::PipelineStageFlags2 stage, vk::AccessFlags2 access) {
-    request_acceleration_structure(blas.handle(), stage, access);
-}
-
-void ResourceTracker::request(const rt::as::TopLevelAccelerationStructure &tlas,
-                              vk::PipelineStageFlags2 stage,
-                              vk::AccessFlags2 access) {
-    request_acceleration_structure(tlas.handle(), stage, access);
 }
 
 void ResourceTracker::flush(vk::CommandBuffer commandBuffer) {
