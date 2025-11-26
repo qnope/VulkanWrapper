@@ -14,8 +14,11 @@ DescriptorAllocator::DescriptorAllocator() {
 
 void DescriptorAllocator::add_uniform_buffer(int binding, vk::Buffer buffer,
                                              vk::DeviceSize offset,
-                                             vk::DeviceSize size) {
-    auto &[info, write] = m_bufferUpdate.emplace_back();
+                                             vk::DeviceSize size,
+                                             vk::PipelineStageFlags2 stage,
+                                             vk::AccessFlags2 access) {
+    auto &[info, write, stageFlags, accessFlags] =
+        m_bufferUpdate.emplace_back();
     info =
         vk::DescriptorBufferInfo().setBuffer(buffer).setOffset(offset).setRange(
             size);
@@ -24,25 +27,36 @@ void DescriptorAllocator::add_uniform_buffer(int binding, vk::Buffer buffer,
                 .setDescriptorType(vk::DescriptorType::eUniformBuffer)
                 .setDstBinding(binding)
                 .setDstArrayElement(0);
+    stageFlags = stage;
+    accessFlags = access;
 }
 
-void DescriptorAllocator::add_combined_image(int binding,
-                                             const CombinedImage &image) {
-    auto &[info, write] = m_imageUpdate.emplace_back();
+void DescriptorAllocator::add_combined_image(
+    int binding, const CombinedImage &combined_image,
+    vk::PipelineStageFlags2 stage, vk::AccessFlags2 access) {
+    auto &[info, write, image, range, stageFlags, accessFlags] =
+        m_imageUpdate.emplace_back();
     info = vk::DescriptorImageInfo()
                .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
-               .setImageView(image.image_view())
-               .setSampler(image.sampler());
+               .setImageView(combined_image.image_view())
+               .setSampler(combined_image.sampler());
     write = vk::WriteDescriptorSet()
                 .setDescriptorCount(1)
                 .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
                 .setDstBinding(binding)
                 .setDstArrayElement(0);
+    image = combined_image.image();
+    range = combined_image.subresource_range();
+    stageFlags = stage;
+    accessFlags = access;
 }
 
 void DescriptorAllocator::add_storage_image(int binding,
-                                            const ImageView &image_view) {
-    auto &[info, write] = m_imageUpdate.emplace_back();
+                                            const ImageView &image_view,
+                                            vk::PipelineStageFlags2 stage,
+                                            vk::AccessFlags2 access) {
+    auto &[info, write, image, range, stageFlags, accessFlags] =
+        m_imageUpdate.emplace_back();
     info = vk::DescriptorImageInfo()
                .setImageLayout(vk::ImageLayout::eGeneral)
                .setImageView(image_view.handle());
@@ -51,11 +65,16 @@ void DescriptorAllocator::add_storage_image(int binding,
                 .setDescriptorType(vk::DescriptorType::eStorageImage)
                 .setDstBinding(binding)
                 .setDstArrayElement(0);
+    image = image_view.image()->handle();
+    range = image_view.subresource_range();
+    stageFlags = stage;
+    accessFlags = access;
 }
 
 void DescriptorAllocator::add_acceleration_structure(
-    int binding, vk::AccelerationStructureKHR tlas) {
-    auto &[accelerationStructure, info, write] =
+    int binding, vk::AccelerationStructureKHR tlas,
+    vk::PipelineStageFlags2 stage, vk::AccessFlags2 access) {
+    auto &[accelerationStructure, info, write, stageFlags, accessFlags] =
         m_accelerationStructureUpdate.emplace();
 
     accelerationStructure = tlas;
@@ -69,11 +88,15 @@ void DescriptorAllocator::add_acceleration_structure(
             .setDstBinding(binding)
             .setDstArrayElement(0)
             .setPNext(&write); // Use pNext to pass the acceleration structure
+    stageFlags = stage;
+    accessFlags = access;
 }
 
 void DescriptorAllocator::add_input_attachment(
-    int binding, std::shared_ptr<const ImageView> image_view) {
-    auto &[info, write] = m_imageUpdate.emplace_back();
+    int binding, std::shared_ptr<const ImageView> image_view,
+    vk::PipelineStageFlags2 stage, vk::AccessFlags2 access) {
+    auto &[info, write, image, range, stageFlags, accessFlags] =
+        m_imageUpdate.emplace_back();
     info = vk::DescriptorImageInfo()
                .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
                .setImageView(image_view->handle());
@@ -82,6 +105,10 @@ void DescriptorAllocator::add_input_attachment(
                 .setDescriptorType(vk::DescriptorType::eInputAttachment)
                 .setDstBinding(binding)
                 .setDstArrayElement(0);
+    image = image_view->image()->handle();
+    range = image_view->subresource_range();
+    stageFlags = stage;
+    accessFlags = access;
 }
 
 std::vector<vk::WriteDescriptorSet>
@@ -118,27 +145,28 @@ std::vector<Barrier::ResourceState> DescriptorAllocator::get_resources() const {
         bufferState.buffer = bufferUpdate.info.buffer;
         bufferState.offset = bufferUpdate.info.offset;
         bufferState.size = bufferUpdate.info.range;
-        bufferState.stage = vk::PipelineStageFlagBits2::eAllCommands;
-        bufferState.access = vk::AccessFlagBits2::eShaderRead;
+        bufferState.stage = bufferUpdate.stage;
+        bufferState.access = bufferUpdate.access;
         resources.push_back(bufferState);
     }
 
     // Add image resources
     for (const auto &imageUpdate : m_imageUpdate) {
         Barrier::ImageState imageState;
+        imageState.image = imageUpdate.image;
+        imageState.subresourceRange = imageUpdate.subresource_range;
+        imageState.layout = imageUpdate.info.imageLayout;
+        imageState.stage = imageUpdate.stage;
+        imageState.access = imageUpdate.access;
         resources.push_back(imageState);
-        // We need to get the vk::Image from the ImageView, but we only have the
-        // handle For now, we'll skip image resources as we don't have access to
-        // the underlying image
-        // TODO: Store image information in ImageUpdate or pass it differently
     }
 
     // Add acceleration structure resources
     if (m_accelerationStructureUpdate) {
         Barrier::AccelerationStructureState asState;
         asState.handle = m_accelerationStructureUpdate->accelerationStructure;
-        asState.stage = vk::PipelineStageFlagBits2::eAllCommands;
-        asState.access = vk::AccessFlagBits2::eAccelerationStructureReadKHR;
+        asState.stage = m_accelerationStructureUpdate->stage;
+        asState.access = m_accelerationStructureUpdate->access;
         resources.push_back(asState);
     }
 

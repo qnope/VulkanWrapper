@@ -25,7 +25,9 @@ Material ConcreteMaterialManager<&textured_material_tag>::allocate(
     CombinedImage image = m_staging_buffer->stage_image_from_path(path, true);
 
     DescriptorAllocator set_allocator;
-    set_allocator.add_combined_image(0, image);
+    set_allocator.add_combined_image(
+        0, image, vk::PipelineStageFlagBits2::eFragmentShader,
+        vk::AccessFlagBits2::eShaderSampledRead);
 
     auto set = allocate_set(set_allocator);
     m_combined_images.push_back(std::move(image));

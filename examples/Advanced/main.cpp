@@ -2,7 +2,6 @@
 #include "ColorPass.h"
 #include "ZPass.h"
 #include <VulkanWrapper/3rd_party.h>
-#include <VulkanWrapper/RenderPass/Rendering.h>
 #include <VulkanWrapper/Command/CommandBuffer.h>
 #include <VulkanWrapper/Command/CommandPool.h>
 #include <VulkanWrapper/Descriptors/DescriptorAllocator.h>
@@ -25,6 +24,7 @@
 #include <VulkanWrapper/RayTracing/BottomLevelAccelerationStructure.h>
 #include <VulkanWrapper/RayTracing/ShaderBindingTable.h>
 #include <VulkanWrapper/RayTracing/TopLevelAccelerationStructure.h>
+#include <VulkanWrapper/RenderPass/Rendering.h>
 #include <VulkanWrapper/RenderPass/Subpass.h>
 #include <VulkanWrapper/Synchronization/Fence.h>
 #include <VulkanWrapper/Synchronization/Semaphore.h>
@@ -552,8 +552,10 @@ int main() {
                 .build();
 
         vw::DescriptorAllocator descriptor_allocator;
-        descriptor_allocator.add_uniform_buffer(0, uniform_buffer.handle(), 0,
-                                                uniform_buffer.size_bytes());
+        descriptor_allocator.add_uniform_buffer(
+            0, uniform_buffer.handle(), 0, uniform_buffer.size_bytes(),
+            vk::PipelineStageFlagBits2::eVertexShader,
+            vk::AccessFlagBits2::eUniformRead);
 
         auto descriptor_set =
             descriptor_pool.allocate_set(descriptor_allocator);
@@ -592,27 +594,30 @@ int main() {
             auto depth_subpass = std::make_unique<ZPass>(
                 app.device, *example.mesh_manager, descriptor_set_layout,
                 app.swapchain.width(), app.swapchain.height(), descriptor_set,
-                gbuffer_formats, depth_buffer->format(), depth_buffer->format());
+                gbuffer_formats, depth_buffer->format(),
+                depth_buffer->format());
             auto color_subpass = std::make_unique<ColorSubpass>(
                 app.device, *example.mesh_manager, descriptor_set_layout,
                 app.swapchain.width(), app.swapchain.height(), descriptor_set,
-                gbuffer_formats, depth_buffer->format(), depth_buffer->format());
+                gbuffer_formats, depth_buffer->format(),
+                depth_buffer->format());
 
-            std::vector<std::shared_ptr<const vw::ImageView>> colorAttachments = {
-                gBuffer.color, gBuffer.position, gBuffer.normal,
-                gBuffer.tangeant, gBuffer.biTangeant, gBuffer.light
-            };
+            std::vector<std::shared_ptr<const vw::ImageView>> colorAttachments =
+                {gBuffer.color,    gBuffer.position,   gBuffer.normal,
+                 gBuffer.tangeant, gBuffer.biTangeant, gBuffer.light};
 
             renderings.push_back(
                 vw::RenderingBuilder()
                     .add_subpass(std::move(depth_subpass), {}, gBuffer.depth)
-                    .add_subpass(std::move(color_subpass), colorAttachments, gBuffer.depth)
+                    .add_subpass(std::move(color_subpass), colorAttachments,
+                                 gBuffer.depth)
                     .build());
         }
 
         size_t frameIndex = 0;
         for (auto [gBuffer, commandBuffer, swapchainBuffer, rendering] :
-             std::views::zip(gBuffers, commandBuffers, image_views, renderings)) {
+             std::views::zip(gBuffers, commandBuffers, image_views,
+                             renderings)) {
             vw::CommandBufferRecorder recorder(commandBuffer);
 
             // Geometry Pass using Rendering

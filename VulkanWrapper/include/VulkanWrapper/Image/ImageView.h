@@ -12,12 +12,16 @@ using ImageViewCreationException = TaggedException<struct ImageViewCreationTag>;
 class ImageView : public ObjectWithUniqueHandle<vk::UniqueImageView> {
   public:
     ImageView(const std::shared_ptr<const Image> &image,
-              vk::UniqueImageView imageView);
+              vk::UniqueImageView imageView,
+              vk::ImageSubresourceRange subresource_range);
 
     std::shared_ptr<const Image> image() const noexcept;
 
+    vk::ImageSubresourceRange subresource_range() const noexcept;
+
   private:
     std::shared_ptr<const Image> m_image;
+    vk::ImageSubresourceRange m_subresource_range;
 };
 
 class ImageViewBuilder {

@@ -22,4 +22,8 @@ vk::Sampler CombinedImage::sampler() const noexcept {
     return m_sampler->handle();
 }
 
+vk::ImageSubresourceRange CombinedImage::subresource_range() const noexcept {
+    return m_image_view->subresource_range();
+}
+
 } // namespace vw

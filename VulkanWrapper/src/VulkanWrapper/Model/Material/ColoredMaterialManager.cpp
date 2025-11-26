@@ -31,7 +31,9 @@ Material ConcreteMaterialManager<&colored_material_tag>::allocate(
 
     DescriptorAllocator allocator;
     allocator.add_uniform_buffer(0, buffer->handle(),
-                                 offset * sizeof(glm::vec4), sizeof(glm::vec4));
+                                 offset * sizeof(glm::vec4), sizeof(glm::vec4),
+                                 vk::PipelineStageFlagBits2::eFragmentShader,
+                                 vk::AccessFlagBits2::eUniformRead);
     auto set = allocate_set(allocator);
     return {.material_type = &colored_material_tag, .descriptor_set = set};
 }

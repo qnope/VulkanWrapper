@@ -11,6 +11,7 @@ class CombinedImage {
     [[nodiscard]] vk::Image image() const noexcept;
     [[nodiscard]] vk::ImageView image_view() const noexcept;
     [[nodiscard]] vk::Sampler sampler() const noexcept;
+    [[nodiscard]] vk::ImageSubresourceRange subresource_range() const noexcept;
 
   private:
     std::shared_ptr<const Image> m_image;

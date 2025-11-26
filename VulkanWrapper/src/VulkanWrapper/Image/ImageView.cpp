@@ -6,12 +6,18 @@
 namespace vw {
 
 ImageView::ImageView(const std::shared_ptr<const Image> &image,
-                     vk::UniqueImageView imageView)
+                     vk::UniqueImageView imageView,
+                     vk::ImageSubresourceRange subresource_range)
     : ObjectWithUniqueHandle<vk::UniqueImageView>(std::move(imageView))
-    , m_image{image} {}
+    , m_image{image}
+    , m_subresource_range{subresource_range} {}
 
 std::shared_ptr<const Image> ImageView::image() const noexcept {
     return m_image;
+}
+
+vk::ImageSubresourceRange ImageView::subresource_range() const noexcept {
+    return m_subresource_range;
 }
 
 ImageViewBuilder::ImageViewBuilder(const Device &device,
@@ -37,7 +43,8 @@ std::shared_ptr<const ImageView> ImageViewBuilder::build() && {
     if (view.result != vk::Result::eSuccess) {
         throw ImageViewCreationException{std::source_location::current()};
     }
-    return std::make_shared<const ImageView>(m_image, std::move(view.value));
+    return std::make_shared<const ImageView>(m_image, std::move(view.value),
+                                             m_subResourceRange);
 }
 
 } // namespace vw
