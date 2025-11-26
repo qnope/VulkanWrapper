@@ -31,7 +31,6 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
 
     VulkanWrapper/Command/CommandPool.cpp
     VulkanWrapper/Command/CommandBuffer.cpp
-    VulkanWrapper/Command/ResourceTracker.cpp
 
     VulkanWrapper/Synchronization/Fence.cpp
     VulkanWrapper/Synchronization/Semaphore.cpp
@@ -41,6 +40,7 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     VulkanWrapper/Memory/Buffer.cpp
     VulkanWrapper/Memory/StagingBufferManager.cpp
     VulkanWrapper/Memory/Barrier.cpp
+    VulkanWrapper/Memory/ResourceTracker.cpp
 
     VulkanWrapper/Descriptors/DescriptorSetLayout.cpp
     VulkanWrapper/Descriptors/DescriptorPool.cpp

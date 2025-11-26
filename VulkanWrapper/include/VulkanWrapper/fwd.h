@@ -33,6 +33,7 @@ class Semaphore;
 class Fence;
 
 class Allocator;
+class BufferBase;
 
 enum class QueueType;
 
@@ -52,4 +53,12 @@ class MaterialManager;
 class MaterialManagerMap;
 } // namespace Material
 } // namespace Model
+
+namespace Barrier {
+struct ImageState;
+struct BufferState;
+struct AccelerationStructureState;
+class ResourceTracker;
+} // namespace Barrier
+
 } // namespace vw

@@ -6,37 +6,31 @@
 #include <vector>
 #include <variant>
 
-namespace vw {
+namespace vw::Barrier {
 
-class BufferBase;
-namespace rt::as {
-class BottomLevelAccelerationStructure;
-class TopLevelAccelerationStructure;
-}
+struct ImageState {
+    const Image &image;
+    vk::ImageLayout layout;
+    vk::PipelineStageFlags2 stage;
+    vk::AccessFlags2 access;
+};
+
+struct BufferState {
+    const BufferBase &buffer;
+    vk::PipelineStageFlags2 stage;
+    vk::AccessFlags2 access;
+};
+
+struct AccelerationStructureState {
+    vk::AccelerationStructureKHR handle;
+    vk::PipelineStageFlags2 stage;
+    vk::AccessFlags2 access;
+};
+
+using ResourceState = std::variant<ImageState, BufferState, AccelerationStructureState>;
 
 class ResourceTracker {
   public:
-    struct ImageState {
-        const Image &image;
-        vk::ImageLayout layout;
-        vk::PipelineStageFlags2 stage;
-        vk::AccessFlags2 access;
-    };
-
-    struct BufferState {
-        const BufferBase &buffer;
-        vk::PipelineStageFlags2 stage;
-        vk::AccessFlags2 access;
-    };
-
-    struct AccelerationStructureState {
-        vk::AccelerationStructureKHR handle;
-        vk::PipelineStageFlags2 stage;
-        vk::AccessFlags2 access;
-    };
-
-    using ResourceState = std::variant<ImageState, BufferState, AccelerationStructureState>;
-
     ResourceTracker() = default;
 
     void track(const ResourceState &state);
@@ -93,4 +87,4 @@ class ResourceTracker {
                                        vk::AccessFlags2 access);
 };
 
-} // namespace vw
+} // namespace vw::Barrier

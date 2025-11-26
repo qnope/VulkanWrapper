@@ -1,10 +1,10 @@
-#include "VulkanWrapper/Command/ResourceTracker.h"
+#include "VulkanWrapper/Memory/ResourceTracker.h"
 #include "VulkanWrapper/Image/Image.h"
 #include "VulkanWrapper/Memory/Buffer.h"
 #include "VulkanWrapper/RayTracing/BottomLevelAccelerationStructure.h"
 #include "VulkanWrapper/RayTracing/TopLevelAccelerationStructure.h"
 
-namespace vw {
+namespace vw::Barrier {
 
 void ResourceTracker::track(const ResourceState &state) {
     std::visit([this](auto &&arg) {
@@ -168,4 +168,4 @@ void ResourceTracker::flush(vk::CommandBuffer commandBuffer) {
     m_pending_memory_barriers.clear();
 }
 
-} // namespace vw
+} // namespace vw::Barrier
