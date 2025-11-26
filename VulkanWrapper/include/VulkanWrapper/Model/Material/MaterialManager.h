@@ -19,7 +19,7 @@ class MaterialManager {
     layout() const noexcept;
 
   protected:
-    [[nodiscard]] vk::DescriptorSet
+    [[nodiscard]] DescriptorSet
     allocate_set(const DescriptorAllocator &allocator);
 
   private:

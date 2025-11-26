@@ -40,7 +40,7 @@ DescriptorPool::layout() const noexcept {
     return m_layout;
 }
 
-vk::DescriptorSet DescriptorPool::allocate_set(
+DescriptorSet DescriptorPool::allocate_set(
     const DescriptorAllocator &descriptorAllocator) noexcept {
     auto it = m_sets.find(descriptorAllocator);
     if (it != m_sets.end()) {
@@ -55,9 +55,12 @@ vk::DescriptorSet DescriptorPool::allocate_set(
     }
 
     m_device->handle().updateDescriptorSets(writers, nullptr);
-    m_sets.emplace(descriptorAllocator, set);
+    
+    // Extract resources from DescriptorAllocator
+    auto descriptor_set = DescriptorSet(set, descriptorAllocator.get_resources());
+    m_sets.emplace(descriptorAllocator, descriptor_set);
 
-    return set;
+    return descriptor_set;
 }
 
 vk::DescriptorSet DescriptorPool::allocate_descriptor_set_from_last_pool() {

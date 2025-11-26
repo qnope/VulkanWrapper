@@ -2,6 +2,7 @@
 
 #include "RenderPassInformation.h"
 #include "VulkanWrapper/3rd_party.h"
+#include "VulkanWrapper/Descriptors/DescriptorSet.h"
 #include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
 #include "VulkanWrapper/Model/MeshManager.h"
 #include "VulkanWrapper/Pipeline/Pipeline.h"
@@ -34,7 +35,7 @@ class ZPass : public vw::Subpass {
   public:
     ZPass(const vw::Device &device, const vw::Model::MeshManager &mesh_manager,
           std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
-          vw::Width width, vw::Height height, vk::DescriptorSet descriptor_set,
+          vw::Width width, vw::Height height, vw::DescriptorSet descriptor_set,
           std::span<const vk::Format>, vk::Format depth_format, vk::Format)
         : m_device{device}
         , m_mesh_manager{mesh_manager}
@@ -48,7 +49,8 @@ class ZPass : public vw::Subpass {
 
     void execute(vk::CommandBuffer cmd_buffer) const noexcept override {
         const auto &meshes = m_mesh_manager.meshes();
-        std::span first_descriptor_sets = {&m_descriptor_set, 1};
+        auto descriptor_set_handle = m_descriptor_set.handle();
+        std::span first_descriptor_sets = {&descriptor_set_handle, 1};
         cmd_buffer.bindPipeline(pipeline_bind_point(), m_pipeline->handle());
         cmd_buffer.bindDescriptorSets(pipeline_bind_point(),
                                       m_pipeline->layout().handle(), 0,
@@ -78,6 +80,6 @@ class ZPass : public vw::Subpass {
     std::shared_ptr<const vw::DescriptorSetLayout> m_uniform_buffer_layout;
     vw::Width m_width;
     vw::Height m_height;
-    vk::DescriptorSet m_descriptor_set;
+    vw::DescriptorSet m_descriptor_set;
     std::optional<vw::Pipeline> m_pipeline;
 };

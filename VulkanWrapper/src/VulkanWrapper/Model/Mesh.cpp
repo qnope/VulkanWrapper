@@ -18,7 +18,7 @@ Mesh::Mesh(const Vertex3DBuffer *vertex_buffer,
     , m_vertices_count{vertices_count} {}
 
 Material::MaterialTypeTag Mesh::material_type_tag() const noexcept {
-    return m_material.material_type;
+    return *m_material.material_type;
 }
 
 void Mesh::draw(vk::CommandBuffer cmd_buffer, const PipelineLayout &layout,
@@ -28,9 +28,10 @@ void Mesh::draw(vk::CommandBuffer cmd_buffer, const PipelineLayout &layout,
     vk::DeviceSize vbo = 0;
     cmd_buffer.bindVertexBuffers(0, vb, vbo);
     cmd_buffer.bindIndexBuffer(ib, 0, vk::IndexType::eUint32);
+    auto descriptor_set_handle = m_material.descriptor_set.handle();
     cmd_buffer.bindDescriptorSets(
         vk::PipelineBindPoint::eGraphics, layout.handle(),
-        material_descriptor_set_index, m_material.descriptor_set, nullptr);
+        material_descriptor_set_index, descriptor_set_handle, nullptr);
     cmd_buffer.drawIndexed(m_indice_count, 1, m_first_index, m_vertex_offset,
                            0);
 }

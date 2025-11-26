@@ -10,7 +10,7 @@ MaterialManager::layout() const noexcept {
     return m_descriptor_pool.layout();
 }
 
-vk::DescriptorSet
+DescriptorSet
 MaterialManager::allocate_set(const DescriptorAllocator &allocator) {
     return m_descriptor_pool.allocate_set(allocator);
 }

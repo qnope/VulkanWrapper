@@ -108,4 +108,40 @@ DescriptorAllocator::get_write_descriptors() const {
 
     return writers;
 }
+
+std::vector<Barrier::ResourceState> DescriptorAllocator::get_resources() const {
+    std::vector<Barrier::ResourceState> resources;
+
+    // Add buffer resources
+    for (const auto &bufferUpdate : m_bufferUpdate) {
+        Barrier::BufferState bufferState;
+        bufferState.buffer = bufferUpdate.info.buffer;
+        bufferState.offset = bufferUpdate.info.offset;
+        bufferState.size = bufferUpdate.info.range;
+        bufferState.stage = vk::PipelineStageFlagBits2::eAllCommands;
+        bufferState.access = vk::AccessFlagBits2::eShaderRead;
+        resources.push_back(bufferState);
+    }
+
+    // Add image resources
+    for (const auto &imageUpdate : m_imageUpdate) {
+        Barrier::ImageState imageState;
+        resources.push_back(imageState);
+        // We need to get the vk::Image from the ImageView, but we only have the
+        // handle For now, we'll skip image resources as we don't have access to
+        // the underlying image
+        // TODO: Store image information in ImageUpdate or pass it differently
+    }
+
+    // Add acceleration structure resources
+    if (m_accelerationStructureUpdate) {
+        Barrier::AccelerationStructureState asState;
+        asState.handle = m_accelerationStructureUpdate->accelerationStructure;
+        asState.stage = vk::PipelineStageFlagBits2::eAllCommands;
+        asState.access = vk::AccessFlagBits2::eAccelerationStructureReadKHR;
+        resources.push_back(asState);
+    }
+
+    return resources;
+}
 } // namespace vw

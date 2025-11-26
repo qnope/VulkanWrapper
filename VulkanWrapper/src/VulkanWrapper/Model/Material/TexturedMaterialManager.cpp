@@ -29,7 +29,7 @@ Material ConcreteMaterialManager<&textured_material_tag>::allocate(
 
     auto set = allocate_set(set_allocator);
     m_combined_images.push_back(std::move(image));
-    return {.material_type = textured_material_tag, .descriptor_set = set};
+    return {.material_type = &textured_material_tag, .descriptor_set = set};
 }
 
 std::optional<Material>

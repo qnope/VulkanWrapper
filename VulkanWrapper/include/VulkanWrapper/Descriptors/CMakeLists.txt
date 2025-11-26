@@ -3,4 +3,5 @@ target_sources(VulkanWrapperCoreLibrary PUBLIC
     DescriptorSetLayout.h
     DescriptorPool.h
     DescriptorAllocator.h
+    DescriptorSet.h
 )

@@ -2,6 +2,7 @@
 
 #include "RenderPassInformation.h"
 #include "VulkanWrapper/3rd_party.h"
+#include "VulkanWrapper/Descriptors/DescriptorSet.h"
 #include "VulkanWrapper/Model/Material/ColoredMaterialManager.h"
 #include "VulkanWrapper/Model/Material/TexturedMaterialManager.h"
 #include "VulkanWrapper/Model/MeshManager.h"
@@ -79,7 +80,7 @@ class ColorSubpass : public vw::Subpass {
     ColorSubpass(
         const vw::Device &device, const vw::Model::MeshManager &mesh_manager,
         std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
-        vw::Width width, vw::Height height, vk::DescriptorSet descriptor_set,
+        vw::Width width, vw::Height height, vw::DescriptorSet descriptor_set,
         std::span<const vk::Format> color_formats, vk::Format depth_format,
         vk::Format)
         : m_device{device}
@@ -95,7 +96,8 @@ class ColorSubpass : public vw::Subpass {
 
     void execute(vk::CommandBuffer cmd_buffer) const noexcept override {
         const auto &meshes = m_mesh_manager.meshes();
-        std::span first_descriptor_sets = {&m_descriptor_set, 1};
+        auto descriptor_set_handle = m_descriptor_set.handle();
+        std::span first_descriptor_sets = {&descriptor_set_handle, 1};
         for (const auto &mesh : meshes) {
             m_mesh_renderer.draw_mesh(cmd_buffer, mesh, first_descriptor_sets);
         }
@@ -133,5 +135,5 @@ class ColorSubpass : public vw::Subpass {
     vw::Width m_width;
     vw::Height m_height;
     vw::MeshRenderer m_mesh_renderer;
-    vk::DescriptorSet m_descriptor_set;
+    vw::DescriptorSet m_descriptor_set;
 };

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include "VulkanWrapper/fwd.h"
 
 namespace vw {
@@ -22,6 +23,9 @@ class DescriptorAllocator {
 
     [[nodiscard]] std::vector<vk::WriteDescriptorSet>
     get_write_descriptors() const;
+
+    [[nodiscard]] std::vector<Barrier::ResourceState>
+    get_resources() const;
 
     bool operator==(const DescriptorAllocator &) const = default;
 

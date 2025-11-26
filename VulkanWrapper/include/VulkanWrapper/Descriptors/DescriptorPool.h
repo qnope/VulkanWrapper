@@ -1,5 +1,6 @@
 #pragma once
 #include "VulkanWrapper/Descriptors/DescriptorAllocator.h"
+#include "VulkanWrapper/Descriptors/DescriptorSet.h"
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Utils/exceptions.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
@@ -36,7 +37,7 @@ class DescriptorPool {
     [[nodiscard]] std::shared_ptr<const DescriptorSetLayout>
     layout() const noexcept;
 
-    [[nodiscard]] vk::DescriptorSet
+    [[nodiscard]] DescriptorSet
     allocate_set(const DescriptorAllocator &descriptorAllocator) noexcept;
 
   private:
@@ -46,7 +47,7 @@ class DescriptorPool {
     const Device *m_device;
     std::shared_ptr<const DescriptorSetLayout> m_layout;
     std::vector<Internal::DescriptorPoolImpl> m_descriptor_pools;
-    std::unordered_map<DescriptorAllocator, vk::DescriptorSet> m_sets;
+    std::unordered_map<DescriptorAllocator, DescriptorSet> m_sets;
 };
 
 class DescriptorPoolBuilder {
