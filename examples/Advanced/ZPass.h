@@ -75,7 +75,7 @@ class ZPass : public vw::Subpass {
     }
 
     std::vector<vw::Barrier::ResourceState> resource_states() const override {
-        return {};
+        return m_descriptor_set.resources();
     }
 
   private:

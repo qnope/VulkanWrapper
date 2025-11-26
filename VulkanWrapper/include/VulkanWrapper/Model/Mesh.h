@@ -34,6 +34,10 @@ class Mesh {
         return m_indice_count;
     }
 
+    [[nodiscard]] const Material::Material &material() const noexcept {
+        return m_material;
+    }
+
   private:
     const Vertex3DBuffer *m_vertex_buffer;
     const FullVertex3DBuffer *m_full_vertex_buffer;

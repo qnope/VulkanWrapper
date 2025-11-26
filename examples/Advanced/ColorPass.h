@@ -129,7 +129,17 @@ class ColorSubpass : public vw::Subpass {
     }
 
     std::vector<vw::Barrier::ResourceState> resource_states() const override {
-        return {};
+        std::vector<vw::Barrier::ResourceState> resources =
+            m_descriptor_set.resources();
+
+        for (const auto &mesh : m_mesh_manager.meshes()) {
+            const auto &material_resources =
+                mesh.material().descriptor_set.resources();
+            resources.insert(resources.end(), material_resources.begin(),
+                             material_resources.end());
+        }
+
+        return resources;
     }
 
   private:
