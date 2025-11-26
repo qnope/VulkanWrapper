@@ -1,4 +1,4 @@
-#include "VulkanWrapper/Memory/ResourceTracker.h"
+#include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include "VulkanWrapper/Image/Image.h"
 #include "VulkanWrapper/Memory/Buffer.h"
 #include "VulkanWrapper/RayTracing/BottomLevelAccelerationStructure.h"

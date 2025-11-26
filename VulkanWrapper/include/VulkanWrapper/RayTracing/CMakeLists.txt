@@ -1,4 +1,4 @@
-target_sources(VulkanWrapperCoreLibrary PRIVATE
+target_sources(VulkanWrapperCoreLibrary PUBLIC
     BottomLevelAccelerationStructure.h
     TopLevelAccelerationStructure.h
     RayTracingPipeline.h
