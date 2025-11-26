@@ -11,4 +11,6 @@ vk::RenderingAttachmentInfo Subpass::depth_attachment_information() const {
     throw SubpassNotManagingDepthException{std::source_location::current()};
 }
 
+
+
 } // namespace vw

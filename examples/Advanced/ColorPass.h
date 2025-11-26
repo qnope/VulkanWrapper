@@ -128,6 +128,10 @@ class ColorSubpass : public vw::Subpass {
             .setStoreOp(vk::AttachmentStoreOp::eStore);
     }
 
+    std::vector<vw::Barrier::ResourceState> resource_states() const override {
+        return {};
+    }
+
   private:
     const vw::Device &m_device;
     const vw::Model::MeshManager &m_mesh_manager;

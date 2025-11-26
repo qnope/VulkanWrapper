@@ -74,6 +74,10 @@ class ZPass : public vw::Subpass {
             .setClearValue(vk::ClearDepthStencilValue(1.0f, 0));
     }
 
+    std::vector<vw::Barrier::ResourceState> resource_states() const override {
+        return {};
+    }
+
   private:
     const vw::Device &m_device;
     const vw::Model::MeshManager &m_mesh_manager;

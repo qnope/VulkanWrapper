@@ -5,6 +5,7 @@
 #include "VulkanWrapper/Utils/IdentifierTag.h"
 #include <span>
 #include <vulkan/vulkan.hpp>
+#include "VulkanWrapper/Synchronization/ResourceTracker.h"
 
 namespace vw {
 
@@ -31,6 +32,8 @@ class Subpass {
     color_attachment_information() const noexcept = 0;
 
     virtual vk::RenderingAttachmentInfo depth_attachment_information() const;
+
+    virtual std::vector<vw::Barrier::ResourceState> resource_states() const = 0;
 };
 
 } // namespace vw
