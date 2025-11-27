@@ -1,6 +1,7 @@
 #pragma once
 
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
+#include "VulkanWrapper/3rd_party.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include <vulkan/vulkan.hpp>
 #include <vector>

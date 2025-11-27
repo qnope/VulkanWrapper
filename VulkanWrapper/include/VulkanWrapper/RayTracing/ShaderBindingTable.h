@@ -1,4 +1,5 @@
 #pragma once
+#include "VulkanWrapper/3rd_party.h"
 
 #include "VulkanWrapper/Memory/Buffer.h"
 #include "VulkanWrapper/RayTracing/RayTracingPipeline.h"

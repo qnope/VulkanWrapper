@@ -1,4 +1,5 @@
 #pragma once
+#include "VulkanWrapper/3rd_party.h"
 
 namespace vw {
 constexpr uint64_t align(uint64_t size, uint64_t align) {

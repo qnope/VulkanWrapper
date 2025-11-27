@@ -1,4 +1,5 @@
 #pragma once
+#include "VulkanWrapper/3rd_party.h"
 
 #include "VulkanWrapper/Descriptors/DescriptorPool.h"
 #include "VulkanWrapper/Model/Material/MaterialTypeTag.h"

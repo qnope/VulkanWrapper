@@ -1,4 +1,5 @@
 #pragma once
+#include "VulkanWrapper/3rd_party.h"
 
 #include "VulkanWrapper/Model/Material/Material.h"
 #include "VulkanWrapper/Model/Material/MaterialManager.h"

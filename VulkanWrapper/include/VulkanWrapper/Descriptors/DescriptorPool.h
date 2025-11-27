@@ -1,4 +1,5 @@
 #pragma once
+#include "VulkanWrapper/3rd_party.h"
 #include "VulkanWrapper/Descriptors/DescriptorAllocator.h"
 #include "VulkanWrapper/Descriptors/DescriptorSet.h"
 #include "VulkanWrapper/fwd.h"

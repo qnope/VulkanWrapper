@@ -1,6 +1,7 @@
 #pragma once
 
 #include "VulkanWrapper/fwd.h"
+#include "VulkanWrapper/3rd_party.h"
 #include "VulkanWrapper/Utils/exceptions.h"
 #include "VulkanWrapper/Utils/IdentifierTag.h"
 #include <span>

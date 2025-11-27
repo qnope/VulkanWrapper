@@ -1,4 +1,5 @@
 #pragma once
+#include "VulkanWrapper/3rd_party.h"
 
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Image/Image.h"

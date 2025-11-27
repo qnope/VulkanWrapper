@@ -1,6 +1,7 @@
 #pragma once
 
 #include "VulkanWrapper/Descriptors/Vertex.h"
+#include "VulkanWrapper/3rd_party.h"
 #include "VulkanWrapper/Memory/Buffer.h"
 #include "VulkanWrapper/Model/Material/Material.h"
 
