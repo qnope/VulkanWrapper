@@ -137,11 +137,11 @@ class ColorSubpass : public vw::Subpass {
         return attachments;
     }
 
-    std::vector<vw::Barrier::ResourceState> resource_states(
-        const std::vector<std::shared_ptr<const vw::ImageView>>
-            &color_attachments,
-        const std::shared_ptr<const vw::ImageView> &depth_attachment)
-        const override {
+    std::vector<vw::Barrier::ResourceState>
+    resource_states(const std::vector<std::shared_ptr<const vw::ImageView>>
+                        &color_attachments,
+                    const std::shared_ptr<const vw::ImageView>
+                        &depth_attachment) const override {
         if (!depth_attachment) {
             throw vw::SubpassNotManagingDepthException(
                 std::source_location::current());
@@ -165,8 +165,7 @@ class ColorSubpass : public vw::Subpass {
             .layout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
             .stage = vk::PipelineStageFlagBits2::eEarlyFragmentTests |
                      vk::PipelineStageFlagBits2::eLateFragmentTests,
-            .access = vk::AccessFlagBits2::eDepthStencilAttachmentWrite |
-                      vk::AccessFlagBits2::eDepthStencilAttachmentRead});
+            .access = vk::AccessFlagBits2::eDepthStencilAttachmentRead});
 
         for (const auto &mesh : m_mesh_manager.meshes()) {
             const auto &material_resources =
