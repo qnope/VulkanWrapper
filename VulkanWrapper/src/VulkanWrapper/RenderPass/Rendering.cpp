@@ -71,7 +71,7 @@ void Rendering::execute(vk::CommandBuffer cmd_buffer,
         resource_tracker.flush(cmd_buffer);
 
         cmd_buffer.beginRendering(renderingInfo);
-        subpassInfo.subpass->execute(cmd_buffer);
+        subpassInfo.subpass->execute(cmd_buffer, renderArea);
         cmd_buffer.endRendering();
     }
 }

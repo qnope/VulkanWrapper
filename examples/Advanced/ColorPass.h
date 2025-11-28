@@ -17,8 +17,7 @@ inline vw::Pipeline create_pipeline(
     vk::Format depth_format, std::shared_ptr<const vw::ShaderModule> vertex,
     std::shared_ptr<const vw::ShaderModule> fragment,
     std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
-    std::shared_ptr<const vw::DescriptorSetLayout> material_layout,
-    vw::Width width, vw::Height height) {
+    std::shared_ptr<const vw::DescriptorSetLayout> material_layout) {
 
     auto pipelineLayout = vw::PipelineLayoutBuilder(device)
                               .with_descriptor_set_layout(uniform_buffer_layout)
@@ -30,8 +29,7 @@ inline vw::Pipeline create_pipeline(
             .add_vertex_binding<vw::FullVertex3D>()
             .add_shader(vk::ShaderStageFlagBits::eVertex, std::move(vertex))
             .add_shader(vk::ShaderStageFlagBits::eFragment, std::move(fragment))
-            .with_fixed_scissor(int32_t(width), int32_t(height))
-            .with_fixed_viewport(int32_t(width), int32_t(height))
+            .with_dynamic_viewport_scissor()
             .with_depth_test(false, vk::CompareOp::eEqual)
             .set_depth_format(depth_format);
 
@@ -45,8 +43,7 @@ inline vw::Pipeline create_pipeline(
 inline vw::MeshRenderer create_renderer(
     const vw::Device &device, std::span<const vk::Format> color_formats,
     vk::Format depth_format, const vw::Model::MeshManager &mesh_manager,
-    const std::shared_ptr<const vw::DescriptorSetLayout> &uniform_buffer_layout,
-    vw::Width width, vw::Height height) {
+    const std::shared_ptr<const vw::DescriptorSetLayout> &uniform_buffer_layout) {
     auto vertexShader = vw::ShaderModule::create_from_spirv_file(
         device, "Shaders/GBuffer/gbuffer.spv");
     auto fragment_textured = vw::ShaderModule::create_from_spirv_file(
@@ -57,15 +54,13 @@ inline vw::MeshRenderer create_renderer(
         create_pipeline(device, color_formats, depth_format, vertexShader,
                         fragment_textured, uniform_buffer_layout,
                         mesh_manager.material_manager_map().layout(
-                            vw::Model::Material::textured_material_tag),
-                        width, height);
+                            vw::Model::Material::textured_material_tag));
 
     auto colored_pipeline =
         create_pipeline(device, color_formats, depth_format, vertexShader,
                         fragment_colored, uniform_buffer_layout,
                         mesh_manager.material_manager_map().layout(
-                            vw::Model::Material::colored_material_tag),
-                        width, height);
+                            vw::Model::Material::colored_material_tag));
 
     vw::MeshRenderer renderer;
     renderer.add_pipeline(vw::Model::Material::textured_material_tag,
@@ -80,21 +75,27 @@ class ColorSubpass : public vw::Subpass {
     ColorSubpass(
         const vw::Device &device, const vw::Model::MeshManager &mesh_manager,
         std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
-        vw::Width width, vw::Height height, vw::DescriptorSet descriptor_set,
+        vw::DescriptorSet descriptor_set,
         std::span<const vk::Format> color_formats, vk::Format depth_format,
         vk::Format)
         : m_device{device}
         , m_mesh_manager{mesh_manager}
         , m_uniform_buffer_layout{uniform_buffer_layout}
-        , m_width{width}
-        , m_height{height}
         , m_descriptor_set{descriptor_set} {
         m_mesh_renderer = create_renderer(
             m_device, color_formats, depth_format, m_mesh_manager,
-            m_uniform_buffer_layout, m_width, m_height);
+            m_uniform_buffer_layout);
     }
 
-    void execute(vk::CommandBuffer cmd_buffer) const noexcept override {
+    void execute(vk::CommandBuffer cmd_buffer,
+                 vk::Rect2D render_area) const noexcept override {
+        vk::Viewport viewport(0.0f, 0.0f,
+                              static_cast<float>(render_area.extent.width),
+                              static_cast<float>(render_area.extent.height),
+                              0.0f, 1.0f);
+        cmd_buffer.setViewport(0, 1, &viewport);
+        cmd_buffer.setScissor(0, 1, &render_area);
+
         const auto &meshes = m_mesh_manager.meshes();
         auto descriptor_set_handle = m_descriptor_set.handle();
         std::span first_descriptor_sets = {&descriptor_set_handle, 1};
@@ -146,8 +147,6 @@ class ColorSubpass : public vw::Subpass {
     const vw::Device &m_device;
     const vw::Model::MeshManager &m_mesh_manager;
     std::shared_ptr<const vw::DescriptorSetLayout> m_uniform_buffer_layout;
-    vw::Width m_width;
-    vw::Height m_height;
     vw::MeshRenderer m_mesh_renderer;
     vw::DescriptorSet m_descriptor_set;
 };

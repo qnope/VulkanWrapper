@@ -37,6 +37,7 @@ class GraphicsPipelineBuilder {
 
     GraphicsPipelineBuilder &&with_fixed_viewport(int width, int height) &&;
     GraphicsPipelineBuilder &&with_fixed_scissor(int width, int height) &&;
+    GraphicsPipelineBuilder &&with_dynamic_viewport_scissor() &&;
 
     GraphicsPipelineBuilder &&add_color_attachment(vk::Format format) &&;
     GraphicsPipelineBuilder &&set_depth_format(vk::Format format) &&;

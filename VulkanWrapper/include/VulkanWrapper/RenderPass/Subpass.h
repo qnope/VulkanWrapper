@@ -27,7 +27,8 @@ class Subpass {
     [[nodiscard]] virtual vk::PipelineBindPoint
     pipeline_bind_point() const noexcept;
 
-    virtual void execute(vk::CommandBuffer cmd_buffer) const noexcept = 0;
+    virtual void execute(vk::CommandBuffer cmd_buffer,
+                         vk::Rect2D render_area) const noexcept = 0;
 
     virtual std::vector<vk::RenderingAttachmentInfo>
     color_attachment_information() const noexcept = 0;

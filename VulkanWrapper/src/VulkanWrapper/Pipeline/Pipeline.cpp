@@ -46,6 +46,13 @@ GraphicsPipelineBuilder::with_fixed_scissor(int width, int height) && {
 }
 
 GraphicsPipelineBuilder &&
+GraphicsPipelineBuilder::with_dynamic_viewport_scissor() && {
+    m_dynamicStates.push_back(vk::DynamicState::eViewport);
+    m_dynamicStates.push_back(vk::DynamicState::eScissor);
+    return std::move(*this);
+}
+
+GraphicsPipelineBuilder &&
 GraphicsPipelineBuilder::add_color_attachment(vk::Format format) && {
     const auto colorBlendAttachment =
         vk::PipelineColorBlendAttachmentState()

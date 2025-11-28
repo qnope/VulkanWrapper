@@ -11,8 +11,7 @@
 
 inline vw::Pipeline create_zpass_pipeline(
     const vw::Device &device, vk::Format depth_format,
-    std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
-    vw::Width width, vw::Height height) {
+    std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout) {
     auto vertex_shader = vw::ShaderModule::create_from_spirv_file(
         device, "Shaders/GBuffer/zpass.spv");
 
@@ -25,8 +24,7 @@ inline vw::Pipeline create_zpass_pipeline(
         .set_depth_format(depth_format)
         .add_vertex_binding<vw::Vertex3D>()
         .add_shader(vk::ShaderStageFlagBits::eVertex, std::move(vertex_shader))
-        .with_fixed_scissor(int32_t(width), int32_t(height))
-        .with_fixed_viewport(int32_t(width), int32_t(height))
+        .with_dynamic_viewport_scissor()
         .with_depth_test(true, vk::CompareOp::eLess)
         .build();
 }
@@ -35,19 +33,25 @@ class ZPass : public vw::Subpass {
   public:
     ZPass(const vw::Device &device, const vw::Model::MeshManager &mesh_manager,
           std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
-          vw::Width width, vw::Height height, vw::DescriptorSet descriptor_set,
-          std::span<const vk::Format>, vk::Format depth_format, vk::Format)
+          vw::DescriptorSet descriptor_set, std::span<const vk::Format>,
+          vk::Format depth_format, vk::Format)
         : m_device{device}
         , m_mesh_manager{mesh_manager}
         , m_uniform_buffer_layout{uniform_buffer_layout}
-        , m_width{width}
-        , m_height{height}
         , m_descriptor_set{descriptor_set} {
-        m_pipeline = create_zpass_pipeline(
-            m_device, depth_format, m_uniform_buffer_layout, m_width, m_height);
+        m_pipeline = create_zpass_pipeline(m_device, depth_format,
+                                           m_uniform_buffer_layout);
     }
 
-    void execute(vk::CommandBuffer cmd_buffer) const noexcept override {
+    void execute(vk::CommandBuffer cmd_buffer,
+                 vk::Rect2D render_area) const noexcept override {
+        vk::Viewport viewport(0.0f, 0.0f,
+                              static_cast<float>(render_area.extent.width),
+                              static_cast<float>(render_area.extent.height),
+                              0.0f, 1.0f);
+        cmd_buffer.setViewport(0, 1, &viewport);
+        cmd_buffer.setScissor(0, 1, &render_area);
+
         const auto &meshes = m_mesh_manager.meshes();
         auto descriptor_set_handle = m_descriptor_set.handle();
         std::span first_descriptor_sets = {&descriptor_set_handle, 1};
@@ -82,8 +86,6 @@ class ZPass : public vw::Subpass {
     const vw::Device &m_device;
     const vw::Model::MeshManager &m_mesh_manager;
     std::shared_ptr<const vw::DescriptorSetLayout> m_uniform_buffer_layout;
-    vw::Width m_width;
-    vw::Height m_height;
     vw::DescriptorSet m_descriptor_set;
     std::optional<vw::Pipeline> m_pipeline;
 };

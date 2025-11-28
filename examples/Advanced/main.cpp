@@ -595,13 +595,11 @@ int main() {
         for (const auto &gBuffer : gBuffers) {
             auto depth_subpass = std::make_unique<ZPass>(
                 app.device, *example.mesh_manager, descriptor_set_layout,
-                app.swapchain.width(), app.swapchain.height(), descriptor_set,
-                gbuffer_formats, depth_buffer->format(),
+                descriptor_set, gbuffer_formats, depth_buffer->format(),
                 depth_buffer->format());
             auto color_subpass = std::make_unique<ColorSubpass>(
                 app.device, *example.mesh_manager, descriptor_set_layout,
-                app.swapchain.width(), app.swapchain.height(), descriptor_set,
-                gbuffer_formats, depth_buffer->format(),
+                descriptor_set, gbuffer_formats, depth_buffer->format(),
                 depth_buffer->format());
 
             std::vector<std::shared_ptr<const vw::ImageView>> colorAttachments =
