@@ -3,6 +3,7 @@
 
 #include "VulkanWrapper/Image/ImageView.h"
 #include "VulkanWrapper/RenderPass/Subpass.h"
+#include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include "VulkanWrapper/fwd.h"
 #include <memory>
 #include <vector>
@@ -19,7 +20,8 @@ class Rendering {
 
     Rendering(std::vector<SubpassInfo> subpasses);
 
-    void execute(vk::CommandBuffer cmd_buffer) const;
+    void execute(vk::CommandBuffer cmd_buffer,
+                 Barrier::ResourceTracker &resource_tracker) const;
 
   private:
     std::vector<SubpassInfo> m_subpasses;

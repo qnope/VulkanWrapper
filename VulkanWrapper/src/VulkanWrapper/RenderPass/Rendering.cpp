@@ -7,11 +7,8 @@ namespace vw {
 Rendering::Rendering(std::vector<SubpassInfo> subpasses)
     : m_subpasses(std::move(subpasses)) {}
 
-void Rendering::execute(vk::CommandBuffer cmd_buffer) const {
-    // Track current layout of each image
-    std::map<std::shared_ptr<const ImageView>, std::optional<vk::ImageLayout>>
-        imageLayouts;
-
+void Rendering::execute(vk::CommandBuffer cmd_buffer,
+                        Barrier::ResourceTracker &resource_tracker) const {
     for (const auto &subpassInfo : m_subpasses) {
         auto attachmentInfos =
             subpassInfo.subpass->color_attachment_information();
@@ -31,16 +28,12 @@ void Rendering::execute(vk::CommandBuffer cmd_buffer) const {
             if (colorIndex < subpassInfo.color_attachments.size()) {
                 const auto &view = subpassInfo.color_attachments[colorIndex];
 
-                // Get current layout or default to Undefined
-                auto &oldLayout = imageLayouts[view];
-
-                execute_image_transition(
-                    cmd_buffer, view->image(),
-                    oldLayout.value_or(vk::ImageLayout::eUndefined),
-                    attachmentInfo.imageLayout);
-
-                // Update tracked layout
-                oldLayout = attachmentInfo.imageLayout;
+                resource_tracker.request(Barrier::ImageState{
+                    .image = view->image()->handle(),
+                    .subresourceRange = view->subresource_range(),
+                    .layout = attachmentInfo.imageLayout,
+                    .stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                    .access = vk::AccessFlagBits2::eColorAttachmentWrite});
 
                 attachmentInfo.setImageView(view->handle());
                 colorIndex++;
@@ -57,20 +50,25 @@ void Rendering::execute(vk::CommandBuffer cmd_buffer) const {
         if (subpassInfo.depth_attachment) {
             depthInfo = subpassInfo.subpass->depth_attachment_information();
 
-            // Get current layout or default to Undefined
-            auto &oldLayout = imageLayouts[subpassInfo.depth_attachment];
-
-            execute_image_transition(
-                cmd_buffer, subpassInfo.depth_attachment->image(),
-                oldLayout.value_or(vk::ImageLayout::eUndefined),
-                depthInfo.imageLayout);
-
-            // Update tracked layout
-            oldLayout = depthInfo.imageLayout;
+            resource_tracker.request(Barrier::ImageState{
+                .image = subpassInfo.depth_attachment->image()->handle(),
+                .subresourceRange =
+                    subpassInfo.depth_attachment->subresource_range(),
+                .layout = depthInfo.imageLayout,
+                .stage = vk::PipelineStageFlagBits2::eEarlyFragmentTests |
+                         vk::PipelineStageFlagBits2::eLateFragmentTests,
+                .access = vk::AccessFlagBits2::eDepthStencilAttachmentWrite |
+                          vk::AccessFlagBits2::eDepthStencilAttachmentRead});
 
             depthInfo.setImageView(subpassInfo.depth_attachment->handle());
             renderingInfo.setPDepthAttachment(&depthInfo);
         }
+
+        for (const auto &resource : subpassInfo.subpass->resource_states()) {
+            resource_tracker.request(resource);
+        }
+
+        resource_tracker.flush(cmd_buffer);
 
         cmd_buffer.beginRendering(renderingInfo);
         subpassInfo.subpass->execute(cmd_buffer);

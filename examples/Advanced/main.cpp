@@ -27,6 +27,7 @@
 #include <VulkanWrapper/RenderPass/Rendering.h>
 #include <VulkanWrapper/RenderPass/Subpass.h>
 #include <VulkanWrapper/Synchronization/Fence.h>
+#include <VulkanWrapper/Synchronization/ResourceTracker.h>
 #include <VulkanWrapper/Synchronization/Semaphore.h>
 #include <VulkanWrapper/Utils/exceptions.h>
 #include <VulkanWrapper/Vulkan/Queue.h>
@@ -498,7 +499,8 @@ createGBuffers(vw::Device &device, const vw::Allocator &allocator,
 
     constexpr auto usageFlags = vk::ImageUsageFlagBits::eColorAttachment |
                                 vk::ImageUsageFlagBits::eInputAttachment |
-                                vk::ImageUsageFlagBits::eSampled;
+                                vk::ImageUsageFlagBits::eSampled |
+                                vk::ImageUsageFlagBits::eTransferSrc;
 
     auto create_img = [&](vk::ImageUsageFlags otherFlags = {}) {
         return allocator.create_image_2D(swapchain.width(), swapchain.height(),
@@ -621,48 +623,25 @@ int main() {
             vw::CommandBufferRecorder recorder(commandBuffer);
 
             // Geometry Pass using Rendering
-            rendering.execute(commandBuffer);
-
-            // Transitions for reading in shaders
-            vw::execute_image_transition(
-                commandBuffer, gBuffer.color->image(),
-                vk::ImageLayout::eColorAttachmentOptimal,
-                vk::ImageLayout::eShaderReadOnlyOptimal);
-            vw::execute_image_transition(
-                commandBuffer, gBuffer.position->image(),
-                vk::ImageLayout::eColorAttachmentOptimal,
-                vk::ImageLayout::eShaderReadOnlyOptimal);
-            vw::execute_image_transition(
-                commandBuffer, gBuffer.normal->image(),
-                vk::ImageLayout::eColorAttachmentOptimal,
-                vk::ImageLayout::eShaderReadOnlyOptimal);
-            vw::execute_image_transition(
-                commandBuffer, gBuffer.tangeant->image(),
-                vk::ImageLayout::eColorAttachmentOptimal,
-                vk::ImageLayout::eShaderReadOnlyOptimal);
-            vw::execute_image_transition(
-                commandBuffer, gBuffer.biTangeant->image(),
-                vk::ImageLayout::eColorAttachmentOptimal,
-                vk::ImageLayout::eShaderReadOnlyOptimal);
-            vw::execute_image_transition(
-                commandBuffer, gBuffer.light->image(),
-                vk::ImageLayout::eColorAttachmentOptimal,
-                vk::ImageLayout::eGeneral);
-            vw::execute_image_transition(
-                commandBuffer, gBuffer.depth->image(),
-                vk::ImageLayout::eDepthStencilAttachmentOptimal,
-                vk::ImageLayout::eShaderReadOnlyOptimal);
+            vw::Barrier::ResourceTracker resource_tracker;
+            rendering.execute(commandBuffer, resource_tracker);
 
             // Blit color to swapchain
-            vw::execute_image_transition(
-                commandBuffer, gBuffer.color->image(),
-                vk::ImageLayout::eShaderReadOnlyOptimal,
-                vk::ImageLayout::eTransferSrcOptimal);
+            resource_tracker.request(vw::Barrier::ImageState{
+                .image = gBuffer.color->image()->handle(),
+                .subresourceRange = gBuffer.color->subresource_range(),
+                .layout = vk::ImageLayout::eTransferSrcOptimal,
+                .stage = vk::PipelineStageFlagBits2::eTransfer,
+                .access = vk::AccessFlagBits2::eTransferRead});
 
-            vw::execute_image_transition(commandBuffer,
-                                         swapchainBuffer->image(),
-                                         vk::ImageLayout::eUndefined,
-                                         vk::ImageLayout::eTransferDstOptimal);
+            resource_tracker.request(vw::Barrier::ImageState{
+                .image = swapchainBuffer->image()->handle(),
+                .subresourceRange = swapchainBuffer->subresource_range(),
+                .layout = vk::ImageLayout::eTransferDstOptimal,
+                .stage = vk::PipelineStageFlagBits2::eTransfer,
+                .access = vk::AccessFlagBits2::eTransferWrite});
+
+            resource_tracker.flush(commandBuffer);
 
             vk::ImageBlit blit{};
             blit.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -680,10 +659,14 @@ int main() {
                                     vk::ImageLayout::eTransferDstOptimal, blit,
                                     vk::Filter::eLinear);
 
-            vw::execute_image_transition(commandBuffer,
-                                         swapchainBuffer->image(),
-                                         vk::ImageLayout::eTransferDstOptimal,
-                                         vk::ImageLayout::ePresentSrcKHR);
+            resource_tracker.request(vw::Barrier::ImageState{
+                .image = swapchainBuffer->image()->handle(),
+                .subresourceRange = swapchainBuffer->subresource_range(),
+                .layout = vk::ImageLayout::ePresentSrcKHR,
+                .stage = vk::PipelineStageFlagBits2::eNone,
+                .access = vk::AccessFlagBits2::eNone});
+
+            resource_tracker.flush(commandBuffer);
         }
 
         auto cmd_buffer = example.mesh_manager->fill_command_buffer();
