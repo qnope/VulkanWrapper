@@ -13,7 +13,7 @@ namespace vw {
 class Rendering {
   public:
     struct SubpassInfo {
-        std::unique_ptr<Subpass> subpass;
+        std::shared_ptr<Subpass> subpass;
         std::vector<std::shared_ptr<const ImageView>> color_attachments;
         std::shared_ptr<const ImageView> depth_attachment;
     };
@@ -32,7 +32,7 @@ class RenderingBuilder {
     RenderingBuilder();
 
     RenderingBuilder &&add_subpass(
-        std::unique_ptr<Subpass> subpass,
+        std::shared_ptr<Subpass> subpass,
         std::vector<std::shared_ptr<const ImageView>> color_attachments,
         std::shared_ptr<const ImageView> depth_attachment = nullptr) &&;
 

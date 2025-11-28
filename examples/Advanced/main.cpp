@@ -592,29 +592,29 @@ int main() {
                                   uint32_t(app.swapchain.height()));
 
         std::vector<vw::Rendering> renderings;
-        for (const auto &gBuffer : gBuffers) {
-            auto depth_subpass = std::make_unique<ZPass>(
-                app.device, *example.mesh_manager, descriptor_set_layout,
-                descriptor_set, gbuffer_formats, depth_buffer->format(),
-                depth_buffer->format());
-            auto color_subpass = std::make_unique<ColorSubpass>(
-                app.device, *example.mesh_manager, descriptor_set_layout,
-                descriptor_set, gbuffer_formats, depth_buffer->format(),
-                depth_buffer->format());
+        auto depth_subpass = std::make_shared<ZPass>(
+            app.device, *example.mesh_manager, descriptor_set_layout,
+            descriptor_set, gbuffer_formats, depth_buffer->format(),
+            depth_buffer->format());
+        auto color_subpass = std::make_shared<ColorSubpass>(
+            app.device, *example.mesh_manager, descriptor_set_layout,
+            descriptor_set, gbuffer_formats, depth_buffer->format(),
+            depth_buffer->format());
 
+        for (const auto &gBuffer : gBuffers) {
             std::vector<std::shared_ptr<const vw::ImageView>> colorAttachments =
                 {gBuffer.color,    gBuffer.position,   gBuffer.normal,
                  gBuffer.tangeant, gBuffer.biTangeant, gBuffer.light};
 
-            renderings.push_back(
+            auto rendering =
                 vw::RenderingBuilder()
-                    .add_subpass(std::move(depth_subpass), {}, gBuffer.depth)
-                    .add_subpass(std::move(color_subpass), colorAttachments,
+                    .add_subpass(depth_subpass, {}, gBuffer.depth)
+                    .add_subpass(color_subpass, std::move(colorAttachments),
                                  gBuffer.depth)
-                    .build());
-        }
+                    .build();
 
-        size_t frameIndex = 0;
+            renderings.emplace_back(std::move(rendering));
+        }
         for (auto [gBuffer, commandBuffer, swapchainBuffer, rendering] :
              std::views::zip(gBuffers, commandBuffers, image_views,
                              renderings)) {
