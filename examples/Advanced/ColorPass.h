@@ -43,7 +43,8 @@ inline vw::Pipeline create_pipeline(
 inline vw::MeshRenderer create_renderer(
     const vw::Device &device, std::span<const vk::Format> color_formats,
     vk::Format depth_format, const vw::Model::MeshManager &mesh_manager,
-    const std::shared_ptr<const vw::DescriptorSetLayout> &uniform_buffer_layout) {
+    const std::shared_ptr<const vw::DescriptorSetLayout>
+        &uniform_buffer_layout) {
     auto vertexShader = vw::ShaderModule::create_from_spirv_file(
         device, "Shaders/GBuffer/gbuffer.spv");
     auto fragment_textured = vw::ShaderModule::create_from_spirv_file(
@@ -82,17 +83,16 @@ class ColorSubpass : public vw::Subpass {
         , m_mesh_manager{mesh_manager}
         , m_uniform_buffer_layout{uniform_buffer_layout}
         , m_descriptor_set{descriptor_set} {
-        m_mesh_renderer = create_renderer(
-            m_device, color_formats, depth_format, m_mesh_manager,
-            m_uniform_buffer_layout);
+        m_mesh_renderer =
+            create_renderer(m_device, color_formats, depth_format,
+                            m_mesh_manager, m_uniform_buffer_layout);
     }
 
     void execute(vk::CommandBuffer cmd_buffer,
                  vk::Rect2D render_area) const noexcept override {
-        vk::Viewport viewport(0.0f, 0.0f,
-                              static_cast<float>(render_area.extent.width),
-                              static_cast<float>(render_area.extent.height),
-                              0.0f, 1.0f);
+        vk::Viewport viewport(
+            0.0f, 0.0f, static_cast<float>(render_area.extent.width),
+            static_cast<float>(render_area.extent.height), 0.0f, 1.0f);
         cmd_buffer.setViewport(0, 1, &viewport);
         cmd_buffer.setScissor(0, 1, &render_area);
 
@@ -104,14 +104,17 @@ class ColorSubpass : public vw::Subpass {
         }
     }
 
-    std::vector<vk::RenderingAttachmentInfo>
-    color_attachment_information() const noexcept override {
-        std::vector<vk::RenderingAttachmentInfo> attachments;
+    AttachmentInfo attachment_information(
+        const std::vector<std::shared_ptr<const vw::ImageView>>
+            &color_attachments,
+        const std::shared_ptr<const vw::ImageView> &depth_attachment)
+        const override {
+        AttachmentInfo attachments;
 
-        // 6 color attachments for GBuffer
-        for (int i = 0; i < 6; ++i) {
-            attachments.push_back(
+        for (const auto &view : color_attachments) {
+            attachments.color.push_back(
                 vk::RenderingAttachmentInfo()
+                    .setImageView(view->handle())
                     .setImageLayout(vk::ImageLayout::eColorAttachmentOptimal)
                     .setLoadOp(vk::AttachmentLoadOp::eClear)
                     .setStoreOp(vk::AttachmentStoreOp::eStore)
@@ -119,19 +122,51 @@ class ColorSubpass : public vw::Subpass {
                         vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f)));
         }
 
+        if (!depth_attachment) {
+            throw vw::SubpassNotManagingDepthException(
+                std::source_location::current());
+        }
+
+        attachments.depth =
+            vk::RenderingAttachmentInfo()
+                .setImageView(depth_attachment->handle())
+                .setImageLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+                .setLoadOp(vk::AttachmentLoadOp::eLoad)
+                .setStoreOp(vk::AttachmentStoreOp::eStore);
+
         return attachments;
     }
 
-    vk::RenderingAttachmentInfo depth_attachment_information() const override {
-        return vk::RenderingAttachmentInfo()
-            .setImageLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
-            .setLoadOp(vk::AttachmentLoadOp::eLoad)
-            .setStoreOp(vk::AttachmentStoreOp::eStore);
-    }
+    std::vector<vw::Barrier::ResourceState> resource_states(
+        const std::vector<std::shared_ptr<const vw::ImageView>>
+            &color_attachments,
+        const std::shared_ptr<const vw::ImageView> &depth_attachment)
+        const override {
+        if (!depth_attachment) {
+            throw vw::SubpassNotManagingDepthException(
+                std::source_location::current());
+        }
 
-    std::vector<vw::Barrier::ResourceState> resource_states() const override {
         std::vector<vw::Barrier::ResourceState> resources =
             m_descriptor_set.resources();
+
+        for (const auto &view : color_attachments) {
+            resources.push_back(vw::Barrier::ImageState{
+                .image = view->image()->handle(),
+                .subresourceRange = view->subresource_range(),
+                .layout = vk::ImageLayout::eColorAttachmentOptimal,
+                .stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                .access = vk::AccessFlagBits2::eColorAttachmentWrite});
+        }
+
+        resources.push_back(vw::Barrier::ImageState{
+            .image = depth_attachment->image()->handle(),
+            .subresourceRange = depth_attachment->subresource_range(),
+            .layout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
+            .stage = vk::PipelineStageFlagBits2::eEarlyFragmentTests |
+                     vk::PipelineStageFlagBits2::eLateFragmentTests,
+            .access = vk::AccessFlagBits2::eDepthStencilAttachmentWrite |
+                      vk::AccessFlagBits2::eDepthStencilAttachmentRead});
 
         for (const auto &mesh : m_mesh_manager.meshes()) {
             const auto &material_resources =

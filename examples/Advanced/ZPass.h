@@ -45,10 +45,9 @@ class ZPass : public vw::Subpass {
 
     void execute(vk::CommandBuffer cmd_buffer,
                  vk::Rect2D render_area) const noexcept override {
-        vk::Viewport viewport(0.0f, 0.0f,
-                              static_cast<float>(render_area.extent.width),
-                              static_cast<float>(render_area.extent.height),
-                              0.0f, 1.0f);
+        vk::Viewport viewport(
+            0.0f, 0.0f, static_cast<float>(render_area.extent.width),
+            static_cast<float>(render_area.extent.height), 0.0f, 1.0f);
         cmd_buffer.setViewport(0, 1, &viewport);
         cmd_buffer.setScissor(0, 1, &render_area);
 
@@ -64,22 +63,50 @@ class ZPass : public vw::Subpass {
         }
     }
 
-    std::vector<vk::RenderingAttachmentInfo>
-    color_attachment_information() const noexcept override {
-        // ZPass doesn't use color attachments, only depth
-        return {};
+    AttachmentInfo attachment_information(
+        const std::vector<std::shared_ptr<const vw::ImageView>> &,
+        const std::shared_ptr<const vw::ImageView> &depth_attachment)
+        const override {
+        AttachmentInfo attachments;
+
+        if (!depth_attachment) {
+            throw vw::SubpassNotManagingDepthException(
+                std::source_location::current());
+        }
+
+        attachments.depth =
+            vk::RenderingAttachmentInfo()
+                .setImageView(depth_attachment->handle())
+                .setImageLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+                .setLoadOp(vk::AttachmentLoadOp::eClear)
+                .setStoreOp(vk::AttachmentStoreOp::eStore)
+                .setClearValue(vk::ClearDepthStencilValue(1.0f, 0));
+
+        return attachments;
     }
 
-    vk::RenderingAttachmentInfo depth_attachment_information() const override {
-        return vk::RenderingAttachmentInfo()
-            .setImageLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
-            .setLoadOp(vk::AttachmentLoadOp::eClear)
-            .setStoreOp(vk::AttachmentStoreOp::eStore)
-            .setClearValue(vk::ClearDepthStencilValue(1.0f, 0));
-    }
+    std::vector<vw::Barrier::ResourceState> resource_states(
+        const std::vector<std::shared_ptr<const vw::ImageView>> &,
+        const std::shared_ptr<const vw::ImageView> &depth_attachment)
+        const override {
+        if (!depth_attachment) {
+            throw vw::SubpassNotManagingDepthException(
+                std::source_location::current());
+        }
 
-    std::vector<vw::Barrier::ResourceState> resource_states() const override {
-        return m_descriptor_set.resources();
+        std::vector<vw::Barrier::ResourceState> resources =
+            m_descriptor_set.resources();
+
+        resources.push_back(vw::Barrier::ImageState{
+            .image = depth_attachment->image()->handle(),
+            .subresourceRange = depth_attachment->subresource_range(),
+            .layout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
+            .stage = vk::PipelineStageFlagBits2::eEarlyFragmentTests |
+                     vk::PipelineStageFlagBits2::eLateFragmentTests,
+            .access = vk::AccessFlagBits2::eDepthStencilAttachmentWrite |
+                      vk::AccessFlagBits2::eDepthStencilAttachmentRead});
+
+        return resources;
     }
 
   private:
