@@ -12,7 +12,7 @@
 #include "VulkanWrapper/RenderPass/Subpass.h"
 #include <span>
 
-inline vw::Pipeline create_pipeline(
+inline std::shared_ptr<const vw::Pipeline> create_pipeline(
     const vw::Device &device, std::span<const vk::Format> color_formats,
     vk::Format depth_format, std::shared_ptr<const vw::ShaderModule> vertex,
     std::shared_ptr<const vw::ShaderModule> fragment,
@@ -40,7 +40,7 @@ inline vw::Pipeline create_pipeline(
     return std::move(builder).build();
 }
 
-inline vw::MeshRenderer create_renderer(
+inline std::shared_ptr<vw::MeshRenderer> create_renderer(
     const vw::Device &device, std::span<const vk::Format> color_formats,
     vk::Format depth_format, const vw::Model::MeshManager &mesh_manager,
     const std::shared_ptr<const vw::DescriptorSetLayout>
@@ -63,11 +63,11 @@ inline vw::MeshRenderer create_renderer(
                         mesh_manager.material_manager_map().layout(
                             vw::Model::Material::colored_material_tag));
 
-    vw::MeshRenderer renderer;
-    renderer.add_pipeline(vw::Model::Material::textured_material_tag,
-                          std::move(textured_pipeline));
-    renderer.add_pipeline(vw::Model::Material::colored_material_tag,
-                          std::move(colored_pipeline));
+    auto renderer = std::make_shared<vw::MeshRenderer>();
+    renderer->add_pipeline(vw::Model::Material::textured_material_tag,
+                           std::move(textured_pipeline));
+    renderer->add_pipeline(vw::Model::Material::colored_material_tag,
+                           std::move(colored_pipeline));
     return renderer;
 }
 
@@ -76,24 +76,18 @@ class ColorSubpass : public vw::Subpass {
     ColorSubpass(
         const vw::Device &device, const vw::Model::MeshManager &mesh_manager,
         std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
-        vw::DescriptorSet descriptor_set,
-        std::span<const vk::Format> color_formats, vk::Format depth_format,
-        std::vector<GBuffer> gbuffers)
+        vw::DescriptorSet descriptor_set, GBuffer gbuffer,
+        std::shared_ptr<vw::MeshRenderer> mesh_renderer)
         : m_device{device}
         , m_mesh_manager{mesh_manager}
         , m_uniform_buffer_layout{uniform_buffer_layout}
         , m_descriptor_set{descriptor_set}
-        , m_gbuffers(std::move(gbuffers)) {
-        m_mesh_renderer =
-            create_renderer(m_device, color_formats, depth_format,
-                            m_mesh_manager, m_uniform_buffer_layout);
-    }
+        , m_gbuffer(std::move(gbuffer))
+        , m_mesh_renderer(std::move(mesh_renderer)) {}
 
-    void execute(vk::CommandBuffer cmd_buffer,
-                 int image_index) const noexcept override {
-        const auto &gbuffer = m_gbuffers[image_index];
+    void execute(vk::CommandBuffer cmd_buffer) const noexcept override {
         vk::Rect2D render_area;
-        render_area.extent = gbuffer.color->image()->extent2D();
+        render_area.extent = m_gbuffer.color->image()->extent2D();
 
         vk::Viewport viewport(
             0.0f, 0.0f, static_cast<float>(render_area.extent.width),
@@ -105,17 +99,16 @@ class ColorSubpass : public vw::Subpass {
         auto descriptor_set_handle = m_descriptor_set.handle();
         std::span first_descriptor_sets = {&descriptor_set_handle, 1};
         for (const auto &mesh : meshes) {
-            m_mesh_renderer.draw_mesh(cmd_buffer, mesh, first_descriptor_sets);
+            m_mesh_renderer->draw_mesh(cmd_buffer, mesh, first_descriptor_sets);
         }
     }
 
-    AttachmentInfo attachment_information(int image_index) const override {
+    AttachmentInfo attachment_information() const override {
         AttachmentInfo attachments;
-        const auto &gbuffer = m_gbuffers[image_index];
 
         std::vector<std::shared_ptr<const vw::ImageView>> color_attachments = {
-            gbuffer.color,    gbuffer.position,   gbuffer.normal,
-            gbuffer.tangeant, gbuffer.biTangeant, gbuffer.light};
+            m_gbuffer.color,    m_gbuffer.position,   m_gbuffer.normal,
+            m_gbuffer.tangeant, m_gbuffer.biTangeant, m_gbuffer.light};
 
         for (const auto &view : color_attachments) {
             attachments.color.push_back(
@@ -128,7 +121,7 @@ class ColorSubpass : public vw::Subpass {
                         vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f)));
         }
 
-        const auto &depth_attachment = gbuffer.depth;
+        const auto &depth_attachment = m_gbuffer.depth;
         if (!depth_attachment) {
             throw vw::SubpassNotManagingDepthException(
                 std::source_location::current());
@@ -141,15 +134,13 @@ class ColorSubpass : public vw::Subpass {
                 .setLoadOp(vk::AttachmentLoadOp::eLoad)
                 .setStoreOp(vk::AttachmentStoreOp::eStore);
 
-        attachments.render_area.extent = gbuffer.color->image()->extent2D();
+        attachments.render_area.extent = m_gbuffer.color->image()->extent2D();
 
         return attachments;
     }
 
-    std::vector<vw::Barrier::ResourceState>
-    resource_states(int image_index) const override {
-        const auto &gbuffer = m_gbuffers[image_index];
-        const auto &depth_attachment = gbuffer.depth;
+    std::vector<vw::Barrier::ResourceState> resource_states() const override {
+        const auto &depth_attachment = m_gbuffer.depth;
 
         if (!depth_attachment) {
             throw vw::SubpassNotManagingDepthException(
@@ -160,8 +151,8 @@ class ColorSubpass : public vw::Subpass {
             m_descriptor_set.resources();
 
         std::vector<std::shared_ptr<const vw::ImageView>> color_attachments = {
-            gbuffer.color,    gbuffer.position,   gbuffer.normal,
-            gbuffer.tangeant, gbuffer.biTangeant, gbuffer.light};
+            m_gbuffer.color,    m_gbuffer.position,   m_gbuffer.normal,
+            m_gbuffer.tangeant, m_gbuffer.biTangeant, m_gbuffer.light};
 
         for (const auto &view : color_attachments) {
             resources.push_back(vw::Barrier::ImageState{
@@ -194,7 +185,7 @@ class ColorSubpass : public vw::Subpass {
     const vw::Device &m_device;
     const vw::Model::MeshManager &m_mesh_manager;
     std::shared_ptr<const vw::DescriptorSetLayout> m_uniform_buffer_layout;
-    vw::MeshRenderer m_mesh_renderer;
+    std::shared_ptr<vw::MeshRenderer> m_mesh_renderer;
     vw::DescriptorSet m_descriptor_set;
-    std::vector<GBuffer> m_gbuffers;
+    GBuffer m_gbuffer;
 };

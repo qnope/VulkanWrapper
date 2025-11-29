@@ -9,7 +9,7 @@
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
 #include "VulkanWrapper/RenderPass/Subpass.h"
 
-inline vw::Pipeline create_zpass_pipeline(
+inline std::shared_ptr<const vw::Pipeline> create_zpass_pipeline(
     const vw::Device &device, vk::Format depth_format,
     std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout) {
     auto vertex_shader = vw::ShaderModule::create_from_spirv_file(
@@ -33,22 +33,18 @@ class ZPass : public vw::Subpass {
   public:
     ZPass(const vw::Device &device, const vw::Model::MeshManager &mesh_manager,
           std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
-          vw::DescriptorSet descriptor_set, std::span<const vk::Format>,
-          vk::Format depth_format, std::vector<GBuffer> gbuffers)
+          vw::DescriptorSet descriptor_set, GBuffer gbuffer,
+          std::shared_ptr<const vw::Pipeline> pipeline)
         : m_device{device}
         , m_mesh_manager{mesh_manager}
         , m_uniform_buffer_layout{uniform_buffer_layout}
         , m_descriptor_set{descriptor_set}
-        , m_gbuffers(std::move(gbuffers)) {
-        m_pipeline = create_zpass_pipeline(m_device, depth_format,
-                                           m_uniform_buffer_layout);
-    }
+        , m_gbuffer(std::move(gbuffer))
+        , m_pipeline(std::move(pipeline)) {}
 
-    void execute(vk::CommandBuffer cmd_buffer,
-                 int image_index) const noexcept override {
-        const auto &gbuffer = m_gbuffers[image_index];
+    void execute(vk::CommandBuffer cmd_buffer) const noexcept override {
         vk::Rect2D render_area;
-        render_area.extent = gbuffer.depth->image()->extent2D();
+        render_area.extent = m_gbuffer.depth->image()->extent2D();
 
         vk::Viewport viewport(
             0.0f, 0.0f, static_cast<float>(render_area.extent.width),
@@ -68,10 +64,9 @@ class ZPass : public vw::Subpass {
         }
     }
 
-    AttachmentInfo attachment_information(int image_index) const override {
+    AttachmentInfo attachment_information() const override {
         AttachmentInfo attachments;
-        const auto &gbuffer = m_gbuffers[image_index];
-        const auto &depth_attachment = gbuffer.depth;
+        const auto &depth_attachment = m_gbuffer.depth;
 
         if (!depth_attachment) {
             throw vw::SubpassNotManagingDepthException(
@@ -91,10 +86,8 @@ class ZPass : public vw::Subpass {
         return attachments;
     }
 
-    std::vector<vw::Barrier::ResourceState>
-    resource_states(int image_index) const override {
-        const auto &gbuffer = m_gbuffers[image_index];
-        const auto &depth_attachment = gbuffer.depth;
+    std::vector<vw::Barrier::ResourceState> resource_states() const override {
+        const auto &depth_attachment = m_gbuffer.depth;
 
         if (!depth_attachment) {
             throw vw::SubpassNotManagingDepthException(
@@ -121,6 +114,6 @@ class ZPass : public vw::Subpass {
     const vw::Model::MeshManager &m_mesh_manager;
     std::shared_ptr<const vw::DescriptorSetLayout> m_uniform_buffer_layout;
     vw::DescriptorSet m_descriptor_set;
-    std::optional<vw::Pipeline> m_pipeline;
-    std::vector<GBuffer> m_gbuffers;
+    GBuffer m_gbuffer;
+    std::shared_ptr<const vw::Pipeline> m_pipeline;
 };

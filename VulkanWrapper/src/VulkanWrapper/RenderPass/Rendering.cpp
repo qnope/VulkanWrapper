@@ -8,11 +8,9 @@ Rendering::Rendering(std::vector<std::shared_ptr<Subpass>> subpasses)
     : m_subpasses(std::move(subpasses)) {}
 
 void Rendering::execute(vk::CommandBuffer cmd_buffer,
-                        Barrier::ResourceTracker &resource_tracker,
-                        int image_index) const {
+                        Barrier::ResourceTracker &resource_tracker) const {
     for (const auto &subpass : m_subpasses) {
-        auto [color, depth, renderArea] =
-            subpass->attachment_information(image_index);
+        auto [color, depth, renderArea] = subpass->attachment_information();
 
         auto renderingInfo = vk::RenderingInfo()
                                  .setRenderArea(renderArea)
@@ -23,14 +21,14 @@ void Rendering::execute(vk::CommandBuffer cmd_buffer,
             renderingInfo.setPDepthAttachment(&*depth);
         }
 
-        for (const auto &resource : subpass->resource_states(image_index)) {
+        for (const auto &resource : subpass->resource_states()) {
             resource_tracker.request(resource);
         }
 
         resource_tracker.flush(cmd_buffer);
 
         cmd_buffer.beginRendering(renderingInfo);
-        subpass->execute(cmd_buffer, image_index);
+        subpass->execute(cmd_buffer);
         cmd_buffer.endRendering();
     }
 }

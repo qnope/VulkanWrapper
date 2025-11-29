@@ -591,29 +591,36 @@ int main() {
         const vk::Extent2D extent(uint32_t(app.swapchain.width()),
                                   uint32_t(app.swapchain.height()));
 
+        auto zpass_pipeline = create_zpass_pipeline(
+            app.device, depth_buffer->format(), descriptor_set_layout);
+
+        auto mesh_renderer = create_renderer(
+            app.device, gbuffer_formats, depth_buffer->format(),
+            *example.mesh_manager, descriptor_set_layout);
+
         std::vector<vw::Rendering> renderings;
-        auto depth_subpass = std::make_shared<ZPass>(
-            app.device, *example.mesh_manager, descriptor_set_layout,
-            descriptor_set, gbuffer_formats, depth_buffer->format(),
-            gBuffers);
-        auto color_subpass = std::make_shared<ColorSubpass>(
-            app.device, *example.mesh_manager, descriptor_set_layout,
-            descriptor_set, gbuffer_formats, depth_buffer->format(),
-            gBuffers);
+        for (const auto &gBuffer : gBuffers) {
+            auto depth_subpass = std::make_shared<ZPass>(
+                app.device, *example.mesh_manager, descriptor_set_layout,
+                descriptor_set, gBuffer, zpass_pipeline);
+            auto color_subpass = std::make_shared<ColorSubpass>(
+                app.device, *example.mesh_manager, descriptor_set_layout,
+                descriptor_set, gBuffer, mesh_renderer);
 
-        auto rendering = vw::RenderingBuilder()
-                             .add_subpass(depth_subpass)
-                             .add_subpass(color_subpass)
-                             .build();
+            renderings.emplace_back(vw::RenderingBuilder()
+                                        .add_subpass(depth_subpass)
+                                        .add_subpass(color_subpass)
+                                        .build());
+        }
 
-        int index = 0;
-        for (auto [gBuffer, commandBuffer, swapchainBuffer] :
-             std::views::zip(gBuffers, commandBuffers, image_views)) {
+        for (auto [gBuffer, commandBuffer, swapchainBuffer, rendering] :
+             std::views::zip(gBuffers, commandBuffers, image_views,
+                             renderings)) {
             vw::CommandBufferRecorder recorder(commandBuffer);
 
             // Geometry Pass using Rendering
             vw::Barrier::ResourceTracker resource_tracker;
-            rendering.execute(commandBuffer, resource_tracker, index);
+            rendering.execute(commandBuffer, resource_tracker);
 
             // Blit color to swapchain
             resource_tracker.request(vw::Barrier::ImageState{
@@ -656,7 +663,6 @@ int main() {
                 .access = vk::AccessFlagBits2::eNone});
 
             resource_tracker.flush(commandBuffer);
-            index++;
         }
 
         auto cmd_buffer = example.mesh_manager->fill_command_buffer();

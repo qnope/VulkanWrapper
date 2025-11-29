@@ -93,7 +93,7 @@ GraphicsPipelineBuilder::with_topology(vk::PrimitiveTopology topology) && {
     return std::move(*this);
 }
 
-Pipeline GraphicsPipelineBuilder::build() && {
+std::shared_ptr<const Pipeline> GraphicsPipelineBuilder::build() && {
     const auto shaderStageInfos = createShaderStageInfos();
     const auto dynamicStateInfo = createDynamicStateInfo();
     const auto viewportStateInfo = createViewportStateInfo();
@@ -130,7 +130,8 @@ Pipeline GraphicsPipelineBuilder::build() && {
             std::source_location::current()};
     }
 
-    return Pipeline{std::move(pipeline), std::move(m_pipelineLayout)};
+    return std::make_shared<Pipeline>(std::move(pipeline),
+                                      std::move(m_pipelineLayout));
 }
 
 std::vector<vk::PipelineShaderStageCreateInfo>

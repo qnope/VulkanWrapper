@@ -5,7 +5,7 @@
 namespace vw {
 
 void MeshRenderer::add_pipeline(Model::Material::MaterialTypeTag tag,
-                                Pipeline pipeline) {
+                                std::shared_ptr<const Pipeline> pipeline) {
     m_pipelines.emplace(tag, std::move(pipeline));
 }
 
@@ -15,10 +15,10 @@ void MeshRenderer::draw_mesh(
     auto it = m_pipelines.find(mesh.material_type_tag());
     assert(it != m_pipelines.end());
     cmd_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
-                            it->second.handle());
+                            it->second->handle());
     cmd_buffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-                                  it->second.layout().handle(), 0,
+                                  it->second->layout().handle(), 0,
                                   first_descriptor_sets, nullptr);
-    mesh.draw(cmd_buffer, it->second.layout(), first_descriptor_sets.size());
+    mesh.draw(cmd_buffer, it->second->layout(), first_descriptor_sets.size());
 }
 } // namespace vw

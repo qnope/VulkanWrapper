@@ -66,7 +66,7 @@ class GraphicsPipelineBuilder {
 
     GraphicsPipelineBuilder &&with_topology(vk::PrimitiveTopology topology) &&;
 
-    Pipeline build() &&;
+    std::shared_ptr<const Pipeline> build() &&;
 
   private:
     [[nodiscard]] std::vector<vk::PipelineShaderStageCreateInfo>

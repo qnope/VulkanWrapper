@@ -29,8 +29,7 @@ class Subpass {
     [[nodiscard]] virtual vk::PipelineBindPoint
     pipeline_bind_point() const noexcept;
 
-    virtual void execute(vk::CommandBuffer cmd_buffer,
-                         int image_index) const noexcept = 0;
+    virtual void execute(vk::CommandBuffer cmd_buffer) const noexcept = 0;
 
     struct AttachmentInfo {
         std::vector<vk::RenderingAttachmentInfo> color;
@@ -38,10 +37,9 @@ class Subpass {
         vk::Rect2D render_area;
     };
 
-    virtual AttachmentInfo attachment_information(int image_index) const = 0;
+    virtual AttachmentInfo attachment_information() const = 0;
 
-    virtual std::vector<vw::Barrier::ResourceState>
-    resource_states(int image_index) const = 0;
+    virtual std::vector<vw::Barrier::ResourceState> resource_states() const = 0;
 };
 
 } // namespace vw

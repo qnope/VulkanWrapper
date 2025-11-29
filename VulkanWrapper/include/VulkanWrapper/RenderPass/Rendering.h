@@ -15,8 +15,7 @@ class Rendering {
     Rendering(std::vector<std::shared_ptr<Subpass>> subpasses);
 
     void execute(vk::CommandBuffer cmd_buffer,
-                 Barrier::ResourceTracker &resource_tracker,
-                 int image_index) const;
+                 Barrier::ResourceTracker &resource_tracker) const;
 
   private:
     std::vector<std::shared_ptr<Subpass>> m_subpasses;
