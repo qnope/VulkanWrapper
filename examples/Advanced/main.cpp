@@ -1,5 +1,7 @@
 #include "Application.h"
 #include "ColorPass.h"
+#include "SkyPass.h"
+#include "SunLightPass.h"
 #include "ZPass.h"
 #include <VulkanWrapper/3rd_party.h>
 #include <VulkanWrapper/Command/CommandBuffer.h>
@@ -542,7 +544,9 @@ int main() {
         App app;
         auto descriptor_set_layout =
             vw::DescriptorSetLayoutBuilder(app.device)
-                .with_uniform_buffer(vk::ShaderStageFlagBits::eVertex, 1)
+                .with_uniform_buffer(vk::ShaderStageFlagBits::eVertex |
+                                         vk::ShaderStageFlagBits::eFragment,
+                                     1)
                 .build();
 
         auto uniform_buffer = createUbo(app.allocator);
@@ -594,11 +598,45 @@ int main() {
         auto zpass_pipeline = create_zpass_pipeline(
             app.device, depth_buffer->format(), descriptor_set_layout);
 
-        auto mesh_renderer = create_renderer(
-            app.device, gbuffer_formats, depth_buffer->format(),
-            *example.mesh_manager, descriptor_set_layout);
+        auto mesh_renderer =
+            create_renderer(app.device, gbuffer_formats, depth_buffer->format(),
+                            *example.mesh_manager, descriptor_set_layout);
+
+        auto sunlight_descriptor_set_layout =
+            vw::DescriptorSetLayoutBuilder(app.device)
+                .with_combined_image(vk::ShaderStageFlagBits::eFragment,
+                                     1) // Color
+                .with_combined_image(vk::ShaderStageFlagBits::eFragment,
+                                     1) // Position
+                .with_combined_image(vk::ShaderStageFlagBits::eFragment,
+                                     1) // Normal
+                .build();
+
+        auto sunlight_pool = vw::DescriptorPoolBuilder(
+                                 app.device, sunlight_descriptor_set_layout)
+                                 .build();
+
+        std::vector<vw::DescriptorSet> sunlight_descriptor_sets;
+        for (int i = 0; i < image_views.size(); ++i) {
+            vw::DescriptorAllocator sunlight_allocator;
+            sunlight_allocator.add_combined_image(
+                0, vw::CombinedImage(gBuffers[i].color, sampler),
+                vk::PipelineStageFlagBits2::eFragmentShader,
+                vk::AccessFlagBits2::eShaderRead);
+            sunlight_allocator.add_combined_image(
+                1, vw::CombinedImage(gBuffers[i].position, sampler),
+                vk::PipelineStageFlagBits2::eFragmentShader,
+                vk::AccessFlagBits2::eShaderRead);
+            sunlight_allocator.add_combined_image(
+                2, vw::CombinedImage(gBuffers[i].normal, sampler),
+                vk::PipelineStageFlagBits2::eFragmentShader,
+                vk::AccessFlagBits2::eShaderRead);
+            sunlight_descriptor_sets.push_back(
+                sunlight_pool.allocate_set(sunlight_allocator));
+        }
 
         std::vector<vw::Rendering> renderings;
+        int i = 0;
         for (const auto &gBuffer : gBuffers) {
             auto depth_subpass = std::make_shared<ZPass>(
                 app.device, *example.mesh_manager, descriptor_set_layout,
@@ -607,10 +645,21 @@ int main() {
                 app.device, *example.mesh_manager, descriptor_set_layout,
                 descriptor_set, gBuffer, mesh_renderer);
 
+            auto sunlight_pass = create_sun_light_pass(
+                app.device, sunlight_descriptor_set_layout,
+                sunlight_descriptor_sets[i], gBuffer.light);
+
+            auto sky_pass =
+                create_sky_pass(app.device, descriptor_set_layout,
+                                descriptor_set, gBuffer.light, gBuffer.depth);
+
             renderings.emplace_back(vw::RenderingBuilder()
                                         .add_subpass(depth_subpass)
                                         .add_subpass(color_subpass)
+                                        .add_subpass(sunlight_pass)
+                                        .add_subpass(sky_pass)
                                         .build());
+            i++;
         }
 
         for (auto [gBuffer, commandBuffer, swapchainBuffer, rendering] :
@@ -624,8 +673,8 @@ int main() {
 
             // Blit color to swapchain
             resource_tracker.request(vw::Barrier::ImageState{
-                .image = gBuffer.color->image()->handle(),
-                .subresourceRange = gBuffer.color->subresource_range(),
+                .image = gBuffer.light->image()->handle(),
+                .subresourceRange = gBuffer.light->subresource_range(),
                 .layout = vk::ImageLayout::eTransferSrcOptimal,
                 .stage = vk::PipelineStageFlagBits2::eTransfer,
                 .access = vk::AccessFlagBits2::eTransferRead});
@@ -649,7 +698,7 @@ int main() {
             blit.dstOffsets[1] =
                 vk::Offset3D(int32_t(extent.width), int32_t(extent.height), 1);
 
-            commandBuffer.blitImage(gBuffer.color->image()->handle(),
+            commandBuffer.blitImage(gBuffer.light->image()->handle(),
                                     vk::ImageLayout::eTransferSrcOptimal,
                                     swapchainBuffer->image()->handle(),
                                     vk::ImageLayout::eTransferDstOptimal, blit,

@@ -65,6 +65,8 @@ class GraphicsPipelineBuilder {
     with_depth_test(bool write, vk::CompareOp compare_operator) &&;
 
     GraphicsPipelineBuilder &&with_topology(vk::PrimitiveTopology topology) &&;
+    
+    GraphicsPipelineBuilder &&with_cull_mode(vk::CullModeFlags cull_mode) &&;
 
     std::shared_ptr<const Pipeline> build() &&;
 
@@ -84,7 +86,7 @@ class GraphicsPipelineBuilder {
     [[nodiscard]] vk::PipelineViewportStateCreateInfo
     createViewportStateInfo() const noexcept;
 
-    [[nodiscard]] static vk::PipelineRasterizationStateCreateInfo
+    [[nodiscard]] vk::PipelineRasterizationStateCreateInfo
     createRasterizationStateInfo() noexcept;
 
     [[nodiscard]] static vk::PipelineMultisampleStateCreateInfo
@@ -118,5 +120,6 @@ class GraphicsPipelineBuilder {
     vk::Bool32 m_depthWriteEnabled = vk::Bool32{false};
     vk::CompareOp m_depthCompareOp = vk::CompareOp::eLess;
     vk::PrimitiveTopology m_topology = vk::PrimitiveTopology::eTriangleList;
+    vk::CullModeFlags m_cullMode = vk::CullModeFlagBits::eBack;
 };
 } // namespace vw

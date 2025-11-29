@@ -93,6 +93,12 @@ GraphicsPipelineBuilder::with_topology(vk::PrimitiveTopology topology) && {
     return std::move(*this);
 }
 
+GraphicsPipelineBuilder &&
+GraphicsPipelineBuilder::with_cull_mode(vk::CullModeFlags cull_mode) && {
+    m_cullMode = cull_mode;
+    return std::move(*this);
+}
+
 std::shared_ptr<const Pipeline> GraphicsPipelineBuilder::build() && {
     const auto shaderStageInfos = createShaderStageInfos();
     const auto dynamicStateInfo = createDynamicStateInfo();
@@ -185,7 +191,7 @@ GraphicsPipelineBuilder::createRasterizationStateInfo() noexcept {
         .setRasterizerDiscardEnable(0U)
         .setPolygonMode(vk::PolygonMode::eFill)
         .setLineWidth(1.0F)
-        .setCullMode(vk::CullModeFlagBits::eBack)
+        .setCullMode(m_cullMode)
         .setFrontFace(vk::FrontFace::eCounterClockwise)
         .setDepthBiasEnable(0U);
 }

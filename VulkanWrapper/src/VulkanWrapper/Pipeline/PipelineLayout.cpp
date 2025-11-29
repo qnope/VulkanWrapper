@@ -15,10 +15,18 @@ PipelineLayoutBuilder &&PipelineLayoutBuilder::with_descriptor_set_layout(
     return std::move(*this);
 }
 
+PipelineLayoutBuilder &&PipelineLayoutBuilder::with_push_constant_range(
+    vk::PushConstantRange range) && {
+    m_pushConstantRanges.push_back(range);
+    return std::move(*this);
+}
+
 PipelineLayout PipelineLayoutBuilder::build() && {
     auto layouts = m_descriptorSetLayouts | to_handle | to<std::vector>;
 
-    const auto info = vk::PipelineLayoutCreateInfo().setSetLayouts(layouts);
+    const auto info = vk::PipelineLayoutCreateInfo()
+                          .setSetLayouts(layouts)
+                          .setPushConstantRanges(m_pushConstantRanges);
 
     auto [result, layout] = m_device->handle().createPipelineLayoutUnique(info);
 

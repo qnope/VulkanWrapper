@@ -25,6 +25,9 @@ class PipelineLayoutBuilder {
     PipelineLayoutBuilder &&with_descriptor_set_layout(
         std::shared_ptr<const DescriptorSetLayout> layout) &&;
 
+    PipelineLayoutBuilder &&
+    with_push_constant_range(vk::PushConstantRange range) &&;
+
     PipelineLayout build() &&;
 
   private:
@@ -34,5 +37,6 @@ class PipelineLayoutBuilder {
     const Device *m_device;
     std::vector<std::shared_ptr<const DescriptorSetLayout>>
         m_descriptorSetLayouts;
+    std::vector<vk::PushConstantRange> m_pushConstantRanges;
 };
 } // namespace vw

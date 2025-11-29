@@ -5,7 +5,6 @@ layout(location = 0) in vec2 in_position;
 layout(set = 0, binding = 0, std140) uniform Block {
     mat4 perspective;
     mat4 view;
-    float angle;
 };
 
 layout(location = 0) out vec4 out_color;
@@ -47,6 +46,7 @@ const float ZenithH = radiusAtmo - radiusEarth;
 const vec3 origin_view = vec3(0, radiusEarth + 1, 0);
 const float originH = origin_view.y - radiusEarth;
 const int STEPS = 8;
+const float angle = 30.0;
 
 float rayleigh_phase(vec3 view_dir, vec3 sun_dir) {
     const float mu = dot(view_dir, sun_dir);
@@ -147,11 +147,6 @@ void main() {
     const vec3 view_direction = get_view_direction();
     const vec3 sun_dir = normalize(vec3(cos(radians(angle)), sin(radians(angle)), 0.0));
 
-    if(view_direction.y < 0) {
-        out_color = vec4(0.1, 0.1, 0.1, 1.0);
-        return;
-    }
-
     const float distance_out =
         intersectRaySphereFromInside(origin_view, view_direction, radiusAtmo);
     const vec3 view_out = origin_view + view_direction * distance_out;
@@ -160,4 +155,5 @@ void main() {
     luminance += direct_light_from_sun(view_direction, view_out, sun_dir);
 
     out_color = vec4(luminance, 1.0);
+    //out_color = vec4(1.0, 1.0, 1.0, 1.0);
 }
