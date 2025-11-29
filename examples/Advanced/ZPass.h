@@ -34,17 +34,22 @@ class ZPass : public vw::Subpass {
     ZPass(const vw::Device &device, const vw::Model::MeshManager &mesh_manager,
           std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
           vw::DescriptorSet descriptor_set, std::span<const vk::Format>,
-          vk::Format depth_format, vk::Format)
+          vk::Format depth_format, std::vector<GBuffer> gbuffers)
         : m_device{device}
         , m_mesh_manager{mesh_manager}
         , m_uniform_buffer_layout{uniform_buffer_layout}
-        , m_descriptor_set{descriptor_set} {
+        , m_descriptor_set{descriptor_set}
+        , m_gbuffers(std::move(gbuffers)) {
         m_pipeline = create_zpass_pipeline(m_device, depth_format,
                                            m_uniform_buffer_layout);
     }
 
     void execute(vk::CommandBuffer cmd_buffer,
-                 vk::Rect2D render_area) const noexcept override {
+                 int image_index) const noexcept override {
+        const auto &gbuffer = m_gbuffers[image_index];
+        vk::Rect2D render_area;
+        render_area.extent = gbuffer.depth->image()->extent2D();
+
         vk::Viewport viewport(
             0.0f, 0.0f, static_cast<float>(render_area.extent.width),
             static_cast<float>(render_area.extent.height), 0.0f, 1.0f);
@@ -63,11 +68,10 @@ class ZPass : public vw::Subpass {
         }
     }
 
-    AttachmentInfo attachment_information(
-        const std::vector<std::shared_ptr<const vw::ImageView>> &,
-        const std::shared_ptr<const vw::ImageView> &depth_attachment)
-        const override {
+    AttachmentInfo attachment_information(int image_index) const override {
         AttachmentInfo attachments;
+        const auto &gbuffer = m_gbuffers[image_index];
+        const auto &depth_attachment = gbuffer.depth;
 
         if (!depth_attachment) {
             throw vw::SubpassNotManagingDepthException(
@@ -82,13 +86,16 @@ class ZPass : public vw::Subpass {
                 .setStoreOp(vk::AttachmentStoreOp::eStore)
                 .setClearValue(vk::ClearDepthStencilValue(1.0f, 0));
 
+        attachments.render_area.extent = depth_attachment->image()->extent2D();
+
         return attachments;
     }
 
-    std::vector<vw::Barrier::ResourceState> resource_states(
-        const std::vector<std::shared_ptr<const vw::ImageView>> &,
-        const std::shared_ptr<const vw::ImageView> &depth_attachment)
-        const override {
+    std::vector<vw::Barrier::ResourceState>
+    resource_states(int image_index) const override {
+        const auto &gbuffer = m_gbuffers[image_index];
+        const auto &depth_attachment = gbuffer.depth;
+
         if (!depth_attachment) {
             throw vw::SubpassNotManagingDepthException(
                 std::source_location::current());
@@ -115,4 +122,5 @@ class ZPass : public vw::Subpass {
     std::shared_ptr<const vw::DescriptorSetLayout> m_uniform_buffer_layout;
     vw::DescriptorSet m_descriptor_set;
     std::optional<vw::Pipeline> m_pipeline;
+    std::vector<GBuffer> m_gbuffers;
 };

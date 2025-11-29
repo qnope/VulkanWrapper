@@ -12,34 +12,26 @@ namespace vw {
 
 class Rendering {
   public:
-    struct SubpassInfo {
-        std::shared_ptr<Subpass> subpass;
-        std::vector<std::shared_ptr<const ImageView>> color_attachments;
-        std::shared_ptr<const ImageView> depth_attachment;
-    };
-
-    Rendering(std::vector<SubpassInfo> subpasses);
+    Rendering(std::vector<std::shared_ptr<Subpass>> subpasses);
 
     void execute(vk::CommandBuffer cmd_buffer,
-                 Barrier::ResourceTracker &resource_tracker) const;
+                 Barrier::ResourceTracker &resource_tracker,
+                 int image_index) const;
 
   private:
-    std::vector<SubpassInfo> m_subpasses;
+    std::vector<std::shared_ptr<Subpass>> m_subpasses;
 };
 
 class RenderingBuilder {
   public:
     RenderingBuilder();
 
-    RenderingBuilder &&add_subpass(
-        std::shared_ptr<Subpass> subpass,
-        std::vector<std::shared_ptr<const ImageView>> color_attachments,
-        std::shared_ptr<const ImageView> depth_attachment = nullptr) &&;
+    RenderingBuilder &&add_subpass(std::shared_ptr<Subpass> subpass) &&;
 
     Rendering build() &&;
 
   private:
-    std::vector<Rendering::SubpassInfo> m_subpasses;
+    std::vector<std::shared_ptr<Subpass>> m_subpasses;
 };
 
 } // namespace vw

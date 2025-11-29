@@ -30,20 +30,18 @@ class Subpass {
     pipeline_bind_point() const noexcept;
 
     virtual void execute(vk::CommandBuffer cmd_buffer,
-                         vk::Rect2D render_area) const noexcept = 0;
+                         int image_index) const noexcept = 0;
 
     struct AttachmentInfo {
         std::vector<vk::RenderingAttachmentInfo> color;
         std::optional<vk::RenderingAttachmentInfo> depth;
+        vk::Rect2D render_area;
     };
 
-    virtual AttachmentInfo attachment_information(
-        const std::vector<std::shared_ptr<const ImageView>> &color_attachments,
-        const std::shared_ptr<const ImageView> &depth_attachment) const = 0;
+    virtual AttachmentInfo attachment_information(int image_index) const = 0;
 
-    virtual std::vector<vw::Barrier::ResourceState> resource_states(
-        const std::vector<std::shared_ptr<const ImageView>> &color_attachments,
-        const std::shared_ptr<const ImageView> &depth_attachment) const = 0;
+    virtual std::vector<vw::Barrier::ResourceState>
+    resource_states(int image_index) const = 0;
 };
 
 } // namespace vw
