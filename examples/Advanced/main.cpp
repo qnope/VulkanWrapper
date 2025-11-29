@@ -495,8 +495,7 @@ createUbo(vw::Allocator &allocator) {
 
 std::vector<GBuffer>
 createGBuffers(vw::Device &device, const vw::Allocator &allocator,
-               const vw::Swapchain &swapchain,
-               const std::shared_ptr<const vw::ImageView> &depth_buffer) {
+               const vw::Swapchain &swapchain) {
     std::vector<GBuffer> framebuffers;
 
     constexpr auto usageFlags = vk::ImageUsageFlagBits::eColorAttachment |
@@ -527,11 +526,18 @@ createGBuffers(vw::Device &device, const vw::Allocator &allocator,
         auto img_biTangeant = create_img();
         auto img_light = create_img(vk::ImageUsageFlagBits::eStorage);
 
+        // Create depth buffer for this frame
+        auto img_depth = allocator.create_image_2D(
+            swapchain.width(), swapchain.height(), false,
+            vk::Format::eD32Sfloat,
+            vk::ImageUsageFlagBits::eDepthStencilAttachment |
+                vk::ImageUsageFlagBits::eSampled);
+
         framebuffers.push_back(
             {create_img_view(img_color), create_img_view(img_position),
              create_img_view(img_normal), create_img_view(img_tangeant),
              create_img_view(img_biTangeant), create_img_view(img_light),
-             depth_buffer});
+             create_img_view(img_depth)});
     }
 
     return framebuffers;
@@ -566,17 +572,6 @@ int main() {
         auto descriptor_set =
             descriptor_pool.allocate_set(descriptor_allocator);
 
-        const auto depth_buffer = app.allocator.create_image_2D(
-            app.swapchain.width(), app.swapchain.height(), false,
-            vk::Format::eD32Sfloat,
-            vk::ImageUsageFlagBits::eDepthStencilAttachment |
-                vk::ImageUsageFlagBits::eSampled);
-
-        const auto depth_buffer_view =
-            vw::ImageViewBuilder(app.device, depth_buffer)
-                .setImageType(vk::ImageViewType::e2D)
-                .build();
-
         VulkanExample example(app.device, app.allocator, app.swapchain);
         example.prepare();
 
@@ -590,16 +585,16 @@ int main() {
         auto commandBuffers = commandPool.allocate(image_views.size());
 
         const auto gBuffers = createGBuffers(app.device, app.allocator,
-                                             app.swapchain, depth_buffer_view);
+                                             app.swapchain);
 
         const vk::Extent2D extent(uint32_t(app.swapchain.width()),
                                   uint32_t(app.swapchain.height()));
 
         auto zpass_pipeline = create_zpass_pipeline(
-            app.device, depth_buffer->format(), descriptor_set_layout);
+            app.device, vk::Format::eD32Sfloat, descriptor_set_layout);
 
         auto mesh_renderer =
-            create_renderer(app.device, gbuffer_formats, depth_buffer->format(),
+            create_renderer(app.device, gbuffer_formats, vk::Format::eD32Sfloat,
                             *example.mesh_manager, descriptor_set_layout);
 
         auto sunlight_descriptor_set_layout =

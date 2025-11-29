@@ -111,13 +111,12 @@ std::shared_ptr<const Pipeline> create_screen_space_pipeline(
                                    std::move(fragment_shader))
                        .with_dynamic_viewport_scissor()
                        .with_topology(vk::PrimitiveTopology::eTriangleStrip)
-                       .with_cull_mode(vk::CullModeFlagBits::eNone)
                        .add_color_attachment(color_format);
 
     if (depth_format != vk::Format::eUndefined) {
         std::move(builder)
             .set_depth_format(depth_format)
-            .with_depth_test(true, depth_compare_op);
+            .with_depth_test(false, depth_compare_op);
     }
 
     return std::move(builder).build();
