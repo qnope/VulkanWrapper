@@ -548,12 +548,7 @@ using namespace glm;
 int main() {
     try {
         App app;
-        auto descriptor_set_layout =
-            vw::DescriptorSetLayoutBuilder(app.device)
-                .with_uniform_buffer(vk::ShaderStageFlagBits::eVertex |
-                                         vk::ShaderStageFlagBits::eFragment,
-                                     1)
-                .build();
+        auto descriptor_set_layout = create_zpass_descriptor_layout(app.device);
 
         auto uniform_buffer = createUbo(app.allocator);
 
@@ -563,14 +558,8 @@ int main() {
             vw::DescriptorPoolBuilder(app.device, descriptor_set_layout)
                 .build();
 
-        vw::DescriptorAllocator descriptor_allocator;
-        descriptor_allocator.add_uniform_buffer(
-            0, uniform_buffer.handle(), 0, uniform_buffer.size_bytes(),
-            vk::PipelineStageFlagBits2::eVertexShader,
-            vk::AccessFlagBits2::eUniformRead);
-
         auto descriptor_set =
-            descriptor_pool.allocate_set(descriptor_allocator);
+            create_zpass_descriptor_set(descriptor_pool, uniform_buffer);
 
         VulkanExample example(app.device, app.allocator, app.swapchain);
         example.prepare();
@@ -598,36 +587,17 @@ int main() {
                             *example.mesh_manager, descriptor_set_layout);
 
         auto sunlight_descriptor_set_layout =
-            vw::DescriptorSetLayoutBuilder(app.device)
-                .with_combined_image(vk::ShaderStageFlagBits::eFragment,
-                                     1) // Color
-                .with_combined_image(vk::ShaderStageFlagBits::eFragment,
-                                     1) // Position
-                .with_combined_image(vk::ShaderStageFlagBits::eFragment,
-                                     1) // Normal
-                .build();
+            create_sun_light_pass_descriptor_layout(app.device);
 
         auto sunlight_pool = vw::DescriptorPoolBuilder(
                                  app.device, sunlight_descriptor_set_layout)
                                  .build();
 
         std::vector<vw::DescriptorSet> sunlight_descriptor_sets;
-        for (int i = 0; i < image_views.size(); ++i) {
-            vw::DescriptorAllocator sunlight_allocator;
-            sunlight_allocator.add_combined_image(
-                0, vw::CombinedImage(gBuffers[i].color, sampler),
-                vk::PipelineStageFlagBits2::eFragmentShader,
-                vk::AccessFlagBits2::eShaderRead);
-            sunlight_allocator.add_combined_image(
-                1, vw::CombinedImage(gBuffers[i].position, sampler),
-                vk::PipelineStageFlagBits2::eFragmentShader,
-                vk::AccessFlagBits2::eShaderRead);
-            sunlight_allocator.add_combined_image(
-                2, vw::CombinedImage(gBuffers[i].normal, sampler),
-                vk::PipelineStageFlagBits2::eFragmentShader,
-                vk::AccessFlagBits2::eShaderRead);
+        for (const auto &gBuffer : gBuffers) {
             sunlight_descriptor_sets.push_back(
-                sunlight_pool.allocate_set(sunlight_allocator));
+                create_sun_light_pass_descriptor_set(sunlight_pool, sampler,
+                                                      gBuffer));
         }
 
         std::vector<vw::Rendering> renderings;

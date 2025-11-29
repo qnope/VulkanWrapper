@@ -4,10 +4,34 @@
 #include "VulkanWrapper/3rd_party.h"
 #include "VulkanWrapper/Descriptors/DescriptorSet.h"
 #include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
+#include "VulkanWrapper/Descriptors/DescriptorAllocator.h"
+#include "VulkanWrapper/Descriptors/DescriptorPool.h"
+#include "VulkanWrapper/Memory/Buffer.h"
 #include "VulkanWrapper/Model/MeshManager.h"
 #include "VulkanWrapper/Pipeline/Pipeline.h"
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
 #include "VulkanWrapper/RenderPass/Subpass.h"
+
+inline std::shared_ptr<vw::DescriptorSetLayout>
+create_zpass_descriptor_layout(const vw::Device &device) {
+    return vw::DescriptorSetLayoutBuilder(device)
+        .with_uniform_buffer(vk::ShaderStageFlagBits::eVertex |
+                                 vk::ShaderStageFlagBits::eFragment,
+                             1)
+        .build();
+}
+
+template <typename UBOData>
+inline vw::DescriptorSet create_zpass_descriptor_set(
+    vw::DescriptorPool &pool,
+    const vw::Buffer<UBOData, true, vw::UniformBufferUsage> &uniform_buffer) {
+    vw::DescriptorAllocator allocator;
+    allocator.add_uniform_buffer(
+        0, uniform_buffer.handle(), 0, uniform_buffer.size_bytes(),
+        vk::PipelineStageFlagBits2::eVertexShader,
+        vk::AccessFlagBits2::eUniformRead);
+    return pool.allocate_set(allocator);
+}
 
 inline std::shared_ptr<const vw::Pipeline> create_zpass_pipeline(
     const vw::Device &device, vk::Format depth_format,

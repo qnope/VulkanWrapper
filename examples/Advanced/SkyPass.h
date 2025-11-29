@@ -5,6 +5,13 @@
 #include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
 #include "VulkanWrapper/Descriptors/DescriptorPool.h"
 
+inline std::shared_ptr<vw::DescriptorSetLayout>
+create_sky_pass_descriptor_layout(const vw::Device &device) {
+    return vw::DescriptorSetLayoutBuilder(device)
+        .with_uniform_buffer(vk::ShaderStageFlagBits::eFragment, 1)
+        .build();
+}
+
 inline std::shared_ptr<vw::ScreenSpacePass> create_sky_pass(
     const vw::Device &device,
     std::shared_ptr<const vw::DescriptorSetLayout> descriptor_set_layout,

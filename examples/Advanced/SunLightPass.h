@@ -1,9 +1,42 @@
 #pragma once
 
+#include "RenderPassInformation.h"
 #include "VulkanWrapper/RenderPass/ScreenSpacePass.h"
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
 #include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
 #include "VulkanWrapper/Descriptors/DescriptorPool.h"
+#include "VulkanWrapper/Descriptors/DescriptorAllocator.h"
+#include "VulkanWrapper/Image/CombinedImage.h"
+#include "VulkanWrapper/Image/Sampler.h"
+
+inline std::shared_ptr<vw::DescriptorSetLayout>
+create_sun_light_pass_descriptor_layout(const vw::Device &device) {
+    return vw::DescriptorSetLayoutBuilder(device)
+        .with_combined_image(vk::ShaderStageFlagBits::eFragment, 1) // Color
+        .with_combined_image(vk::ShaderStageFlagBits::eFragment, 1) // Position
+        .with_combined_image(vk::ShaderStageFlagBits::eFragment, 1) // Normal
+        .build();
+}
+
+inline vw::DescriptorSet create_sun_light_pass_descriptor_set(
+    vw::DescriptorPool &pool,
+    std::shared_ptr<const vw::Sampler> sampler,
+    const GBuffer &gbuffer) {
+    vw::DescriptorAllocator allocator;
+    allocator.add_combined_image(
+        0, vw::CombinedImage(gbuffer.color, sampler),
+        vk::PipelineStageFlagBits2::eFragmentShader,
+        vk::AccessFlagBits2::eShaderRead);
+    allocator.add_combined_image(
+        1, vw::CombinedImage(gbuffer.position, sampler),
+        vk::PipelineStageFlagBits2::eFragmentShader,
+        vk::AccessFlagBits2::eShaderRead);
+    allocator.add_combined_image(
+        2, vw::CombinedImage(gbuffer.normal, sampler),
+        vk::PipelineStageFlagBits2::eFragmentShader,
+        vk::AccessFlagBits2::eShaderRead);
+    return pool.allocate_set(allocator);
+}
 
 class SunLightPass : public vw::ScreenSpacePass {
   public:

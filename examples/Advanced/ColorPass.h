@@ -3,6 +3,7 @@
 #include "RenderPassInformation.h"
 #include "VulkanWrapper/3rd_party.h"
 #include "VulkanWrapper/Descriptors/DescriptorSet.h"
+#include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
 #include "VulkanWrapper/Model/Material/ColoredMaterialManager.h"
 #include "VulkanWrapper/Model/Material/TexturedMaterialManager.h"
 #include "VulkanWrapper/Model/MeshManager.h"
@@ -11,6 +12,15 @@
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
 #include "VulkanWrapper/RenderPass/Subpass.h"
 #include <span>
+
+inline std::shared_ptr<vw::DescriptorSetLayout>
+create_colorpass_descriptor_layout(const vw::Device &device) {
+    return vw::DescriptorSetLayoutBuilder(device)
+        .with_uniform_buffer(vk::ShaderStageFlagBits::eVertex |
+                                 vk::ShaderStageFlagBits::eFragment,
+                             1)
+        .build();
+}
 
 inline std::shared_ptr<const vw::Pipeline> create_pipeline(
     const vw::Device &device, std::span<const vk::Format> color_formats,
