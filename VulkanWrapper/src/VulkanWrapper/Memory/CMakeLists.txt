@@ -6,4 +6,6 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     Barrier.cpp
     Interval.cpp
     IntervalSet.cpp
+    Transfer.cpp
+    UniformBufferAllocator.cpp
 )

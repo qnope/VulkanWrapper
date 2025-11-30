@@ -8,6 +8,7 @@ enable_testing()
 add_executable(MemoryTests
     Memory/IntervalTests.cpp
     Memory/IntervalSetTests.cpp
+    Memory/UniformBufferAllocatorTests.cpp
 )
 
 target_link_libraries(MemoryTests
