@@ -4,4 +4,5 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     Buffer.cpp
     StagingBufferManager.cpp
     Barrier.cpp
+    Interval.cpp
 )

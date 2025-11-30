@@ -4,6 +4,7 @@
     {"name": "sdl3-image", "features":["png"]},
     "glm",
     "assimp",
-    "vulkan-memory-allocator"
+    "vulkan-memory-allocator",
+    "gtest"
   ]
 }
