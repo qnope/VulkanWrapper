@@ -9,6 +9,7 @@ add_executable(MemoryTests
     Memory/IntervalTests.cpp
     Memory/IntervalSetTests.cpp
     Memory/UniformBufferAllocatorTests.cpp
+    Memory/ResourceTrackerTests.cpp
 )
 
 target_link_libraries(MemoryTests

@@ -2,6 +2,7 @@
 #include "VulkanWrapper/3rd_party.h"
 
 #include "VulkanWrapper/fwd.h"
+#include "VulkanWrapper/Memory/IntervalSet.h"
 #include <vulkan/vulkan.hpp>
 #include <unordered_map>
 #include <vector>
@@ -42,20 +43,7 @@ class ResourceTracker {
     void flush(vk::CommandBuffer commandBuffer);
 
   private:
-    struct ImageKey {
-        vk::Image handle;
-        vk::ImageSubresourceRange subresourceRange;
-
-        bool operator==(const ImageKey &) const = default;
-    };
-
-    struct BufferKey {
-        vk::Buffer handle;
-        vk::DeviceSize offset;
-        vk::DeviceSize size;
-
-        bool operator==(const BufferKey &) const = default;
-    };
+    friend class ResourceTrackerTest;
 
     struct InternalImageState {
         vk::ImageLayout layout = vk::ImageLayout::eUndefined;
@@ -73,28 +61,38 @@ class ResourceTracker {
         vk::AccessFlags2 access = vk::AccessFlagBits2::eNone;
     };
 
-    struct ImageKeyHash {
-        std::size_t operator()(const ImageKey &key) const {
-            return std::hash<uint64_t>()((uint64_t)(VkImage)key.handle);
-        }
-    };
-
-    struct BufferKeyHash {
-        std::size_t operator()(const BufferKey &key) const {
-            return std::hash<uint64_t>()((uint64_t)(VkBuffer)key.handle);
-        }
-    };
-
     struct HandleHash {
         std::size_t operator()(const vk::AccelerationStructureKHR &handle) const {
             return std::hash<uint64_t>()((uint64_t)(VkAccelerationStructureKHR)handle);
         }
     };
 
-    std::unordered_map<ImageKey, InternalImageState, ImageKeyHash> m_image_states;
-    std::unordered_map<BufferKey, InternalBufferState, BufferKeyHash> m_buffer_states;
-    std::unordered_map<vk::AccelerationStructureKHR, InternalAccelerationStructureState, HandleHash>
-        m_as_states;
+    struct BufferHandleHash {
+        std::size_t operator()(const vk::Buffer &buffer) const {
+            return std::hash<uint64_t>()((uint64_t)(VkBuffer)buffer);
+        }
+    };
+    
+    struct ImageHandleHash {
+        std::size_t operator()(const vk::Image &image) const {
+            return std::hash<uint64_t>()((uint64_t)(VkImage)image);
+        }
+    };
+
+    // Group intervals by state: vector<pair<IntervalSet, State>>
+    struct BufferIntervalSetState {
+        BufferIntervalSet intervals;
+        InternalBufferState state;
+    };
+
+    struct ImageIntervalSetState {
+        ImageIntervalSet intervals;
+        InternalImageState state;
+    };
+
+    std::unordered_map<vk::Buffer, std::vector<BufferIntervalSetState>, BufferHandleHash> m_buffer_states;
+    std::unordered_map<vk::Image, std::vector<ImageIntervalSetState>, ImageHandleHash> m_image_states;
+    std::unordered_map<vk::AccelerationStructureKHR, InternalAccelerationStructureState, HandleHash> m_as_states;
 
     std::vector<vk::ImageMemoryBarrier2> m_pending_image_barriers;
     std::vector<vk::BufferMemoryBarrier2> m_pending_buffer_barriers;

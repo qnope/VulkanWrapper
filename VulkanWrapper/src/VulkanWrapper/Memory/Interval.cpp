@@ -50,6 +50,28 @@ BufferInterval::intersect(const BufferInterval &other) const {
     return BufferInterval{new_offset, new_end - new_offset};
 }
 
+std::vector<BufferInterval>
+BufferInterval::difference(const BufferInterval &other) const {
+    std::vector<BufferInterval> result;
+
+    if (!overlaps(other)) {
+        result.push_back(*this);
+        return result;
+    }
+
+    // Part before the overlap
+    if (offset < other.offset) {
+        result.emplace_back(offset, other.offset - offset);
+    }
+
+    // Part after the overlap
+    if (end() > other.end()) {
+        result.emplace_back(other.end(), end() - other.end());
+    }
+
+    return result;
+}
+
 // ============================================================================
 // ImageInterval Implementation
 // ============================================================================
@@ -177,6 +199,61 @@ ImageInterval::intersect(const ImageInterval &other) const {
         std::min(this_layer_end, other_layer_end) - intersection.baseArrayLayer;
 
     return ImageInterval{intersection};
+}
+
+std::vector<ImageInterval>
+ImageInterval::difference(const ImageInterval &other) const {
+    std::vector<ImageInterval> result;
+
+    auto intersectionOpt = intersect(other);
+    if (!intersectionOpt.has_value()) {
+        result.push_back(*this);
+        return result;
+    }
+
+    const auto &intersection = intersectionOpt->range;
+
+    // 1. Mips before intersection
+    if (range.baseMipLevel < intersection.baseMipLevel) {
+        vk::ImageSubresourceRange r = range;
+        r.levelCount = intersection.baseMipLevel - range.baseMipLevel;
+        result.emplace_back(r);
+    }
+
+    // 2. Mips after intersection
+    uint32_t this_mip_end = range.baseMipLevel + range.levelCount;
+    uint32_t intersection_mip_end =
+        intersection.baseMipLevel + intersection.levelCount;
+    if (this_mip_end > intersection_mip_end) {
+        vk::ImageSubresourceRange r = range;
+        r.baseMipLevel = intersection_mip_end;
+        r.levelCount = this_mip_end - intersection_mip_end;
+        result.emplace_back(r);
+    }
+
+    // 3. Layers before intersection (within intersection mips)
+    if (range.baseArrayLayer < intersection.baseArrayLayer) {
+        vk::ImageSubresourceRange r = range;
+        r.baseMipLevel = intersection.baseMipLevel;
+        r.levelCount = intersection.levelCount;
+        r.layerCount = intersection.baseArrayLayer - range.baseArrayLayer;
+        result.emplace_back(r);
+    }
+
+    // 4. Layers after intersection (within intersection mips)
+    uint32_t this_layer_end = range.baseArrayLayer + range.layerCount;
+    uint32_t intersection_layer_end =
+        intersection.baseArrayLayer + intersection.layerCount;
+    if (this_layer_end > intersection_layer_end) {
+        vk::ImageSubresourceRange r = range;
+        r.baseMipLevel = intersection.baseMipLevel;
+        r.levelCount = intersection.levelCount;
+        r.baseArrayLayer = intersection_layer_end;
+        r.layerCount = this_layer_end - intersection_layer_end;
+        result.emplace_back(r);
+    }
+
+    return result;
 }
 
 } // namespace vw

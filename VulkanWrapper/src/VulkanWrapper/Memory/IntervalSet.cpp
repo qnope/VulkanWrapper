@@ -27,20 +27,10 @@ void BufferIntervalSet::remove(const BufferInterval &interval) {
             // No overlap, keep the interval as is
             newIntervals.push_back(existing);
         } else {
-            // There's overlap, need to split the existing interval
-            // Keep the part before the removed interval
-            if (existing.offset < interval.offset) {
-                BufferInterval before(existing.offset,
-                                      interval.offset - existing.offset);
-                newIntervals.push_back(before);
-            }
-
-            // Keep the part after the removed interval
-            if (existing.end() > interval.end()) {
-                BufferInterval after(interval.end(),
-                                     existing.end() - interval.end());
-                newIntervals.push_back(after);
-            }
+            // There's overlap, use difference to get remaining parts
+            auto remaining = existing.difference(interval);
+            newIntervals.insert(newIntervals.end(), remaining.begin(),
+                                remaining.end());
         }
     }
 
@@ -121,18 +111,10 @@ void ImageIntervalSet::remove(const ImageInterval &interval) {
             // No overlap, keep the interval as is
             newIntervals.push_back(existing);
         } else {
-            // There's overlap - for images, this is complex
-            // For simplicity, we'll remove the entire interval if there's any overlap
-            // A more sophisticated implementation would split the interval
-            auto intersection = existing.intersect(interval);
-            if (intersection.has_value() && *intersection == existing) {
-                // Completely contained, remove it
-                continue;
-            } else {
-                // Partial overlap - for now, keep the existing interval
-                // TODO: Implement proper splitting for image intervals
-                newIntervals.push_back(existing);
-            }
+            // Overlap: compute difference and add remaining parts
+            auto remaining = existing.difference(interval);
+            newIntervals.insert(newIntervals.end(), remaining.begin(),
+                                remaining.end());
         }
     }
 

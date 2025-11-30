@@ -157,10 +157,50 @@ TEST(BufferIntervalTest, Intersect_NoOverlap) {
 }
 
 TEST(BufferIntervalTest, Intersect_Adjacent) {
-    BufferInterval a(0, 50);
-    BufferInterval b(50, 50);
-    auto intersection = a.intersect(b);
-    EXPECT_FALSE(intersection.has_value());
+    BufferInterval a(0, 100);
+    BufferInterval b(100, 100);
+    auto result = a.intersect(b);
+    EXPECT_FALSE(result.has_value());
+}
+
+TEST(BufferIntervalTest, Difference_NoOverlap) {
+    BufferInterval a(0, 100);
+    BufferInterval b(200, 100);
+    auto result = a.difference(b);
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0], a);
+}
+
+TEST(BufferIntervalTest, Difference_CompletelyInside) {
+    BufferInterval a(0, 100);
+    BufferInterval b(25, 50);
+    auto result = a.difference(b);
+    ASSERT_EQ(result.size(), 2);
+    EXPECT_EQ(result[0], BufferInterval(0, 25));
+    EXPECT_EQ(result[1], BufferInterval(75, 25));
+}
+
+TEST(BufferIntervalTest, Difference_OverlapStart) {
+    BufferInterval a(100, 100); // 100-200
+    BufferInterval b(50, 100);  // 50-150
+    auto result = a.difference(b);
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0], BufferInterval(150, 50));
+}
+
+TEST(BufferIntervalTest, Difference_OverlapEnd) {
+    BufferInterval a(100, 100); // 100-200
+    BufferInterval b(150, 100); // 150-250
+    auto result = a.difference(b);
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0], BufferInterval(100, 50));
+}
+
+TEST(BufferIntervalTest, Difference_Contains) {
+    BufferInterval a(100, 100); // 100-200
+    BufferInterval b(50, 200);  // 50-250
+    auto result = a.difference(b);
+    EXPECT_TRUE(result.empty());
 }
 
 // ============================================================================

@@ -50,6 +50,13 @@ struct BufferInterval {
     [[nodiscard]] std::optional<BufferInterval>
     intersect(const BufferInterval &other) const;
 
+    /**
+     * Returns the difference of this interval and another (this - other).
+     * Returns a list of intervals that represent the remaining area.
+     */
+    [[nodiscard]] std::vector<BufferInterval>
+    difference(const BufferInterval &other) const;
+
     bool operator==(const BufferInterval &other) const {
         return offset == other.offset && size == other.size;
     }
@@ -102,6 +109,13 @@ struct ImageInterval {
      */
     [[nodiscard]] std::optional<ImageInterval>
     intersect(const ImageInterval &other) const;
+
+    /**
+     * Returns the difference of this interval and another (this - other).
+     * Returns a list of intervals that represent the remaining area.
+     */
+    [[nodiscard]] std::vector<ImageInterval>
+    difference(const ImageInterval &other) const;
 
     bool operator==(const ImageInterval &other) const {
         return range.aspectMask == other.range.aspectMask &&
