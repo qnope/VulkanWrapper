@@ -7,6 +7,7 @@ enable_testing()
 # Memory tests
 add_executable(MemoryTests
     Memory/IntervalTests.cpp
+    Memory/IntervalSetTests.cpp
 )
 
 target_link_libraries(MemoryTests
