@@ -1,166 +1,244 @@
 #include <gtest/gtest.h>
 #include "VulkanWrapper/Memory/UniformBufferAllocator.h"
+#include "VulkanWrapper/Memory/Allocator.h"
+#include "utils/create_gpu.hpp"
+#include <glm/glm.hpp>
+#include <optional>
+#include <cstring>
 
-using namespace vw;
-
-// Note: These tests require a Vulkan device, so they are more integration tests
-// For now, we'll create simple unit tests that test the logic without actual Vulkan
-
-// Mock test to verify the allocator interface compiles
-TEST(UniformBufferAllocatorTest, InterfaceCompiles) {
-    // This test just verifies the interface compiles
-    // Actual testing would require a Vulkan device
+TEST(UniformBufferAllocatorTest, CreateAllocator) {
+    auto gpu = vw::tests::create_gpu();
+    auto allocator = vw::AllocatorBuilder(gpu.instance, gpu.device).build();
+    vw::UniformBufferAllocator uboAllocator(allocator, 1024 * 1024);
     SUCCEED();
 }
 
-// Test alignment calculation
-TEST(UniformBufferAllocatorTest, AlignmentCalculation) {
-    // Test that alignment works correctly
-    vk::DeviceSize minAlignment = 256;
+TEST(UniformBufferAllocatorTest, AllocateChunk) {
+    auto gpu = vw::tests::create_gpu();
+    auto allocator = vw::AllocatorBuilder(gpu.instance, gpu.device).build();
+    vw::UniformBufferAllocator uboAllocator(allocator, 1024 * 1024);
     
-    // These would be tested if we could instantiate the allocator
-    // For now, we test the alignment math directly
-    auto align = [minAlignment](vk::DeviceSize size) {
-        return (size + minAlignment - 1) & ~(minAlignment - 1);
-    };
-    
-    EXPECT_EQ(align(1), 256);
-    EXPECT_EQ(align(256), 256);
-    EXPECT_EQ(align(257), 512);
-    EXPECT_EQ(align(512), 512);
-    EXPECT_EQ(align(513), 768);
+    auto chunk = uboAllocator.allocate<float>();
+    ASSERT_TRUE(chunk.has_value());
+    SUCCEED();
 }
 
-// Test chunk descriptor info
-TEST(UniformBufferAllocatorTest, ChunkDescriptorInfo) {
-    UniformBufferChunk<int> chunk;
-    chunk.handle = vk::Buffer{}; // Null handle for testing
-    chunk.offset = 256;
-    chunk.size = 512;
-    chunk.index = 0;
+TEST(UniformBufferAllocatorTest, CopyToChunk) {
+    auto gpu = vw::tests::create_gpu();
+    auto allocator = vw::AllocatorBuilder(gpu.instance, gpu.device).build();
+    vw::UniformBufferAllocator uboAllocator(allocator, 1024 * 1024);
     
-    auto info = chunk.descriptorInfo();
-    EXPECT_EQ(info.offset, 256);
-    EXPECT_EQ(info.range, 512);
+    auto chunk = uboAllocator.allocate<float>();
+    ASSERT_TRUE(chunk.has_value());
+    
+    float value = 123.456f;
+    chunk->copy(value);
+    SUCCEED();
 }
 
-// Test allocation logic conceptually
-TEST(UniformBufferAllocatorTest, AllocationLogic) {
-    // Test the first-fit allocation strategy conceptually
-    struct MockAllocation {
-        vk::DeviceSize offset;
-        vk::DeviceSize size;
-        bool free;
+TEST(UniformBufferAllocatorTest, AllocateAndCopyFloat) {
+    auto gpu = vw::tests::create_gpu();
+    auto allocator = vw::AllocatorBuilder(gpu.instance, gpu.device).build();
+    vw::UniformBufferAllocator uboAllocator(allocator, 1024 * 1024);
+    
+    auto chunk = uboAllocator.allocate<float>();
+    ASSERT_TRUE(chunk.has_value());
+    
+    float value = 123.456f;
+    chunk->copy(value);
+    
+    const auto& buffer = uboAllocator.buffer_ref();
+    // Read only sizeof(float) bytes, not the aligned size
+    auto data = buffer.as_vector(static_cast<std::size_t>(chunk->offset), static_cast<std::size_t>(sizeof(float)));
+    
+    ASSERT_EQ(data.size(), sizeof(float));
+    float loadedValue;
+    std::memcpy(&loadedValue, data.data(), sizeof(float));
+    EXPECT_FLOAT_EQ(loadedValue, value);
+}
+
+TEST(UniformBufferAllocatorTest, AllocateSameStructureMultipleTimes) {
+    auto gpu = vw::tests::create_gpu();
+    auto allocator = vw::AllocatorBuilder(gpu.instance, gpu.device).build();
+    vw::UniformBufferAllocator uboAllocator(allocator, 1024 * 1024);
+    
+    struct TestStruct {
+        float x;
+        float y;
+        float z;
+        int id;
     };
     
-    std::vector<MockAllocation> allocations;
-    allocations.push_back({0, 1024, true}); // One large free block
+    // Allocate multiple chunks of the same structure
+    auto chunk1 = uboAllocator.allocate<TestStruct>();
+    ASSERT_TRUE(chunk1.has_value());
     
-    // Simulate allocating 256 bytes
-    vk::DeviceSize requestedSize = 256;
+    auto chunk2 = uboAllocator.allocate<TestStruct>();
+    ASSERT_TRUE(chunk2.has_value());
     
-    // Find first free block
-    size_t foundIndex = 0;
-    for (size_t i = 0; i < allocations.size(); ++i) {
-        if (allocations[i].free && allocations[i].size >= requestedSize) {
-            foundIndex = i;
-            break;
-        }
+    auto chunk3 = uboAllocator.allocate<TestStruct>();
+    ASSERT_TRUE(chunk3.has_value());
+    
+    // Set different values
+    TestStruct value1{1.0f, 2.0f, 3.0f, 100};
+    TestStruct value2{4.0f, 5.0f, 6.0f, 200};
+    TestStruct value3{7.0f, 8.0f, 9.0f, 300};
+    
+    chunk1->copy(value1);
+    chunk2->copy(value2);
+    chunk3->copy(value3);
+    
+    // Retrieve and verify each one
+    const auto& buffer = uboAllocator.buffer_ref();
+    
+    auto data1 = buffer.as_vector(static_cast<std::size_t>(chunk1->offset), sizeof(TestStruct));
+    auto data2 = buffer.as_vector(static_cast<std::size_t>(chunk2->offset), sizeof(TestStruct));
+    auto data3 = buffer.as_vector(static_cast<std::size_t>(chunk3->offset), sizeof(TestStruct));
+    
+    ASSERT_EQ(data1.size(), sizeof(TestStruct));
+    ASSERT_EQ(data2.size(), sizeof(TestStruct));
+    ASSERT_EQ(data3.size(), sizeof(TestStruct));
+    
+    TestStruct loaded1, loaded2, loaded3;
+    std::memcpy(&loaded1, data1.data(), sizeof(TestStruct));
+    std::memcpy(&loaded2, data2.data(), sizeof(TestStruct));
+    std::memcpy(&loaded3, data3.data(), sizeof(TestStruct));
+    
+    EXPECT_FLOAT_EQ(loaded1.x, value1.x);
+    EXPECT_FLOAT_EQ(loaded1.y, value1.y);
+    EXPECT_FLOAT_EQ(loaded1.z, value1.z);
+    EXPECT_EQ(loaded1.id, value1.id);
+    
+    EXPECT_FLOAT_EQ(loaded2.x, value2.x);
+    EXPECT_FLOAT_EQ(loaded2.y, value2.y);
+    EXPECT_FLOAT_EQ(loaded2.z, value2.z);
+    EXPECT_EQ(loaded2.id, value2.id);
+    
+    EXPECT_FLOAT_EQ(loaded3.x, value3.x);
+    EXPECT_FLOAT_EQ(loaded3.y, value3.y);
+    EXPECT_FLOAT_EQ(loaded3.z, value3.z);
+    EXPECT_EQ(loaded3.id, value3.id);
+}
+
+TEST(UniformBufferAllocatorTest, AllocateDifferentStructures) {
+    auto gpu = vw::tests::create_gpu();
+    auto allocator = vw::AllocatorBuilder(gpu.instance, gpu.device).build();
+    vw::UniformBufferAllocator uboAllocator(allocator, 1024 * 1024);
+    
+    struct SmallStruct {
+        int32_t value;
+    };
+    
+    struct MediumStruct {
+        float x, y, z;
+        uint32_t flags;
+    };
+    
+    struct LargeStruct {
+        glm::vec4 position;
+        glm::vec4 color;
+        float intensity;
+        int32_t id;
+    };
+    
+    // Allocate different structure types
+    auto chunk1 = uboAllocator.allocate<SmallStruct>();
+    ASSERT_TRUE(chunk1.has_value());
+    
+    auto chunk2 = uboAllocator.allocate<MediumStruct>();
+    ASSERT_TRUE(chunk2.has_value());
+    
+    auto chunk3 = uboAllocator.allocate<LargeStruct>();
+    ASSERT_TRUE(chunk3.has_value());
+    
+    // Set values
+    SmallStruct value1{42};
+    MediumStruct value2{10.5f, 20.5f, 30.5f, 0x12345678};
+    LargeStruct value3{
+        glm::vec4(1.0f, 2.0f, 3.0f, 4.0f),
+        glm::vec4(0.1f, 0.2f, 0.3f, 0.4f),
+        99.9f,
+        12345
+    };
+    
+    chunk1->copy(value1);
+    chunk2->copy(value2);
+    chunk3->copy(value3);
+    
+    // Retrieve and verify each one
+    const auto& buffer = uboAllocator.buffer_ref();
+    
+    auto data1 = buffer.as_vector(static_cast<std::size_t>(chunk1->offset), sizeof(SmallStruct));
+    auto data2 = buffer.as_vector(static_cast<std::size_t>(chunk2->offset), sizeof(MediumStruct));
+    auto data3 = buffer.as_vector(static_cast<std::size_t>(chunk3->offset), sizeof(LargeStruct));
+    
+    ASSERT_EQ(data1.size(), sizeof(SmallStruct));
+    ASSERT_EQ(data2.size(), sizeof(MediumStruct));
+    ASSERT_EQ(data3.size(), sizeof(LargeStruct));
+    
+    SmallStruct loaded1;
+    MediumStruct loaded2;
+    LargeStruct loaded3;
+    
+    std::memcpy(&loaded1, data1.data(), sizeof(SmallStruct));
+    std::memcpy(&loaded2, data2.data(), sizeof(MediumStruct));
+    std::memcpy(&loaded3, data3.data(), sizeof(LargeStruct));
+    
+    EXPECT_EQ(loaded1.value, value1.value);
+    
+    EXPECT_FLOAT_EQ(loaded2.x, value2.x);
+    EXPECT_FLOAT_EQ(loaded2.y, value2.y);
+    EXPECT_FLOAT_EQ(loaded2.z, value2.z);
+    EXPECT_EQ(loaded2.flags, value2.flags);
+    
+    EXPECT_FLOAT_EQ(loaded3.position.x, value3.position.x);
+    EXPECT_FLOAT_EQ(loaded3.position.y, value3.position.y);
+    EXPECT_FLOAT_EQ(loaded3.position.z, value3.position.z);
+    EXPECT_FLOAT_EQ(loaded3.position.w, value3.position.w);
+    EXPECT_FLOAT_EQ(loaded3.color.x, value3.color.x);
+    EXPECT_FLOAT_EQ(loaded3.color.y, value3.color.y);
+    EXPECT_FLOAT_EQ(loaded3.color.z, value3.color.z);
+    EXPECT_FLOAT_EQ(loaded3.color.w, value3.color.w);
+    EXPECT_FLOAT_EQ(loaded3.intensity, value3.intensity);
+    EXPECT_EQ(loaded3.id, value3.id);
+}
+
+TEST(UniformBufferAllocatorTest, AllocateSameStructureWithVector) {
+    auto gpu = vw::tests::create_gpu();
+    auto allocator = vw::AllocatorBuilder(gpu.instance, gpu.device).build();
+    vw::UniformBufferAllocator uboAllocator(allocator, 1024 * 1024);
+    
+    struct Vec3 {
+        float x, y, z;
+    };
+    
+    // Allocate space for multiple Vec3 elements
+    constexpr size_t count = 5;
+    auto chunk = uboAllocator.allocate<Vec3>(count);
+    ASSERT_TRUE(chunk.has_value());
+    
+    // Create a vector of values
+    std::vector<Vec3> values;
+    for (size_t i = 0; i < count; ++i) {
+        values.push_back({static_cast<float>(i), static_cast<float>(i * 2), static_cast<float>(i * 3)});
     }
     
-    EXPECT_EQ(foundIndex, 0);
-    EXPECT_GE(allocations[foundIndex].size, requestedSize);
+    // Copy the entire vector
+    chunk->copy(std::span<const Vec3>(values));
     
-    // Split the block
-    auto &alloc = allocations[foundIndex];
-    vk::DeviceSize remainingSize = alloc.size - requestedSize;
-    vk::DeviceSize newOffset = alloc.offset + requestedSize;
+    // Retrieve using as_vector
+    const auto& buffer = uboAllocator.buffer_ref();
+    auto data = buffer.as_vector(static_cast<std::size_t>(chunk->offset), count * sizeof(Vec3));
     
-    alloc.size = requestedSize;
-    alloc.free = false;
+    ASSERT_EQ(data.size(), count * sizeof(Vec3));
     
-    allocations.push_back({newOffset, remainingSize, true});
-    
-    EXPECT_EQ(allocations.size(), 2);
-    EXPECT_EQ(allocations[0].size, 256);
-    EXPECT_FALSE(allocations[0].free);
-    EXPECT_EQ(allocations[1].offset, 256);
-    EXPECT_EQ(allocations[1].size, 768);
-    EXPECT_TRUE(allocations[1].free);
-}
-
-// Test deallocation and merging logic
-TEST(UniformBufferAllocatorTest, DeallocationMerging) {
-    struct MockAllocation {
-        vk::DeviceSize offset;
-        vk::DeviceSize size;
-        bool free;
-    };
-    
-    std::vector<MockAllocation> allocations;
-    // Three adjacent blocks: used, used, used
-    allocations.push_back({0, 256, false});
-    allocations.push_back({256, 256, false});
-    allocations.push_back({512, 256, false});
-    
-    // Free the middle one
-    allocations[1].free = true;
-    
-    // Free the first one
-    allocations[0].free = true;
-    
-    // Sort by offset
-    std::sort(allocations.begin(), allocations.end(),
-              [](const MockAllocation &a, const MockAllocation &b) {
-                  return a.offset < b.offset;
-              });
-    
-    // Merge adjacent free blocks
-    for (size_t i = 0; i < allocations.size();) {
-        if (!allocations[i].free) {
-            ++i;
-            continue;
-        }
+    // Verify each element
+    for (size_t i = 0; i < count; ++i) {
+        Vec3 loaded;
+        std::memcpy(&loaded, data.data() + i * sizeof(Vec3), sizeof(Vec3));
         
-        size_t j = i + 1;
-        while (j < allocations.size() && 
-               allocations[j].free &&
-               allocations[i].offset + allocations[i].size == allocations[j].offset) {
-            allocations[i].size += allocations[j].size;
-            allocations.erase(allocations.begin() + j);
-        }
-        ++i;
+        EXPECT_FLOAT_EQ(loaded.x, values[i].x);
+        EXPECT_FLOAT_EQ(loaded.y, values[i].y);
+        EXPECT_FLOAT_EQ(loaded.z, values[i].z);
     }
-    
-    // Should have merged first two blocks
-    EXPECT_EQ(allocations.size(), 2);
-    EXPECT_EQ(allocations[0].offset, 0);
-    EXPECT_EQ(allocations[0].size, 512);
-    EXPECT_TRUE(allocations[0].free);
-    EXPECT_EQ(allocations[1].offset, 512);
-    EXPECT_FALSE(allocations[1].free);
-}
-
-// Test free space calculation
-TEST(UniformBufferAllocatorTest, FreeSpaceCalculation) {
-    struct MockAllocation {
-        vk::DeviceSize offset;
-        vk::DeviceSize size;
-        bool free;
-    };
-    
-    std::vector<MockAllocation> allocations;
-    allocations.push_back({0, 256, false});
-    allocations.push_back({256, 256, true});
-    allocations.push_back({512, 512, false});
-    allocations.push_back({1024, 256, true});
-    
-    vk::DeviceSize freeSpace = 0;
-    for (const auto &alloc : allocations) {
-        if (alloc.free) {
-            freeSpace += alloc.size;
-        }
-    }
-    
-    EXPECT_EQ(freeSpace, 512); // 256 + 256
 }

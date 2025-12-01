@@ -24,8 +24,36 @@ vk::DeviceAddress BufferBase::device_address() const noexcept {
 
 void BufferBase::generic_copy(const void *data, VkDeviceSize size,
                               VkDeviceSize offset) {
-    vmaCopyMemoryToAllocation(m_data->m_allocator->handle(), data,
-                              m_data->m_allocation, offset, size);
+    if (!m_data || !m_data->m_allocation) {
+        throw std::runtime_error("Invalid allocation");
+    }
+    if (offset + size > m_data->m_size_in_bytes) {
+        throw std::runtime_error("Copy would exceed buffer size");
+    }
+    VkResult res = vmaCopyMemoryToAllocation(
+        m_data->m_allocator->handle(),
+        data,
+        m_data->m_allocation,
+        offset,
+        size);
+    if (res != VK_SUCCESS) {
+        throw std::runtime_error("Failed to copy memory to allocation");
+    }
+}
+
+std::vector<std::byte> BufferBase::generic_as_vector(VkDeviceSize offset, VkDeviceSize size) const {
+    std::vector<std::byte> result(size);
+    VkResult res = vmaCopyAllocationToMemory(
+        m_data->m_allocator->handle(),
+        m_data->m_allocation,
+        offset,
+        result.data(),
+        size);
+    if (res != VK_SUCCESS) {
+        throw std::runtime_error("Failed to copy memory from allocation");
+    }
+    
+    return result;
 }
 
 BufferBase::~BufferBase() {

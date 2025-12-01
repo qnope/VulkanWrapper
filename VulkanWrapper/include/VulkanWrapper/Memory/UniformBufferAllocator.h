@@ -14,10 +14,12 @@ namespace vw {
  */
 template<typename T>
 struct UniformBufferChunk {
-    vk::Buffer handle;      // The underlying buffer handle
-    vk::DeviceSize offset;  // Offset within the buffer
-    vk::DeviceSize size;    // Size of the chunk in bytes
-    uint32_t index;         // Index of this allocation (for tracking)
+    vk::Buffer handle{};      // The underlying buffer handle
+    vk::DeviceSize offset{};  // Offset within the buffer
+    vk::DeviceSize size{};    // Size of the chunk in bytes
+    uint32_t index{};         // Index of this allocation (for tracking)
+
+    Buffer<std::byte, true, UniformBufferUsage>* buffer_ref{}; // Reference to the underlying buffer
 
     /**
      * Returns descriptor buffer info for binding this chunk.
@@ -25,6 +27,21 @@ struct UniformBufferChunk {
      */
     vk::DescriptorBufferInfo descriptorInfo() const {
         return vk::DescriptorBufferInfo(handle, offset, size);
+    }
+
+    void copy(const T& value) {
+        if (!buffer_ref) {
+            throw std::runtime_error("Buffer reference is null");
+        }
+        BufferBase* base_ptr = static_cast<BufferBase*>(buffer_ref);
+        base_ptr->generic_copy(&value, sizeof(T), offset);
+    }
+
+    void copy(std::span<const T> data) {
+        if (!buffer_ref) {
+            throw std::runtime_error("Buffer reference is null");
+        }
+        static_cast<BufferBase*>(buffer_ref)->generic_copy(data.data(), data.size_bytes(), offset);
     }
 };
 
@@ -83,11 +100,13 @@ class UniformBufferAllocator {
      */
     void clear();
 
+    [[nodiscard]] const Buffer<std::byte, true, UniformBufferUsage>& buffer_ref() const { return m_buffer; }
+
   private:
     struct Allocation {
-        vk::DeviceSize offset;
-        vk::DeviceSize size;
-        bool free;
+        vk::DeviceSize offset{};
+        vk::DeviceSize size{};
+        bool free{};
     };
 
     Buffer<std::byte, true, UniformBufferUsage> m_buffer;
@@ -115,16 +134,17 @@ std::optional<UniformBufferChunk<T>> UniformBufferAllocator::allocate(size_t cou
     }
 
     uint32_t index = *freeBlockIndex;
-    auto &allocation = m_allocations[index];
+    // Get values before modifying vector (push_back may reallocate)
+    vk::DeviceSize chunkOffset = m_allocations[index].offset;
     
     // If the free block is larger than needed, split it
-    if (allocation.size > alignedSize) {
-        vk::DeviceSize remainingSize = allocation.size - alignedSize;
-        vk::DeviceSize newOffset = allocation.offset + alignedSize;
+    if (m_allocations[index].size > alignedSize) {
+        vk::DeviceSize remainingSize = m_allocations[index].size - alignedSize;
+        vk::DeviceSize newOffset = chunkOffset + alignedSize;
         
         // Update current allocation
-        allocation.size = alignedSize;
-        allocation.free = false;
+        m_allocations[index].size = alignedSize;
+        m_allocations[index].free = false;
         
         // Create new free allocation for the remainder
         m_allocations.push_back({
@@ -133,14 +153,15 @@ std::optional<UniformBufferChunk<T>> UniformBufferAllocator::allocate(size_t cou
             .free = true
         });
     } else {
-        allocation.free = false;
+        m_allocations[index].free = false;
     }
 
     return UniformBufferChunk<T>{
         .handle = m_buffer.handle(),
-        .offset = allocation.offset,
+        .offset = chunkOffset,
         .size = alignedSize,
-        .index = index
+        .index = index,
+        .buffer_ref = &m_buffer
     };
 }
 

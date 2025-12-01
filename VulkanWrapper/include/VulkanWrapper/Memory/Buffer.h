@@ -4,6 +4,7 @@
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
 #include <vk_mem_alloc.h>
+#include <cstring>
 
 namespace vw {
 
@@ -44,6 +45,7 @@ class BufferBase : public ObjectWithHandle<vk::Buffer> {
     [[nodiscard]] vk::DeviceAddress device_address() const noexcept;
 
     void generic_copy(const void *data, VkDeviceSize size, VkDeviceSize offset);
+    [[nodiscard]] std::vector<std::byte> generic_as_vector(VkDeviceSize offset, VkDeviceSize size) const;
 
     ~BufferBase();
 
@@ -92,6 +94,15 @@ class Buffer : public BufferBase {
 
     [[nodiscard]] std::size_t size() const noexcept {
         return size_bytes() / sizeof(T);
+    }
+
+    [[nodiscard]] std::vector<T> as_vector(std::size_t offset, std::size_t count) const
+        requires(HostVisible)
+    {
+        auto bytes = BufferBase::generic_as_vector(offset * sizeof(T), count * sizeof(T));
+        std::vector<T> result(count);
+        std::memcpy(result.data(), bytes.data(), bytes.size());
+        return result;
     }
 };
 
