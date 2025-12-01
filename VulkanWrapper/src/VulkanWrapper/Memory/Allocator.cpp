@@ -76,6 +76,7 @@ BufferBase Allocator::allocate_buffer(VkDeviceSize size, bool host_visible,
     vmaCreateBufferWithAlignment(handle(), &buffer_info, &allocation_info,
                                  DefaultBufferAlignment, &buffer, &allocation,
                                  nullptr);
+
     return BufferBase{*m_device, *this, buffer, allocation, size};
 }
 
