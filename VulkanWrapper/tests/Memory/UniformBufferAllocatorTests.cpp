@@ -236,9 +236,206 @@ TEST(UniformBufferAllocatorTest, AllocateSameStructureWithVector) {
     for (size_t i = 0; i < count; ++i) {
         Vec3 loaded;
         std::memcpy(&loaded, data.data() + i * sizeof(Vec3), sizeof(Vec3));
-        
+
         EXPECT_FLOAT_EQ(loaded.x, values[i].x);
         EXPECT_FLOAT_EQ(loaded.y, values[i].y);
         EXPECT_FLOAT_EQ(loaded.z, values[i].z);
+    }
+}
+
+// Alignment tests
+TEST(UniformBufferAllocatorTest, SingleChunkAlignment) {
+    auto gpu = vw::tests::create_gpu();
+    auto allocator = vw::AllocatorBuilder(gpu.instance, gpu.device).build();
+    constexpr vk::DeviceSize minAlignment = 256;
+    vw::UniformBufferAllocator uboAllocator(allocator, 1024 * 1024, minAlignment);
+
+    auto chunk = uboAllocator.allocate<float>();
+    ASSERT_TRUE(chunk.has_value());
+
+    // Verify offset is aligned
+    EXPECT_EQ(chunk->offset % minAlignment, 0)
+        << "Chunk offset " << chunk->offset << " is not aligned to " << minAlignment;
+}
+
+TEST(UniformBufferAllocatorTest, MultipleChunksAlignment) {
+    auto gpu = vw::tests::create_gpu();
+    auto allocator = vw::AllocatorBuilder(gpu.instance, gpu.device).build();
+    constexpr vk::DeviceSize minAlignment = 256;
+    vw::UniformBufferAllocator uboAllocator(allocator, 1024 * 1024, minAlignment);
+
+    // Allocate multiple chunks of different sizes
+    auto chunk1 = uboAllocator.allocate<uint32_t>();
+    auto chunk2 = uboAllocator.allocate<float>();
+    auto chunk3 = uboAllocator.allocate<glm::vec4>();
+    auto chunk4 = uboAllocator.allocate<glm::mat4>();
+
+    ASSERT_TRUE(chunk1.has_value());
+    ASSERT_TRUE(chunk2.has_value());
+    ASSERT_TRUE(chunk3.has_value());
+    ASSERT_TRUE(chunk4.has_value());
+
+    // Verify all offsets are aligned
+    EXPECT_EQ(chunk1->offset % minAlignment, 0)
+        << "Chunk1 offset " << chunk1->offset << " is not aligned to " << minAlignment;
+    EXPECT_EQ(chunk2->offset % minAlignment, 0)
+        << "Chunk2 offset " << chunk2->offset << " is not aligned to " << minAlignment;
+    EXPECT_EQ(chunk3->offset % minAlignment, 0)
+        << "Chunk3 offset " << chunk3->offset << " is not aligned to " << minAlignment;
+    EXPECT_EQ(chunk4->offset % minAlignment, 0)
+        << "Chunk4 offset " << chunk4->offset << " is not aligned to " << minAlignment;
+}
+
+TEST(UniformBufferAllocatorTest, AlignmentWithDifferentTypes) {
+    auto gpu = vw::tests::create_gpu();
+    auto allocator = vw::AllocatorBuilder(gpu.instance, gpu.device).build();
+    constexpr vk::DeviceSize minAlignment = 256;
+    vw::UniformBufferAllocator uboAllocator(allocator, 1024 * 1024, minAlignment);
+
+    struct SmallStruct {
+        int32_t value;
+    };
+
+    struct MediumStruct {
+        float x, y, z;
+        uint32_t flags;
+    };
+
+    struct LargeStruct {
+        glm::vec4 position;
+        glm::vec4 color;
+        float intensity;
+        int32_t id;
+    };
+
+    // Allocate different structure types
+    auto chunk1 = uboAllocator.allocate<SmallStruct>();
+    auto chunk2 = uboAllocator.allocate<MediumStruct>();
+    auto chunk3 = uboAllocator.allocate<LargeStruct>();
+
+    ASSERT_TRUE(chunk1.has_value());
+    ASSERT_TRUE(chunk2.has_value());
+    ASSERT_TRUE(chunk3.has_value());
+
+    // Verify all offsets are aligned
+    EXPECT_EQ(chunk1->offset % minAlignment, 0)
+        << "SmallStruct chunk offset " << chunk1->offset << " is not aligned to " << minAlignment;
+    EXPECT_EQ(chunk2->offset % minAlignment, 0)
+        << "MediumStruct chunk offset " << chunk2->offset << " is not aligned to " << minAlignment;
+    EXPECT_EQ(chunk3->offset % minAlignment, 0)
+        << "LargeStruct chunk offset " << chunk3->offset << " is not aligned to " << minAlignment;
+}
+
+TEST(UniformBufferAllocatorTest, AlignmentAfterDeallocation) {
+    auto gpu = vw::tests::create_gpu();
+    auto allocator = vw::AllocatorBuilder(gpu.instance, gpu.device).build();
+    constexpr vk::DeviceSize minAlignment = 256;
+    vw::UniformBufferAllocator uboAllocator(allocator, 1024 * 1024, minAlignment);
+
+    // Allocate three chunks
+    auto chunk1 = uboAllocator.allocate<float>();
+    auto chunk2 = uboAllocator.allocate<float>();
+    auto chunk3 = uboAllocator.allocate<float>();
+
+    ASSERT_TRUE(chunk1.has_value());
+    ASSERT_TRUE(chunk2.has_value());
+    ASSERT_TRUE(chunk3.has_value());
+
+    // Verify initial alignment
+    EXPECT_EQ(chunk1->offset % minAlignment, 0);
+    EXPECT_EQ(chunk2->offset % minAlignment, 0);
+    EXPECT_EQ(chunk3->offset % minAlignment, 0);
+
+    // Deallocate the middle chunk
+    uboAllocator.deallocate(chunk2->index);
+
+    // Allocate a new chunk (should reuse deallocated space)
+    auto chunk4 = uboAllocator.allocate<float>();
+    ASSERT_TRUE(chunk4.has_value());
+
+    // Verify new chunk is still aligned
+    EXPECT_EQ(chunk4->offset % minAlignment, 0)
+        << "Chunk after deallocation offset " << chunk4->offset << " is not aligned to " << minAlignment;
+}
+
+TEST(UniformBufferAllocatorTest, AlignmentWithArrayAllocation) {
+    auto gpu = vw::tests::create_gpu();
+    auto allocator = vw::AllocatorBuilder(gpu.instance, gpu.device).build();
+    constexpr vk::DeviceSize minAlignment = 256;
+    vw::UniformBufferAllocator uboAllocator(allocator, 1024 * 1024, minAlignment);
+
+    struct Vec3 {
+        float x, y, z;
+    };
+
+    // Allocate arrays of different sizes
+    auto chunk1 = uboAllocator.allocate<Vec3>(5);
+    auto chunk2 = uboAllocator.allocate<Vec3>(10);
+    auto chunk3 = uboAllocator.allocate<Vec3>(20);
+
+    ASSERT_TRUE(chunk1.has_value());
+    ASSERT_TRUE(chunk2.has_value());
+    ASSERT_TRUE(chunk3.has_value());
+
+    // Verify all offsets are aligned
+    EXPECT_EQ(chunk1->offset % minAlignment, 0)
+        << "Array chunk1 offset " << chunk1->offset << " is not aligned to " << minAlignment;
+    EXPECT_EQ(chunk2->offset % minAlignment, 0)
+        << "Array chunk2 offset " << chunk2->offset << " is not aligned to " << minAlignment;
+    EXPECT_EQ(chunk3->offset % minAlignment, 0)
+        << "Array chunk3 offset " << chunk3->offset << " is not aligned to " << minAlignment;
+}
+
+TEST(UniformBufferAllocatorTest, AlignmentWithCustomAlignment) {
+    auto gpu = vw::tests::create_gpu();
+    auto allocator = vw::AllocatorBuilder(gpu.instance, gpu.device).build();
+
+    // Test with different alignment values
+    constexpr vk::DeviceSize alignment512 = 512;
+    vw::UniformBufferAllocator uboAllocator512(allocator, 1024 * 1024, alignment512);
+
+    auto chunk1 = uboAllocator512.allocate<float>();
+    auto chunk2 = uboAllocator512.allocate<glm::vec4>();
+
+    ASSERT_TRUE(chunk1.has_value());
+    ASSERT_TRUE(chunk2.has_value());
+
+    EXPECT_EQ(chunk1->offset % alignment512, 0)
+        << "Chunk offset " << chunk1->offset << " is not aligned to " << alignment512;
+    EXPECT_EQ(chunk2->offset % alignment512, 0)
+        << "Chunk offset " << chunk2->offset << " is not aligned to " << alignment512;
+}
+
+TEST(UniformBufferAllocatorTest, AlignmentStressTest) {
+    auto gpu = vw::tests::create_gpu();
+    auto allocator = vw::AllocatorBuilder(gpu.instance, gpu.device).build();
+    constexpr vk::DeviceSize minAlignment = 256;
+    vw::UniformBufferAllocator uboAllocator(allocator, 1024 * 1024, minAlignment);
+
+    // Allocate many chunks
+    std::vector<vw::UniformBufferChunk<float>> chunks;
+    for (int i = 0; i < 100; ++i) {
+        auto chunk = uboAllocator.allocate<float>();
+        if (chunk.has_value()) {
+            chunks.push_back(*chunk);
+
+            // Verify each chunk is aligned
+            EXPECT_EQ(chunk->offset % minAlignment, 0)
+                << "Chunk " << i << " offset " << chunk->offset << " is not aligned to " << minAlignment;
+        }
+    }
+
+    // Deallocate some chunks (every other one)
+    for (size_t i = 0; i < chunks.size(); i += 2) {
+        uboAllocator.deallocate(chunks[i].index);
+    }
+
+    // Reallocate and verify alignment is maintained
+    for (int i = 0; i < 50; ++i) {
+        auto chunk = uboAllocator.allocate<float>();
+        if (chunk.has_value()) {
+            EXPECT_EQ(chunk->offset % minAlignment, 0)
+                << "Reallocated chunk " << i << " offset " << chunk->offset << " is not aligned to " << minAlignment;
+        }
     }
 }
