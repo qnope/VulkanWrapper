@@ -16,7 +16,9 @@ GPU create_gpu() {
                       .with_dynamic_rendering()
                       .build();
 
-    return GPU{std::move(instance), std::move(device)};
+    auto allocator = AllocatorBuilder(instance, device).build();
+
+    return GPU{std::move(instance), std::move(device), std::move(allocator)};
 }
 
 } // namespace vw::tests
