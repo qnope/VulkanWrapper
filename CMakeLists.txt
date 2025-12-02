@@ -4,6 +4,7 @@ project(VulkanWrapper)
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS True)
 
+enable_testing()
 add_subdirectory(VulkanWrapper)
 add_subdirectory(examples)
 #add_subdirectory(vw_c)

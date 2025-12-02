@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.20)
 
 find_package(GTest CONFIG REQUIRED)
 
-enable_testing()
-
 add_library(TestUtils STATIC
     utils/create_gpu.cpp
 )
@@ -21,6 +19,8 @@ add_executable(MemoryTests
     Memory/IntervalSetTests.cpp
     Memory/UniformBufferAllocatorTests.cpp
     Memory/ResourceTrackerTests.cpp
+    Memory/BufferTests.cpp
+    Memory/AllocatorTests.cpp
 )
 
 target_link_libraries(MemoryTests
@@ -33,3 +33,20 @@ target_link_libraries(MemoryTests
 
 include(GoogleTest)
 gtest_discover_tests(MemoryTests)
+
+# Image tests
+add_executable(ImageTests
+    Image/ImageTests.cpp
+    Image/ImageViewTests.cpp
+    Image/SamplerTests.cpp
+)
+
+target_link_libraries(ImageTests
+    PRIVATE
+    TestUtils
+    VulkanWrapperCoreLibrary
+    GTest::gtest
+    GTest::gtest_main
+)
+
+gtest_discover_tests(ImageTests)

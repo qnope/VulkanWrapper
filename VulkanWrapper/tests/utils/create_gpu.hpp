@@ -10,6 +10,8 @@ struct GPU {
     Instance instance;
     Device device;
     Allocator allocator;
+
+    vw::Queue& queue() { return device.graphicsQueue(); }
 };
 
 GPU create_gpu();
