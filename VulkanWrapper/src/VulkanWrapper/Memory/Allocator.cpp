@@ -3,6 +3,7 @@
 #include "VulkanWrapper/Utils/Alignment.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 #include "VulkanWrapper/Vulkan/Instance.h"
+#include <exception>
 #include <vk_mem_alloc.h>
 
 namespace vw {
@@ -94,8 +95,9 @@ Allocator AllocatorBuilder::build() && {
     info.physicalDevice = m_device->physical_device();
 
     VmaAllocator allocator = nullptr;
-    assert(vk::Result(vmaCreateAllocator(&info, &allocator)) ==
-           vk::Result::eSuccess);
+    if (vk::Result(vmaCreateAllocator(&info, &allocator)) !=
+        vk::Result::eSuccess)
+        std::terminate();
 
     return Allocator{*m_device, allocator};
 }
