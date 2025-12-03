@@ -14,26 +14,21 @@ MipLevel mip_level_from_size(Width width, Height height, Depth depth) {
 }
 } // namespace
 
-Allocator::Allocator(const Device &device, VmaAllocator allocator)
-    : m_device{&device}
-    , m_allocator{allocator} {}
+Allocator::Impl::Impl(const Device &dev, VmaAllocator alloc)
+    : device{&dev}
+    , allocator{alloc} {}
 
-Allocator::Allocator(Allocator &&other) noexcept
-    : m_device{std::exchange(other.m_device, nullptr)}
-    , m_allocator{std::exchange(other.m_allocator, VK_NULL_HANDLE)} {}
-
-Allocator &Allocator::operator=(Allocator &&other) noexcept {
-    if (this != &other) {
-        // Destroy current allocator if valid
-        if (m_allocator != VK_NULL_HANDLE) {
-            vmaDestroyAllocator(m_allocator);
-        }
-
-        // Move from other using std::exchange
-        m_device = std::exchange(other.m_device, nullptr);
-        m_allocator = std::exchange(other.m_allocator, VK_NULL_HANDLE);
+Allocator::Impl::~Impl() {
+    if (allocator != VK_NULL_HANDLE) {
+        vmaDestroyAllocator(allocator);
     }
-    return *this;
+}
+
+Allocator::Allocator(const Device &device, VmaAllocator allocator)
+    : m_impl{std::make_shared<Impl>(device, allocator)} {}
+
+VmaAllocator Allocator::handle() const noexcept {
+    return m_impl->allocator;
 }
 
 IndexBuffer Allocator::allocate_index_buffer(VkDeviceSize size) const {
@@ -67,17 +62,11 @@ Allocator::create_image_2D(Width width, Height height, bool mipmap,
     allocation_info.usage = VMA_MEMORY_USAGE_AUTO;
     VmaAllocation allocation = nullptr;
     VkImage image = nullptr;
-    vmaCreateImage(m_allocator, &create_info, &allocation_info, &image,
+    vmaCreateImage(m_impl->allocator, &create_info, &allocation_info, &image,
                    &allocation, nullptr);
     return std::make_shared<const Image>(vk::Image(image), width, height,
                                          Depth(1), mip_levels, format, usage,
                                          this, allocation);
-}
-
-Allocator::~Allocator() {
-    if (m_allocator != VK_NULL_HANDLE) {
-        vmaDestroyAllocator(m_allocator);
-    }
 }
 
 BufferBase Allocator::allocate_buffer(VkDeviceSize size, bool host_visible,
@@ -96,11 +85,11 @@ BufferBase Allocator::allocate_buffer(VkDeviceSize size, bool host_visible,
 
     VmaAllocation allocation = nullptr;
     VkBuffer buffer = nullptr;
-    vmaCreateBufferWithAlignment(m_allocator, &buffer_info, &allocation_info,
+    vmaCreateBufferWithAlignment(m_impl->allocator, &buffer_info, &allocation_info,
                                  DefaultBufferAlignment, &buffer, &allocation,
                                  nullptr);
 
-    return BufferBase{*m_device, *this, buffer, allocation, size};
+    return BufferBase{*m_impl->device, *this, buffer, allocation, size};
 }
 
 AllocatorBuilder::AllocatorBuilder(const Instance &instance,

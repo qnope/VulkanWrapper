@@ -4,22 +4,21 @@
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Image/Image.h"
 #include "VulkanWrapper/Memory/Buffer.h"
-#include "VulkanWrapper/Utils/ObjectWithHandle.h"
+#include <memory>
 #include <vk_mem_alloc.h>
 
 namespace vw {
-struct AllocatorImpl;
 
 class Allocator {
   public:
     Allocator(const Device &device, VmaAllocator allocator);
-    Allocator(const Allocator &) = delete;
-    Allocator(Allocator &&other) noexcept;
+    Allocator(const Allocator &) = default;
+    Allocator(Allocator &&other) noexcept = default;
 
-    Allocator &operator=(Allocator &&other) noexcept;
-    Allocator &operator=(const Allocator &) noexcept = delete;
+    Allocator &operator=(Allocator &&other) noexcept = default;
+    Allocator &operator=(const Allocator &) noexcept = default;
 
-    [[nodiscard]] VmaAllocator handle() const noexcept { return m_allocator; }
+    [[nodiscard]] VmaAllocator handle() const noexcept;
 
     template <typename T, bool HostVisible = false>
     Buffer<T, HostVisible, VertexBufferUsage>
@@ -53,17 +52,26 @@ class Allocator {
     create_image_2D(Width width, Height height, bool mipmap, vk::Format format,
                     vk::ImageUsageFlags usage) const;
 
-    ~Allocator();
-
   private:
     [[nodiscard]] BufferBase
     allocate_buffer(VkDeviceSize size, bool host_visible,
                     vk::BufferUsageFlags usage,
                     vk::SharingMode sharing_mode) const;
 
-  private:
-    const Device *m_device;
-    VmaAllocator m_allocator;
+    struct Impl {
+        const Device *device;
+        VmaAllocator allocator;
+
+        Impl(const Device &dev, VmaAllocator alloc);
+        ~Impl();
+
+        Impl(const Impl &) = delete;
+        Impl &operator=(const Impl &) = delete;
+        Impl(Impl &&) = delete;
+        Impl &operator=(Impl &&) = delete;
+    };
+
+    std::shared_ptr<Impl> m_impl;
 };
 
 class AllocatorBuilder {
