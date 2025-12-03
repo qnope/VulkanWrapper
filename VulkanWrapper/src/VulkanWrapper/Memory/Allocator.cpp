@@ -1,5 +1,6 @@
 #include "VulkanWrapper/Memory/Allocator.h"
 
+#include "VulkanWrapper/Image/Image.h"
 #include "VulkanWrapper/Memory/Buffer.h"
 #include "VulkanWrapper/Utils/Alignment.h"
 #include "VulkanWrapper/Vulkan/Device.h"
@@ -65,7 +66,7 @@ Allocator::create_image_2D(Width width, Height height, bool mipmap,
                    &allocation, nullptr);
     return std::make_shared<const Image>(vk::Image(image), width, height,
                                          Depth(1), mip_levels, format, usage,
-                                         this, allocation);
+                                         *this, allocation);
 }
 
 BufferBase Allocator::allocate_buffer(VkDeviceSize size, bool host_visible,

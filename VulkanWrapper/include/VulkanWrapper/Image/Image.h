@@ -2,7 +2,9 @@
 #include "VulkanWrapper/3rd_party.h"
 
 #include "VulkanWrapper/fwd.h"
+#include "VulkanWrapper/Memory/Allocator.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
+#include <optional>
 #include <vk_mem_alloc.h>
 
 namespace vw {
@@ -11,7 +13,7 @@ class Image : public ObjectWithHandle<vk::Image> {
   public:
     Image(vk::Image image, Width width, Height height, Depth depth,
           MipLevel mip_level, vk::Format format, vk::ImageUsageFlags usage,
-          const Allocator *allocator, VmaAllocation allocation);
+          std::optional<Allocator> allocator, VmaAllocation allocation);
 
     Image(const Image &) = delete;
     Image(Image &&) = default;
@@ -49,7 +51,7 @@ class Image : public ObjectWithHandle<vk::Image> {
     MipLevel m_mip_levels;
     vk::Format m_format;
     vk::ImageUsageFlags m_usage;
-    const Allocator *m_allocator;
+    std::optional<Allocator> m_allocator;
     VmaAllocation m_allocation;
 };
 

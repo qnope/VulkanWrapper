@@ -22,7 +22,7 @@ vk::ImageAspectFlags aspect_flags_from_format(vk::Format format) {
 
 Image::Image(vk::Image image, Width width, Height height, Depth depth,
              MipLevel mip_level, vk::Format format, vk::ImageUsageFlags usage,
-             const Allocator *allocator, VmaAllocation allocation)
+             std::optional<Allocator> allocator, VmaAllocation allocation)
     : ObjectWithHandle<vk::Image>(image)
     , m_width{width}
     , m_height{height}
@@ -30,12 +30,13 @@ Image::Image(vk::Image image, Width width, Height height, Depth depth,
     , m_mip_levels{mip_level}
     , m_format{format}
     , m_usage{usage}
-    , m_allocator{allocator}
+    , m_allocator{std::move(allocator)}
     , m_allocation{allocation} {}
 
 Image::~Image() {
-    if (m_allocator != nullptr)
+    if (m_allocator.has_value()) {
         vmaDestroyImage(m_allocator->handle(), handle(), m_allocation);
+    }
 }
 
 MipLevel Image::mip_levels() const noexcept { return m_mip_levels; }

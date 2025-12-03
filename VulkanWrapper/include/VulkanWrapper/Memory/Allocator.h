@@ -2,11 +2,12 @@
 #include "VulkanWrapper/3rd_party.h"
 
 #include "VulkanWrapper/fwd.h"
-#include "VulkanWrapper/Image/Image.h"
 #include <memory>
 #include <vk_mem_alloc.h>
 
 namespace vw {
+
+class Image;
 
 class Allocator {
   public:
