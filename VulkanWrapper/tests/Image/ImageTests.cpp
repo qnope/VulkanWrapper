@@ -4,7 +4,7 @@
 #include "utils/create_gpu.hpp"
 
 TEST(ImageTest, CreateImage2D) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator.create_image_2D(
         vw::Width{256},
@@ -20,7 +20,7 @@ TEST(ImageTest, CreateImage2D) {
 }
 
 TEST(ImageTest, ImageExtent2D) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator.create_image_2D(
         vw::Width{512},
@@ -37,7 +37,7 @@ TEST(ImageTest, ImageExtent2D) {
 }
 
 TEST(ImageTest, ImageExtent3D) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator.create_image_2D(
         vw::Width{512},
@@ -55,7 +55,7 @@ TEST(ImageTest, ImageExtent3D) {
 }
 
 TEST(ImageTest, CreateImageWithMipmaps) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator.create_image_2D(
         vw::Width{512},
@@ -70,7 +70,7 @@ TEST(ImageTest, CreateImageWithMipmaps) {
 }
 
 TEST(ImageTest, MipLevelCount) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator.create_image_2D(
         vw::Width{1024},
@@ -86,7 +86,7 @@ TEST(ImageTest, MipLevelCount) {
 }
 
 TEST(ImageTest, FullRange) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator.create_image_2D(
         vw::Width{256},
@@ -106,7 +106,7 @@ TEST(ImageTest, FullRange) {
 }
 
 TEST(ImageTest, MipLevelRange) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator.create_image_2D(
         vw::Width{512},
@@ -124,7 +124,7 @@ TEST(ImageTest, MipLevelRange) {
 }
 
 TEST(ImageTest, MipLevelLayer) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator.create_image_2D(
         vw::Width{512},
@@ -143,7 +143,7 @@ TEST(ImageTest, MipLevelLayer) {
 }
 
 TEST(ImageTest, MipLevelExtent) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator.create_image_2D(
         vw::Width{512},
@@ -172,7 +172,7 @@ TEST(ImageTest, MipLevelExtent) {
 }
 
 TEST(ImageTest, MipLevelOffsets) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator.create_image_2D(
         vw::Width{512},
@@ -195,7 +195,7 @@ TEST(ImageTest, MipLevelOffsets) {
 }
 
 TEST(ImageTest, DifferentFormats) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
 
     auto imageRGBA8 = gpu.allocator.create_image_2D(
         vw::Width{128}, vw::Height{128}, false,
@@ -225,7 +225,7 @@ TEST(ImageTest, DifferentFormats) {
 }
 
 TEST(ImageTest, DifferentSizes) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
 
     auto small = gpu.allocator.create_image_2D(
         vw::Width{64}, vw::Height{64}, false,
@@ -255,7 +255,7 @@ TEST(ImageTest, DifferentSizes) {
 }
 
 TEST(ImageTest, NonSquareImage) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator.create_image_2D(
         vw::Width{1920}, vw::Height{1080}, false,

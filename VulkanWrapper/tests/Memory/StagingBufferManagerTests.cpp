@@ -7,13 +7,13 @@
 #include <vector>
 
 TEST(StagingBufferManagerTest, CreateStagingBufferManager) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
     vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
     SUCCEED();
 }
 
 TEST(StagingBufferManagerTest, TransferDataToDeviceBuffer) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
 
     // Create StagingBufferManager
     vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
@@ -74,7 +74,7 @@ TEST(StagingBufferManagerTest, TransferDataToDeviceBuffer) {
 }
 
 TEST(StagingBufferManagerTest, TransferIntegerData) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
     vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
 
     // Create a device-only buffer for integers
@@ -133,7 +133,7 @@ TEST(StagingBufferManagerTest, TransferIntegerData) {
 }
 
 TEST(StagingBufferManagerTest, TransferDoubleData) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
     vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
 
     // Create a device-only buffer for doubles
@@ -201,7 +201,7 @@ struct Vec3 {
 };
 
 TEST(StagingBufferManagerTest, TransferSimpleStructData) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
     vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
 
     // Create a device-only buffer for Vec3 structures
@@ -285,7 +285,7 @@ struct alignas(16) ParticleData {
 };
 
 TEST(StagingBufferManagerTest, TransferComplexStructData) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
     vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
 
     // Create a device-only buffer for ParticleData structures
@@ -353,7 +353,7 @@ TEST(StagingBufferManagerTest, TransferComplexStructData) {
 }
 
 TEST(StagingBufferManagerTest, TransferWithOffset) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
     vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
 
     // Create a device-only buffer
@@ -421,7 +421,7 @@ TEST(StagingBufferManagerTest, TransferWithOffset) {
 }
 
 TEST(StagingBufferManagerTest, TransferMultipleSequential) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
     vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
 
     // Create three device buffers
@@ -490,7 +490,7 @@ TEST(StagingBufferManagerTest, TransferMultipleSequential) {
 }
 
 TEST(StagingBufferManagerTest, TransferLargeDataSet) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
     vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
 
     // Create a large device buffer (1 million floats = ~4MB)

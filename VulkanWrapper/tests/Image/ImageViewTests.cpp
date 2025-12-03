@@ -5,7 +5,7 @@
 #include "utils/create_gpu.hpp"
 
 TEST(ImageViewTest, CreateImageView) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator.create_image_2D(
         vw::Width{256}, vw::Height{256}, false,
@@ -20,7 +20,7 @@ TEST(ImageViewTest, CreateImageView) {
 }
 
 TEST(ImageViewTest, ImageViewImage) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator.create_image_2D(
         vw::Width{256}, vw::Height{256}, false,
@@ -35,7 +35,7 @@ TEST(ImageViewTest, ImageViewImage) {
 }
 
 TEST(ImageViewTest, ImageViewSubresourceRange) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator.create_image_2D(
         vw::Width{256}, vw::Height{256}, false,
@@ -51,7 +51,7 @@ TEST(ImageViewTest, ImageViewSubresourceRange) {
 }
 
 TEST(ImageViewTest, ImageViewWithMipmaps) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator.create_image_2D(
         vw::Width{512}, vw::Height{512}, true,
@@ -67,7 +67,7 @@ TEST(ImageViewTest, ImageViewWithMipmaps) {
 }
 
 TEST(ImageViewTest, ImageView2D) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator.create_image_2D(
         vw::Width{256}, vw::Height{256}, false,
@@ -84,7 +84,7 @@ TEST(ImageViewTest, ImageView2D) {
 }
 
 TEST(ImageViewTest, MultipleImageViews) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator.create_image_2D(
         vw::Width{256}, vw::Height{256}, true,
@@ -101,7 +101,7 @@ TEST(ImageViewTest, MultipleImageViews) {
 }
 
 TEST(ImageViewTest, DepthImageView) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator.create_image_2D(
         vw::Width{256}, vw::Height{256}, false,
@@ -117,7 +117,7 @@ TEST(ImageViewTest, DepthImageView) {
 }
 
 TEST(ImageViewTest, DifferentFormatsImageViews) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
 
     auto imageRGBA = gpu.allocator.create_image_2D(
         vw::Width{128}, vw::Height{128}, false,

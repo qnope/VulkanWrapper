@@ -6,7 +6,7 @@
 #include <cstring>
 
 TEST(BufferTest, CreateUniformBuffer) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
     using UniformBuffer = vw::Buffer<float, false, vw::UniformBufferUsage>;
     auto buffer = gpu.allocator.create_buffer<UniformBuffer>(100);
 
@@ -16,7 +16,7 @@ TEST(BufferTest, CreateUniformBuffer) {
 }
 
 TEST(BufferTest, CreateStorageBuffer) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
     constexpr VkBufferUsageFlags StorageBufferUsage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     using StorageBuffer = vw::Buffer<uint32_t, false, StorageBufferUsage>;
     auto buffer = gpu.allocator.create_buffer<StorageBuffer>(50);
@@ -27,7 +27,7 @@ TEST(BufferTest, CreateStorageBuffer) {
 }
 
 TEST(BufferTest, CreateHostVisibleBuffer) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
     using HostUniformBuffer = vw::Buffer<float, true, vw::UniformBufferUsage>;
     auto buffer = gpu.allocator.create_buffer<HostUniformBuffer>(100);
 
@@ -36,7 +36,7 @@ TEST(BufferTest, CreateHostVisibleBuffer) {
 }
 
 TEST(BufferTest, CopySingleElementToHostVisibleBuffer) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
     using HostUniformBuffer = vw::Buffer<float, true, vw::UniformBufferUsage>;
     auto buffer = gpu.allocator.create_buffer<HostUniformBuffer>(10);
 
@@ -49,7 +49,7 @@ TEST(BufferTest, CopySingleElementToHostVisibleBuffer) {
 }
 
 TEST(BufferTest, CopyMultipleElementsToHostVisibleBuffer) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
     using HostUniformBuffer = vw::Buffer<float, true, vw::UniformBufferUsage>;
     auto buffer = gpu.allocator.create_buffer<HostUniformBuffer>(100);
 
@@ -65,7 +65,7 @@ TEST(BufferTest, CopyMultipleElementsToHostVisibleBuffer) {
 }
 
 TEST(BufferTest, CopyWithOffset) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
     using HostUniformBuffer = vw::Buffer<int32_t, true, vw::UniformBufferUsage>;
     auto buffer = gpu.allocator.create_buffer<HostUniformBuffer>(20);
 
@@ -93,7 +93,7 @@ TEST(BufferTest, CreateBufferWithStruct) {
         float r, g, b;
     };
 
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
     using HostStructBuffer = vw::Buffer<DataStruct, true, vw::UniformBufferUsage>;
     auto buffer = gpu.allocator.create_buffer<HostStructBuffer>(50);
 
@@ -114,7 +114,7 @@ TEST(BufferTest, CreateBufferWithStruct) {
 }
 
 TEST(BufferTest, MoveBuffer) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
     using HostUniformBuffer = vw::Buffer<float, true, vw::UniformBufferUsage>;
     auto buffer1 = gpu.allocator.create_buffer<HostUniformBuffer>(10);
 
@@ -129,7 +129,7 @@ TEST(BufferTest, MoveBuffer) {
 }
 
 TEST(BufferTest, CreateLargeBuffer) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
     constexpr size_t largeSize = 1024 * 1024;
     using UniformBuffer = vw::Buffer<float, false, vw::UniformBufferUsage>;
     auto buffer = gpu.allocator.create_buffer<UniformBuffer>(largeSize);
@@ -139,7 +139,7 @@ TEST(BufferTest, CreateLargeBuffer) {
 }
 
 TEST(BufferTest, GenericCopy) {
-    auto gpu = vw::tests::create_gpu();
+    auto& gpu = vw::tests::create_gpu();
     using HostByteBuffer = vw::Buffer<std::byte, true, vw::UniformBufferUsage>;
     auto buffer = gpu.allocator.create_buffer<HostByteBuffer>(100);
 

@@ -14,6 +14,6 @@ struct GPU {
     vw::Queue& queue() { return device.graphicsQueue(); }
 };
 
-GPU create_gpu();
+GPU& create_gpu();
 
 } // namespace vw::tests
