@@ -3,23 +3,44 @@
 
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Utils/exceptions.h"
-#include "VulkanWrapper/Utils/ObjectWithHandle.h"
+#include <memory>
 
 namespace vw {
 using InstanceCreationException = TaggedException<struct InstanceCreationTag>;
 
-class Instance : public ObjectWithUniqueHandle<vk::UniqueInstance> {
+class Instance {
     friend class InstanceBuilder;
 
   public:
+    Instance(const Instance &) = default;
+    Instance(Instance &&) noexcept = default;
+
+    Instance &operator=(Instance &&) noexcept = default;
+    Instance &operator=(const Instance &) noexcept = default;
+
+    [[nodiscard]] vk::Instance handle() const noexcept;
+
     [[nodiscard]] DeviceFinder findGpu() const noexcept;
 
   private:
     Instance(vk::UniqueInstance instance, std::span<const char *> extensions,
              ApiVersion apiVersion) noexcept;
 
-    std::vector<const char *> m_extensions;
-    ApiVersion m_version;
+    struct Impl {
+        vk::UniqueInstance instance;
+        std::vector<const char *> extensions;
+        ApiVersion version;
+
+        Impl(vk::UniqueInstance inst, std::span<const char *> exts,
+             ApiVersion apiVersion) noexcept;
+
+        Impl(const Impl &) = delete;
+        Impl &operator=(const Impl &) = delete;
+        Impl(Impl &&) = delete;
+        Impl &operator=(Impl &&) = delete;
+    };
+
+    std::shared_ptr<Impl> m_impl;
 };
 
 class InstanceBuilder {

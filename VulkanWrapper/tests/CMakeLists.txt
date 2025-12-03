@@ -51,3 +51,18 @@ target_link_libraries(ImageTests
 )
 
 gtest_discover_tests(ImageTests)
+
+# Vulkan tests
+add_executable(VulkanTests
+    Vulkan/InstanceTests.cpp
+)
+
+target_link_libraries(VulkanTests
+    PRIVATE
+    TestUtils
+    VulkanWrapperCoreLibrary
+    GTest::gtest
+    GTest::gtest_main
+)
+
+gtest_discover_tests(VulkanTests)

@@ -13,16 +13,23 @@ const vk::detail::DispatchLoaderDynamic &DefaultDispatcher() {
     return VULKAN_HPP_DEFAULT_DISPATCHER;
 }
 
+Instance::Impl::Impl(vk::UniqueInstance inst, std::span<const char *> exts,
+                      ApiVersion apiVersion) noexcept
+    : instance{std::move(inst)}
+    , extensions{exts.begin(), exts.end()}
+    , version{apiVersion} {}
+
 Instance::Instance(vk::UniqueInstance instance,
                    std::span<const char *> extensions,
                    ApiVersion apiVersion) noexcept
-    : ObjectWithUniqueHandle<vk::UniqueInstance>{std::move(instance)}
-    , m_extensions{extensions.begin(), extensions.end()}
-    , m_version{apiVersion} {}
+    : m_impl{std::make_shared<Impl>(std::move(instance), extensions,
+                                     apiVersion)} {}
+
+vk::Instance Instance::handle() const noexcept { return *m_impl->instance; }
 
 DeviceFinder Instance::findGpu() const noexcept {
     auto supportVersion = [this](const PhysicalDevice &device) {
-        return device.api_version() >= m_version;
+        return device.api_version() >= m_impl->version;
     };
     auto physicalDevices = [&] {
         auto devices = handle().enumeratePhysicalDevices().value;
