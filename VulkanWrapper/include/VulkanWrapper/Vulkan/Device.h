@@ -19,6 +19,12 @@ class Device : public ObjectWithUniqueHandle<vk::UniqueDevice> {
     void wait_idle() const;
     [[nodiscard]] vk::PhysicalDevice physical_device() const;
 
+    Device(Device&&) noexcept;
+    Device& operator=(Device&&) noexcept;
+
+    Device(const Device&) = delete;
+    Device& operator=(const Device&) = delete;
+
   private:
     Device(vk::UniqueDevice device, vk::PhysicalDevice physicalDevice,
            std::vector<Queue> queues,
