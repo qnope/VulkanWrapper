@@ -1,6 +1,6 @@
 #include "VulkanWrapper/RayTracing/TopLevelAccelerationStructure.h"
 
-#include "VulkanWrapper/Memory/AllocatorImpl.h"
+#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 #include <vulkan/vulkan.hpp>
 
@@ -54,7 +54,7 @@ TopLevelAccelerationStructure
 TopLevelAccelerationStructureBuilder::build(vk::CommandBuffer command_buffer) {
     // Create instance buffer
     auto instance_buffer =
-        m_allocator.create_buffer<InstanceBuffer>(m_instances.size());
+        create_buffer<InstanceBuffer>(m_allocator, m_instances.size());
 
     // Upload instances to buffer
     instance_buffer.copy(m_instances, 0);
@@ -85,7 +85,7 @@ TopLevelAccelerationStructureBuilder::build(vk::CommandBuffer command_buffer) {
             primitive_count);
 
     // Allocate acceleration structure buffer
-    auto as_buffer = m_allocator.create_buffer<AccelerationStructureBuffer>(
+    auto as_buffer = create_buffer<AccelerationStructureBuffer>(m_allocator, 
         build_sizes.accelerationStructureSize);
 
     // Create acceleration structure
@@ -108,7 +108,7 @@ TopLevelAccelerationStructureBuilder::build(vk::CommandBuffer command_buffer) {
 
     // Allocate scratch buffer
     auto scratch_buffer =
-        m_allocator.create_buffer<ScratchBuffer>(build_sizes.buildScratchSize);
+        create_buffer<ScratchBuffer>(m_allocator, build_sizes.buildScratchSize);
 
     // Build acceleration structure
     build_info.setDstAccelerationStructure(*acceleration_structure);

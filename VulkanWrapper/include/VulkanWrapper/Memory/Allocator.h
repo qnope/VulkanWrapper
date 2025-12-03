@@ -19,29 +19,18 @@ class Allocator {
 
     [[nodiscard]] VmaAllocator handle() const noexcept;
 
-    template <typename T, bool HostVisible = false>
-    Buffer<T, HostVisible, VertexBufferUsage>
-    allocate_vertex_buffer(VkDeviceSize size) const;
-
     [[nodiscard]] IndexBuffer allocate_index_buffer(VkDeviceSize size) const;
-
-    template <typename T, bool HostVisible, VkBufferUsageFlags2 Usage>
-    [[nodiscard]] Buffer<T, HostVisible, Usage>
-    create_buffer(vk::DeviceSize number_elements) const;
-
-    template <typename BufferType>
-    [[nodiscard]] BufferType
-    create_buffer(vk::DeviceSize number_elements) const;
 
     [[nodiscard]] std::shared_ptr<const Image>
     create_image_2D(Width width, Height height, bool mipmap, vk::Format format,
                     vk::ImageUsageFlags usage) const;
 
-  private:
     [[nodiscard]] BufferBase
     allocate_buffer(VkDeviceSize size, bool host_visible,
                     vk::BufferUsageFlags usage,
                     vk::SharingMode sharing_mode) const;
+
+  private:
 
     struct Impl {
         const Device *device;

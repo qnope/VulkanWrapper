@@ -12,7 +12,7 @@
 #include <VulkanWrapper/Image/CombinedImage.h>
 #include <VulkanWrapper/Image/ImageLoader.h>
 #include <VulkanWrapper/Image/Sampler.h>
-#include <VulkanWrapper/Memory/AllocatorImpl.h>
+#include <VulkanWrapper/Memory/AllocateBufferUtils.h>
 #include <VulkanWrapper/Memory/Barrier.h>
 #include <VulkanWrapper/Memory/StagingBufferManager.h>
 #include <VulkanWrapper/Model/Importer.h>
@@ -351,7 +351,7 @@ class VulkanExample {
     */
     void createUniformBuffer() {
         uniformBuffer =
-            allocator.create_buffer<UniformData, true, vw::UniformBufferUsage>(
+            vw::create_buffer<UniformData, true, vw::UniformBufferUsage>(allocator, 
                 1);
         uniformBuffer->copy(std::span(&uniformData, 1), 0);
     }
@@ -487,7 +487,7 @@ create_image_views(const vw::Device &device, const vw::Swapchain &swapchain) {
 vw::Buffer<UBOData, true, vw::UniformBufferUsage>
 createUbo(vw::Allocator &allocator) {
     auto buffer =
-        allocator.create_buffer<UBOData, true, vw::UniformBufferUsage>(1);
+        vw::create_buffer<UBOData, true, vw::UniformBufferUsage>(allocator, 1);
     UBOData data;
     buffer.copy(data, 0);
     return buffer;

@@ -1,6 +1,6 @@
 #include "VulkanWrapper/Memory/Allocator.h"
-#include "VulkanWrapper/Memory/AllocatorImpl.h"
 
+#include "VulkanWrapper/Memory/Buffer.h"
 #include "VulkanWrapper/Utils/Alignment.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 #include "VulkanWrapper/Vulkan/Instance.h"
@@ -28,9 +28,7 @@ Allocator::Impl::~Impl() {
 Allocator::Allocator(const Device &device, VmaAllocator allocator)
     : m_impl{std::make_shared<Impl>(device, allocator)} {}
 
-VmaAllocator Allocator::handle() const noexcept {
-    return m_impl->allocator;
-}
+VmaAllocator Allocator::handle() const noexcept { return m_impl->allocator; }
 
 IndexBuffer Allocator::allocate_index_buffer(VkDeviceSize size) const {
     return Buffer<unsigned, false, IndexBufferUsage>{allocate_buffer(
@@ -86,9 +84,9 @@ BufferBase Allocator::allocate_buffer(VkDeviceSize size, bool host_visible,
 
     VmaAllocation allocation = nullptr;
     VkBuffer buffer = nullptr;
-    vmaCreateBufferWithAlignment(m_impl->allocator, &buffer_info, &allocation_info,
-                                 DefaultBufferAlignment, &buffer, &allocation,
-                                 nullptr);
+    vmaCreateBufferWithAlignment(m_impl->allocator, &buffer_info,
+                                 &allocation_info, DefaultBufferAlignment,
+                                 &buffer, &allocation, nullptr);
 
     return BufferBase{*m_impl->device, *this, buffer, allocation, size};
 }

@@ -1,7 +1,7 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
 
-#include "VulkanWrapper/Memory/AllocatorImpl.h"
+#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
 #include "VulkanWrapper/Memory/Buffer.h"
 
 namespace vw {
@@ -27,8 +27,8 @@ class BufferList {
             it->get()->offset += size;
             return result;
         }
-        auto buffer = m_allocator->create_buffer<T, HostVisible, flags>(
-            std::max(buffer_size, size));
+        auto buffer = create_buffer<T, HostVisible, flags>(
+            *m_allocator, std::max(buffer_size, size));
         auto &[bufferRef, offset] = *m_buffer_list.emplace_back(
             std::make_unique<BufferAndOffset>(std::move(buffer), size));
         return {&bufferRef, 0};

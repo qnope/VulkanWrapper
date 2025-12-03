@@ -1,18 +1,18 @@
-#include <gtest/gtest.h>
-#include "VulkanWrapper/Memory/AllocatorImpl.h"
-#include "VulkanWrapper/Vulkan/DeviceFinder.h"
 #include "utils/create_gpu.hpp"
+#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
+#include "VulkanWrapper/Vulkan/DeviceFinder.h"
+#include <gtest/gtest.h>
 
 TEST(AllocatorTest, CreateAllocator) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
     EXPECT_NE(gpu.allocator.handle(), nullptr);
     SUCCEED();
 }
 
 TEST(AllocatorTest, AllocateUniformBuffer) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
     using UniformBuffer = vw::Buffer<float, false, vw::UniformBufferUsage>;
-    auto buffer = gpu.allocator.create_buffer<UniformBuffer>(100);
+    auto buffer = vw::create_buffer<UniformBuffer>(gpu.allocator, 100);
 
     EXPECT_EQ(buffer.size(), 100);
     EXPECT_TRUE(buffer.does_support(vk::BufferUsageFlagBits::eUniformBuffer));
@@ -20,34 +20,36 @@ TEST(AllocatorTest, AllocateUniformBuffer) {
 }
 
 TEST(AllocatorTest, AllocateHostVisibleUniformBuffer) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
     using HostUniformBuffer = vw::Buffer<float, true, vw::UniformBufferUsage>;
-    auto buffer = gpu.allocator.create_buffer<HostUniformBuffer>(100);
+    auto buffer = vw::create_buffer<HostUniformBuffer>(gpu.allocator, 100);
 
     EXPECT_EQ(buffer.size(), 100);
     EXPECT_TRUE(buffer.host_visible);
 }
 
 TEST(AllocatorTest, AllocateStorageBuffer) {
-    auto& gpu = vw::tests::create_gpu();
-    constexpr VkBufferUsageFlags StorageBufferUsage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    auto &gpu = vw::tests::create_gpu();
+    constexpr VkBufferUsageFlags StorageBufferUsage =
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     using StorageBuffer = vw::Buffer<uint32_t, false, StorageBufferUsage>;
-    auto buffer = gpu.allocator.create_buffer<StorageBuffer>(50);
+    auto buffer = vw::create_buffer<StorageBuffer>(gpu.allocator, 50);
 
     EXPECT_EQ(buffer.size(), 50);
     EXPECT_TRUE(buffer.does_support(vk::BufferUsageFlagBits::eStorageBuffer));
 }
 
 TEST(AllocatorTest, AllocateMultipleBuffers) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     using UniformBuffer = vw::Buffer<float, false, vw::UniformBufferUsage>;
-    constexpr VkBufferUsageFlags StorageBufferUsage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    constexpr VkBufferUsageFlags StorageBufferUsage =
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     using StorageBuffer = vw::Buffer<uint32_t, false, StorageBufferUsage>;
 
-    auto buffer1 = gpu.allocator.create_buffer<UniformBuffer>(100);
-    auto buffer2 = gpu.allocator.create_buffer<UniformBuffer>(200);
-    auto buffer3 = gpu.allocator.create_buffer<StorageBuffer>(150);
+    auto buffer1 = vw::create_buffer<UniformBuffer>(gpu.allocator, 100);
+    auto buffer2 = vw::create_buffer<UniformBuffer>(gpu.allocator, 200);
+    auto buffer3 = vw::create_buffer<StorageBuffer>(gpu.allocator, 150);
 
     EXPECT_EQ(buffer1.size(), 100);
     EXPECT_EQ(buffer2.size(), 200);
@@ -55,10 +57,10 @@ TEST(AllocatorTest, AllocateMultipleBuffers) {
 }
 
 TEST(AllocatorTest, CreateBufferWithCustomUsage) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     using CustomBuffer = vw::Buffer<uint32_t, true, vw::UniformBufferUsage>;
-    auto buffer = gpu.allocator.create_buffer<CustomBuffer>(20);
+    auto buffer = vw::create_buffer<CustomBuffer>(gpu.allocator, 20);
 
     EXPECT_EQ(buffer.size(), 20);
     EXPECT_TRUE(buffer.does_support(vk::BufferUsageFlagBits::eUniformBuffer));
@@ -66,15 +68,12 @@ TEST(AllocatorTest, CreateBufferWithCustomUsage) {
 }
 
 TEST(AllocatorTest, CreateImage2D) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator.create_image_2D(
-        vw::Width{256},
-        vw::Height{256},
-        false,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
-    );
+        vw::Width{256}, vw::Height{256}, false, vk::Format::eR8G8B8A8Unorm,
+        vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eTransferDst);
 
     ASSERT_NE(image, nullptr);
     EXPECT_EQ(image->format(), vk::Format::eR8G8B8A8Unorm);
@@ -83,38 +82,28 @@ TEST(AllocatorTest, CreateImage2D) {
 }
 
 TEST(AllocatorTest, CreateImage2DWithMipmaps) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator.create_image_2D(
-        vw::Width{512},
-        vw::Height{512},
-        true,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
-    );
+        vw::Width{512}, vw::Height{512}, true, vk::Format::eR8G8B8A8Unorm,
+        vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eTransferDst);
 
     ASSERT_NE(image, nullptr);
     EXPECT_GT(static_cast<uint32_t>(image->mip_levels()), 1);
 }
 
 TEST(AllocatorTest, CreateDifferentImageFormats) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     auto imageRGBA = gpu.allocator.create_image_2D(
-        vw::Width{128},
-        vw::Height{128},
-        false,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
-    );
+        vw::Width{128}, vw::Height{128}, false, vk::Format::eR8G8B8A8Unorm,
+        vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eTransferDst);
 
     auto imageDepth = gpu.allocator.create_image_2D(
-        vw::Width{128},
-        vw::Height{128},
-        false,
-        vk::Format::eD32Sfloat,
-        vk::ImageUsageFlagBits::eDepthStencilAttachment
-    );
+        vw::Width{128}, vw::Height{128}, false, vk::Format::eD32Sfloat,
+        vk::ImageUsageFlagBits::eDepthStencilAttachment);
 
     ASSERT_NE(imageRGBA, nullptr);
     ASSERT_NE(imageDepth, nullptr);
@@ -124,7 +113,7 @@ TEST(AllocatorTest, CreateDifferentImageFormats) {
 }
 
 TEST(AllocatorTest, MoveAllocator) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     // Create a separate allocator to test move semantics
     // Don't move from the shared GPU allocator as it's used by other tests
@@ -153,18 +142,18 @@ TEST(AllocatorTest, AllocatorBuilder) {
 
     EXPECT_NE(allocator.handle(), nullptr);
 
-    auto buffer = allocator.allocate_vertex_buffer<float>(10);
+    auto buffer = vw::allocate_vertex_buffer<float, true>(allocator, 10);
     EXPECT_EQ(buffer.size(), 10);
 }
 
 TEST(AllocatorTest, CreateTypedBuffer) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     // Use simple vertex buffer usage without ray tracing flags for testing
     constexpr VkBufferUsageFlags SimpleVertexBufferUsage =
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     using VertexBuffer = vw::Buffer<float, false, SimpleVertexBufferUsage>;
-    auto buffer = gpu.allocator.create_buffer<VertexBuffer>(100);
+    auto buffer = vw::create_buffer<VertexBuffer>(gpu.allocator, 100);
 
     EXPECT_EQ(buffer.size(), 100);
     EXPECT_FALSE(buffer.host_visible);
@@ -172,19 +161,17 @@ TEST(AllocatorTest, CreateTypedBuffer) {
 }
 
 TEST(AllocatorTest, CreateMultipleImages) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     auto image1 = gpu.allocator.create_image_2D(
-        vw::Width{256}, vw::Height{256}, false,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
-    );
+        vw::Width{256}, vw::Height{256}, false, vk::Format::eR8G8B8A8Unorm,
+        vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eTransferDst);
 
     auto image2 = gpu.allocator.create_image_2D(
-        vw::Width{512}, vw::Height{512}, false,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
-    );
+        vw::Width{512}, vw::Height{512}, false, vk::Format::eR8G8B8A8Unorm,
+        vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eTransferDst);
 
     ASSERT_NE(image1, nullptr);
     ASSERT_NE(image2, nullptr);

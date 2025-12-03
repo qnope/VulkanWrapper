@@ -4,4 +4,5 @@ target_sources(VulkanWrapperCoreLibrary PUBLIC
     StagingBufferManager.h
     Barrier.h
     BufferList.h
+    AllocateBufferUtils.h
 )

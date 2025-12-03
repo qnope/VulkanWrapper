@@ -1,12 +1,12 @@
 #include "VulkanWrapper/Memory/UniformBufferAllocator.h"
-#include "VulkanWrapper/Memory/AllocatorImpl.h"
+#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
 
 namespace vw {
 
 UniformBufferAllocator::UniformBufferAllocator(const Allocator &allocator,
                                                vk::DeviceSize totalSize,
                                                vk::DeviceSize minAlignment)
-    : m_buffer(allocator.create_buffer<std::byte, true, UniformBufferUsage>(totalSize)),
+    : m_buffer(create_buffer<std::byte, true, UniformBufferUsage>(allocator, totalSize)),
       m_totalSize(totalSize),
       m_minAlignment(minAlignment),
       m_nextIndex(0) {

@@ -1,6 +1,6 @@
 #include "VulkanWrapper/RayTracing/ShaderBindingTable.h"
 
-#include "VulkanWrapper/Memory/AllocatorImpl.h"
+#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
 
 namespace vw::rt {
 
@@ -8,13 +8,13 @@ ShaderBindingTable::ShaderBindingTable(
     const Allocator &allocator, const ShaderBindingTableHandle &raygen_handle)
     : m_allocator{allocator}
     , m_sbt_ray_generation_and_miss_buffer(
-          allocator.create_buffer<ShaderBindingTableRecord, true,
+          create_buffer<ShaderBindingTableRecord, true,
                                   ShaderBindingTableUsage>(
-              MaximumRecordInShaderBindingTable))
+              allocator, MaximumRecordInShaderBindingTable))
     , m_sbt_closest_hit_buffer(
-          allocator.create_buffer<ShaderBindingTableRecord, true,
+          create_buffer<ShaderBindingTableRecord, true,
                                   ShaderBindingTableUsage>(
-              MaximumRecordInShaderBindingTable)) {
+              allocator, MaximumRecordInShaderBindingTable)) {
     add_miss_record(raygen_handle);
 }
 
