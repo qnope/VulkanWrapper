@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include "VulkanWrapper/Memory/StagingBufferManager.h"
 #include "VulkanWrapper/Memory/Buffer.h"
-#include "VulkanWrapper/Memory/Allocator.h"
+#include "VulkanWrapper/Memory/AllocatorImpl.h"
 #include "VulkanWrapper/Command/CommandPool.h"
 #include "VulkanWrapper/Synchronization/Fence.h"
 #include "VulkanWrapper/Vulkan/Queue.h"

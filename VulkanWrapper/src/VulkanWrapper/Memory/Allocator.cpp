@@ -1,4 +1,5 @@
 #include "VulkanWrapper/Memory/Allocator.h"
+#include "VulkanWrapper/Memory/AllocatorImpl.h"
 
 #include "VulkanWrapper/Utils/Alignment.h"
 #include "VulkanWrapper/Vulkan/Device.h"

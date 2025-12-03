@@ -1,5 +1,6 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
+#include "VulkanWrapper/Memory/BufferUsage.h"
 
 namespace vw {
 class SDL_Initializer;
@@ -35,6 +36,10 @@ class Fence;
 
 class Allocator;
 class BufferBase;
+template <typename T, bool HostVisible, VkBufferUsageFlags Flags>
+class Buffer;
+
+using IndexBuffer = Buffer<uint32_t, false, IndexBufferUsage>;
 
 enum class QueueType;
 

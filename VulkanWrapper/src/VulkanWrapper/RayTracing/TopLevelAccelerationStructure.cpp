@@ -1,6 +1,6 @@
 #include "VulkanWrapper/RayTracing/TopLevelAccelerationStructure.h"
 
-#include "VulkanWrapper/Memory/Allocator.h"
+#include "VulkanWrapper/Memory/AllocatorImpl.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 #include <vulkan/vulkan.hpp>
 

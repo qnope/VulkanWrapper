@@ -1,6 +1,6 @@
 #include "VulkanWrapper/RayTracing/ShaderBindingTable.h"
 
-#include "VulkanWrapper/Memory/Allocator.h"
+#include "VulkanWrapper/Memory/AllocatorImpl.h"
 
 namespace vw::rt {
 

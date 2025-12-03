@@ -12,7 +12,7 @@
 #include <VulkanWrapper/Image/CombinedImage.h>
 #include <VulkanWrapper/Image/ImageLoader.h>
 #include <VulkanWrapper/Image/Sampler.h>
-#include <VulkanWrapper/Memory/Allocator.h>
+#include <VulkanWrapper/Memory/AllocatorImpl.h>
 #include <VulkanWrapper/Memory/Barrier.h>
 #include <VulkanWrapper/Memory/StagingBufferManager.h>
 #include <VulkanWrapper/Model/Importer.h>

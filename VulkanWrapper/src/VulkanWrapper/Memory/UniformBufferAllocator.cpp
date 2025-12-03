@@ -1,5 +1,5 @@
 #include "VulkanWrapper/Memory/UniformBufferAllocator.h"
-#include "VulkanWrapper/Memory/Allocator.h"
+#include "VulkanWrapper/Memory/AllocatorImpl.h"
 
 namespace vw {
 

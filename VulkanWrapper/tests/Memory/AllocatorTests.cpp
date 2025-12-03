@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "VulkanWrapper/Memory/Allocator.h"
+#include "VulkanWrapper/Memory/AllocatorImpl.h"
 #include "VulkanWrapper/Vulkan/DeviceFinder.h"
 #include "utils/create_gpu.hpp"
 
