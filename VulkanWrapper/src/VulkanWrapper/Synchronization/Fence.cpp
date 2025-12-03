@@ -4,16 +4,16 @@
 
 namespace vw {
 
-Fence::Fence(const Device &device, vk::UniqueFence fence)
+Fence::Fence(vk::Device device, vk::UniqueFence fence)
     : ObjectWithUniqueHandle<vk::UniqueFence>{std::move(fence)}
-    , m_device{&device} {}
+    , m_device{std::move(device)} {}
 
 void Fence::wait() const {
-    std::ignore = m_device->handle().waitForFences(
-        handle(), 1U, std::numeric_limits<uint64_t>::max());
+    std::ignore = m_device.waitForFences(handle(), 1U,
+                                         std::numeric_limits<uint64_t>::max());
 }
 
-void Fence::reset() const { m_device->handle().resetFences(handle()); }
+void Fence::reset() const { std::ignore = m_device.resetFences(handle()); }
 
 Fence::~Fence() {
     if (handle() != vk::Fence()) {
@@ -21,14 +21,14 @@ Fence::~Fence() {
     }
 }
 
-FenceBuilder::FenceBuilder(const Device &device)
-    : m_device{&device} {}
+FenceBuilder::FenceBuilder(vk::Device device)
+    : m_device{std::move(device)} {}
 
 Fence FenceBuilder::build() && {
     const auto info = vk::FenceCreateInfo();
 
-    auto [result, fence] = m_device->handle().createFenceUnique(info);
+    auto [result, fence] = m_device.createFenceUnique(info);
 
-    return Fence{*m_device, std::move(fence)};
+    return Fence{m_device, std::move(fence)};
 }
 } // namespace vw

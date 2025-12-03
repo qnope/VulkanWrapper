@@ -3,6 +3,7 @@
 
 #include "VulkanWrapper/Command/CommandPool.h"
 #include "VulkanWrapper/Memory/Allocator.h"
+#include "VulkanWrapper/Synchronization/Fence.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 #include "VulkanWrapper/Vulkan/Queue.h"
 #include <vulkan/vulkan.hpp>

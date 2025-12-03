@@ -29,12 +29,9 @@ ctest --test-dir build-Clang20Debug
 ctest --test-dir build-Clang20Debug --verbose
 ```
 
-### Running Examples
-```bash
-# Examples are built in the examples/ directory
-./build-Clang20Debug/examples/Application/<example_name>
-./build-Clang20Debug/examples/Advanced/<example_name>
-```
+### Debugging tests
+You can use lldb to debug tests
+
 
 ## Project Architecture
 
@@ -45,7 +42,7 @@ VulkanWrapper is a modern C++23 library providing high-level abstractions over t
 - **RAII**: Automatic lifetime management through ObjectWithHandle wrapper and unique Vulkan handles
 - **Type Safety**: Template-based buffers `Buffer<T, HostVisible, Usage>` with compile-time usage validation
 - **Automatic Resource Tracking**: ResourceTracker automatically generates Vulkan barriers based on resource state transitions
-- **Modern Vulkan**: Uses Vulkan 1.3 features (dynamic rendering, synchronization2, ray tracing)
+- **Modern Vulkan**: Uses Vulkan 1.3 features (dynamic rendering, synchronization2, ray tracing). It uses Vulkan HPP
 
 ### Module Organization
 
@@ -158,12 +155,6 @@ hostVisibleVertexBuffer.copy_from_host(...); // OK - HostVisible=true
 deviceLocalIndexBuffer.copy_from_host(...);  // Compile error - HostVisible=false
 ```
 
-**Material System:**
-Materials use type tags and polymorphic managers:
-- Each material type has its own DescriptorPool
-- MaterialManagerMap dispatches to appropriate manager based on MaterialTypeTag
-- MeshRenderer selects pipeline based on material type
-
 ### Dependencies
 
 **External Libraries (vcpkg.json):**
@@ -177,13 +168,6 @@ Materials use type tags and polymorphic managers:
 **Internal Dependencies:**
 All core functionality depends on Device and Allocator. ResourceTracker sits at the top of the dependency chain, tracking all resource types (buffers, images, acceleration structures).
 
-### Thread Safety
-
-**IMPORTANT:** This library is NOT thread-safe (as documented in Improving.md). All operations must be performed from a single thread or externally synchronized:
-- VMA is configured with VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT
-- No internal mutex protection
-- ResourceTracker state modifications are not thread-safe
-
 ### C++23 Features Used
 
 - std::span for safe array access
@@ -192,6 +176,7 @@ All core functionality depends on Device and Allocator. ResourceTracker sits at 
 - std::source_location for error reporting
 - Structured bindings
 - Template parameter deduction
+- Extensive use of algorithms
 
 ### Shader Compilation
 
@@ -204,25 +189,13 @@ Shaders are compiled with glslangValidator and output to the target's runtime di
 
 ### Testing Strategy
 
-Tests use GoogleTest with a singleton pattern for GPU creation (avoids repeated initialization overhead):
-- Memory tests: Allocation, buffers, staging, ResourceTracker, Intervals
-- Image tests: Image creation, views, samplers
-
 Test utilities are in VulkanWrapper/tests/utils/create_gpu.cpp which provides a singleton Device instance.
 
-### Known Issues and Considerations
-
-See Improving.md for a comprehensive analysis including:
-- Thread safety limitations (Priority 1)
-- Lifetime management with raw pointers (Priority 1)
-- Error handling inconsistencies (Priority 1)
-- Performance considerations for ResourceTracker (interval tree vs linear search)
-- UniformBufferAllocator sorting overhead
-
-### Vulkan-Hpp Configuration
-
-The library uses Vulkan-Hpp with:
-- Dynamic dispatcher (VULKAN_HPP_DISPATCH_LOADER_DYNAMIC)
-- No exceptions from Vulkan (VULKAN_HPP_NO_EXCEPTIONS)
-- Result checking via asserts and explicit checks
-- Custom dispatcher instance per Vulkan instance
+### Workflow
+1. Explore the code
+2. Write the units tests if possible
+3. compile (if possible) and execute the tests written to see that they fail
+4. Make the implementation
+5. Execute the tests:
+    1. If they pass: finish
+    2. If they don't: go back on 4)

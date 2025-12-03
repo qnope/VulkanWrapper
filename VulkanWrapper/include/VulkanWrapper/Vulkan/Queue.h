@@ -1,9 +1,8 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
-
 #include "VulkanWrapper/Command/CommandPool.h"
 #include "VulkanWrapper/fwd.h"
-#include "VulkanWrapper/Synchronization/Fence.h"
+#include "VulkanWrapper/Vulkan/Device.h"
 
 namespace vw {
 
@@ -25,7 +24,7 @@ class Queue {
 
     std::vector<vk::CommandBuffer> m_command_buffers;
 
-    Device *m_device = nullptr;
+    vk::Device m_device;
     vk::Queue m_queue;
     vk::QueueFlags m_queueFlags;
 };

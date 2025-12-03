@@ -1,16 +1,17 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
-
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Utils/exceptions.h"
-#include "VulkanWrapper/Utils/ObjectWithHandle.h"
 #include "VulkanWrapper/Vulkan/PresentQueue.h"
-#include "VulkanWrapper/Vulkan/Queue.h"
+#include <memory>
 
 namespace vw {
 using DeviceCreationException = TaggedException<struct DeviceCreationTag>;
 
-class Device : public ObjectWithUniqueHandle<vk::UniqueDevice> {
+// Private implementation - definition in Device.cpp
+struct DeviceImpl;
+
+class Device {
     friend class DeviceFinder;
 
   public:
@@ -18,21 +19,20 @@ class Device : public ObjectWithUniqueHandle<vk::UniqueDevice> {
     [[nodiscard]] const PresentQueue &presentQueue() const;
     void wait_idle() const;
     [[nodiscard]] vk::PhysicalDevice physical_device() const;
+    [[nodiscard]] vk::Device handle() const;
 
-    Device(Device&&) noexcept;
-    Device& operator=(Device&&) noexcept;
-
-    Device(const Device&) = delete;
-    Device& operator=(const Device&) = delete;
+    // Default constructor creates an empty device (for Queue initialization)
+    Device(const Device &) = default;
+    Device &operator=(const Device &) = default;
+    Device(Device &&) noexcept = default;
+    Device &operator=(Device &&) noexcept = default;
 
   private:
     Device(vk::UniqueDevice device, vk::PhysicalDevice physicalDevice,
            std::vector<Queue> queues,
            std::optional<PresentQueue> presentQueue) noexcept;
 
-    vk::PhysicalDevice m_physicalDevice;
-    std::vector<Queue> m_queues;
-    std::optional<PresentQueue> m_presentQueue;
+    std::shared_ptr<DeviceImpl> m_impl;
 };
 
 } // namespace vw

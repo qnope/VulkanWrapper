@@ -3,6 +3,8 @@
 #include "VulkanWrapper/Memory/Buffer.h"
 #include "VulkanWrapper/Memory/Allocator.h"
 #include "VulkanWrapper/Command/CommandPool.h"
+#include "VulkanWrapper/Synchronization/Fence.h"
+#include "VulkanWrapper/Vulkan/Queue.h"
 #include "utils/create_gpu.hpp"
 #include <vector>
 

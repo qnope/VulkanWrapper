@@ -1,5 +1,7 @@
 #include "VulkanWrapper/Vulkan/Queue.h"
 
+#include "VulkanWrapper/Synchronization/Fence.h"
+
 namespace vw {
 
 Queue::Queue(vk::Queue queue, vk::QueueFlags type) noexcept
@@ -20,7 +22,7 @@ void Queue::enqueue_command_buffers(
 Fence Queue::submit(std::span<const vk::PipelineStageFlags> waitStages,
                     std::span<const vk::Semaphore> waitSemaphores,
                     std::span<const vk::Semaphore> signalSemaphores) {
-    auto fence = FenceBuilder(*m_device).build();
+    auto fence = FenceBuilder(m_device).build();
 
     std::vector<vk::CommandBuffer> cmd_buffers =
         std::exchange(m_command_buffers, {});
