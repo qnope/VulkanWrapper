@@ -37,9 +37,9 @@ Surface Window::create_surface(const Instance &instance) const {
     return Surface{vk::UniqueSurfaceKHR(surface, instance.handle())};
 }
 
-Swapchain Window::create_swapchain(const Device &device,
+Swapchain Window::create_swapchain(std::shared_ptr<const Device> device,
                                    vk::SurfaceKHR surface) const {
-    return SwapchainBuilder(device, surface, m_width, m_height).build();
+    return SwapchainBuilder(std::move(device), surface, m_width, m_height).build();
 }
 
 bool Window::is_close_requested() const noexcept { return m_closeRequested; }

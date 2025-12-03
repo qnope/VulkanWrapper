@@ -23,12 +23,13 @@ BottomLevelAccelerationStructure::device_address() const noexcept {
 }
 
 BottomLevelAccelerationStructureList::BottomLevelAccelerationStructureList(
-    const Device &device, const Allocator &allocator)
+    std::shared_ptr<const Device> device,
+    std::shared_ptr<const Allocator> allocator)
     : m_acceleration_structure_buffer_list(allocator)
     , m_scratch_buffer_list(allocator)
     , m_command_pool(CommandPoolBuilder(device).build())
     , m_command_buffer(m_command_pool.allocate(1).front())
-    , m_device(device) {
+    , m_device(std::move(device)) {
     std::ignore = m_command_buffer.begin(vk::CommandBufferBeginInfo().setFlags(
         vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 }
@@ -67,15 +68,15 @@ vk::CommandBuffer BottomLevelAccelerationStructureList::command_buffer() {
 
 void BottomLevelAccelerationStructureList::submit_and_wait() {
     std::ignore = m_command_buffer.end();
-    auto &queue = const_cast<Device &>(m_device).graphicsQueue();
+    auto &queue = const_cast<Device &>(*m_device).graphicsQueue();
     queue.enqueue_command_buffer(m_command_buffer);
     queue.submit({}, {}, {});
-    m_device.wait_idle();
+    m_device->wait_idle();
 }
 
 BottomLevelAccelerationStructureBuilder::
-    BottomLevelAccelerationStructureBuilder(const Device &device)
-    : m_device(device) {}
+    BottomLevelAccelerationStructureBuilder(std::shared_ptr<const Device> device)
+    : m_device(std::move(device)) {}
 
 BottomLevelAccelerationStructureBuilder &
 BottomLevelAccelerationStructureBuilder::add_geometry(
@@ -109,7 +110,7 @@ BottomLevelAccelerationStructureBuilder::build_into(
     }
 
     const auto build_sizes =
-        m_device.handle().getAccelerationStructureBuildSizesKHR(
+        m_device->handle().getAccelerationStructureBuildSizesKHR(
             vk::AccelerationStructureBuildTypeKHR::eDevice, build_info,
             max_primitive_counts);
 
@@ -123,14 +124,14 @@ BottomLevelAccelerationStructureBuilder::build_into(
     create_info.setType(vk::AccelerationStructureTypeKHR::eBottomLevel);
 
     auto acceleration_structure =
-        m_device.handle()
+        m_device->handle()
             .createAccelerationStructureKHRUnique(create_info)
             .value;
 
     vk::AccelerationStructureDeviceAddressInfoKHR address_info;
     address_info.setAccelerationStructure(*acceleration_structure);
     auto address =
-        m_device.handle().getAccelerationStructureAddressKHR(address_info);
+        m_device->handle().getAccelerationStructureAddressKHR(address_info);
 
     auto scratch_buffer =
         list.allocate_scratch_buffer(build_sizes.buildScratchSize);

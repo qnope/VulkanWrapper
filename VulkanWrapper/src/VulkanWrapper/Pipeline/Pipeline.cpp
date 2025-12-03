@@ -14,9 +14,9 @@ Pipeline::Pipeline(vk::UniquePipeline pipeline,
 
 const PipelineLayout &Pipeline::layout() const noexcept { return m_layout; }
 
-GraphicsPipelineBuilder::GraphicsPipelineBuilder(const Device &device,
-                                                 PipelineLayout pipelineLayout)
-    : m_device{&device}
+GraphicsPipelineBuilder::GraphicsPipelineBuilder(
+    std::shared_ptr<const Device> device, PipelineLayout pipelineLayout)
+    : m_device{std::move(device)}
     , m_pipelineLayout{std::move(pipelineLayout)} {}
 
 GraphicsPipelineBuilder &&GraphicsPipelineBuilder::add_shader(

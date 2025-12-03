@@ -28,7 +28,7 @@ class Window {
     get_required_instance_extensions() noexcept;
     [[nodiscard]] Surface create_surface(const Instance &instance) const;
 
-    [[nodiscard]] Swapchain create_swapchain(const Device &device,
+    [[nodiscard]] Swapchain create_swapchain(std::shared_ptr<const Device> device,
                                              vk::SurfaceKHR surface) const;
 
   private:

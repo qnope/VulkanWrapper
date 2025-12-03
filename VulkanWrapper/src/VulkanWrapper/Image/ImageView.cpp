@@ -20,9 +20,9 @@ vk::ImageSubresourceRange ImageView::subresource_range() const noexcept {
     return m_subresource_range;
 }
 
-ImageViewBuilder::ImageViewBuilder(const Device &device,
+ImageViewBuilder::ImageViewBuilder(std::shared_ptr<const Device> device,
                                    std::shared_ptr<const Image> image)
-    : m_device{&device}
+    : m_device{std::move(device)}
     , m_image{std::move(image)}
     , m_subResourceRange{m_image->full_range()} {}
 

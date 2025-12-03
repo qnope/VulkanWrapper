@@ -20,9 +20,10 @@ TopLevelAccelerationStructure::device_address() const noexcept {
 }
 
 TopLevelAccelerationStructureBuilder::TopLevelAccelerationStructureBuilder(
-    const Device &device, const Allocator &allocator)
-    : m_device(device)
-    , m_allocator(allocator) {}
+    std::shared_ptr<const Device> device,
+    std::shared_ptr<const Allocator> allocator)
+    : m_device(std::move(device))
+    , m_allocator(std::move(allocator)) {}
 
 TopLevelAccelerationStructureBuilder &TopLevelAccelerationStructureBuilder::
     add_bottom_level_acceleration_structure_address(
@@ -54,7 +55,7 @@ TopLevelAccelerationStructure
 TopLevelAccelerationStructureBuilder::build(vk::CommandBuffer command_buffer) {
     // Create instance buffer
     auto instance_buffer =
-        create_buffer<InstanceBuffer>(m_allocator, m_instances.size());
+        create_buffer<InstanceBuffer>(*m_allocator, m_instances.size());
 
     // Upload instances to buffer
     instance_buffer.copy(m_instances, 0);
@@ -80,12 +81,12 @@ TopLevelAccelerationStructureBuilder::build(vk::CommandBuffer command_buffer) {
 
     // Query build sizes
     const auto build_sizes =
-        m_device.handle().getAccelerationStructureBuildSizesKHR(
+        m_device->handle().getAccelerationStructureBuildSizesKHR(
             vk::AccelerationStructureBuildTypeKHR::eDevice, build_info,
             primitive_count);
 
     // Allocate acceleration structure buffer
-    auto as_buffer = create_buffer<AccelerationStructureBuffer>(m_allocator, 
+    auto as_buffer = create_buffer<AccelerationStructureBuffer>(*m_allocator,
         build_sizes.accelerationStructureSize);
 
     // Create acceleration structure
@@ -96,7 +97,7 @@ TopLevelAccelerationStructureBuilder::build(vk::CommandBuffer command_buffer) {
     create_info.setType(vk::AccelerationStructureTypeKHR::eTopLevel);
 
     auto acceleration_structure =
-        m_device.handle()
+        m_device->handle()
             .createAccelerationStructureKHRUnique(create_info)
             .value;
 
@@ -104,11 +105,11 @@ TopLevelAccelerationStructureBuilder::build(vk::CommandBuffer command_buffer) {
     vk::AccelerationStructureDeviceAddressInfoKHR address_info;
     address_info.setAccelerationStructure(*acceleration_structure);
     auto address =
-        m_device.handle().getAccelerationStructureAddressKHR(address_info);
+        m_device->handle().getAccelerationStructureAddressKHR(address_info);
 
     // Allocate scratch buffer
     auto scratch_buffer =
-        create_buffer<ScratchBuffer>(m_allocator, build_sizes.buildScratchSize);
+        create_buffer<ScratchBuffer>(*m_allocator, build_sizes.buildScratchSize);
 
     // Build acceleration structure
     build_info.setDstAccelerationStructure(*acceleration_structure);

@@ -23,7 +23,7 @@ class DescriptorSetLayout
 
 class DescriptorSetLayoutBuilder {
   public:
-    DescriptorSetLayoutBuilder(const Device &device);
+    DescriptorSetLayoutBuilder(std::shared_ptr<const Device> device);
 
     DescriptorSetLayoutBuilder &&
     with_uniform_buffer(vk::ShaderStageFlags stages, int number) &&;
@@ -46,7 +46,7 @@ class DescriptorSetLayoutBuilder {
     std::shared_ptr<DescriptorSetLayout> build() &&;
 
   private:
-    const Device *m_device;
+    std::shared_ptr<const Device> m_device;
     int m_current_binding = 0;
     std::vector<vk::DescriptorSetLayoutBinding> m_bindings;
 };

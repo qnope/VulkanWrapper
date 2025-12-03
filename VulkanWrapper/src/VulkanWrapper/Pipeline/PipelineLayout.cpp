@@ -5,8 +5,8 @@
 #include "VulkanWrapper/Vulkan/Device.h"
 
 namespace vw {
-PipelineLayoutBuilder::PipelineLayoutBuilder(const Device &device)
-    : m_device{&device} {}
+PipelineLayoutBuilder::PipelineLayoutBuilder(std::shared_ptr<const Device> device)
+    : m_device{std::move(device)} {}
 
 PipelineLayoutBuilder &&PipelineLayoutBuilder::with_descriptor_set_layout(
     std::shared_ptr<const DescriptorSetLayout> layout) && {

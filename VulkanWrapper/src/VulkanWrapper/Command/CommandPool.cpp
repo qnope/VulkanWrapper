@@ -3,9 +3,10 @@
 #include "VulkanWrapper/Vulkan/Device.h"
 
 namespace vw {
-CommandPool::CommandPool(const Device &device, vk::UniqueCommandPool pool)
+CommandPool::CommandPool(std::shared_ptr<const Device> device,
+                         vk::UniqueCommandPool pool)
     : ObjectWithUniqueHandle<vk::UniqueCommandPool>(std::move(pool))
-    , m_device(&device) {}
+    , m_device(std::move(device)) {}
 
 std::vector<vk::CommandBuffer> CommandPool::allocate(std::size_t number) {
     const auto info = vk::CommandBufferAllocateInfo()
@@ -23,8 +24,8 @@ std::vector<vk::CommandBuffer> CommandPool::allocate(std::size_t number) {
     return commandBuffers;
 }
 
-CommandPoolBuilder::CommandPoolBuilder(const Device &device)
-    : m_device{&device} {}
+CommandPoolBuilder::CommandPoolBuilder(std::shared_ptr<const Device> device)
+    : m_device{std::move(device)} {}
 
 CommandPool CommandPoolBuilder::build() && {
     auto info = vk::CommandPoolCreateInfo().setQueueFamilyIndex(0);
@@ -35,6 +36,6 @@ CommandPool CommandPoolBuilder::build() && {
         throw CommandPoolCreationException(std::source_location::current());
     }
 
-    return {*m_device, std::move(pool)};
+    return {m_device, std::move(pool)};
 }
 } // namespace vw

@@ -41,7 +41,7 @@ class VulkanExample {
     vw::Swapchain &swapchain;
 
     vw::Queue queue = device->graphicsQueue();
-    vw::CommandPool pool = vw::CommandPoolBuilder(*device).build();
+    vw::CommandPool pool = vw::CommandPoolBuilder(device).build();
 
     vk::PhysicalDeviceRayTracingPipelinePropertiesKHR
         rayTracingPipelineProperties{};
@@ -92,7 +92,7 @@ class VulkanExample {
         : device{std::move(device)}
         , allocator{std::move(allocator)}
         , swapchain(swapchain)
-        , m_blasList(*this->device, *this->allocator) {
+        , m_blasList(this->device, this->allocator) {
         projectionMatrix =
             glm::perspective(glm::radians(60.0f), 800.0f / 600.0f, 0.1f, 512.f);
         projectionMatrix[1][1] *= -1;
@@ -121,7 +121,7 @@ class VulkanExample {
                                        vk::ImageUsageFlagBits::eStorage |
                                            vk::ImageUsageFlagBits::eTransferSrc);
 
-        storageImage.view = vw::ImageViewBuilder(*device, storageImage.image)
+        storageImage.view = vw::ImageViewBuilder(device, storageImage.image)
                                 .setImageType(vk::ImageViewType::e2D)
                                 .build();
 
@@ -139,7 +139,7 @@ class VulkanExample {
        actual geometry (vertices, triangles)
     */
     void createBottomLevelAccelerationStructure() {
-        auto &blas = vw::rt::as::BottomLevelAccelerationStructureBuilder(*device)
+        auto &blas = vw::rt::as::BottomLevelAccelerationStructureBuilder(device)
                          .add_mesh(mesh_manager->meshes().front())
                          .build_into(m_blasList);
 
@@ -164,7 +164,7 @@ class VulkanExample {
         std::ignore = commandBuffer.begin(vk::CommandBufferBeginInfo());
 
         topLevelAS =
-            vw::rt::as::TopLevelAccelerationStructureBuilder(*device, *allocator)
+            vw::rt::as::TopLevelAccelerationStructureBuilder(device, allocator)
                 .add_bottom_level_acceleration_structure_address(blasAddress,
                                                                  transform)
                 .build(commandBuffer);
@@ -190,7 +190,7 @@ class VulkanExample {
 
      */
     void createShaderBindingTable() {
-        shaderBindingTable.emplace(*allocator,
+        shaderBindingTable.emplace(allocator,
                                    pipeline->ray_generation_handle());
 
         shaderBindingTable->add_miss_record(pipeline->miss_handles().front(),
@@ -329,16 +329,16 @@ class VulkanExample {
         std::vector<vk::PipelineShaderStageCreateInfo> shaderStages;
 
         auto raygen = vw::ShaderModule::create_from_spirv_file(
-            *device, "Shaders/RayTracing/raygen.rgen.spv");
+            device, "Shaders/RayTracing/raygen.rgen.spv");
         auto miss = vw::ShaderModule::create_from_spirv_file(
-            *device, "Shaders/RayTracing/miss.rmiss.spv");
+            device, "Shaders/RayTracing/miss.rmiss.spv");
         auto hit = vw::ShaderModule::create_from_spirv_file(
-            *device, "Shaders/RayTracing/hit.rchit.spv");
+            device, "Shaders/RayTracing/hit.rchit.spv");
 
         /*
                 Create the ray tracing pipeline
         */
-        pipeline = vw::rt::RayTracingPipelineBuilder(*device, *allocator,
+        pipeline = vw::rt::RayTracingPipelineBuilder(device, allocator,
                                                      std::move(*pipelineLayout))
                        .set_ray_generation_shader(raygen)
                        .add_miss_shader(miss)
@@ -364,7 +364,7 @@ class VulkanExample {
     }
 
     void createMeshManager() {
-        mesh_manager.emplace(*device, *allocator);
+        mesh_manager.emplace(device, allocator);
         // mesh_manager.read_file("../../../Models/Sponza/sponza.obj");
         mesh_manager->read_file("../../../Models/cube.obj");
         auto cmd_buffer = mesh_manager->fill_command_buffer();
@@ -384,7 +384,7 @@ class VulkanExample {
         createRayTracingPipeline();
         createShaderBindingTable();
         createDescriptorSets();
-        commandPool = vw::CommandPoolBuilder(*device).build();
+        commandPool = vw::CommandPoolBuilder(device).build();
         drawCmdBuffers = commandPool->allocate(3);
 
         buildCommandBuffer(0);
@@ -474,7 +474,8 @@ class VulkanExample {
 };
 
 std::vector<std::shared_ptr<const vw::ImageView>>
-create_image_views(const vw::Device &device, const vw::Swapchain &swapchain) {
+create_image_views(std::shared_ptr<const vw::Device> device,
+                   const vw::Swapchain &swapchain) {
     std::vector<std::shared_ptr<const vw::ImageView>> result;
     for (auto &&image : swapchain.images()) {
         auto imageView = vw::ImageViewBuilder(device, image)
@@ -495,7 +496,8 @@ createUbo(const vw::Allocator &allocator) {
 }
 
 std::vector<GBuffer>
-createGBuffers(const vw::Device &device, const vw::Allocator &allocator,
+createGBuffers(std::shared_ptr<const vw::Device> device,
+               std::shared_ptr<const vw::Allocator> allocator,
                const vw::Swapchain &swapchain) {
     std::vector<GBuffer> framebuffers;
 
@@ -505,9 +507,9 @@ createGBuffers(const vw::Device &device, const vw::Allocator &allocator,
                                 vk::ImageUsageFlagBits::eTransferSrc;
 
     auto create_img = [&](vk::ImageUsageFlags otherFlags = {}) {
-        return allocator.create_image_2D(swapchain.width(), swapchain.height(),
-                                         false, vk::Format::eR32G32B32A32Sfloat,
-                                         usageFlags | otherFlags);
+        return allocator->create_image_2D(swapchain.width(), swapchain.height(),
+                                          false, vk::Format::eR32G32B32A32Sfloat,
+                                          usageFlags | otherFlags);
     };
 
     auto create_img_view = [&](auto img) {
@@ -517,7 +519,7 @@ createGBuffers(const vw::Device &device, const vw::Allocator &allocator,
     };
 
     for (int i = 0; i < swapchain.number_images(); ++i) {
-        auto img_color = allocator.create_image_2D(
+        auto img_color = allocator->create_image_2D(
             swapchain.width(), swapchain.height(), false,
             vk::Format::eR8G8B8A8Unorm, usageFlags);
 
@@ -528,7 +530,7 @@ createGBuffers(const vw::Device &device, const vw::Allocator &allocator,
         auto img_light = create_img(vk::ImageUsageFlagBits::eStorage);
 
         // Create depth buffer for this frame
-        auto img_depth = allocator.create_image_2D(
+        auto img_depth = allocator->create_image_2D(
             swapchain.width(), swapchain.height(), false,
             vk::Format::eD32Sfloat,
             vk::ImageUsageFlagBits::eDepthStencilAttachment |
@@ -549,14 +551,14 @@ using namespace glm;
 int main() {
     try {
         App app;
-        auto descriptor_set_layout = create_zpass_descriptor_layout(*app.device);
+        auto descriptor_set_layout = create_zpass_descriptor_layout(app.device);
 
         auto uniform_buffer = createUbo(*app.allocator);
 
-        auto sampler = vw::SamplerBuilder(*app.device).build();
+        auto sampler = vw::SamplerBuilder(app.device).build();
 
         auto descriptor_pool =
-            vw::DescriptorPoolBuilder(*app.device, descriptor_set_layout)
+            vw::DescriptorPoolBuilder(app.device, descriptor_set_layout)
                 .build();
 
         auto descriptor_set =
@@ -570,28 +572,28 @@ int main() {
             vk::Format::eR32G32B32A32Sfloat, vk::Format::eR32G32B32A32Sfloat,
             vk::Format::eR32G32B32A32Sfloat, vk::Format::eR32G32B32A32Sfloat};
 
-        auto commandPool = vw::CommandPoolBuilder(*app.device).build();
-        auto image_views = create_image_views(*app.device, app.swapchain);
+        auto commandPool = vw::CommandPoolBuilder(app.device).build();
+        auto image_views = create_image_views(app.device, app.swapchain);
         auto commandBuffers = commandPool.allocate(image_views.size());
 
-        const auto gBuffers = createGBuffers(*app.device, *app.allocator,
+        const auto gBuffers = createGBuffers(app.device, app.allocator,
                                              app.swapchain);
 
         const vk::Extent2D extent(uint32_t(app.swapchain.width()),
                                   uint32_t(app.swapchain.height()));
 
         auto zpass_pipeline = create_zpass_pipeline(
-            *app.device, vk::Format::eD32Sfloat, descriptor_set_layout);
+            app.device, vk::Format::eD32Sfloat, descriptor_set_layout);
 
         auto mesh_renderer =
-            create_renderer(*app.device, gbuffer_formats, vk::Format::eD32Sfloat,
+            create_renderer(app.device, gbuffer_formats, vk::Format::eD32Sfloat,
                             *example.mesh_manager, descriptor_set_layout);
 
         auto sunlight_descriptor_set_layout =
-            create_sun_light_pass_descriptor_layout(*app.device);
+            create_sun_light_pass_descriptor_layout(app.device);
 
         auto sunlight_pool = vw::DescriptorPoolBuilder(
-                                 *app.device, sunlight_descriptor_set_layout)
+                                 app.device, sunlight_descriptor_set_layout)
                                  .build();
 
         std::vector<vw::DescriptorSet> sunlight_descriptor_sets;
@@ -605,18 +607,18 @@ int main() {
         int i = 0;
         for (const auto &gBuffer : gBuffers) {
             auto depth_subpass = std::make_shared<ZPass>(
-                *app.device, *example.mesh_manager, descriptor_set_layout,
+                app.device, *example.mesh_manager, descriptor_set_layout,
                 descriptor_set, gBuffer, zpass_pipeline);
             auto color_subpass = std::make_shared<ColorSubpass>(
-                *app.device, *example.mesh_manager, descriptor_set_layout,
+                app.device, *example.mesh_manager, descriptor_set_layout,
                 descriptor_set, gBuffer, mesh_renderer);
 
             auto sunlight_pass = create_sun_light_pass(
-                *app.device, sunlight_descriptor_set_layout,
+                app.device, sunlight_descriptor_set_layout,
                 sunlight_descriptor_sets[i], gBuffer.light);
 
             auto sky_pass =
-                create_sky_pass(*app.device, descriptor_set_layout,
+                create_sky_pass(app.device, descriptor_set_layout,
                                 descriptor_set, gBuffer.light, gBuffer.depth);
 
             renderings.emplace_back(vw::RenderingBuilder()
@@ -685,8 +687,8 @@ int main() {
         app.device->graphicsQueue().enqueue_command_buffer(cmd_buffer);
         float angle = 90.0;
 
-        auto renderFinishedSemaphore = vw::SemaphoreBuilder(*app.device).build();
-        auto imageAvailableSemaphore = vw::SemaphoreBuilder(*app.device).build();
+        auto renderFinishedSemaphore = vw::SemaphoreBuilder(app.device).build();
+        auto imageAvailableSemaphore = vw::SemaphoreBuilder(app.device).build();
 
         while (!app.window.is_close_requested()) {
             app.window.update();

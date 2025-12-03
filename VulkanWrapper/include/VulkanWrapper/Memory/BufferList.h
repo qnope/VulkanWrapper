@@ -13,8 +13,8 @@ class BufferList {
         std::size_t offset;
     };
 
-    BufferList(const Allocator &allocator) noexcept
-        : m_allocator{&allocator} {}
+    BufferList(std::shared_ptr<const Allocator> allocator) noexcept
+        : m_allocator{std::move(allocator)} {}
 
     BufferInfo create_buffer(std::size_t size) {
         constexpr std::size_t buffer_size = 1 << 24;
@@ -40,7 +40,7 @@ class BufferList {
         std::size_t offset;
     };
 
-    const Allocator *m_allocator;
+    std::shared_ptr<const Allocator> m_allocator;
     std::vector<std::unique_ptr<BufferAndOffset>> m_buffer_list;
 };
 

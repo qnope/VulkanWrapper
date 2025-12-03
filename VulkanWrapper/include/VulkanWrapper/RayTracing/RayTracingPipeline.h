@@ -17,7 +17,8 @@ using RayTracingPipelineCreationException =
 class RayTracingPipeline : public ObjectWithUniqueHandle<vk::UniquePipeline> {
     friend class RayTracingPipelineBuilder;
 
-    RayTracingPipeline(const Device &device, vk::UniquePipeline pipeline,
+    RayTracingPipeline(std::shared_ptr<const Device> device,
+                       vk::UniquePipeline pipeline,
                        PipelineLayout pipeline_layout,
                        uint32_t number_miss_shader,
                        uint32_t number_close_hit_shader) noexcept;
@@ -42,7 +43,8 @@ class RayTracingPipeline : public ObjectWithUniqueHandle<vk::UniquePipeline> {
 
 class RayTracingPipelineBuilder {
   public:
-    RayTracingPipelineBuilder(const Device &device, const Allocator &allocator,
+    RayTracingPipelineBuilder(std::shared_ptr<const Device> device,
+                              std::shared_ptr<const Allocator> allocator,
                               PipelineLayout pipelineLayout);
 
     RayTracingPipelineBuilder &&
@@ -63,8 +65,8 @@ class RayTracingPipelineBuilder {
     create_groups() const;
 
   private:
-    const Device &m_device;
-    const Allocator &m_allocator;
+    std::shared_ptr<const Device> m_device;
+    std::shared_ptr<const Allocator> m_allocator;
     PipelineLayout m_pipelineLayout;
 
     std::shared_ptr<const ShaderModule> m_ray_generation_shader;

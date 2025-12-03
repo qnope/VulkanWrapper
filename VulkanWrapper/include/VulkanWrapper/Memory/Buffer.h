@@ -11,7 +11,8 @@ namespace vw {
 
 class BufferBase : public ObjectWithHandle<vk::Buffer> {
   public:
-    BufferBase(const Device &device, const Allocator &allocator,
+    BufferBase(std::shared_ptr<const Device> device,
+               std::shared_ptr<const Allocator> allocator,
                vk::Buffer buffer, VmaAllocation allocation, VkDeviceSize size);
 
     BufferBase(const BufferBase &) = delete;
@@ -30,8 +31,8 @@ class BufferBase : public ObjectWithHandle<vk::Buffer> {
 
   private:
     struct Data {
-        const Device *m_device;
-        const Allocator *m_allocator;
+        std::shared_ptr<const Device> m_device;
+        std::shared_ptr<const Allocator> m_allocator;
         VmaAllocation m_allocation;
         VkDeviceSize m_size_in_bytes;
     };

@@ -18,12 +18,12 @@ class Sampler : public ObjectWithUniqueHandle<vk::UniqueSampler> {
 
 class SamplerBuilder {
   public:
-    SamplerBuilder(const Device &device);
+    SamplerBuilder(std::shared_ptr<const Device> device);
 
     std::shared_ptr<const Sampler> build();
 
   private:
-    const Device *m_device;
+    std::shared_ptr<const Device> m_device;
     vk::SamplerCreateInfo m_info;
 };
 } // namespace vw

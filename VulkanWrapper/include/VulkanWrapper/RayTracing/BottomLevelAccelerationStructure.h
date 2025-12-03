@@ -34,8 +34,8 @@ class BottomLevelAccelerationStructure
 
 class BottomLevelAccelerationStructureList {
   public:
-    BottomLevelAccelerationStructureList(const Device &device,
-                                         const Allocator &allocator);
+    BottomLevelAccelerationStructureList(std::shared_ptr<const Device> device,
+                                         std::shared_ptr<const Allocator> allocator);
 
     using AccelerationStructureBufferList =
         BufferList<std::byte, false,
@@ -68,12 +68,12 @@ class BottomLevelAccelerationStructureList {
 
     CommandPool m_command_pool;
     vk::CommandBuffer m_command_buffer;
-    const Device &m_device;
+    std::shared_ptr<const Device> m_device;
 };
 
 class BottomLevelAccelerationStructureBuilder {
   public:
-    BottomLevelAccelerationStructureBuilder(const Device &device);
+    BottomLevelAccelerationStructureBuilder(std::shared_ptr<const Device> device);
 
     BottomLevelAccelerationStructureBuilder &
     add_geometry(const vk::AccelerationStructureGeometryKHR &geometry,
@@ -85,7 +85,7 @@ class BottomLevelAccelerationStructureBuilder {
     build_into(BottomLevelAccelerationStructureList &list);
 
   private:
-    const Device &m_device;
+    std::shared_ptr<const Device> m_device;
     std::vector<vk::AccelerationStructureGeometryKHR> m_geometries;
     std::vector<vk::AccelerationStructureBuildRangeInfoKHR> m_ranges;
 };

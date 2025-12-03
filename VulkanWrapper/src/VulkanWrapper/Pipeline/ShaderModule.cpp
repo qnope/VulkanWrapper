@@ -32,12 +32,12 @@ static std::vector<uint32_t> readSpirVFile(const std::filesystem::path &path) {
 }
 
 std::shared_ptr<const ShaderModule>
-ShaderModule::create_from_spirv(const Device &device,
+ShaderModule::create_from_spirv(std::shared_ptr<const Device> device,
                                 std::span<const std::uint32_t> spirV) {
     auto info = vk::ShaderModuleCreateInfo()
                     .setCodeSize(spirV.size() * sizeof(std::uint32_t))
                     .setCode(spirV);
-    auto [result, module] = device.handle().createShaderModuleUnique(info);
+    auto [result, module] = device->handle().createShaderModuleUnique(info);
 
     if (result != vk::Result::eSuccess) {
         throw SpirVInvalidException{std::source_location::current()};
@@ -47,10 +47,10 @@ ShaderModule::create_from_spirv(const Device &device,
 }
 
 std::shared_ptr<const ShaderModule>
-ShaderModule::create_from_spirv_file(const Device &device,
+ShaderModule::create_from_spirv_file(std::shared_ptr<const Device> device,
                                      const std::filesystem::path &path) {
     const auto spirV = readSpirVFile(path);
-    return create_from_spirv(device, spirV);
+    return create_from_spirv(std::move(device), spirV);
 }
 
 } // namespace vw

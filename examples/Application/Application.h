@@ -46,5 +46,5 @@ class App {
         vw::AllocatorBuilder(instance, device).build();
 
     vw::Swapchain swapchain =
-        window.create_swapchain(*device, surface.handle());
+        window.create_swapchain(device, surface.handle());
 };

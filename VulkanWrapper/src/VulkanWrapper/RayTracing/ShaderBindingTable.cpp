@@ -5,16 +5,17 @@
 namespace vw::rt {
 
 ShaderBindingTable::ShaderBindingTable(
-    const Allocator &allocator, const ShaderBindingTableHandle &raygen_handle)
+    std::shared_ptr<const Allocator> allocator,
+    const ShaderBindingTableHandle &raygen_handle)
     : m_allocator{allocator}
     , m_sbt_ray_generation_and_miss_buffer(
           create_buffer<ShaderBindingTableRecord, true,
                                   ShaderBindingTableUsage>(
-              allocator, MaximumRecordInShaderBindingTable))
+              *allocator, MaximumRecordInShaderBindingTable))
     , m_sbt_closest_hit_buffer(
           create_buffer<ShaderBindingTableRecord, true,
                                   ShaderBindingTableUsage>(
-              allocator, MaximumRecordInShaderBindingTable)) {
+              *allocator, MaximumRecordInShaderBindingTable)) {
     add_miss_record(raygen_handle);
 }
 

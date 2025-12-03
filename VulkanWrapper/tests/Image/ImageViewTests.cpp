@@ -13,7 +13,7 @@ TEST(ImageViewTest, CreateImageView) {
         vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
     );
 
-    auto imageView = vw::ImageViewBuilder(*gpu.device, image).build();
+    auto imageView = vw::ImageViewBuilder(gpu.device, image).build();
 
     ASSERT_NE(imageView, nullptr);
     EXPECT_TRUE(imageView->handle());
@@ -28,7 +28,7 @@ TEST(ImageViewTest, ImageViewImage) {
         vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
     );
 
-    auto imageView = vw::ImageViewBuilder(*gpu.device, image).build();
+    auto imageView = vw::ImageViewBuilder(gpu.device, image).build();
 
     ASSERT_NE(imageView, nullptr);
     EXPECT_EQ(imageView->image(), image);
@@ -43,7 +43,7 @@ TEST(ImageViewTest, ImageViewSubresourceRange) {
         vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
     );
 
-    auto imageView = vw::ImageViewBuilder(*gpu.device, image).build();
+    auto imageView = vw::ImageViewBuilder(gpu.device, image).build();
 
     ASSERT_NE(imageView, nullptr);
     auto range = imageView->subresource_range();
@@ -59,7 +59,7 @@ TEST(ImageViewTest, ImageViewWithMipmaps) {
         vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
     );
 
-    auto imageView = vw::ImageViewBuilder(*gpu.device, image).build();
+    auto imageView = vw::ImageViewBuilder(gpu.device, image).build();
 
     ASSERT_NE(imageView, nullptr);
     auto range = imageView->subresource_range();
@@ -75,7 +75,7 @@ TEST(ImageViewTest, ImageView2D) {
         vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
     );
 
-    auto imageView = vw::ImageViewBuilder(*gpu.device, image)
+    auto imageView = vw::ImageViewBuilder(gpu.device, image)
                          .setImageType(vk::ImageViewType::e2D)
                          .build();
 
@@ -92,8 +92,8 @@ TEST(ImageViewTest, MultipleImageViews) {
         vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
     );
 
-    auto imageView1 = vw::ImageViewBuilder(*gpu.device, image).build();
-    auto imageView2 = vw::ImageViewBuilder(*gpu.device, image).build();
+    auto imageView1 = vw::ImageViewBuilder(gpu.device, image).build();
+    auto imageView2 = vw::ImageViewBuilder(gpu.device, image).build();
 
     ASSERT_NE(imageView1, nullptr);
     ASSERT_NE(imageView2, nullptr);
@@ -109,7 +109,7 @@ TEST(ImageViewTest, DepthImageView) {
         vk::ImageUsageFlagBits::eDepthStencilAttachment
     );
 
-    auto imageView = vw::ImageViewBuilder(*gpu.device, image).build();
+    auto imageView = vw::ImageViewBuilder(gpu.device, image).build();
 
     ASSERT_NE(imageView, nullptr);
     auto range = imageView->subresource_range();
@@ -131,8 +131,8 @@ TEST(ImageViewTest, DifferentFormatsImageViews) {
         vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
     );
 
-    auto viewRGBA = vw::ImageViewBuilder(*gpu.device, imageRGBA).build();
-    auto viewFloat = vw::ImageViewBuilder(*gpu.device, imageFloat).build();
+    auto viewRGBA = vw::ImageViewBuilder(gpu.device, imageRGBA).build();
+    auto viewFloat = vw::ImageViewBuilder(gpu.device, imageFloat).build();
 
     ASSERT_NE(viewRGBA, nullptr);
     ASSERT_NE(viewFloat, nullptr);

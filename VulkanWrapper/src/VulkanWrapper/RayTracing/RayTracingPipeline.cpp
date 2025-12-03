@@ -7,7 +7,7 @@
 namespace vw::rt {
 
 RayTracingPipeline::RayTracingPipeline(
-    const Device &device, vk::UniquePipeline pipeline,
+    std::shared_ptr<const Device> device, vk::UniquePipeline pipeline,
     PipelineLayout pipeline_layout, uint32_t number_miss_shader,
     uint32_t number_close_hit_shader) noexcept
     : ObjectWithUniqueHandle<vk::UniquePipeline>(std::move(pipeline))
@@ -16,7 +16,7 @@ RayTracingPipeline::RayTracingPipeline(
     , m_number_close_hit_shader{number_close_hit_shader} {
 
     auto rayTracingPipelineProperties =
-        device.physical_device()
+        device->physical_device()
             .getProperties2<vk::PhysicalDeviceProperties2,
                             vk::PhysicalDeviceRayTracingPipelinePropertiesKHR>()
             .get<vk::PhysicalDeviceRayTracingPipelinePropertiesKHR>();
@@ -28,7 +28,7 @@ RayTracingPipeline::RayTracingPipeline(
         1 + number_miss_shader + number_close_hit_shader;
 
     std::vector<std::byte> shaderHandleStorage =
-        device.handle()
+        device->handle()
             .getRayTracingShaderGroupHandlesKHR<std::byte>(
                 handle(), 0, groupCount, handleSize * groupCount)
             .value;
@@ -63,10 +63,11 @@ vk::PipelineLayout RayTracingPipeline::handle_layout() const {
 }
 
 RayTracingPipelineBuilder::RayTracingPipelineBuilder(
-    const Device &device, const Allocator &allocator,
+    std::shared_ptr<const Device> device,
+    std::shared_ptr<const Allocator> allocator,
     PipelineLayout pipelineLayout)
-    : m_device(device)
-    , m_allocator{allocator}
+    : m_device(std::move(device))
+    , m_allocator{std::move(allocator)}
     , m_pipelineLayout(std::move(pipelineLayout)) {}
 
 RayTracingPipelineBuilder &&
@@ -99,7 +100,7 @@ RayTracingPipeline RayTracingPipelineBuilder::build() && {
                           .setLayout(m_pipelineLayout.handle());
 
     auto [result, pipeline] =
-        m_device.handle().createRayTracingPipelineKHRUnique(
+        m_device->handle().createRayTracingPipelineKHRUnique(
             vk::DeferredOperationKHR(), vk::PipelineCache(), info);
 
     if (result != vk::Result::eSuccess) {

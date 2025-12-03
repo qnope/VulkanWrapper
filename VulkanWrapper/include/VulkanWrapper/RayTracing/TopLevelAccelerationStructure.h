@@ -43,8 +43,8 @@ class TopLevelAccelerationStructure
 
 class TopLevelAccelerationStructureBuilder {
   public:
-    TopLevelAccelerationStructureBuilder(const Device &device,
-                                         const Allocator &allocator);
+    TopLevelAccelerationStructureBuilder(std::shared_ptr<const Device> device,
+                                         std::shared_ptr<const Allocator> allocator);
 
     TopLevelAccelerationStructureBuilder &
     add_bottom_level_acceleration_structure_address(vk::DeviceAddress address,
@@ -53,8 +53,8 @@ class TopLevelAccelerationStructureBuilder {
     TopLevelAccelerationStructure build(vk::CommandBuffer command_buffer);
 
   private:
-    const Device &m_device;
-    const Allocator &m_allocator;
+    std::shared_ptr<const Device> m_device;
+    std::shared_ptr<const Allocator> m_allocator;
     std::vector<vk::AccelerationStructureInstanceKHR> m_instances;
 };
 

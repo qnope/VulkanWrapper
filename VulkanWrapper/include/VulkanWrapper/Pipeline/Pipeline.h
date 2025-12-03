@@ -26,7 +26,7 @@ class Pipeline : public ObjectWithUniqueHandle<vk::UniquePipeline> {
 
 class GraphicsPipelineBuilder {
   public:
-    GraphicsPipelineBuilder(const Device &device,
+    GraphicsPipelineBuilder(std::shared_ptr<const Device> device,
                             PipelineLayout pipelineLayout);
 
     GraphicsPipelineBuilder &&
@@ -98,7 +98,7 @@ class GraphicsPipelineBuilder {
     [[nodiscard]] vk::PipelineDepthStencilStateCreateInfo
     createDepthStencilStateInfo() const noexcept;
 
-    const Device *m_device;
+    std::shared_ptr<const Device> m_device;
     PipelineLayout m_pipelineLayout;
 
     std::map<vk::ShaderStageFlagBits, std::shared_ptr<const ShaderModule>>

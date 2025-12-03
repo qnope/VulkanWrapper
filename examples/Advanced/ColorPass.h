@@ -14,7 +14,7 @@
 #include <span>
 
 inline std::shared_ptr<vw::DescriptorSetLayout>
-create_colorpass_descriptor_layout(const vw::Device &device) {
+create_colorpass_descriptor_layout(std::shared_ptr<const vw::Device> device) {
     return vw::DescriptorSetLayoutBuilder(device)
         .with_uniform_buffer(vk::ShaderStageFlagBits::eVertex |
                                  vk::ShaderStageFlagBits::eFragment,
@@ -23,7 +23,8 @@ create_colorpass_descriptor_layout(const vw::Device &device) {
 }
 
 inline std::shared_ptr<const vw::Pipeline> create_pipeline(
-    const vw::Device &device, std::span<const vk::Format> color_formats,
+    std::shared_ptr<const vw::Device> device,
+    std::span<const vk::Format> color_formats,
     vk::Format depth_format, std::shared_ptr<const vw::ShaderModule> vertex,
     std::shared_ptr<const vw::ShaderModule> fragment,
     std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
@@ -51,7 +52,8 @@ inline std::shared_ptr<const vw::Pipeline> create_pipeline(
 }
 
 inline std::shared_ptr<vw::MeshRenderer> create_renderer(
-    const vw::Device &device, std::span<const vk::Format> color_formats,
+    std::shared_ptr<const vw::Device> device,
+    std::span<const vk::Format> color_formats,
     vk::Format depth_format, const vw::Model::MeshManager &mesh_manager,
     const std::shared_ptr<const vw::DescriptorSetLayout>
         &uniform_buffer_layout) {
@@ -84,11 +86,12 @@ inline std::shared_ptr<vw::MeshRenderer> create_renderer(
 class ColorSubpass : public vw::Subpass {
   public:
     ColorSubpass(
-        const vw::Device &device, const vw::Model::MeshManager &mesh_manager,
+        std::shared_ptr<const vw::Device> device,
+        const vw::Model::MeshManager &mesh_manager,
         std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
         vw::DescriptorSet descriptor_set, GBuffer gbuffer,
         std::shared_ptr<vw::MeshRenderer> mesh_renderer)
-        : m_device{device}
+        : m_device{std::move(device)}
         , m_mesh_manager{mesh_manager}
         , m_uniform_buffer_layout{uniform_buffer_layout}
         , m_descriptor_set{descriptor_set}
@@ -192,7 +195,7 @@ class ColorSubpass : public vw::Subpass {
     }
 
   private:
-    const vw::Device &m_device;
+    std::shared_ptr<const vw::Device> m_device;
     const vw::Model::MeshManager &m_mesh_manager;
     std::shared_ptr<const vw::DescriptorSetLayout> m_uniform_buffer_layout;
     std::shared_ptr<vw::MeshRenderer> m_mesh_renderer;

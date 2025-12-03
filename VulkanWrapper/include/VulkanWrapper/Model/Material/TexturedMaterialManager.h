@@ -13,7 +13,7 @@ inline const MaterialTypeTag textured_material_tag =
 template <>
 class ConcreteMaterialManager<&textured_material_tag> : public MaterialManager {
   public:
-    ConcreteMaterialManager(const Device &device,
+    ConcreteMaterialManager(std::shared_ptr<const Device> device,
                             StagingBufferManager &staging_buffer) noexcept;
 
     Material allocate(const std::filesystem::path &path);

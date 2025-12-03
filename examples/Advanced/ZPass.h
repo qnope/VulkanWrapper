@@ -13,7 +13,7 @@
 #include "VulkanWrapper/RenderPass/Subpass.h"
 
 inline std::shared_ptr<vw::DescriptorSetLayout>
-create_zpass_descriptor_layout(const vw::Device &device) {
+create_zpass_descriptor_layout(std::shared_ptr<const vw::Device> device) {
     return vw::DescriptorSetLayoutBuilder(device)
         .with_uniform_buffer(vk::ShaderStageFlagBits::eVertex |
                                  vk::ShaderStageFlagBits::eFragment,
@@ -34,7 +34,7 @@ inline vw::DescriptorSet create_zpass_descriptor_set(
 }
 
 inline std::shared_ptr<const vw::Pipeline> create_zpass_pipeline(
-    const vw::Device &device, vk::Format depth_format,
+    std::shared_ptr<const vw::Device> device, vk::Format depth_format,
     std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout) {
     auto vertex_shader = vw::ShaderModule::create_from_spirv_file(
         device, "Shaders/GBuffer/zpass.spv");
@@ -55,11 +55,12 @@ inline std::shared_ptr<const vw::Pipeline> create_zpass_pipeline(
 
 class ZPass : public vw::Subpass {
   public:
-    ZPass(const vw::Device &device, const vw::Model::MeshManager &mesh_manager,
+    ZPass(std::shared_ptr<const vw::Device> device,
+          const vw::Model::MeshManager &mesh_manager,
           std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
           vw::DescriptorSet descriptor_set, GBuffer gbuffer,
           std::shared_ptr<const vw::Pipeline> pipeline)
-        : m_device{device}
+        : m_device{std::move(device)}
         , m_mesh_manager{mesh_manager}
         , m_uniform_buffer_layout{uniform_buffer_layout}
         , m_descriptor_set{descriptor_set}
@@ -134,7 +135,7 @@ class ZPass : public vw::Subpass {
     }
 
   private:
-    const vw::Device &m_device;
+    std::shared_ptr<const vw::Device> m_device;
     const vw::Model::MeshManager &m_mesh_manager;
     std::shared_ptr<const vw::DescriptorSetLayout> m_uniform_buffer_layout;
     vw::DescriptorSet m_descriptor_set;

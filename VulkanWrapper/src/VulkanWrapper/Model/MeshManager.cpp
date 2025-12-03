@@ -6,7 +6,8 @@
 
 namespace vw::Model {
 
-MeshManager::MeshManager(const Device &device, const Allocator &allocator)
+MeshManager::MeshManager(std::shared_ptr<const Device> device,
+                         std::shared_ptr<const Allocator> allocator)
     : m_staging_buffer_manager{device, allocator}
     , m_vertex_buffer{allocator}
     , m_full_vertex_buffer{allocator}
@@ -33,8 +34,9 @@ MeshManager::material_manager_map() const noexcept {
     return m_material_manager_map;
 }
 
-void MeshManager::create_default_material_managers(const Device &device,
-                                                   const Allocator &allocator) {
+void MeshManager::create_default_material_managers(
+    std::shared_ptr<const Device> device,
+    std::shared_ptr<const Allocator> allocator) {
     m_material_manager_map.insert_manager(
         std::make_unique<Material::TextureMaterialManager>(
             device, m_staging_buffer_manager));

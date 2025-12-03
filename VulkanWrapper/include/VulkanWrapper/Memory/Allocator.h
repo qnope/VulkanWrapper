@@ -33,13 +33,13 @@ class Allocator : public std::enable_shared_from_this<Allocator> {
                     vk::SharingMode sharing_mode) const;
 
   private:
-    Allocator(const Device &device, VmaAllocator allocator);
+    Allocator(std::shared_ptr<const Device> device, VmaAllocator allocator);
 
     struct Impl {
-        const Device *device;
+        std::shared_ptr<const Device> device;
         VmaAllocator allocator;
 
-        Impl(const Device &dev, VmaAllocator alloc);
+        Impl(std::shared_ptr<const Device> dev, VmaAllocator alloc);
         ~Impl();
 
         Impl(const Impl &) = delete;

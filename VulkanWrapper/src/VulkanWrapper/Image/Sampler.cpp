@@ -2,8 +2,8 @@
 
 #include "VulkanWrapper/Vulkan/Device.h"
 
-vw::SamplerBuilder::SamplerBuilder(const Device &device)
-    : m_device{&device} {
+vw::SamplerBuilder::SamplerBuilder(std::shared_ptr<const Device> device)
+    : m_device{std::move(device)} {
     m_info = vk::SamplerCreateInfo()
                  .setAddressModeU(vk::SamplerAddressMode::eRepeat)
                  .setAddressModeV(vk::SamplerAddressMode::eRepeat)

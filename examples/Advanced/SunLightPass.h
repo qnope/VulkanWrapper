@@ -10,7 +10,7 @@
 #include "VulkanWrapper/Image/Sampler.h"
 
 inline std::shared_ptr<vw::DescriptorSetLayout>
-create_sun_light_pass_descriptor_layout(const vw::Device &device) {
+create_sun_light_pass_descriptor_layout(std::shared_ptr<const vw::Device> device) {
     return vw::DescriptorSetLayoutBuilder(device)
         .with_combined_image(vk::ShaderStageFlagBits::eFragment, 1) // Color
         .with_combined_image(vk::ShaderStageFlagBits::eFragment, 1) // Position
@@ -45,11 +45,11 @@ class SunLightPass : public vw::ScreenSpacePass {
         glm::vec4 sunColor;
     };
 
-    SunLightPass(const vw::Device &device,
+    SunLightPass(std::shared_ptr<const vw::Device> device,
                  std::shared_ptr<const vw::Pipeline> pipeline,
                  vw::DescriptorSet descriptor_set,
                  std::shared_ptr<const vw::ImageView> output_image)
-        : ScreenSpacePass(device, std::move(pipeline),
+        : ScreenSpacePass(std::move(device), std::move(pipeline),
                           std::move(descriptor_set), std::move(output_image)) {}
 
     void execute(vk::CommandBuffer cmd_buffer) const noexcept override {
@@ -66,7 +66,7 @@ class SunLightPass : public vw::ScreenSpacePass {
 };
 
 inline std::shared_ptr<vw::ScreenSpacePass> create_sun_light_pass(
-    const vw::Device &device,
+    std::shared_ptr<const vw::Device> device,
     std::shared_ptr<const vw::DescriptorSetLayout> descriptor_set_layout,
     vw::DescriptorSet descriptor_set,
     std::shared_ptr<const vw::ImageView> output_image) {

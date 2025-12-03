@@ -5,7 +5,7 @@
 TEST(SamplerTest, CreateSampler) {
     auto& gpu = vw::tests::create_gpu();
 
-    auto sampler = vw::SamplerBuilder(*gpu.device).build();
+    auto sampler = vw::SamplerBuilder(gpu.device).build();
 
     ASSERT_NE(sampler, nullptr);
     EXPECT_TRUE(sampler->handle());
@@ -14,9 +14,9 @@ TEST(SamplerTest, CreateSampler) {
 TEST(SamplerTest, CreateMultipleSamplers) {
     auto& gpu = vw::tests::create_gpu();
 
-    auto sampler1 = vw::SamplerBuilder(*gpu.device).build();
-    auto sampler2 = vw::SamplerBuilder(*gpu.device).build();
-    auto sampler3 = vw::SamplerBuilder(*gpu.device).build();
+    auto sampler1 = vw::SamplerBuilder(gpu.device).build();
+    auto sampler2 = vw::SamplerBuilder(gpu.device).build();
+    auto sampler3 = vw::SamplerBuilder(gpu.device).build();
 
     ASSERT_NE(sampler1, nullptr);
     ASSERT_NE(sampler2, nullptr);
@@ -29,7 +29,7 @@ TEST(SamplerTest, CreateMultipleSamplers) {
 TEST(SamplerTest, SamplerHandle) {
     auto& gpu = vw::tests::create_gpu();
 
-    auto sampler = vw::SamplerBuilder(*gpu.device).build();
+    auto sampler = vw::SamplerBuilder(gpu.device).build();
 
     ASSERT_NE(sampler, nullptr);
     EXPECT_TRUE(static_cast<bool>(sampler->handle()));

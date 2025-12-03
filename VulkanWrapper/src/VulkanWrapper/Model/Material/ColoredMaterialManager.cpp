@@ -8,7 +8,7 @@
 
 namespace vw::Model::Material {
 
-static DescriptorPool create_pool(const Device &device) {
+static DescriptorPool create_pool(std::shared_ptr<const Device> device) {
     auto layout =
         DescriptorSetLayoutBuilder(device)
             .with_uniform_buffer(vk::ShaderStageFlagBits::eFragment, 1)
@@ -17,7 +17,8 @@ static DescriptorPool create_pool(const Device &device) {
 }
 
 ConcreteMaterialManager<&colored_material_tag>::ConcreteMaterialManager(
-    const Device &device, const Allocator &allocator,
+    std::shared_ptr<const Device> device,
+    std::shared_ptr<const Allocator> allocator,
     StagingBufferManager &staging_buffer_manager) noexcept
     : MaterialManager(create_pool(device))
     , m_staging_buffer_manager{&staging_buffer_manager}

@@ -29,8 +29,9 @@ DescriptorSetLayout::get_pool_sizes() const {
     return pool_sizes;
 }
 
-DescriptorSetLayoutBuilder::DescriptorSetLayoutBuilder(const Device &device)
-    : m_device{&device} {}
+DescriptorSetLayoutBuilder::DescriptorSetLayoutBuilder(
+    std::shared_ptr<const Device> device)
+    : m_device{std::move(device)} {}
 
 DescriptorSetLayoutBuilder &&
 DescriptorSetLayoutBuilder::with_uniform_buffer(vk::ShaderStageFlags stages,

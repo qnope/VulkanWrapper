@@ -14,7 +14,8 @@ class MeshManager {
     friend void import_model(const std::filesystem::path &, MeshManager &);
 
   public:
-    MeshManager(const Device &device, const Allocator &allocator);
+    MeshManager(std::shared_ptr<const Device> device,
+                std::shared_ptr<const Allocator> allocator);
 
     void read_file(const std::filesystem::path &path);
 
@@ -26,8 +27,8 @@ class MeshManager {
     material_manager_map() const noexcept;
 
   private:
-    void create_default_material_managers(const Device &device,
-                                          const Allocator &allocator);
+    void create_default_material_managers(std::shared_ptr<const Device> device,
+                                          std::shared_ptr<const Allocator> allocator);
     void create_default_material_factories();
 
   private:

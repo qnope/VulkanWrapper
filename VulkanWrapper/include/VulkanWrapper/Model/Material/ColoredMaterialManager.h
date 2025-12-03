@@ -15,7 +15,8 @@ template <>
 class ConcreteMaterialManager<&colored_material_tag> : public MaterialManager {
   public:
     ConcreteMaterialManager<&colored_material_tag>(
-        const Device &device, const Allocator &allocator,
+        std::shared_ptr<const Device> device,
+        std::shared_ptr<const Allocator> allocator,
         StagingBufferManager &staging_buffer_manager) noexcept;
 
     Material allocate(const glm::vec4 &color) noexcept;

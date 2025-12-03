@@ -6,12 +6,12 @@
 
 namespace vw {
 
-ScreenSpacePass::ScreenSpacePass(const Device &device,
+ScreenSpacePass::ScreenSpacePass(std::shared_ptr<const Device> device,
                                  std::shared_ptr<const Pipeline> pipeline,
                                  DescriptorSet descriptor_set,
                                  std::shared_ptr<const ImageView> output_image,
                                  std::shared_ptr<const ImageView> depth_image)
-    : m_device(device)
+    : m_device(std::move(device))
     , m_pipeline(std::move(pipeline))
     , m_descriptor_set(std::move(descriptor_set))
     , m_output_image(std::move(output_image))
@@ -87,7 +87,8 @@ std::vector<Barrier::ResourceState> ScreenSpacePass::resource_states() const {
 }
 
 std::shared_ptr<const Pipeline> create_screen_space_pipeline(
-    const Device &device, std::shared_ptr<const ShaderModule> vertex_shader,
+    std::shared_ptr<const Device> device,
+    std::shared_ptr<const ShaderModule> vertex_shader,
     std::shared_ptr<const ShaderModule> fragment_shader,
     std::shared_ptr<const DescriptorSetLayout> descriptor_set_layout,
     vk::Format color_format, vk::Format depth_format, bool depth_test,

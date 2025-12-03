@@ -19,10 +19,10 @@ class Semaphore : public ObjectWithUniqueHandle<vk::UniqueSemaphore> {
 
 class SemaphoreBuilder {
   public:
-    SemaphoreBuilder(const Device &device);
+    SemaphoreBuilder(std::shared_ptr<const Device> device);
     Semaphore build() &&;
 
   private:
-    const Device *m_device;
+    std::shared_ptr<const Device> m_device;
 };
 } // namespace vw

@@ -5,10 +5,11 @@
 
 namespace vw {
 
-Swapchain::Swapchain(const Device &device, vk::UniqueSwapchainKHR swapchain,
+Swapchain::Swapchain(std::shared_ptr<const Device> device,
+                     vk::UniqueSwapchainKHR swapchain,
                      vk::Format format, Width width, Height height)
     : vw::ObjectWithUniqueHandle<vk::UniqueSwapchainKHR>{std::move(swapchain)}
-    , m_device{&device}
+    , m_device{std::move(device)}
     , m_format{format}
     , m_width{width}
     , m_height{height} {
@@ -41,9 +42,10 @@ Swapchain::acquire_next_image(const Semaphore &semaphore) const noexcept {
         .value;
 }
 
-SwapchainBuilder::SwapchainBuilder(const Device &device, vk::SurfaceKHR surface,
+SwapchainBuilder::SwapchainBuilder(std::shared_ptr<const Device> device,
+                                   vk::SurfaceKHR surface,
                                    Width width, Height height) noexcept
-    : m_device{&device}
+    : m_device{std::move(device)}
     , m_width{width}
     , m_height{height} {
     m_info.setSurface(surface)
@@ -68,7 +70,7 @@ Swapchain SwapchainBuilder::build() && {
         throw 0;
     }
 
-    return Swapchain{*m_device, std::move(result.value), m_info.imageFormat,
+    return Swapchain{m_device, std::move(result.value), m_info.imageFormat,
                      m_width, m_height};
 }
 

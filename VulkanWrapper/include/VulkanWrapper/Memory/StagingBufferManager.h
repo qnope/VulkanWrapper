@@ -11,7 +11,8 @@ namespace vw {
 
 class StagingBufferManager {
   public:
-    StagingBufferManager(const Device &device, const Allocator &allocator);
+    StagingBufferManager(std::shared_ptr<const Device> device,
+                         std::shared_ptr<const Allocator> allocator);
 
     [[nodiscard]] vk::CommandBuffer fill_command_buffer();
 
@@ -47,8 +48,8 @@ class StagingBufferManager {
     stage_image_from_path(const std::filesystem::path &path, bool mipmaps);
 
   private:
-    const Device *m_device;
-    const Allocator *m_allocator;
+    std::shared_ptr<const Device> m_device;
+    std::shared_ptr<const Allocator> m_allocator;
     CommandPool m_command_pool;
     BufferList<std::byte, true, VK_BUFFER_USAGE_TRANSFER_SRC_BIT>
         m_staging_buffers;

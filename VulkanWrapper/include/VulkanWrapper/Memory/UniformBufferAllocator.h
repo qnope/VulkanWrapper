@@ -57,7 +57,7 @@ class UniformBufferAllocator {
      * @param totalSize Total size of the backing buffer in bytes
      * @param minAlignment Minimum alignment for allocations (typically 256 for uniform buffers)
      */
-    UniformBufferAllocator(const Allocator &allocator, 
+    UniformBufferAllocator(std::shared_ptr<const Allocator> allocator,
                           vk::DeviceSize totalSize,
                           vk::DeviceSize minAlignment = 256);
 

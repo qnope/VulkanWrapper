@@ -7,7 +7,7 @@
 #include "VulkanWrapper/Model/Material/Material.h"
 
 namespace vw::Model::Material {
-static vw::DescriptorPool create_pool(const Device &device) {
+static vw::DescriptorPool create_pool(std::shared_ptr<const Device> device) {
     auto layout =
         DescriptorSetLayoutBuilder(device)
             .with_combined_image(vk::ShaderStageFlagBits::eFragment, 1)
@@ -16,7 +16,8 @@ static vw::DescriptorPool create_pool(const Device &device) {
 }
 
 ConcreteMaterialManager<&textured_material_tag>::ConcreteMaterialManager(
-    const Device &device, StagingBufferManager &staging_buffer) noexcept
+    std::shared_ptr<const Device> device,
+    StagingBufferManager &staging_buffer) noexcept
     : MaterialManager{create_pool(device)}
     , m_staging_buffer{&staging_buffer} {}
 

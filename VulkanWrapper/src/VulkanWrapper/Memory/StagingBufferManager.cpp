@@ -19,14 +19,14 @@ static vk::DeviceSize compute_size(vk::DeviceSize size) {
     return vk::DeviceSize(std::pow(2, std::ceil(std::log2(max_size))));
 }
 
-static CommandPool create_command_pool(const Device &device) {
+static CommandPool create_command_pool(std::shared_ptr<const Device> device) {
     return CommandPoolBuilder(device).build();
 }
 
-StagingBufferManager::StagingBufferManager(const Device &device,
-                                           const Allocator &allocator)
-    : m_device{&device}
-    , m_allocator{&allocator}
+StagingBufferManager::StagingBufferManager(std::shared_ptr<const Device> device,
+                                           std::shared_ptr<const Allocator> allocator)
+    : m_device{device}
+    , m_allocator{allocator}
     , m_command_pool(create_command_pool(device))
     , m_staging_buffers{allocator}
     , m_sampler(SamplerBuilder{device}.build()) {}
@@ -91,7 +91,7 @@ StagingBufferManager::stage_image_from_path(const std::filesystem::path &path,
     m_transfer_functions.emplace_back(function);
     staging_buffer->copy(img_description.pixels, offset);
 
-    auto image_view = ImageViewBuilder(*m_device, image)
+    auto image_view = ImageViewBuilder(m_device, image)
                           .setImageType(vk::ImageViewType::e2D)
                           .build();
 

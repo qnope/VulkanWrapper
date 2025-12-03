@@ -4,11 +4,13 @@
 #include "VulkanWrapper/Vulkan/Device.h"
 
 namespace vw {
-BufferBase::BufferBase(const Device &device, const Allocator &allocator,
+BufferBase::BufferBase(std::shared_ptr<const Device> device,
+                       std::shared_ptr<const Allocator> allocator,
                        vk::Buffer buffer, VmaAllocation allocation,
                        VkDeviceSize size)
     : ObjectWithHandle<vk::Buffer>{buffer}
-    , m_data{std::make_unique<Data>(&device, &allocator, allocation, size)} {}
+    , m_data{std::make_unique<Data>(std::move(device), std::move(allocator),
+                                    allocation, size)} {}
 
 VkDeviceSize BufferBase::size_bytes() const noexcept {
     return m_data->m_size_in_bytes;

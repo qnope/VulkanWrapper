@@ -3,8 +3,8 @@
 #include "VulkanWrapper/Vulkan/Device.h"
 
 namespace vw {
-SemaphoreBuilder::SemaphoreBuilder(const Device &device)
-    : m_device{&device} {}
+SemaphoreBuilder::SemaphoreBuilder(std::shared_ptr<const Device> device)
+    : m_device{std::move(device)} {}
 
 Semaphore SemaphoreBuilder::build() && {
     const auto info = vk::SemaphoreCreateInfo();

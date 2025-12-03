@@ -9,7 +9,7 @@ namespace vw {
 
 class ScreenSpacePass : public Subpass {
   public:
-    ScreenSpacePass(const Device &device,
+    ScreenSpacePass(std::shared_ptr<const Device> device,
                     std::shared_ptr<const Pipeline> pipeline,
                     DescriptorSet descriptor_set,
                     std::shared_ptr<const ImageView> output_image,
@@ -22,7 +22,7 @@ class ScreenSpacePass : public Subpass {
     std::vector<Barrier::ResourceState> resource_states() const override;
 
   protected:
-    const Device &m_device;
+    std::shared_ptr<const Device> m_device;
     std::shared_ptr<const Pipeline> m_pipeline;
     DescriptorSet m_descriptor_set;
     std::shared_ptr<const ImageView> m_output_image;
@@ -30,7 +30,8 @@ class ScreenSpacePass : public Subpass {
 };
 
 std::shared_ptr<const Pipeline> create_screen_space_pipeline(
-    const Device &device, std::shared_ptr<const ShaderModule> vertex_shader,
+    std::shared_ptr<const Device> device,
+    std::shared_ptr<const ShaderModule> vertex_shader,
     std::shared_ptr<const ShaderModule> fragment_shader,
     std::shared_ptr<const DescriptorSetLayout> descriptor_set_layout,
     vk::Format color_format, vk::Format depth_format = vk::Format::eUndefined,

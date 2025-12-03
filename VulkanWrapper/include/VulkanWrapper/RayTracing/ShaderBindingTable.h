@@ -32,7 +32,7 @@ struct alignas(ShaderBindingTableHandleSizeAlignment) ShaderBindingTableRecord {
 
 class ShaderBindingTable {
   public:
-    ShaderBindingTable(const Allocator &allocator,
+    ShaderBindingTable(std::shared_ptr<const Allocator> allocator,
                        const ShaderBindingTableHandle &raygen_handle);
 
     void add_miss_record(const ShaderBindingTableHandle &handle,
@@ -53,7 +53,7 @@ class ShaderBindingTable {
     [[nodiscard]] vk::StridedDeviceAddressRegionKHR hit_region() const;
 
   private:
-    const Allocator &m_allocator;
+    std::shared_ptr<const Allocator> m_allocator;
 
     uint64_t m_number_raygen_miss = 0;
     uint64_t m_number_hit = 0;

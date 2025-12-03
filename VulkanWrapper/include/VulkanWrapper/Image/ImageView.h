@@ -27,14 +27,15 @@ class ImageView : public ObjectWithUniqueHandle<vk::UniqueImageView> {
 
 class ImageViewBuilder {
   public:
-    ImageViewBuilder(const Device &device, std::shared_ptr<const Image> image);
+    ImageViewBuilder(std::shared_ptr<const Device> device,
+                     std::shared_ptr<const Image> image);
 
     ImageViewBuilder &&setImageType(vk::ImageViewType imageViewType) &&;
 
     std::shared_ptr<const ImageView> build() &&;
 
   private:
-    const Device *m_device;
+    std::shared_ptr<const Device> m_device;
     std::shared_ptr<const Image> m_image;
 
     vk::ImageViewType m_type = vk::ImageViewType::e2D;

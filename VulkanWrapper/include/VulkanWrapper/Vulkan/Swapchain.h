@@ -9,7 +9,8 @@
 namespace vw {
 class Swapchain : public ObjectWithUniqueHandle<vk::UniqueSwapchainKHR> {
   public:
-    Swapchain(const Device &device, vk::UniqueSwapchainKHR swapchain,
+    Swapchain(std::shared_ptr<const Device> device,
+              vk::UniqueSwapchainKHR swapchain,
               vk::Format format, Width width, Height height);
 
     [[nodiscard]] Width width() const noexcept;
@@ -25,7 +26,7 @@ class Swapchain : public ObjectWithUniqueHandle<vk::UniqueSwapchainKHR> {
     acquire_next_image(const Semaphore &semaphore) const noexcept;
 
   private:
-    const Device *m_device;
+    std::shared_ptr<const Device> m_device;
     vk::Format m_format;
     std::vector<std::shared_ptr<const Image>> m_images;
     Width m_width;
@@ -34,12 +35,12 @@ class Swapchain : public ObjectWithUniqueHandle<vk::UniqueSwapchainKHR> {
 
 class SwapchainBuilder {
   public:
-    SwapchainBuilder(const Device &device, vk::SurfaceKHR surface, Width width,
-                     Height height) noexcept;
+    SwapchainBuilder(std::shared_ptr<const Device> device, vk::SurfaceKHR surface,
+                     Width width, Height height) noexcept;
     Swapchain build() &&;
 
   private:
-    const Device *m_device;
+    std::shared_ptr<const Device> m_device;
     Width m_width;
     Height m_height;
 

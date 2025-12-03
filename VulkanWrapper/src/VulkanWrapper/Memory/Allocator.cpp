@@ -16,8 +16,8 @@ MipLevel mip_level_from_size(Width width, Height height, Depth depth) {
 }
 } // namespace
 
-Allocator::Impl::Impl(const Device &dev, VmaAllocator alloc)
-    : device{&dev}
+Allocator::Impl::Impl(std::shared_ptr<const Device> dev, VmaAllocator alloc)
+    : device{std::move(dev)}
     , allocator{alloc} {}
 
 Allocator::Impl::~Impl() {
@@ -26,8 +26,8 @@ Allocator::Impl::~Impl() {
     }
 }
 
-Allocator::Allocator(const Device &device, VmaAllocator allocator)
-    : m_impl{std::make_shared<Impl>(device, allocator)} {}
+Allocator::Allocator(std::shared_ptr<const Device> device, VmaAllocator allocator)
+    : m_impl{std::make_shared<Impl>(std::move(device), allocator)} {}
 
 VmaAllocator Allocator::handle() const noexcept { return m_impl->allocator; }
 
@@ -89,7 +89,7 @@ BufferBase Allocator::allocate_buffer(VkDeviceSize size, bool host_visible,
                                  &allocation_info, DefaultBufferAlignment,
                                  &buffer, &allocation, nullptr);
 
-    return BufferBase{*m_impl->device, *this, buffer, allocation, size};
+    return BufferBase{m_impl->device, shared_from_this(), buffer, allocation, size};
 }
 
 AllocatorBuilder::AllocatorBuilder(std::shared_ptr<const Instance> instance,
@@ -110,7 +110,7 @@ std::shared_ptr<Allocator> AllocatorBuilder::build() && {
         vk::Result::eSuccess)
         std::terminate();
 
-    return std::shared_ptr<Allocator>(new Allocator(*m_device, allocator));
+    return std::shared_ptr<Allocator>(new Allocator(m_device, allocator));
 }
 
 } // namespace vw
