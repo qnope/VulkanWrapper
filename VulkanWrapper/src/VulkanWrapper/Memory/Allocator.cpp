@@ -66,7 +66,7 @@ Allocator::create_image_2D(Width width, Height height, bool mipmap,
                    &allocation, nullptr);
     return std::make_shared<const Image>(vk::Image(image), width, height,
                                          Depth(1), mip_levels, format, usage,
-                                         *this, allocation);
+                                         shared_from_this(), allocation);
 }
 
 BufferBase Allocator::allocate_buffer(VkDeviceSize size, bool host_visible,
@@ -92,12 +92,12 @@ BufferBase Allocator::allocate_buffer(VkDeviceSize size, bool host_visible,
     return BufferBase{*m_impl->device, *this, buffer, allocation, size};
 }
 
-AllocatorBuilder::AllocatorBuilder(const Instance &instance,
-                                   const Device &device)
-    : m_instance{&instance}
-    , m_device{&device} {}
+AllocatorBuilder::AllocatorBuilder(std::shared_ptr<const Instance> instance,
+                                   std::shared_ptr<const Device> device)
+    : m_instance{std::move(instance)}
+    , m_device{std::move(device)} {}
 
-Allocator AllocatorBuilder::build() && {
+std::shared_ptr<Allocator> AllocatorBuilder::build() && {
     VmaAllocatorCreateInfo info{};
     info.flags = VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT |
                  VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
@@ -110,7 +110,7 @@ Allocator AllocatorBuilder::build() && {
         vk::Result::eSuccess)
         std::terminate();
 
-    return Allocator{*m_device, allocator};
+    return std::shared_ptr<Allocator>(new Allocator(*m_device, allocator));
 }
 
 } // namespace vw

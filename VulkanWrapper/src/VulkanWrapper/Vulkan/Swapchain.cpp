@@ -17,7 +17,7 @@ Swapchain::Swapchain(const Device &device, vk::UniqueSwapchainKHR swapchain,
     for (auto &vkImage : vkImages) {
         auto &image = m_images.emplace_back(std::make_shared<Image>(
             vkImage, m_width, m_height, Depth(1), MipLevel(1), m_format,
-            vk::ImageUsageFlagBits::eColorAttachment, std::nullopt, nullptr));
+            vk::ImageUsageFlagBits::eColorAttachment, nullptr, nullptr));
     }
 }
 

@@ -8,13 +8,13 @@
 
 TEST(UniformBufferAllocatorTest, CreateAllocator) {
     auto& gpu = vw::tests::create_gpu();
-    vw::UniformBufferAllocator uboAllocator(gpu.allocator, 1024 * 1024);
+    vw::UniformBufferAllocator uboAllocator(*gpu.allocator, 1024 * 1024);
     SUCCEED();
 }
 
 TEST(UniformBufferAllocatorTest, AllocateChunk) {
     auto& gpu = vw::tests::create_gpu();
-    vw::UniformBufferAllocator uboAllocator(gpu.allocator, 1024 * 1024);
+    vw::UniformBufferAllocator uboAllocator(*gpu.allocator, 1024 * 1024);
 
     auto chunk = uboAllocator.allocate<float>();
     ASSERT_TRUE(chunk.has_value());
@@ -23,7 +23,7 @@ TEST(UniformBufferAllocatorTest, AllocateChunk) {
 
 TEST(UniformBufferAllocatorTest, CopyToChunk) {
     auto& gpu = vw::tests::create_gpu();
-    vw::UniformBufferAllocator uboAllocator(gpu.allocator, 1024 * 1024);
+    vw::UniformBufferAllocator uboAllocator(*gpu.allocator, 1024 * 1024);
     
     auto chunk = uboAllocator.allocate<float>();
     ASSERT_TRUE(chunk.has_value());
@@ -35,7 +35,7 @@ TEST(UniformBufferAllocatorTest, CopyToChunk) {
 
 TEST(UniformBufferAllocatorTest, AllocateAndCopyFloat) {
     auto& gpu = vw::tests::create_gpu();
-    vw::UniformBufferAllocator uboAllocator(gpu.allocator, 1024 * 1024);
+    vw::UniformBufferAllocator uboAllocator(*gpu.allocator, 1024 * 1024);
     
     auto chunk = uboAllocator.allocate<float>();
     ASSERT_TRUE(chunk.has_value());
@@ -55,7 +55,7 @@ TEST(UniformBufferAllocatorTest, AllocateAndCopyFloat) {
 
 TEST(UniformBufferAllocatorTest, AllocateSameStructureMultipleTimes) {
     auto& gpu = vw::tests::create_gpu();
-    vw::UniformBufferAllocator uboAllocator(gpu.allocator, 1024 * 1024);
+    vw::UniformBufferAllocator uboAllocator(*gpu.allocator, 1024 * 1024);
     
     struct TestStruct {
         float x;
@@ -117,7 +117,7 @@ TEST(UniformBufferAllocatorTest, AllocateSameStructureMultipleTimes) {
 
 TEST(UniformBufferAllocatorTest, AllocateDifferentStructures) {
     auto& gpu = vw::tests::create_gpu();
-    vw::UniformBufferAllocator uboAllocator(gpu.allocator, 1024 * 1024);
+    vw::UniformBufferAllocator uboAllocator(*gpu.allocator, 1024 * 1024);
     
     struct SmallStruct {
         int32_t value;
@@ -199,7 +199,7 @@ TEST(UniformBufferAllocatorTest, AllocateDifferentStructures) {
 
 TEST(UniformBufferAllocatorTest, AllocateSameStructureWithVector) {
     auto& gpu = vw::tests::create_gpu();
-    vw::UniformBufferAllocator uboAllocator(gpu.allocator, 1024 * 1024);
+    vw::UniformBufferAllocator uboAllocator(*gpu.allocator, 1024 * 1024);
     
     struct Vec3 {
         float x, y, z;
@@ -240,7 +240,7 @@ TEST(UniformBufferAllocatorTest, AllocateSameStructureWithVector) {
 TEST(UniformBufferAllocatorTest, SingleChunkAlignment) {
     auto& gpu = vw::tests::create_gpu();
     constexpr vk::DeviceSize minAlignment = 256;
-    vw::UniformBufferAllocator uboAllocator(gpu.allocator, 1024 * 1024, minAlignment);
+    vw::UniformBufferAllocator uboAllocator(*gpu.allocator, 1024 * 1024, minAlignment);
 
     auto chunk = uboAllocator.allocate<float>();
     ASSERT_TRUE(chunk.has_value());
@@ -253,7 +253,7 @@ TEST(UniformBufferAllocatorTest, SingleChunkAlignment) {
 TEST(UniformBufferAllocatorTest, MultipleChunksAlignment) {
     auto& gpu = vw::tests::create_gpu();
     constexpr vk::DeviceSize minAlignment = 256;
-    vw::UniformBufferAllocator uboAllocator(gpu.allocator, 1024 * 1024, minAlignment);
+    vw::UniformBufferAllocator uboAllocator(*gpu.allocator, 1024 * 1024, minAlignment);
 
     // Allocate multiple chunks of different sizes
     auto chunk1 = uboAllocator.allocate<uint32_t>();
@@ -280,7 +280,7 @@ TEST(UniformBufferAllocatorTest, MultipleChunksAlignment) {
 TEST(UniformBufferAllocatorTest, AlignmentWithDifferentTypes) {
     auto& gpu = vw::tests::create_gpu();
     constexpr vk::DeviceSize minAlignment = 256;
-    vw::UniformBufferAllocator uboAllocator(gpu.allocator, 1024 * 1024, minAlignment);
+    vw::UniformBufferAllocator uboAllocator(*gpu.allocator, 1024 * 1024, minAlignment);
 
     struct SmallStruct {
         int32_t value;
@@ -319,7 +319,7 @@ TEST(UniformBufferAllocatorTest, AlignmentWithDifferentTypes) {
 TEST(UniformBufferAllocatorTest, AlignmentAfterDeallocation) {
     auto& gpu = vw::tests::create_gpu();
     constexpr vk::DeviceSize minAlignment = 256;
-    vw::UniformBufferAllocator uboAllocator(gpu.allocator, 1024 * 1024, minAlignment);
+    vw::UniformBufferAllocator uboAllocator(*gpu.allocator, 1024 * 1024, minAlignment);
 
     // Allocate three chunks
     auto chunk1 = uboAllocator.allocate<float>();
@@ -350,7 +350,7 @@ TEST(UniformBufferAllocatorTest, AlignmentAfterDeallocation) {
 TEST(UniformBufferAllocatorTest, AlignmentWithArrayAllocation) {
     auto& gpu = vw::tests::create_gpu();
     constexpr vk::DeviceSize minAlignment = 256;
-    vw::UniformBufferAllocator uboAllocator(gpu.allocator, 1024 * 1024, minAlignment);
+    vw::UniformBufferAllocator uboAllocator(*gpu.allocator, 1024 * 1024, minAlignment);
 
     struct Vec3 {
         float x, y, z;
@@ -379,7 +379,7 @@ TEST(UniformBufferAllocatorTest, AlignmentWithCustomAlignment) {
 
     // Test with different alignment values
     constexpr vk::DeviceSize alignment512 = 512;
-    vw::UniformBufferAllocator uboAllocator512(gpu.allocator, 1024 * 1024, alignment512);
+    vw::UniformBufferAllocator uboAllocator512(*gpu.allocator, 1024 * 1024, alignment512);
 
     auto chunk1 = uboAllocator512.allocate<float>();
     auto chunk2 = uboAllocator512.allocate<glm::vec4>();
@@ -396,7 +396,7 @@ TEST(UniformBufferAllocatorTest, AlignmentWithCustomAlignment) {
 TEST(UniformBufferAllocatorTest, AlignmentStressTest) {
     auto& gpu = vw::tests::create_gpu();
     constexpr vk::DeviceSize minAlignment = 256;
-    vw::UniformBufferAllocator uboAllocator(gpu.allocator, 1024 * 1024, minAlignment);
+    vw::UniformBufferAllocator uboAllocator(*gpu.allocator, 1024 * 1024, minAlignment);
 
     // Allocate many chunks
     std::vector<vw::UniformBufferChunk<float>> chunks;

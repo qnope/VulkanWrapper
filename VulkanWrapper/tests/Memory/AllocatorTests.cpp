@@ -6,14 +6,14 @@
 
 TEST(AllocatorTest, CreateAllocator) {
     auto &gpu = vw::tests::create_gpu();
-    EXPECT_NE(gpu.allocator.handle(), nullptr);
+    EXPECT_NE(gpu.allocator->handle(), nullptr);
     SUCCEED();
 }
 
 TEST(AllocatorTest, AllocateUniformBuffer) {
     auto &gpu = vw::tests::create_gpu();
     using UniformBuffer = vw::Buffer<float, false, vw::UniformBufferUsage>;
-    auto buffer = vw::create_buffer<UniformBuffer>(gpu.allocator, 100);
+    auto buffer = vw::create_buffer<UniformBuffer>(*gpu.allocator, 100);
 
     EXPECT_EQ(buffer.size(), 100);
     EXPECT_TRUE(buffer.does_support(vk::BufferUsageFlagBits::eUniformBuffer));
@@ -23,7 +23,7 @@ TEST(AllocatorTest, AllocateUniformBuffer) {
 TEST(AllocatorTest, AllocateHostVisibleUniformBuffer) {
     auto &gpu = vw::tests::create_gpu();
     using HostUniformBuffer = vw::Buffer<float, true, vw::UniformBufferUsage>;
-    auto buffer = vw::create_buffer<HostUniformBuffer>(gpu.allocator, 100);
+    auto buffer = vw::create_buffer<HostUniformBuffer>(*gpu.allocator, 100);
 
     EXPECT_EQ(buffer.size(), 100);
     EXPECT_TRUE(buffer.host_visible);
@@ -34,7 +34,7 @@ TEST(AllocatorTest, AllocateStorageBuffer) {
     constexpr VkBufferUsageFlags StorageBufferUsage =
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     using StorageBuffer = vw::Buffer<uint32_t, false, StorageBufferUsage>;
-    auto buffer = vw::create_buffer<StorageBuffer>(gpu.allocator, 50);
+    auto buffer = vw::create_buffer<StorageBuffer>(*gpu.allocator, 50);
 
     EXPECT_EQ(buffer.size(), 50);
     EXPECT_TRUE(buffer.does_support(vk::BufferUsageFlagBits::eStorageBuffer));
@@ -48,9 +48,9 @@ TEST(AllocatorTest, AllocateMultipleBuffers) {
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     using StorageBuffer = vw::Buffer<uint32_t, false, StorageBufferUsage>;
 
-    auto buffer1 = vw::create_buffer<UniformBuffer>(gpu.allocator, 100);
-    auto buffer2 = vw::create_buffer<UniformBuffer>(gpu.allocator, 200);
-    auto buffer3 = vw::create_buffer<StorageBuffer>(gpu.allocator, 150);
+    auto buffer1 = vw::create_buffer<UniformBuffer>(*gpu.allocator, 100);
+    auto buffer2 = vw::create_buffer<UniformBuffer>(*gpu.allocator, 200);
+    auto buffer3 = vw::create_buffer<StorageBuffer>(*gpu.allocator, 150);
 
     EXPECT_EQ(buffer1.size(), 100);
     EXPECT_EQ(buffer2.size(), 200);
@@ -61,7 +61,7 @@ TEST(AllocatorTest, CreateBufferWithCustomUsage) {
     auto &gpu = vw::tests::create_gpu();
 
     using CustomBuffer = vw::Buffer<uint32_t, true, vw::UniformBufferUsage>;
-    auto buffer = vw::create_buffer<CustomBuffer>(gpu.allocator, 20);
+    auto buffer = vw::create_buffer<CustomBuffer>(*gpu.allocator, 20);
 
     EXPECT_EQ(buffer.size(), 20);
     EXPECT_TRUE(buffer.does_support(vk::BufferUsageFlagBits::eUniformBuffer));
@@ -71,7 +71,7 @@ TEST(AllocatorTest, CreateBufferWithCustomUsage) {
 TEST(AllocatorTest, CreateImage2D) {
     auto &gpu = vw::tests::create_gpu();
 
-    auto image = gpu.allocator.create_image_2D(
+    auto image = gpu.allocator->create_image_2D(
         vw::Width{256}, vw::Height{256}, false, vk::Format::eR8G8B8A8Unorm,
         vk::ImageUsageFlagBits::eSampled |
             vk::ImageUsageFlagBits::eTransferDst);
@@ -85,7 +85,7 @@ TEST(AllocatorTest, CreateImage2D) {
 TEST(AllocatorTest, CreateImage2DWithMipmaps) {
     auto &gpu = vw::tests::create_gpu();
 
-    auto image = gpu.allocator.create_image_2D(
+    auto image = gpu.allocator->create_image_2D(
         vw::Width{512}, vw::Height{512}, true, vk::Format::eR8G8B8A8Unorm,
         vk::ImageUsageFlagBits::eSampled |
             vk::ImageUsageFlagBits::eTransferDst);
@@ -97,12 +97,12 @@ TEST(AllocatorTest, CreateImage2DWithMipmaps) {
 TEST(AllocatorTest, CreateDifferentImageFormats) {
     auto &gpu = vw::tests::create_gpu();
 
-    auto imageRGBA = gpu.allocator.create_image_2D(
+    auto imageRGBA = gpu.allocator->create_image_2D(
         vw::Width{128}, vw::Height{128}, false, vk::Format::eR8G8B8A8Unorm,
         vk::ImageUsageFlagBits::eSampled |
             vk::ImageUsageFlagBits::eTransferDst);
 
-    auto imageDepth = gpu.allocator.create_image_2D(
+    auto imageDepth = gpu.allocator->create_image_2D(
         vw::Width{128}, vw::Height{128}, false, vk::Format::eD32Sfloat,
         vk::ImageUsageFlagBits::eDepthStencilAttachment);
 
@@ -113,17 +113,13 @@ TEST(AllocatorTest, CreateDifferentImageFormats) {
     EXPECT_EQ(imageDepth->format(), vk::Format::eD32Sfloat);
 }
 
-TEST(AllocatorTest, MoveAllocator) {
+TEST(AllocatorTest, CreateSeparateAllocator) {
     auto &gpu = vw::tests::create_gpu();
 
-    // Create a separate allocator to test move semantics
-    // Don't move from the shared GPU allocator as it's used by other tests
-    auto allocator1 = vw::AllocatorBuilder(gpu.instance, gpu.device).build();
-    auto handle = allocator1.handle();
+    // Create a separate allocator
+    auto allocator = vw::AllocatorBuilder(gpu.instance, gpu.device).build();
 
-    vw::Allocator allocator2 = std::move(allocator1);
-
-    EXPECT_EQ(allocator2.handle(), handle);
+    EXPECT_NE(allocator->handle(), nullptr);
 }
 
 TEST(AllocatorTest, AllocatorBuilder) {
@@ -132,7 +128,7 @@ TEST(AllocatorTest, AllocatorBuilder) {
                         .setApiVersion(vw::ApiVersion::e13)
                         .build();
 
-    auto device = instance.findGpu()
+    auto device = instance->findGpu()
                       .with_queue(vk::QueueFlagBits::eGraphics)
                       .with_synchronization_2()
                       .with_dynamic_rendering()
@@ -141,9 +137,9 @@ TEST(AllocatorTest, AllocatorBuilder) {
 
     auto allocator = vw::AllocatorBuilder(instance, device).build();
 
-    EXPECT_NE(allocator.handle(), nullptr);
+    EXPECT_NE(allocator->handle(), nullptr);
 
-    auto buffer = vw::allocate_vertex_buffer<float, true>(allocator, 10);
+    auto buffer = vw::allocate_vertex_buffer<float, true>(*allocator, 10);
     EXPECT_EQ(buffer.size(), 10);
 }
 
@@ -154,7 +150,7 @@ TEST(AllocatorTest, CreateTypedBuffer) {
     constexpr VkBufferUsageFlags SimpleVertexBufferUsage =
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     using VertexBuffer = vw::Buffer<float, false, SimpleVertexBufferUsage>;
-    auto buffer = vw::create_buffer<VertexBuffer>(gpu.allocator, 100);
+    auto buffer = vw::create_buffer<VertexBuffer>(*gpu.allocator, 100);
 
     EXPECT_EQ(buffer.size(), 100);
     EXPECT_FALSE(buffer.host_visible);
@@ -164,12 +160,12 @@ TEST(AllocatorTest, CreateTypedBuffer) {
 TEST(AllocatorTest, CreateMultipleImages) {
     auto &gpu = vw::tests::create_gpu();
 
-    auto image1 = gpu.allocator.create_image_2D(
+    auto image1 = gpu.allocator->create_image_2D(
         vw::Width{256}, vw::Height{256}, false, vk::Format::eR8G8B8A8Unorm,
         vk::ImageUsageFlagBits::eSampled |
             vk::ImageUsageFlagBits::eTransferDst);
 
-    auto image2 = gpu.allocator.create_image_2D(
+    auto image2 = gpu.allocator->create_image_2D(
         vw::Width{512}, vw::Height{512}, false, vk::Format::eR8G8B8A8Unorm,
         vk::ImageUsageFlagBits::eSampled |
             vk::ImageUsageFlagBits::eTransferDst);

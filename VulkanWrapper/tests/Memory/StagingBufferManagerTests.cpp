@@ -10,7 +10,7 @@
 
 TEST(StagingBufferManagerTest, CreateStagingBufferManager) {
     auto& gpu = vw::tests::create_gpu();
-    vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
+    vw::StagingBufferManager staging_manager(*gpu.device, *gpu.allocator);
     SUCCEED();
 }
 
@@ -18,7 +18,7 @@ TEST(StagingBufferManagerTest, TransferDataToDeviceBuffer) {
     auto& gpu = vw::tests::create_gpu();
 
     // Create StagingBufferManager
-    vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
+    vw::StagingBufferManager staging_manager(*gpu.device, *gpu.allocator);
 
     // Create a device-only buffer with transfer destination and source capability
     constexpr VkBufferUsageFlags DeviceBufferUsage =
@@ -26,7 +26,7 @@ TEST(StagingBufferManagerTest, TransferDataToDeviceBuffer) {
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
         VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     using DeviceBuffer = vw::Buffer<float, false, DeviceBufferUsage>;
-    auto device_buffer = vw::create_buffer<DeviceBuffer>(gpu.allocator, 10);
+    auto device_buffer = vw::create_buffer<DeviceBuffer>(*gpu.allocator, 10);
 
     // Prepare test data
     std::vector<float> test_data = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f};
@@ -43,10 +43,10 @@ TEST(StagingBufferManagerTest, TransferDataToDeviceBuffer) {
 
     // Create a host-visible buffer to read back the data
     using HostBuffer = vw::Buffer<float, true, vw::StagingBufferUsage>;
-    auto host_buffer = vw::create_buffer<HostBuffer>(gpu.allocator, 10);
+    auto host_buffer = vw::create_buffer<HostBuffer>(*gpu.allocator, 10);
 
     // Create a command to copy from device to host
-    auto cmd_pool = vw::CommandPoolBuilder(gpu.device).build();
+    auto cmd_pool = vw::CommandPoolBuilder(*gpu.device).build();
     auto readback_cmd = cmd_pool.allocate(1)[0];
 
     std::ignore = readback_cmd.begin(vk::CommandBufferBeginInfo()
@@ -77,7 +77,7 @@ TEST(StagingBufferManagerTest, TransferDataToDeviceBuffer) {
 
 TEST(StagingBufferManagerTest, TransferIntegerData) {
     auto& gpu = vw::tests::create_gpu();
-    vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
+    vw::StagingBufferManager staging_manager(*gpu.device, *gpu.allocator);
 
     // Create a device-only buffer for integers
     constexpr VkBufferUsageFlags DeviceBufferUsage =
@@ -85,7 +85,7 @@ TEST(StagingBufferManagerTest, TransferIntegerData) {
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
         VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     using DeviceBuffer = vw::Buffer<int32_t, false, DeviceBufferUsage>;
-    auto device_buffer = vw::create_buffer<DeviceBuffer>(gpu.allocator, 20);
+    auto device_buffer = vw::create_buffer<DeviceBuffer>(*gpu.allocator, 20);
 
     // Prepare test data
     std::vector<int32_t> test_data;
@@ -105,9 +105,9 @@ TEST(StagingBufferManagerTest, TransferIntegerData) {
 
     // Read back and verify
     using HostBuffer = vw::Buffer<int32_t, true, vw::StagingBufferUsage>;
-    auto host_buffer = vw::create_buffer<HostBuffer>(gpu.allocator, 20);
+    auto host_buffer = vw::create_buffer<HostBuffer>(*gpu.allocator, 20);
 
-    auto cmd_pool = vw::CommandPoolBuilder(gpu.device).build();
+    auto cmd_pool = vw::CommandPoolBuilder(*gpu.device).build();
     auto readback_cmd = cmd_pool.allocate(1)[0];
 
     std::ignore = readback_cmd.begin(vk::CommandBufferBeginInfo()
@@ -136,7 +136,7 @@ TEST(StagingBufferManagerTest, TransferIntegerData) {
 
 TEST(StagingBufferManagerTest, TransferDoubleData) {
     auto& gpu = vw::tests::create_gpu();
-    vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
+    vw::StagingBufferManager staging_manager(*gpu.device, *gpu.allocator);
 
     // Create a device-only buffer for doubles
     constexpr VkBufferUsageFlags DeviceBufferUsage =
@@ -144,7 +144,7 @@ TEST(StagingBufferManagerTest, TransferDoubleData) {
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
         VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     using DeviceBuffer = vw::Buffer<double, false, DeviceBufferUsage>;
-    auto device_buffer = vw::create_buffer<DeviceBuffer>(gpu.allocator, 15);
+    auto device_buffer = vw::create_buffer<DeviceBuffer>(*gpu.allocator, 15);
 
     // Prepare test data
     std::vector<double> test_data;
@@ -164,9 +164,9 @@ TEST(StagingBufferManagerTest, TransferDoubleData) {
 
     // Read back and verify
     using HostBuffer = vw::Buffer<double, true, vw::StagingBufferUsage>;
-    auto host_buffer = vw::create_buffer<HostBuffer>(gpu.allocator, 15);
+    auto host_buffer = vw::create_buffer<HostBuffer>(*gpu.allocator, 15);
 
-    auto cmd_pool = vw::CommandPoolBuilder(gpu.device).build();
+    auto cmd_pool = vw::CommandPoolBuilder(*gpu.device).build();
     auto readback_cmd = cmd_pool.allocate(1)[0];
 
     std::ignore = readback_cmd.begin(vk::CommandBufferBeginInfo()
@@ -204,7 +204,7 @@ struct Vec3 {
 
 TEST(StagingBufferManagerTest, TransferSimpleStructData) {
     auto& gpu = vw::tests::create_gpu();
-    vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
+    vw::StagingBufferManager staging_manager(*gpu.device, *gpu.allocator);
 
     // Create a device-only buffer for Vec3 structures
     constexpr VkBufferUsageFlags DeviceBufferUsage =
@@ -212,7 +212,7 @@ TEST(StagingBufferManagerTest, TransferSimpleStructData) {
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
         VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     using DeviceBuffer = vw::Buffer<Vec3, false, DeviceBufferUsage>;
-    auto device_buffer = vw::create_buffer<DeviceBuffer>(gpu.allocator, 8);
+    auto device_buffer = vw::create_buffer<DeviceBuffer>(*gpu.allocator, 8);
 
     // Prepare test data
     std::vector<Vec3> test_data = {
@@ -238,9 +238,9 @@ TEST(StagingBufferManagerTest, TransferSimpleStructData) {
 
     // Read back and verify
     using HostBuffer = vw::Buffer<Vec3, true, vw::StagingBufferUsage>;
-    auto host_buffer = vw::create_buffer<HostBuffer>(gpu.allocator, 8);
+    auto host_buffer = vw::create_buffer<HostBuffer>(*gpu.allocator, 8);
 
-    auto cmd_pool = vw::CommandPoolBuilder(gpu.device).build();
+    auto cmd_pool = vw::CommandPoolBuilder(*gpu.device).build();
     auto readback_cmd = cmd_pool.allocate(1)[0];
 
     std::ignore = readback_cmd.begin(vk::CommandBufferBeginInfo()
@@ -288,7 +288,7 @@ struct alignas(16) ParticleData {
 
 TEST(StagingBufferManagerTest, TransferComplexStructData) {
     auto& gpu = vw::tests::create_gpu();
-    vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
+    vw::StagingBufferManager staging_manager(*gpu.device, *gpu.allocator);
 
     // Create a device-only buffer for ParticleData structures
     constexpr VkBufferUsageFlags DeviceBufferUsage =
@@ -296,7 +296,7 @@ TEST(StagingBufferManagerTest, TransferComplexStructData) {
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
         VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     using DeviceBuffer = vw::Buffer<ParticleData, false, DeviceBufferUsage>;
-    auto device_buffer = vw::create_buffer<DeviceBuffer>(gpu.allocator, 5);
+    auto device_buffer = vw::create_buffer<DeviceBuffer>(*gpu.allocator, 5);
 
     // Prepare test data
     std::vector<ParticleData> test_data;
@@ -325,9 +325,9 @@ TEST(StagingBufferManagerTest, TransferComplexStructData) {
 
     // Read back and verify
     using HostBuffer = vw::Buffer<ParticleData, true, vw::StagingBufferUsage>;
-    auto host_buffer = vw::create_buffer<HostBuffer>(gpu.allocator, 5);
+    auto host_buffer = vw::create_buffer<HostBuffer>(*gpu.allocator, 5);
 
-    auto cmd_pool = vw::CommandPoolBuilder(gpu.device).build();
+    auto cmd_pool = vw::CommandPoolBuilder(*gpu.device).build();
     auto readback_cmd = cmd_pool.allocate(1)[0];
 
     std::ignore = readback_cmd.begin(vk::CommandBufferBeginInfo()
@@ -356,7 +356,7 @@ TEST(StagingBufferManagerTest, TransferComplexStructData) {
 
 TEST(StagingBufferManagerTest, TransferWithOffset) {
     auto& gpu = vw::tests::create_gpu();
-    vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
+    vw::StagingBufferManager staging_manager(*gpu.device, *gpu.allocator);
 
     // Create a device-only buffer
     constexpr VkBufferUsageFlags DeviceBufferUsage =
@@ -364,7 +364,7 @@ TEST(StagingBufferManagerTest, TransferWithOffset) {
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
         VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     using DeviceBuffer = vw::Buffer<float, false, DeviceBufferUsage>;
-    auto device_buffer = vw::create_buffer<DeviceBuffer>(gpu.allocator, 20);
+    auto device_buffer = vw::create_buffer<DeviceBuffer>(*gpu.allocator, 20);
 
     // First transfer: write to beginning
     std::vector<float> first_data = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f};
@@ -387,9 +387,9 @@ TEST(StagingBufferManagerTest, TransferWithOffset) {
 
     // Read back and verify
     using HostBuffer = vw::Buffer<float, true, vw::StagingBufferUsage>;
-    auto host_buffer = vw::create_buffer<HostBuffer>(gpu.allocator, 20);
+    auto host_buffer = vw::create_buffer<HostBuffer>(*gpu.allocator, 20);
 
-    auto cmd_pool = vw::CommandPoolBuilder(gpu.device).build();
+    auto cmd_pool = vw::CommandPoolBuilder(*gpu.device).build();
     auto readback_cmd = cmd_pool.allocate(1)[0];
 
     std::ignore = readback_cmd.begin(vk::CommandBufferBeginInfo()
@@ -424,7 +424,7 @@ TEST(StagingBufferManagerTest, TransferWithOffset) {
 
 TEST(StagingBufferManagerTest, TransferMultipleSequential) {
     auto& gpu = vw::tests::create_gpu();
-    vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
+    vw::StagingBufferManager staging_manager(*gpu.device, *gpu.allocator);
 
     // Create three device buffers
     constexpr VkBufferUsageFlags DeviceBufferUsage =
@@ -432,9 +432,9 @@ TEST(StagingBufferManagerTest, TransferMultipleSequential) {
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
         VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     using DeviceBuffer = vw::Buffer<float, false, DeviceBufferUsage>;
-    auto buffer1 = vw::create_buffer<DeviceBuffer>(gpu.allocator, 5);
-    auto buffer2 = vw::create_buffer<DeviceBuffer>(gpu.allocator, 5);
-    auto buffer3 = vw::create_buffer<DeviceBuffer>(gpu.allocator, 5);
+    auto buffer1 = vw::create_buffer<DeviceBuffer>(*gpu.allocator, 5);
+    auto buffer2 = vw::create_buffer<DeviceBuffer>(*gpu.allocator, 5);
+    auto buffer3 = vw::create_buffer<DeviceBuffer>(*gpu.allocator, 5);
 
     // Prepare test data
     std::vector<float> data1 = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f};
@@ -455,11 +455,11 @@ TEST(StagingBufferManagerTest, TransferMultipleSequential) {
 
     // Read back and verify all buffers
     using HostBuffer = vw::Buffer<float, true, vw::StagingBufferUsage>;
-    auto host_buffer1 = vw::create_buffer<HostBuffer>(gpu.allocator, 5);
-    auto host_buffer2 = vw::create_buffer<HostBuffer>(gpu.allocator, 5);
-    auto host_buffer3 = vw::create_buffer<HostBuffer>(gpu.allocator, 5);
+    auto host_buffer1 = vw::create_buffer<HostBuffer>(*gpu.allocator, 5);
+    auto host_buffer2 = vw::create_buffer<HostBuffer>(*gpu.allocator, 5);
+    auto host_buffer3 = vw::create_buffer<HostBuffer>(*gpu.allocator, 5);
 
-    auto cmd_pool = vw::CommandPoolBuilder(gpu.device).build();
+    auto cmd_pool = vw::CommandPoolBuilder(*gpu.device).build();
     auto readback_cmd = cmd_pool.allocate(1)[0];
 
     std::ignore = readback_cmd.begin(vk::CommandBufferBeginInfo()
@@ -493,7 +493,7 @@ TEST(StagingBufferManagerTest, TransferMultipleSequential) {
 
 TEST(StagingBufferManagerTest, TransferLargeDataSet) {
     auto& gpu = vw::tests::create_gpu();
-    vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
+    vw::StagingBufferManager staging_manager(*gpu.device, *gpu.allocator);
 
     // Create a large device buffer (1 million floats = ~4MB)
     constexpr size_t element_count = 1'000'000;
@@ -502,7 +502,7 @@ TEST(StagingBufferManagerTest, TransferLargeDataSet) {
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
         VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     using DeviceBuffer = vw::Buffer<float, false, DeviceBufferUsage>;
-    auto device_buffer = vw::create_buffer<DeviceBuffer>(gpu.allocator, element_count);
+    auto device_buffer = vw::create_buffer<DeviceBuffer>(*gpu.allocator, element_count);
 
     // Prepare large test data
     std::vector<float> test_data;
@@ -523,9 +523,9 @@ TEST(StagingBufferManagerTest, TransferLargeDataSet) {
 
     // Read back and verify (sample verification to keep test fast)
     using HostBuffer = vw::Buffer<float, true, vw::StagingBufferUsage>;
-    auto host_buffer = vw::create_buffer<HostBuffer>(gpu.allocator, element_count);
+    auto host_buffer = vw::create_buffer<HostBuffer>(*gpu.allocator, element_count);
 
-    auto cmd_pool = vw::CommandPoolBuilder(gpu.device).build();
+    auto cmd_pool = vw::CommandPoolBuilder(*gpu.device).build();
     auto readback_cmd = cmd_pool.allocate(1)[0];
 
     std::ignore = readback_cmd.begin(vk::CommandBufferBeginInfo()

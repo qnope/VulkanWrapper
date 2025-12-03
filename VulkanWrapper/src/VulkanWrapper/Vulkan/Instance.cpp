@@ -74,7 +74,7 @@ InstanceBuilder &&InstanceBuilder::setApiVersion(ApiVersion version) && {
     return std::move(*this);
 }
 
-Instance InstanceBuilder::build() && {
+std::shared_ptr<Instance> InstanceBuilder::build() && {
     const std::vector<const char *> layers = {"VK_LAYER_KHRONOS_validation"};
 
     auto appInfo = vk::ApplicationInfo()
@@ -104,7 +104,8 @@ Instance InstanceBuilder::build() && {
 
     VULKAN_HPP_DEFAULT_DISPATCHER.init(*instance);
 
-    return {std::move(instance), m_extensions, m_version};
+    return std::shared_ptr<Instance>(
+        new Instance(std::move(instance), m_extensions, m_version));
 }
 
 } // namespace vw

@@ -21,11 +21,10 @@ class Device {
     [[nodiscard]] vk::PhysicalDevice physical_device() const;
     [[nodiscard]] vk::Device handle() const;
 
-    // Default constructor creates an empty device (for Queue initialization)
-    Device(const Device &) = default;
-    Device &operator=(const Device &) = default;
-    Device(Device &&) noexcept = default;
-    Device &operator=(Device &&) noexcept = default;
+    Device(const Device &) = delete;
+    Device &operator=(const Device &) = delete;
+    Device(Device &&) = delete;
+    Device &operator=(Device &&) = delete;
 
   private:
     Device(vk::UniqueDevice device, vk::PhysicalDevice physicalDevice,

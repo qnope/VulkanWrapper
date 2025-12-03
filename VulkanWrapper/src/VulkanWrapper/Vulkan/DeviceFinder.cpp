@@ -155,7 +155,7 @@ void DeviceFinder::remove_device_not_supporting_extension(
     std::erase_if(m_physicalDevicesInformation, need_to_remove);
 }
 
-Device DeviceFinder::build() && {
+std::shared_ptr<Device> DeviceFinder::build() && {
     if (m_physicalDevicesInformation.empty()) {
         throw DeviceNotFoundException{std::source_location::current()};
     }
@@ -232,8 +232,9 @@ Device DeviceFinder::build() && {
             device->getQueue(*information.presentationFamilyIndex, 0));
     }
 
-    return Device{std::move(device), information.device.device(),
-                  std::move(queues), presentQueue};
+    return std::shared_ptr<Device>(
+        new Device(std::move(device), information.device.device(),
+                   std::move(queues), presentQueue));
 }
 
 } // namespace vw

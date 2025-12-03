@@ -18,7 +18,7 @@ class DeviceFinder {
     DeviceFinder &&with_ray_tracing() && noexcept;
     DeviceFinder &&with_dynamic_rendering() && noexcept;
 
-    Device build() &&;
+    std::shared_ptr<Device> build() &&;
     std::optional<PhysicalDevice> get() && noexcept;
 
   private:

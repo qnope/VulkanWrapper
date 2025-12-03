@@ -11,7 +11,7 @@ GPU &create_gpu() {
         auto instance =
             InstanceBuilder().setDebug().setApiVersion(ApiVersion::e13).build();
 
-        auto device = instance.findGpu()
+        auto device = instance->findGpu()
                           .with_queue(vk::QueueFlagBits::eGraphics)
                           .with_synchronization_2()
                           .with_dynamic_rendering()

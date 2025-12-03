@@ -12,11 +12,11 @@ class Instance {
     friend class InstanceBuilder;
 
   public:
-    Instance(const Instance &) = default;
-    Instance(Instance &&) noexcept = default;
+    Instance(const Instance &) = delete;
+    Instance(Instance &&) = delete;
 
-    Instance &operator=(Instance &&) noexcept = default;
-    Instance &operator=(const Instance &) noexcept = default;
+    Instance &operator=(Instance &&) = delete;
+    Instance &operator=(const Instance &) = delete;
 
     [[nodiscard]] vk::Instance handle() const noexcept;
 
@@ -51,7 +51,7 @@ class InstanceBuilder {
     InstanceBuilder &&setDebug() &&;
     InstanceBuilder &&setApiVersion(ApiVersion version) &&;
 
-    Instance build() &&;
+    std::shared_ptr<Instance> build() &&;
 
   private:
     vk::InstanceCreateFlags m_flags;

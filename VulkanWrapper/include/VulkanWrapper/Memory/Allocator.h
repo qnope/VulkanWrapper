@@ -9,14 +9,15 @@ namespace vw {
 
 class Image;
 
-class Allocator {
-  public:
-    Allocator(const Device &device, VmaAllocator allocator);
-    Allocator(const Allocator &) = default;
-    Allocator(Allocator &&other) noexcept = default;
+class Allocator : public std::enable_shared_from_this<Allocator> {
+    friend class AllocatorBuilder;
 
-    Allocator &operator=(Allocator &&other) noexcept = default;
-    Allocator &operator=(const Allocator &) noexcept = default;
+  public:
+    Allocator(const Allocator &) = delete;
+    Allocator(Allocator &&) = delete;
+
+    Allocator &operator=(Allocator &&) = delete;
+    Allocator &operator=(const Allocator &) = delete;
 
     [[nodiscard]] VmaAllocator handle() const noexcept;
 
@@ -32,6 +33,7 @@ class Allocator {
                     vk::SharingMode sharing_mode) const;
 
   private:
+    Allocator(const Device &device, VmaAllocator allocator);
 
     struct Impl {
         const Device *device;
@@ -51,13 +53,14 @@ class Allocator {
 
 class AllocatorBuilder {
   public:
-    AllocatorBuilder(const Instance &instance, const Device &device);
+    AllocatorBuilder(std::shared_ptr<const Instance> instance,
+                     std::shared_ptr<const Device> device);
 
-    Allocator build() &&;
+    std::shared_ptr<Allocator> build() &&;
 
   private:
-    const Instance *m_instance;
-    const Device *m_device;
+    std::shared_ptr<const Instance> m_instance;
+    std::shared_ptr<const Device> m_device;
 };
 
 } // namespace vw
