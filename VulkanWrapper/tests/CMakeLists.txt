@@ -21,6 +21,7 @@ add_executable(MemoryTests
     Memory/ResourceTrackerTests.cpp
     Memory/BufferTests.cpp
     Memory/AllocatorTests.cpp
+    Memory/StagingBufferManagerTests.cpp
 )
 
 target_link_libraries(MemoryTests
