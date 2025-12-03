@@ -180,7 +180,7 @@ All core functionality depends on Device and Allocator. ResourceTracker sits at 
 
 ### Shader Compilation
 
-Use the VwCompileShader CMake function to compile shaders:
+Use the VwCompileShader CMake function to compile shaders written in GLSL:
 ```cmake
 VwCompileShader(target_name "shader.vert" "output.vert.spv")
 ```
@@ -197,5 +197,5 @@ Test utilities are in VulkanWrapper/tests/utils/create_gpu.cpp which provides a 
 3. compile (if possible) and execute the tests written to see that they fail
 4. Make the implementation
 5. Execute the tests:
-    1. If they pass: finish
-    2. If they don't: go back on 4)
+    1. If they don't pass: go back on 4)
+6. Compile everything (examples also)
