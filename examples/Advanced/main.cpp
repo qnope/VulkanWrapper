@@ -1,8 +1,5 @@
 #include "Application.h"
-#include "ColorPass.h"
-#include "SkyPass.h"
-#include "SunLightPass.h"
-#include "ZPass.h"
+#include "DeferredRenderingManager.h"
 #include <VulkanWrapper/3rd_party.h>
 #include <VulkanWrapper/Command/CommandBuffer.h>
 #include <VulkanWrapper/Command/CommandPool.h>
@@ -495,140 +492,32 @@ createUbo(const vw::Allocator &allocator) {
     return buffer;
 }
 
-std::vector<GBuffer>
-createGBuffers(std::shared_ptr<const vw::Device> device,
-               std::shared_ptr<const vw::Allocator> allocator,
-               const vw::Swapchain &swapchain) {
-    std::vector<GBuffer> framebuffers;
-
-    constexpr auto usageFlags = vk::ImageUsageFlagBits::eColorAttachment |
-                                vk::ImageUsageFlagBits::eInputAttachment |
-                                vk::ImageUsageFlagBits::eSampled |
-                                vk::ImageUsageFlagBits::eTransferSrc;
-
-    auto create_img = [&](vk::ImageUsageFlags otherFlags = {}) {
-        return allocator->create_image_2D(swapchain.width(), swapchain.height(),
-                                          false, vk::Format::eR32G32B32A32Sfloat,
-                                          usageFlags | otherFlags);
-    };
-
-    auto create_img_view = [&](auto img) {
-        return vw::ImageViewBuilder(device, img)
-            .setImageType(vk::ImageViewType::e2D)
-            .build();
-    };
-
-    for (int i = 0; i < swapchain.number_images(); ++i) {
-        auto img_color = allocator->create_image_2D(
-            swapchain.width(), swapchain.height(), false,
-            vk::Format::eR8G8B8A8Unorm, usageFlags);
-
-        auto img_position = create_img();
-        auto img_normal = create_img();
-        auto img_tangeant = create_img();
-        auto img_biTangeant = create_img();
-        auto img_light = create_img(vk::ImageUsageFlagBits::eStorage);
-
-        // Create depth buffer for this frame
-        auto img_depth = allocator->create_image_2D(
-            swapchain.width(), swapchain.height(), false,
-            vk::Format::eD32Sfloat,
-            vk::ImageUsageFlagBits::eDepthStencilAttachment |
-                vk::ImageUsageFlagBits::eSampled);
-
-        framebuffers.push_back(
-            {create_img_view(img_color), create_img_view(img_position),
-             create_img_view(img_normal), create_img_view(img_tangeant),
-             create_img_view(img_biTangeant), create_img_view(img_light),
-             create_img_view(img_depth)});
-    }
-
-    return framebuffers;
-}
 
 using namespace glm;
 
 int main() {
     try {
         App app;
-        auto descriptor_set_layout = create_zpass_descriptor_layout(app.device);
 
         auto uniform_buffer = createUbo(*app.allocator);
-
-        auto sampler = vw::SamplerBuilder(app.device).build();
-
-        auto descriptor_pool =
-            vw::DescriptorPoolBuilder(app.device, descriptor_set_layout)
-                .build();
-
-        auto descriptor_set =
-            create_zpass_descriptor_set(descriptor_pool, uniform_buffer);
 
         VulkanExample example(app.device, app.allocator, app.swapchain);
         example.prepare();
 
-        std::vector<vk::Format> gbuffer_formats = {
-            vk::Format::eR8G8B8A8Unorm,      vk::Format::eR32G32B32A32Sfloat,
-            vk::Format::eR32G32B32A32Sfloat, vk::Format::eR32G32B32A32Sfloat,
-            vk::Format::eR32G32B32A32Sfloat, vk::Format::eR32G32B32A32Sfloat};
+        // Create the deferred rendering manager - handles all pass setup
+        DeferredRenderingManager renderingManager(
+            app.device, app.allocator, app.swapchain, *example.mesh_manager,
+            uniform_buffer);
 
         auto commandPool = vw::CommandPoolBuilder(app.device).build();
         auto image_views = create_image_views(app.device, app.swapchain);
         auto commandBuffers = commandPool.allocate(image_views.size());
 
-        const auto gBuffers = createGBuffers(app.device, app.allocator,
-                                             app.swapchain);
-
         const vk::Extent2D extent(uint32_t(app.swapchain.width()),
                                   uint32_t(app.swapchain.height()));
 
-        auto zpass_pipeline = create_zpass_pipeline(
-            app.device, vk::Format::eD32Sfloat, descriptor_set_layout);
-
-        auto mesh_renderer =
-            create_renderer(app.device, gbuffer_formats, vk::Format::eD32Sfloat,
-                            *example.mesh_manager, descriptor_set_layout);
-
-        auto sunlight_descriptor_set_layout =
-            create_sun_light_pass_descriptor_layout(app.device);
-
-        auto sunlight_pool = vw::DescriptorPoolBuilder(
-                                 app.device, sunlight_descriptor_set_layout)
-                                 .build();
-
-        std::vector<vw::DescriptorSet> sunlight_descriptor_sets;
-        for (const auto &gBuffer : gBuffers) {
-            sunlight_descriptor_sets.push_back(
-                create_sun_light_pass_descriptor_set(sunlight_pool, sampler,
-                                                      gBuffer));
-        }
-
-        std::vector<vw::Rendering> renderings;
-        int i = 0;
-        for (const auto &gBuffer : gBuffers) {
-            auto depth_subpass = std::make_shared<ZPass>(
-                app.device, *example.mesh_manager, descriptor_set_layout,
-                descriptor_set, gBuffer, zpass_pipeline);
-            auto color_subpass = std::make_shared<ColorSubpass>(
-                app.device, *example.mesh_manager, descriptor_set_layout,
-                descriptor_set, gBuffer, mesh_renderer);
-
-            auto sunlight_pass = create_sun_light_pass(
-                app.device, sunlight_descriptor_set_layout,
-                sunlight_descriptor_sets[i], gBuffer.light);
-
-            auto sky_pass =
-                create_sky_pass(app.device, descriptor_set_layout,
-                                descriptor_set, gBuffer.light, gBuffer.depth);
-
-            renderings.emplace_back(vw::RenderingBuilder()
-                                        .add_subpass(depth_subpass)
-                                        .add_subpass(color_subpass)
-                                        .add_subpass(sunlight_pass)
-                                        .add_subpass(sky_pass)
-                                        .build());
-            i++;
-        }
+        const auto &gBuffers = renderingManager.gbuffers();
+        const auto &renderings = renderingManager.renderings();
 
         for (auto [gBuffer, commandBuffer, swapchainBuffer, rendering] :
              std::views::zip(gBuffers, commandBuffers, image_views,
@@ -685,16 +574,12 @@ int main() {
         auto cmd_buffer = example.mesh_manager->fill_command_buffer();
 
         app.device->graphicsQueue().enqueue_command_buffer(cmd_buffer);
-        float angle = 90.0;
 
         auto renderFinishedSemaphore = vw::SemaphoreBuilder(app.device).build();
         auto imageAvailableSemaphore = vw::SemaphoreBuilder(app.device).build();
 
         while (!app.window.is_close_requested()) {
             app.window.update();
-
-            // SkyPass::UBO ubo{UBOData{}.proj, UBOData{}.view, angle};
-            // sky_buffer->copy({&ubo, 1u}, 0);
 
             auto index =
                 app.swapchain.acquire_next_image(imageAvailableSemaphore);
@@ -707,8 +592,6 @@ int main() {
             const auto render_finished_handle =
                 renderFinishedSemaphore.handle();
 
-            // app.device->graphicsQueue().enqueue_command_buffer(
-            //   example.drawCmdBuffers[index]);
             app.device->graphicsQueue().enqueue_command_buffer(
                 commandBuffers[index]);
 

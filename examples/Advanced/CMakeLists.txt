@@ -3,6 +3,10 @@ add_executable(Main main.cpp
     RenderPassInformation.h
     ZPass.h
     ColorPass.h
+    SkyPass.h
+    SunLightPass.h
+    DeferredRenderingManager.h
+    DeferredRenderingManager.cpp
 )
 
 target_link_libraries(Main PRIVATE App)
