@@ -33,8 +33,9 @@ struct UBOData {
         proj[1][1] *= -1;
         return proj;
     }();
+    // Camera positioned to see sun (at +X, 30° elevation), cube diagonal view, and plane
     glm::mat4 view =
-        glm::lookAt(glm::vec3(4.0f, 3.5f, 4.0f), glm::vec3(0.0f, 3.0f, 0.0f),
+        glm::lookAt(glm::vec3(-4.0f, 5.0f, 5.0f), glm::vec3(3.0f, 1.5f, 0.0f),
                     glm::vec3(0.0f, 1.0f, 0.0f));
 };
 

@@ -7,6 +7,10 @@ layout(set = 0, binding = 0, std140) uniform Block {
     mat4 view;
 };
 
+layout(push_constant) uniform PushConstants {
+    vec4 sunDirection; // xyz = direction to sun, w = unused
+} pushConstants;
+
 layout(location = 0) out vec4 out_color;
 
 vec3 get_world_pos(vec4 clipPosition)
@@ -48,7 +52,6 @@ const float ZenithH = radiusAtmo - radiusEarth;
 const vec3 origin_view = vec3(0, radiusEarth + 1, 0);
 const float originH = origin_view.y - radiusEarth;
 const int STEPS = 8;
-const float angle = 30.0;
 
 float rayleigh_phase(vec3 view_dir, vec3 sun_dir) {
     const float mu = dot(view_dir, sun_dir);
@@ -147,7 +150,7 @@ vec3 direct_light_from_sun(vec3 direction, vec3 out_atmosphere, vec3 sun_dir) {
 
 void main() {
     const vec3 view_direction = get_view_direction();
-    const vec3 sun_dir = normalize(vec3(cos(radians(angle)), sin(radians(angle)), 0.0));
+    const vec3 sun_dir = normalize(pushConstants.sunDirection.xyz);
 
     const float distance_out =
         intersectRaySphereFromInside(origin_view, view_direction, radiusAtmo);

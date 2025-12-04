@@ -114,11 +114,12 @@ void DeferredRenderingManager::create_renderings(
 
         auto sunlight_pass =
             create_sun_light_pass(m_device, m_sunlight_descriptor_layout,
-                                  m_sunlight_descriptor_sets[i], gBuffer.light);
+                                  m_sunlight_descriptor_sets[i], gBuffer.light,
+                                  &m_sun_angle);
 
         auto sky_pass = create_sky_pass(m_device, m_uniform_descriptor_layout,
                                         *m_uniform_descriptor_set, gBuffer.light,
-                                        gBuffer.depth);
+                                        gBuffer.depth, &m_sun_angle);
 
         m_renderings.emplace_back(vw::RenderingBuilder()
                                       .add_subpass(depth_subpass)

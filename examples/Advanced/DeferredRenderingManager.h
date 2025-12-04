@@ -1,11 +1,12 @@
 #pragma once
 
-#include "RenderPassInformation.h"
-#include "ZPass.h"
 #include "ColorPass.h"
+#include "RenderPassInformation.h"
 #include "SkyPass.h"
 #include "SunLightPass.h"
-
+#include "ZPass.h"
+#include <memory>
+#include <vector>
 #include <VulkanWrapper/Descriptors/DescriptorPool.h>
 #include <VulkanWrapper/Descriptors/DescriptorSetLayout.h>
 #include <VulkanWrapper/Image/Sampler.h>
@@ -15,9 +16,6 @@
 #include <VulkanWrapper/RenderPass/Rendering.h>
 #include <VulkanWrapper/Vulkan/Device.h>
 #include <VulkanWrapper/Vulkan/Swapchain.h>
-
-#include <memory>
-#include <vector>
 
 class DeferredRenderingManager {
   public:
@@ -36,22 +34,22 @@ class DeferredRenderingManager {
     DeferredRenderingManager(
         std::shared_ptr<vw::Device> device,
         std::shared_ptr<vw::Allocator> allocator,
-        const vw::Swapchain &swapchain,
-        vw::Model::MeshManager &mesh_manager,
+        const vw::Swapchain &swapchain, vw::Model::MeshManager &mesh_manager,
         const vw::Buffer<UBOData, true, vw::UniformBufferUsage> &uniform_buffer,
         Config config);
 
     DeferredRenderingManager(
         std::shared_ptr<vw::Device> device,
         std::shared_ptr<vw::Allocator> allocator,
-        const vw::Swapchain &swapchain,
-        vw::Model::MeshManager &mesh_manager,
+        const vw::Swapchain &swapchain, vw::Model::MeshManager &mesh_manager,
         const vw::Buffer<UBOData, true, vw::UniformBufferUsage> &uniform_buffer)
         : DeferredRenderingManager(std::move(device), std::move(allocator),
                                    swapchain, mesh_manager, uniform_buffer,
                                    Config{}) {}
 
-    const std::vector<vw::Rendering> &renderings() const { return m_renderings; }
+    const std::vector<vw::Rendering> &renderings() const {
+        return m_renderings;
+    }
 
     const std::vector<GBuffer> &gbuffers() const { return m_gbuffers; }
 
@@ -63,10 +61,14 @@ class DeferredRenderingManager {
         return *m_uniform_descriptor_set;
     }
 
+    void set_sun_angle(float angle_degrees) { m_sun_angle = angle_degrees; }
+    float sun_angle() const { return m_sun_angle; }
+
   private:
     void create_gbuffers(const vw::Swapchain &swapchain);
     void create_uniform_descriptors(
-        const vw::Buffer<UBOData, true, vw::UniformBufferUsage> &uniform_buffer);
+        const vw::Buffer<UBOData, true, vw::UniformBufferUsage>
+            &uniform_buffer);
     void create_zpass_resources();
     void create_color_pass_resources(vw::Model::MeshManager &mesh_manager);
     void create_sun_light_pass_resources();
@@ -76,6 +78,9 @@ class DeferredRenderingManager {
     std::shared_ptr<vw::Device> m_device;
     std::shared_ptr<vw::Allocator> m_allocator;
     Config m_config;
+
+    // Sun angle in degrees above horizon (90 = zenith)
+    float m_sun_angle = 20.0f;
 
     // GBuffers (one per swapchain image)
     std::vector<GBuffer> m_gbuffers;

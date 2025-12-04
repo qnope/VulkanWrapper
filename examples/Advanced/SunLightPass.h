@@ -9,6 +9,10 @@
 #include "VulkanWrapper/Image/CombinedImage.h"
 #include "VulkanWrapper/Image/Sampler.h"
 
+#include <glm/glm.hpp>
+#include <glm/trigonometric.hpp>
+#include <cmath>
+
 inline std::shared_ptr<vw::DescriptorSetLayout>
 create_sun_light_pass_descriptor_layout(std::shared_ptr<const vw::Device> device) {
     return vw::DescriptorSetLayoutBuilder(device)
@@ -48,13 +52,19 @@ class SunLightPass : public vw::ScreenSpacePass {
     SunLightPass(std::shared_ptr<const vw::Device> device,
                  std::shared_ptr<const vw::Pipeline> pipeline,
                  vw::DescriptorSet descriptor_set,
-                 std::shared_ptr<const vw::ImageView> output_image)
+                 std::shared_ptr<const vw::ImageView> output_image,
+                 const float* sun_angle)
         : ScreenSpacePass(std::move(device), std::move(pipeline),
-                          std::move(descriptor_set), std::move(output_image)) {}
+                          std::move(descriptor_set), std::move(output_image)),
+          m_sun_angle(sun_angle) {}
 
     void execute(vk::CommandBuffer cmd_buffer) const noexcept override {
+        // Compute sun direction from angle (direction FROM sun TO surface)
+        // This is the negative of the direction TO the sun
+        float angle_rad = glm::radians(*m_sun_angle);
         PushConstants constants{
-            .sunDirection = glm::vec4(0.0f, -1.0f, -0.5f, 0.0f),
+            .sunDirection = glm::vec4(-std::cos(angle_rad), -std::sin(angle_rad),
+                                      0.0f, 0.0f),
             .sunColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)};
 
         cmd_buffer.pushConstants(m_pipeline->layout().handle(),
@@ -63,13 +73,17 @@ class SunLightPass : public vw::ScreenSpacePass {
 
         ScreenSpacePass::execute(cmd_buffer);
     }
+
+  private:
+    const float* m_sun_angle; // degrees above horizon (90 = zenith)
 };
 
-inline std::shared_ptr<vw::ScreenSpacePass> create_sun_light_pass(
+inline std::shared_ptr<SunLightPass> create_sun_light_pass(
     std::shared_ptr<const vw::Device> device,
     std::shared_ptr<const vw::DescriptorSetLayout> descriptor_set_layout,
     vw::DescriptorSet descriptor_set,
-    std::shared_ptr<const vw::ImageView> output_image) {
+    std::shared_ptr<const vw::ImageView> output_image,
+    const float* sun_angle) {
 
     auto vertex_shader = vw::ShaderModule::create_from_spirv_file(
         device, "Shaders/fullscreen.spv");
@@ -86,5 +100,5 @@ inline std::shared_ptr<vw::ScreenSpacePass> create_sun_light_pass(
         vk::CompareOp::eAlways, push_constants);
 
     return std::make_shared<SunLightPass>(device, pipeline, descriptor_set,
-                                          output_image);
+                                          output_image, sun_angle);
 }
