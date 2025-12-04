@@ -113,11 +113,11 @@ class VulkanExample {
        writing to
     */
     void createStorageImage() {
-        storageImage.image =
-            allocator->create_image_2D(swapchain.width(), swapchain.height(),
-                                       false, vk::Format::eR32G32B32A32Sfloat,
-                                       vk::ImageUsageFlagBits::eStorage |
-                                           vk::ImageUsageFlagBits::eTransferSrc);
+        storageImage.image = allocator->create_image_2D(
+            swapchain.width(), swapchain.height(), false,
+            vk::Format::eR32G32B32A32Sfloat,
+            vk::ImageUsageFlagBits::eStorage |
+                vk::ImageUsageFlagBits::eTransferSrc);
 
         storageImage.view = vw::ImageViewBuilder(device, storageImage.image)
                                 .setImageType(vk::ImageViewType::e2D)
@@ -350,8 +350,8 @@ class VulkanExample {
     */
     void createUniformBuffer() {
         uniformBuffer =
-            vw::create_buffer<UniformData, true, vw::UniformBufferUsage>(*allocator,
-                1);
+            vw::create_buffer<UniformData, true, vw::UniformBufferUsage>(
+                *allocator, 1);
         uniformBuffer->copy(std::span(&uniformData, 1), 0);
     }
 
@@ -377,7 +377,8 @@ class VulkanExample {
         mesh_manager->read_file("../../../Models/cube.obj");
         for (size_t i = planeCount; i < mesh_manager->meshes().size(); ++i) {
             // Cube floating at (0, 2, 0)
-            glm::mat4 transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 2.0f, 0.0f));
+            glm::mat4 transform =
+                glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 2.0f, 0.0f));
             mesh_manager->meshes()[i].set_transform(transform);
         }
 
@@ -509,7 +510,6 @@ createUbo(const vw::Allocator &allocator) {
     return buffer;
 }
 
-
 using namespace glm;
 
 int main() {
@@ -596,28 +596,29 @@ int main() {
             if (!imageSaved) {
                 app.device->wait_idle();
 
-                auto saveCommandPool = vw::CommandPoolBuilder(app.device).build();
+                auto saveCommandPool =
+                    vw::CommandPoolBuilder(app.device).build();
                 auto saveCmd = saveCommandPool.allocate(1)[0];
 
-                std::ignore = saveCmd.begin(vk::CommandBufferBeginInfo()
-                    .setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+                std::ignore =
+                    saveCmd.begin(vk::CommandBufferBeginInfo().setFlags(
+                        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
                 vw::Transfer saveTransfer;
 
-                // Track the swapchain image's current state (ePresentSrcKHR after rendering)
+                // Track the swapchain image's current state (ePresentSrcKHR
+                // after rendering)
                 saveTransfer.resourceTracker().track(vw::Barrier::ImageState{
                     .image = app.swapchain.images()[index]->handle(),
-                    .subresourceRange = app.swapchain.images()[index]->full_range(),
+                    .subresourceRange =
+                        app.swapchain.images()[index]->full_range(),
                     .layout = vk::ImageLayout::ePresentSrcKHR,
                     .stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
                     .access = vk::AccessFlagBits2::eColorAttachmentWrite});
 
                 saveTransfer.saveToFile(
-                    saveCmd,
-                    *app.allocator,
-                    app.device->graphicsQueue(),
-                    app.swapchain.images()[index],
-                    "screenshot.png");
+                    saveCmd, *app.allocator, app.device->graphicsQueue(),
+                    app.swapchain.images()[index], "screenshot.png");
 
                 std::cout << "Screenshot saved to screenshot.png\n";
                 imageSaved = true;
