@@ -45,7 +45,7 @@ TEST(UniformBufferAllocatorTest, AllocateAndCopyFloat) {
     
     const auto& buffer = uboAllocator.buffer_ref();
     // Read only sizeof(float) bytes, not the aligned size
-    auto data = buffer.as_vector(static_cast<std::size_t>(chunk->offset), static_cast<std::size_t>(sizeof(float)));
+    auto data = buffer->as_vector(static_cast<std::size_t>(chunk->offset), static_cast<std::size_t>(sizeof(float)));
     
     ASSERT_EQ(data.size(), sizeof(float));
     float loadedValue;
@@ -86,9 +86,9 @@ TEST(UniformBufferAllocatorTest, AllocateSameStructureMultipleTimes) {
     // Retrieve and verify each one
     const auto& buffer = uboAllocator.buffer_ref();
     
-    auto data1 = buffer.as_vector(static_cast<std::size_t>(chunk1->offset), sizeof(TestStruct));
-    auto data2 = buffer.as_vector(static_cast<std::size_t>(chunk2->offset), sizeof(TestStruct));
-    auto data3 = buffer.as_vector(static_cast<std::size_t>(chunk3->offset), sizeof(TestStruct));
+    auto data1 = buffer->as_vector(static_cast<std::size_t>(chunk1->offset), sizeof(TestStruct));
+    auto data2 = buffer->as_vector(static_cast<std::size_t>(chunk2->offset), sizeof(TestStruct));
+    auto data3 = buffer->as_vector(static_cast<std::size_t>(chunk3->offset), sizeof(TestStruct));
     
     ASSERT_EQ(data1.size(), sizeof(TestStruct));
     ASSERT_EQ(data2.size(), sizeof(TestStruct));
@@ -162,9 +162,9 @@ TEST(UniformBufferAllocatorTest, AllocateDifferentStructures) {
     // Retrieve and verify each one
     const auto& buffer = uboAllocator.buffer_ref();
     
-    auto data1 = buffer.as_vector(static_cast<std::size_t>(chunk1->offset), sizeof(SmallStruct));
-    auto data2 = buffer.as_vector(static_cast<std::size_t>(chunk2->offset), sizeof(MediumStruct));
-    auto data3 = buffer.as_vector(static_cast<std::size_t>(chunk3->offset), sizeof(LargeStruct));
+    auto data1 = buffer->as_vector(static_cast<std::size_t>(chunk1->offset), sizeof(SmallStruct));
+    auto data2 = buffer->as_vector(static_cast<std::size_t>(chunk2->offset), sizeof(MediumStruct));
+    auto data3 = buffer->as_vector(static_cast<std::size_t>(chunk3->offset), sizeof(LargeStruct));
     
     ASSERT_EQ(data1.size(), sizeof(SmallStruct));
     ASSERT_EQ(data2.size(), sizeof(MediumStruct));
@@ -221,7 +221,7 @@ TEST(UniformBufferAllocatorTest, AllocateSameStructureWithVector) {
     
     // Retrieve using as_vector
     const auto& buffer = uboAllocator.buffer_ref();
-    auto data = buffer.as_vector(static_cast<std::size_t>(chunk->offset), count * sizeof(Vec3));
+    auto data = buffer->as_vector(static_cast<std::size_t>(chunk->offset), count * sizeof(Vec3));
     
     ASSERT_EQ(data.size(), count * sizeof(Vec3));
     

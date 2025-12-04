@@ -32,10 +32,10 @@ class Window {
                                              vk::SurfaceKHR surface) const;
 
   private:
-    Window(const SDL_Initializer &initializer, std::string_view name,
+    Window(std::shared_ptr<const SDL_Initializer> initializer, std::string_view name,
            Width width, Height height);
 
-    const SDL_Initializer *m_initializer;
+    std::shared_ptr<const SDL_Initializer> m_initializer;
     std::unique_ptr<SDL_Window, WindowDeleter> m_window;
     bool m_closeRequested = false;
     Width m_width;
@@ -44,8 +44,7 @@ class Window {
 
 class WindowBuilder {
   public:
-    WindowBuilder(const SDL_Initializer &initializer);
-    WindowBuilder(SDL_Initializer &&initializer) = delete;
+    WindowBuilder(std::shared_ptr<const SDL_Initializer> initializer);
 
     WindowBuilder &&with_title(std::string_view name) &&;
     WindowBuilder &&sized(Width width, Height height) &&;
@@ -53,7 +52,7 @@ class WindowBuilder {
     Window build() &&;
 
   private:
-    const SDL_Initializer *initializer;
+    std::shared_ptr<const SDL_Initializer> initializer;
     std::string_view name = "3D Renderer";
     Width width{};
     Height height{};

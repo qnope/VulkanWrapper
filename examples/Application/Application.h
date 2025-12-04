@@ -16,7 +16,7 @@ class App {
     App() = default;
 
   public:
-    vw::SDL_Initializer initializer;
+    std::shared_ptr<vw::SDL_Initializer> initializer = std::make_shared<vw::SDL_Initializer>();
     vw::Window window = vw::WindowBuilder(initializer)
                             .with_title("Vulkan Wrapper")
                             .sized(vw::Width(800), vw::Height(600))

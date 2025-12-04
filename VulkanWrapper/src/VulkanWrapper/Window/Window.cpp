@@ -11,9 +11,9 @@ void Window::WindowDeleter::operator()(SDL_Window *window) const noexcept {
     SDL_DestroyWindow(window);
 };
 
-Window::Window(const SDL_Initializer &initializer, std::string_view name,
+Window::Window(std::shared_ptr<const SDL_Initializer> initializer, std::string_view name,
                Width width, Height height)
-    : m_initializer{&initializer}
+    : m_initializer{std::move(initializer)}
     , m_width{width}
     , m_height{height} {
     auto *window = SDL_CreateWindow(name.data(), int(width), int(height),
@@ -64,8 +64,8 @@ void Window::update() noexcept {
     }
 }
 
-WindowBuilder::WindowBuilder(const SDL_Initializer &initializer)
-    : initializer{&initializer} {}
+WindowBuilder::WindowBuilder(std::shared_ptr<const SDL_Initializer> initializer)
+    : initializer{std::move(initializer)} {}
 
 WindowBuilder &&WindowBuilder::with_title(std::string_view name) && {
     this->name = name;
@@ -79,7 +79,7 @@ WindowBuilder &&WindowBuilder::sized(Width width, Height height) && {
 }
 
 Window WindowBuilder::build() && {
-    return Window{*initializer, name, width, height};
+    return Window{std::move(initializer), name, width, height};
 }
 
 } // namespace vw

@@ -14,7 +14,7 @@ class MaterialFactory {
         const Internal::MaterialInfo &info)>;
 
   public:
-    MaterialFactory(MaterialManagerMap &material_manager_map) noexcept;
+    MaterialFactory(std::shared_ptr<MaterialManagerMap> material_manager_map) noexcept;
     [[nodiscard]] Material
     allocate_material(const Internal::MaterialInfo &) const noexcept;
 
@@ -33,7 +33,7 @@ class MaterialFactory {
     }
 
   private:
-    MaterialManagerMap *m_material_manager_map;
+    std::shared_ptr<MaterialManagerMap> m_material_manager_map;
     std::map<MaterialPriority, Function, std::greater<>> m_factories;
 };
 } // namespace vw::Model::Material

@@ -19,7 +19,7 @@ struct UniformBufferChunk {
     vk::DeviceSize size{};    // Size of the chunk in bytes
     uint32_t index{};         // Index of this allocation (for tracking)
 
-    Buffer<std::byte, true, UniformBufferUsage>* buffer_ref{}; // Reference to the underlying buffer
+    std::shared_ptr<Buffer<std::byte, true, UniformBufferUsage>> buffer_ref{}; // Reference to the underlying buffer
 
     /**
      * Returns descriptor buffer info for binding this chunk.
@@ -33,7 +33,7 @@ struct UniformBufferChunk {
         if (!buffer_ref) {
             throw std::runtime_error("Buffer reference is null");
         }
-        BufferBase* base_ptr = static_cast<BufferBase*>(buffer_ref);
+        BufferBase* base_ptr = static_cast<BufferBase*>(buffer_ref.get());
         base_ptr->generic_copy(&value, sizeof(T), offset);
     }
 
@@ -41,7 +41,7 @@ struct UniformBufferChunk {
         if (!buffer_ref) {
             throw std::runtime_error("Buffer reference is null");
         }
-        static_cast<BufferBase*>(buffer_ref)->generic_copy(data.data(), data.size_bytes(), offset);
+        static_cast<BufferBase*>(buffer_ref.get())->generic_copy(data.data(), data.size_bytes(), offset);
     }
 };
 
@@ -78,7 +78,7 @@ class UniformBufferAllocator {
     /**
      * Returns the underlying buffer handle.
      */
-    [[nodiscard]] vk::Buffer buffer() const { return m_buffer.handle(); }
+    [[nodiscard]] vk::Buffer buffer() const { return m_buffer->handle(); }
 
     /**
      * Returns the total size of the buffer.
@@ -100,7 +100,7 @@ class UniformBufferAllocator {
      */
     void clear();
 
-    [[nodiscard]] const Buffer<std::byte, true, UniformBufferUsage>& buffer_ref() const { return m_buffer; }
+    [[nodiscard]] std::shared_ptr<Buffer<std::byte, true, UniformBufferUsage>> buffer_ref() const { return m_buffer; }
 
   private:
     struct Allocation {
@@ -109,7 +109,7 @@ class UniformBufferAllocator {
         bool free{};
     };
 
-    Buffer<std::byte, true, UniformBufferUsage> m_buffer;
+    std::shared_ptr<Buffer<std::byte, true, UniformBufferUsage>> m_buffer;
     vk::DeviceSize m_totalSize;
     vk::DeviceSize m_minAlignment;
     std::vector<Allocation> m_allocations;
@@ -157,11 +157,11 @@ std::optional<UniformBufferChunk<T>> UniformBufferAllocator::allocate(size_t cou
     }
 
     return UniformBufferChunk<T>{
-        .handle = m_buffer.handle(),
+        .handle = m_buffer->handle(),
         .offset = chunkOffset,
         .size = alignedSize,
         .index = index,
-        .buffer_ref = &m_buffer
+        .buffer_ref = m_buffer
     };
 }
 

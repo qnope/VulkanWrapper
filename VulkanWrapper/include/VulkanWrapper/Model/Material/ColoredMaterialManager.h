@@ -17,12 +17,12 @@ class ConcreteMaterialManager<&colored_material_tag> : public MaterialManager {
     ConcreteMaterialManager<&colored_material_tag>(
         std::shared_ptr<const Device> device,
         std::shared_ptr<const Allocator> allocator,
-        StagingBufferManager &staging_buffer_manager) noexcept;
+        std::shared_ptr<StagingBufferManager> staging_buffer_manager) noexcept;
 
     Material allocate(const glm::vec4 &color) noexcept;
 
   private:
-    StagingBufferManager *m_staging_buffer_manager;
+    std::shared_ptr<StagingBufferManager> m_staging_buffer_manager;
     BufferList<glm::vec4, false, UniformBufferUsage> m_buffer;
 };
 

@@ -69,13 +69,13 @@ void import_model(const std::filesystem::path &path,
             real_material[mesh.material_index], mesh.indices.size(),
             vertex_offset, first_index, mesh.vertices.size());
 
-        mesh_manager.m_staging_buffer_manager.fill_buffer<Vertex3D>(
+        mesh_manager.m_staging_buffer_manager->fill_buffer<Vertex3D>(
             mesh.vertices, *vertex_buffer, vertex_offset);
 
-        mesh_manager.m_staging_buffer_manager.fill_buffer<FullVertex3D>(
+        mesh_manager.m_staging_buffer_manager->fill_buffer<FullVertex3D>(
             mesh.full_vertices, *full_vertex_buffer, vertex_offset);
 
-        mesh_manager.m_staging_buffer_manager.fill_buffer<uint32_t>(
+        mesh_manager.m_staging_buffer_manager->fill_buffer<uint32_t>(
             mesh.indices, *index_buffer, first_index);
     }
 }

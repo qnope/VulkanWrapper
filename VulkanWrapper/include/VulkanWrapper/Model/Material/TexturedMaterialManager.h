@@ -14,12 +14,12 @@ template <>
 class ConcreteMaterialManager<&textured_material_tag> : public MaterialManager {
   public:
     ConcreteMaterialManager(std::shared_ptr<const Device> device,
-                            StagingBufferManager &staging_buffer) noexcept;
+                            std::shared_ptr<StagingBufferManager> staging_buffer) noexcept;
 
     Material allocate(const std::filesystem::path &path);
 
   private:
-    StagingBufferManager *m_staging_buffer;
+    std::shared_ptr<StagingBufferManager> m_staging_buffer;
     std::vector<CombinedImage> m_combined_images;
 };
 

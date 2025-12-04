@@ -7,7 +7,7 @@ UniformBufferAllocator::UniformBufferAllocator(
     std::shared_ptr<const Allocator> allocator,
     vk::DeviceSize totalSize,
     vk::DeviceSize minAlignment)
-    : m_buffer(create_buffer<std::byte, true, UniformBufferUsage>(*allocator, totalSize)),
+    : m_buffer(std::make_shared<Buffer<std::byte, true, UniformBufferUsage>>(create_buffer<std::byte, true, UniformBufferUsage>(*allocator, totalSize))),
       m_totalSize(totalSize),
       m_minAlignment(minAlignment),
       m_nextIndex(0) {

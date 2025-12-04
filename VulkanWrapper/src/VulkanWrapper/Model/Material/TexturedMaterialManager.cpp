@@ -17,9 +17,9 @@ static vw::DescriptorPool create_pool(std::shared_ptr<const Device> device) {
 
 ConcreteMaterialManager<&textured_material_tag>::ConcreteMaterialManager(
     std::shared_ptr<const Device> device,
-    StagingBufferManager &staging_buffer) noexcept
+    std::shared_ptr<StagingBufferManager> staging_buffer) noexcept
     : MaterialManager{create_pool(device)}
-    , m_staging_buffer{&staging_buffer} {}
+    , m_staging_buffer{std::move(staging_buffer)} {}
 
 Material ConcreteMaterialManager<&textured_material_tag>::allocate(
     const std::filesystem::path &path) {
@@ -32,7 +32,7 @@ Material ConcreteMaterialManager<&textured_material_tag>::allocate(
 
     auto set = allocate_set(set_allocator);
     m_combined_images.push_back(std::move(image));
-    return {.material_type = &textured_material_tag, .descriptor_set = set};
+    return {.material_type = std::shared_ptr<const MaterialTypeTag>(&textured_material_tag, [](const MaterialTypeTag*){}), .descriptor_set = set};
 }
 
 std::optional<Material>

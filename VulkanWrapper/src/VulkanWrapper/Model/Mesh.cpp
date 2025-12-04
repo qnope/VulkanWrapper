@@ -3,14 +3,14 @@
 #include "VulkanWrapper/Pipeline/PipelineLayout.h"
 
 namespace vw ::Model {
-Mesh::Mesh(const Vertex3DBuffer *vertex_buffer,
-           const FullVertex3DBuffer *full_vertex_buffer,
-           const IndexBuffer *index_buffer, Material::Material material,
+Mesh::Mesh(std::shared_ptr<const Vertex3DBuffer> vertex_buffer,
+           std::shared_ptr<const FullVertex3DBuffer> full_vertex_buffer,
+           std::shared_ptr<const IndexBuffer> index_buffer, Material::Material material,
            uint32_t indice_count, int vertex_offset, int first_index,
            int vertices_count)
-    : m_vertex_buffer{vertex_buffer}
-    , m_full_vertex_buffer{full_vertex_buffer}
-    , m_index_buffer{index_buffer}
+    : m_vertex_buffer{std::move(vertex_buffer)}
+    , m_full_vertex_buffer{std::move(full_vertex_buffer)}
+    , m_index_buffer{std::move(index_buffer)}
     , m_material{material}
     , m_indice_count{indice_count}
     , m_vertex_offset{vertex_offset}

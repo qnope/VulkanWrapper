@@ -6,7 +6,7 @@
 
 namespace vw::Model::Material {
 struct Material {
-    const MaterialTypeTag *material_type;
+    std::shared_ptr<const MaterialTypeTag> material_type;
     DescriptorSet descriptor_set;
 };
 } // namespace vw::Model::Material

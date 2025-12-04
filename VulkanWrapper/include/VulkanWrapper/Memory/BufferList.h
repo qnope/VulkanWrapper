@@ -9,7 +9,7 @@ template <typename T, bool HostVisible, VkBufferUsageFlags flags>
 class BufferList {
   public:
     struct BufferInfo {
-        Buffer<T, HostVisible, flags> *buffer;
+        std::shared_ptr<Buffer<T, HostVisible, flags>> buffer;
         std::size_t offset;
     };
 
@@ -18,30 +18,29 @@ class BufferList {
 
     BufferInfo create_buffer(std::size_t size) {
         constexpr std::size_t buffer_size = 1 << 24;
-        auto has_enough_place = [size](auto &buffer) {
-            return buffer->buffer.size() >= size + buffer->offset;
+        auto has_enough_place = [size](auto &buffer_and_offset) {
+            return buffer_and_offset.buffer->size() >= size + buffer_and_offset.offset;
         };
         auto it = std::ranges::find_if(m_buffer_list, has_enough_place);
         if (it != m_buffer_list.end()) {
-            BufferInfo result{&it->get()->buffer, it->get()->offset};
-            it->get()->offset += size;
+            BufferInfo result{it->buffer, it->offset};
+            it->offset += size;
             return result;
         }
-        auto buffer = create_buffer<T, HostVisible, flags>(
-            *m_allocator, std::max(buffer_size, size));
-        auto &[bufferRef, offset] = *m_buffer_list.emplace_back(
-            std::make_unique<BufferAndOffset>(std::move(buffer), size));
-        return {&bufferRef, 0};
+        auto buffer = std::make_shared<Buffer<T, HostVisible, flags>>(
+            vw::create_buffer<T, HostVisible, flags>(*m_allocator, std::max(buffer_size, size)));
+        auto &buffer_and_offset = m_buffer_list.emplace_back(BufferAndOffset{buffer, size});
+        return {buffer_and_offset.buffer, 0};
     }
 
   private:
     struct BufferAndOffset {
-        Buffer<T, HostVisible, flags> buffer;
+        std::shared_ptr<Buffer<T, HostVisible, flags>> buffer;
         std::size_t offset;
     };
 
     std::shared_ptr<const Allocator> m_allocator;
-    std::vector<std::unique_ptr<BufferAndOffset>> m_buffer_list;
+    std::vector<BufferAndOffset> m_buffer_list;
 };
 
 using IndexBufferList = BufferList<uint32_t, false, IndexBufferUsage>;

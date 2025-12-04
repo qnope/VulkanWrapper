@@ -19,9 +19,9 @@ static DescriptorPool create_pool(std::shared_ptr<const Device> device) {
 ConcreteMaterialManager<&colored_material_tag>::ConcreteMaterialManager(
     std::shared_ptr<const Device> device,
     std::shared_ptr<const Allocator> allocator,
-    StagingBufferManager &staging_buffer_manager) noexcept
+    std::shared_ptr<StagingBufferManager> staging_buffer_manager) noexcept
     : MaterialManager(create_pool(device))
-    , m_staging_buffer_manager{&staging_buffer_manager}
+    , m_staging_buffer_manager{std::move(staging_buffer_manager)}
     , m_buffer{allocator} {}
 
 Material ConcreteMaterialManager<&colored_material_tag>::allocate(
@@ -36,7 +36,7 @@ Material ConcreteMaterialManager<&colored_material_tag>::allocate(
                                  vk::PipelineStageFlagBits2::eFragmentShader,
                                  vk::AccessFlagBits2::eUniformRead);
     auto set = allocate_set(allocator);
-    return {.material_type = &colored_material_tag, .descriptor_set = set};
+    return {.material_type = std::shared_ptr<const MaterialTypeTag>(&colored_material_tag, [](const MaterialTypeTag*){}), .descriptor_set = set};
 }
 
 std::optional<Material>

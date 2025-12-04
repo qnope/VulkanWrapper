@@ -11,9 +11,9 @@ using FullVertex3DBuffer = Buffer<FullVertex3D, false, VertexBufferUsage>;
 
 class Mesh {
   public:
-    Mesh(const Vertex3DBuffer *vertex_buffer,
-         const FullVertex3DBuffer *full_vertex_buffer,
-         const IndexBuffer *index_buffer,
+    Mesh(std::shared_ptr<const Vertex3DBuffer> vertex_buffer,
+         std::shared_ptr<const FullVertex3DBuffer> full_vertex_buffer,
+         std::shared_ptr<const IndexBuffer> index_buffer,
          Material::Material descriptor_material, uint32_t indice_count,
          int vertex_offset, int first_index, int vertices_count);
 
@@ -40,9 +40,9 @@ class Mesh {
     }
 
   private:
-    const Vertex3DBuffer *m_vertex_buffer;
-    const FullVertex3DBuffer *m_full_vertex_buffer;
-    const IndexBuffer *m_index_buffer;
+    std::shared_ptr<const Vertex3DBuffer> m_vertex_buffer;
+    std::shared_ptr<const FullVertex3DBuffer> m_full_vertex_buffer;
+    std::shared_ptr<const IndexBuffer> m_index_buffer;
     Material::Material m_material;
 
     uint32_t m_indice_count;

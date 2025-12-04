@@ -4,8 +4,8 @@
 
 namespace vw::Model::Material {
 MaterialFactory::MaterialFactory(
-    MaterialManagerMap &material_manager_map) noexcept
-    : m_material_manager_map{&material_manager_map} {}
+    std::shared_ptr<MaterialManagerMap> material_manager_map) noexcept
+    : m_material_manager_map{std::move(material_manager_map)} {}
 
 Material MaterialFactory::allocate_material(
     const Internal::MaterialInfo &info) const noexcept {
