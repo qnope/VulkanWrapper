@@ -553,6 +553,8 @@ int main() {
         auto renderFinishedSemaphore = vw::SemaphoreBuilder(app.device).build();
         auto imageAvailableSemaphore = vw::SemaphoreBuilder(app.device).build();
 
+        bool imageSaved = false;
+
         while (!app.window.is_close_requested()) {
             app.window.update();
 
@@ -573,6 +575,37 @@ int main() {
             app.device->graphicsQueue().submit({&waitStage, 1},
                                                {&image_available_handle, 1},
                                                {&render_finished_handle, 1});
+
+            // Save the first frame to disk
+            if (!imageSaved) {
+                app.device->wait_idle();
+
+                auto saveCommandPool = vw::CommandPoolBuilder(app.device).build();
+                auto saveCmd = saveCommandPool.allocate(1)[0];
+
+                std::ignore = saveCmd.begin(vk::CommandBufferBeginInfo()
+                    .setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+
+                vw::Transfer saveTransfer;
+
+                // Track the swapchain image's current state (ePresentSrcKHR after rendering)
+                saveTransfer.resourceTracker().track(vw::Barrier::ImageState{
+                    .image = app.swapchain.images()[index]->handle(),
+                    .subresourceRange = app.swapchain.images()[index]->full_range(),
+                    .layout = vk::ImageLayout::ePresentSrcKHR,
+                    .stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                    .access = vk::AccessFlagBits2::eColorAttachmentWrite});
+
+                saveTransfer.saveToFile(
+                    saveCmd,
+                    *app.allocator,
+                    app.device->graphicsQueue(),
+                    app.swapchain.images()[index],
+                    "screenshot.png");
+
+                std::cout << "Screenshot saved to screenshot.png\n";
+                imageSaved = true;
+            }
 
             app.device->presentQueue().present(app.swapchain, index,
                                                renderFinishedSemaphore);

@@ -54,7 +54,8 @@ SwapchainBuilder::SwapchainBuilder(std::shared_ptr<const Device> device,
         .setImageFormat(vk::Format::eB8G8R8A8Srgb)
         .setPresentMode(vk::PresentModeKHR::eFifo)
         .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment |
-                       vk::ImageUsageFlagBits::eTransferDst)
+                       vk::ImageUsageFlagBits::eTransferDst |
+                       vk::ImageUsageFlagBits::eTransferSrc)
         .setImageArrayLayers(1)
         .setImageSharingMode(vk::SharingMode::eExclusive)
         .setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
