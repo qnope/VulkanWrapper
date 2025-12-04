@@ -33,6 +33,10 @@ inline std::shared_ptr<const vw::Pipeline> create_pipeline(
     auto pipelineLayout = vw::PipelineLayoutBuilder(device)
                               .with_descriptor_set_layout(uniform_buffer_layout)
                               .with_descriptor_set_layout(material_layout)
+                              .with_push_constant_range(vk::PushConstantRange()
+                                          .setStageFlags(vk::ShaderStageFlagBits::eVertex)
+                                          .setOffset(0)
+                                          .setSize(sizeof(glm::mat4)))
                               .build();
 
     auto builder =

@@ -363,8 +363,24 @@ class VulkanExample {
 
     void createMeshManager() {
         mesh_manager.emplace(device, allocator);
-        // mesh_manager.read_file("../../../Models/Sponza/sponza.obj");
+
+        // Load plane at y=0
+        mesh_manager->read_file("../../../Models/plane.obj");
+        size_t planeCount = mesh_manager->meshes().size();
+        for (size_t i = 0; i < planeCount; ++i) {
+            // Plane at origin (already at y=0 in obj)
+            glm::mat4 transform = glm::mat4(1.0f);
+            mesh_manager->meshes()[i].set_transform(transform);
+        }
+
+        // Load cube floating above the plane
         mesh_manager->read_file("../../../Models/cube.obj");
+        for (size_t i = planeCount; i < mesh_manager->meshes().size(); ++i) {
+            // Cube floating at (0, 2, 0)
+            glm::mat4 transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 2.0f, 0.0f));
+            mesh_manager->meshes()[i].set_transform(transform);
+        }
+
         auto cmd_buffer = mesh_manager->fill_command_buffer();
         queue.enqueue_command_buffer(cmd_buffer);
         queue.submit({}, {}, {});

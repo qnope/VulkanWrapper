@@ -23,6 +23,8 @@ class MeshManager {
 
     [[nodiscard]] const std::vector<Mesh> &meshes() const noexcept;
 
+    [[nodiscard]] std::vector<Mesh> &meshes() noexcept;
+
     [[nodiscard]] const Material::MaterialManagerMap &
     material_manager_map() const noexcept;
 

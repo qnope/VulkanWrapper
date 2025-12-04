@@ -3,6 +3,9 @@
 layout(set = 0, binding = 0, std140) uniform UBO {
     mat4 proj;
     mat4 view;
+};
+
+layout(push_constant) uniform PushConstants {
     mat4 model;
 };
 

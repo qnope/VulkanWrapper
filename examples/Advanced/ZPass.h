@@ -42,6 +42,10 @@ inline std::shared_ptr<const vw::Pipeline> create_zpass_pipeline(
     auto pipeline_layout =
         vw::PipelineLayoutBuilder(device)
             .with_descriptor_set_layout(uniform_buffer_layout)
+            .with_push_constant_range(vk::PushConstantRange()
+                                          .setStageFlags(vk::ShaderStageFlagBits::eVertex)
+                                          .setOffset(0)
+                                          .setSize(sizeof(glm::mat4)))
             .build();
 
     return vw::GraphicsPipelineBuilder(device, std::move(pipeline_layout))
@@ -85,7 +89,7 @@ class ZPass : public vw::Subpass {
                                       m_pipeline->layout().handle(), 0,
                                       first_descriptor_sets, nullptr);
         for (const auto &mesh : meshes) {
-            mesh.draw_zpass(cmd_buffer);
+            mesh.draw_zpass(cmd_buffer, m_pipeline->layout());
         }
     }
 
