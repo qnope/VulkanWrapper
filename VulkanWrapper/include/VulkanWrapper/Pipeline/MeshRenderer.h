@@ -13,7 +13,8 @@ class MeshRenderer {
 
     void
     draw_mesh(vk::CommandBuffer cmd_buffer, const Model::Mesh &mesh,
-              std::span<const vk::DescriptorSet> first_descriptor_sets) const;
+              std::span<const vk::DescriptorSet> first_descriptor_sets,
+              const glm::mat4 &transform) const;
 
   private:
     std::unordered_map<Model::Material::MaterialTypeTag,

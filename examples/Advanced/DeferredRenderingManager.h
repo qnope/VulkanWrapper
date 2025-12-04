@@ -12,6 +12,7 @@
 #include <VulkanWrapper/Image/Sampler.h>
 #include <VulkanWrapper/Memory/Buffer.h>
 #include <VulkanWrapper/Model/MeshManager.h>
+#include <VulkanWrapper/Model/Scene.h>
 #include <VulkanWrapper/Pipeline/MeshRenderer.h>
 #include <VulkanWrapper/RenderPass/Rendering.h>
 #include <VulkanWrapper/Vulkan/Device.h>
@@ -34,17 +35,21 @@ class DeferredRenderingManager {
     DeferredRenderingManager(
         std::shared_ptr<vw::Device> device,
         std::shared_ptr<vw::Allocator> allocator,
-        const vw::Swapchain &swapchain, vw::Model::MeshManager &mesh_manager,
+        const vw::Swapchain &swapchain,
+        const vw::Model::MeshManager &mesh_manager,
+        const vw::Model::Scene &scene,
         const vw::Buffer<UBOData, true, vw::UniformBufferUsage> &uniform_buffer,
         Config config);
 
     DeferredRenderingManager(
         std::shared_ptr<vw::Device> device,
         std::shared_ptr<vw::Allocator> allocator,
-        const vw::Swapchain &swapchain, vw::Model::MeshManager &mesh_manager,
+        const vw::Swapchain &swapchain,
+        const vw::Model::MeshManager &mesh_manager,
+        const vw::Model::Scene &scene,
         const vw::Buffer<UBOData, true, vw::UniformBufferUsage> &uniform_buffer)
         : DeferredRenderingManager(std::move(device), std::move(allocator),
-                                   swapchain, mesh_manager, uniform_buffer,
+                                   swapchain, mesh_manager, scene, uniform_buffer,
                                    Config{}) {}
 
     const std::vector<vw::Rendering> &renderings() const {
@@ -70,13 +75,14 @@ class DeferredRenderingManager {
         const vw::Buffer<UBOData, true, vw::UniformBufferUsage>
             &uniform_buffer);
     void create_zpass_resources();
-    void create_color_pass_resources(vw::Model::MeshManager &mesh_manager);
+    void create_color_pass_resources(const vw::Model::MeshManager &mesh_manager);
     void create_sun_light_pass_resources();
     void create_sky_pass_resources();
-    void create_renderings(vw::Model::MeshManager &mesh_manager);
+    void create_renderings();
 
     std::shared_ptr<vw::Device> m_device;
     std::shared_ptr<vw::Allocator> m_allocator;
+    const vw::Model::Scene &m_scene;
     Config m_config;
 
     // Sun angle in degrees above horizon (90 = zenith)

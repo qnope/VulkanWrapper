@@ -17,6 +17,7 @@
 #include <VulkanWrapper/Model/Material/ColoredMaterialManager.h>
 #include <VulkanWrapper/Model/Material/TexturedMaterialManager.h>
 #include <VulkanWrapper/Model/MeshManager.h>
+#include <VulkanWrapper/Model/Scene.h>
 #include <VulkanWrapper/Pipeline/MeshRenderer.h>
 #include <VulkanWrapper/Pipeline/Pipeline.h>
 #include <VulkanWrapper/Pipeline/PipelineLayout.h>
@@ -54,6 +55,7 @@ class VulkanExample {
     std::optional<vw::Buffer<uint32_t, true, vw::IndexBufferUsage>> indexBuffer;
 
     std::optional<vw::Model::MeshManager> mesh_manager;
+    vw::Model::Scene scene;
 
     uint32_t indexCount{0};
 
@@ -364,22 +366,23 @@ class VulkanExample {
     void createMeshManager() {
         mesh_manager.emplace(device, allocator);
 
-        // Load plane at y=0
+        // Load all models first (to avoid vector reallocation invalidating
+        // pointers)
         mesh_manager->read_file("../../../Models/plane.obj");
         size_t planeCount = mesh_manager->meshes().size();
+        mesh_manager->read_file("../../../Models/cube.obj");
+
+        // Now add mesh instances to the scene (vector won't resize anymore)
+        // Plane at origin (already at y=0 in obj)
         for (size_t i = 0; i < planeCount; ++i) {
-            // Plane at origin (already at y=0 in obj)
-            glm::mat4 transform = glm::mat4(1.0f);
-            mesh_manager->meshes()[i].set_transform(transform);
+            scene.add_mesh_instance(mesh_manager->meshes()[i], glm::mat4(1.0f));
         }
 
-        // Load cube floating above the plane
-        mesh_manager->read_file("../../../Models/cube.obj");
+        // Cube floating at (0, 2, 0)
         for (size_t i = planeCount; i < mesh_manager->meshes().size(); ++i) {
-            // Cube floating at (0, 2, 0)
             glm::mat4 transform =
                 glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 2.0f, 0.0f));
-            mesh_manager->meshes()[i].set_transform(transform);
+            scene.add_mesh_instance(mesh_manager->meshes()[i], transform);
         }
 
         auto cmd_buffer = mesh_manager->fill_command_buffer();
@@ -524,7 +527,7 @@ int main() {
         // Create the deferred rendering manager - handles all pass setup
         DeferredRenderingManager renderingManager(
             app.device, app.allocator, app.swapchain, *example.mesh_manager,
-            uniform_buffer);
+            example.scene, uniform_buffer);
 
         auto commandPool = vw::CommandPoolBuilder(app.device).build();
         auto image_views = create_image_views(app.device, app.swapchain);
@@ -627,6 +630,7 @@ int main() {
             app.device->presentQueue().present(app.swapchain, index,
                                                renderFinishedSemaphore);
             app.device->wait_idle();
+            // break;
         }
 
         app.device->wait_idle();

@@ -8,6 +8,7 @@
 #include "VulkanWrapper/Descriptors/DescriptorPool.h"
 #include "VulkanWrapper/Memory/Buffer.h"
 #include "VulkanWrapper/Model/MeshManager.h"
+#include "VulkanWrapper/Model/Scene.h"
 #include "VulkanWrapper/Pipeline/Pipeline.h"
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
 #include "VulkanWrapper/RenderPass/Subpass.h"
@@ -60,12 +61,12 @@ inline std::shared_ptr<const vw::Pipeline> create_zpass_pipeline(
 class ZPass : public vw::Subpass {
   public:
     ZPass(std::shared_ptr<const vw::Device> device,
-          const vw::Model::MeshManager &mesh_manager,
+          const vw::Model::Scene &scene,
           std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
           vw::DescriptorSet descriptor_set, GBuffer gbuffer,
           std::shared_ptr<const vw::Pipeline> pipeline)
         : m_device{std::move(device)}
-        , m_mesh_manager{mesh_manager}
+        , m_scene{scene}
         , m_uniform_buffer_layout{uniform_buffer_layout}
         , m_descriptor_set{descriptor_set}
         , m_gbuffer(std::move(gbuffer))
@@ -81,15 +82,15 @@ class ZPass : public vw::Subpass {
         cmd_buffer.setViewport(0, 1, &viewport);
         cmd_buffer.setScissor(0, 1, &render_area);
 
-        const auto &meshes = m_mesh_manager.meshes();
         auto descriptor_set_handle = m_descriptor_set.handle();
         std::span first_descriptor_sets = {&descriptor_set_handle, 1};
         cmd_buffer.bindPipeline(pipeline_bind_point(), m_pipeline->handle());
         cmd_buffer.bindDescriptorSets(pipeline_bind_point(),
                                       m_pipeline->layout().handle(), 0,
                                       first_descriptor_sets, nullptr);
-        for (const auto &mesh : meshes) {
-            mesh.draw_zpass(cmd_buffer, m_pipeline->layout());
+        for (const auto &instance : m_scene.instances()) {
+            instance.mesh.draw_zpass(cmd_buffer, m_pipeline->layout(),
+                                     instance.transform);
         }
     }
 
@@ -140,7 +141,7 @@ class ZPass : public vw::Subpass {
 
   private:
     std::shared_ptr<const vw::Device> m_device;
-    const vw::Model::MeshManager &m_mesh_manager;
+    const vw::Model::Scene &m_scene;
     std::shared_ptr<const vw::DescriptorSetLayout> m_uniform_buffer_layout;
     vw::DescriptorSet m_descriptor_set;
     GBuffer m_gbuffer;

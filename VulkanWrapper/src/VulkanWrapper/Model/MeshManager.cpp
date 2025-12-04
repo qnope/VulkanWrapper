@@ -30,10 +30,6 @@ const std::vector<Mesh> &MeshManager::meshes() const noexcept {
     return m_meshes;
 }
 
-std::vector<Mesh> &MeshManager::meshes() noexcept {
-    return m_meshes;
-}
-
 const Material::MaterialManagerMap &
 MeshManager::material_manager_map() const noexcept {
     return *m_material_manager_map;

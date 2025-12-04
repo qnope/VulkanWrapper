@@ -21,10 +21,12 @@ class Mesh {
 
     void draw(vk::CommandBuffer cmd_buffer,
               const PipelineLayout &pipeline_layout,
-              uint32_t material_descriptor_set_index) const;
+              uint32_t material_descriptor_set_index,
+              const glm::mat4 &transform) const;
 
     void draw_zpass(vk::CommandBuffer cmd_buffer,
-                    const PipelineLayout &pipeline_layout) const;
+                    const PipelineLayout &pipeline_layout,
+                    const glm::mat4 &transform) const;
 
     [[nodiscard]] vk::AccelerationStructureGeometryKHR
     acceleration_structure_geometry() const noexcept;
@@ -40,14 +42,6 @@ class Mesh {
         return m_material;
     }
 
-    void set_transform(const glm::mat4 &transform) noexcept {
-        m_transform = transform;
-    }
-
-    [[nodiscard]] const glm::mat4 &transform() const noexcept {
-        return m_transform;
-    }
-
   private:
     std::shared_ptr<const Vertex3DBuffer> m_vertex_buffer;
     std::shared_ptr<const FullVertex3DBuffer> m_full_vertex_buffer;
@@ -58,7 +52,5 @@ class Mesh {
     int m_vertex_offset;
     int m_first_index;
     int m_vertices_count;
-
-    glm::mat4 m_transform = glm::mat4(1.0f);
 };
 } // namespace vw::Model

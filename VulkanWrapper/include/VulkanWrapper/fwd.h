@@ -50,6 +50,8 @@ class RenderingBuilder;
 
 namespace Model {
 class Mesh;
+struct MeshInstance;
+class Scene;
 namespace Internal {
 struct MaterialInfo;
 }

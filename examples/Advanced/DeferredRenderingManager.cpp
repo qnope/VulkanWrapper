@@ -5,11 +5,14 @@
 
 DeferredRenderingManager::DeferredRenderingManager(
     std::shared_ptr<vw::Device> device, std::shared_ptr<vw::Allocator> allocator,
-    const vw::Swapchain &swapchain, vw::Model::MeshManager &mesh_manager,
+    const vw::Swapchain &swapchain,
+    const vw::Model::MeshManager &mesh_manager,
+    const vw::Model::Scene &scene,
     const vw::Buffer<UBOData, true, vw::UniformBufferUsage> &uniform_buffer,
     Config config)
     : m_device{std::move(device)}
     , m_allocator{std::move(allocator)}
+    , m_scene{scene}
     , m_config{std::move(config)} {
 
     m_sampler = vw::SamplerBuilder(m_device).build();
@@ -20,7 +23,7 @@ DeferredRenderingManager::DeferredRenderingManager(
     create_color_pass_resources(mesh_manager);
     create_sun_light_pass_resources();
     create_sky_pass_resources();
-    create_renderings(mesh_manager);
+    create_renderings();
 }
 
 void DeferredRenderingManager::create_gbuffers(const vw::Swapchain &swapchain) {
@@ -79,7 +82,7 @@ void DeferredRenderingManager::create_zpass_resources() {
 }
 
 void DeferredRenderingManager::create_color_pass_resources(
-    vw::Model::MeshManager &mesh_manager) {
+    const vw::Model::MeshManager &mesh_manager) {
     m_mesh_renderer =
         create_renderer(m_device, m_config.gbuffer_color_formats,
                         m_config.depth_format, mesh_manager, m_uniform_descriptor_layout);
@@ -100,16 +103,15 @@ void DeferredRenderingManager::create_sky_pass_resources() {
     // Sky pass uses the uniform descriptor layout directly
 }
 
-void DeferredRenderingManager::create_renderings(
-    vw::Model::MeshManager &mesh_manager) {
+void DeferredRenderingManager::create_renderings() {
     int i = 0;
     for (const auto &gBuffer : m_gbuffers) {
         auto depth_subpass =
-            std::make_shared<ZPass>(m_device, mesh_manager, m_uniform_descriptor_layout,
+            std::make_shared<ZPass>(m_device, m_scene, m_uniform_descriptor_layout,
                                     *m_uniform_descriptor_set, gBuffer, m_zpass_pipeline);
 
         auto color_subpass = std::make_shared<ColorSubpass>(
-            m_device, mesh_manager, m_uniform_descriptor_layout,
+            m_device, m_scene, m_uniform_descriptor_layout,
             *m_uniform_descriptor_set, gBuffer, m_mesh_renderer);
 
         auto sunlight_pass =

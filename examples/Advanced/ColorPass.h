@@ -7,6 +7,7 @@
 #include "VulkanWrapper/Model/Material/ColoredMaterialManager.h"
 #include "VulkanWrapper/Model/Material/TexturedMaterialManager.h"
 #include "VulkanWrapper/Model/MeshManager.h"
+#include "VulkanWrapper/Model/Scene.h"
 #include "VulkanWrapper/Pipeline/MeshRenderer.h"
 #include "VulkanWrapper/Pipeline/Pipeline.h"
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
@@ -91,12 +92,12 @@ class ColorSubpass : public vw::Subpass {
   public:
     ColorSubpass(
         std::shared_ptr<const vw::Device> device,
-        const vw::Model::MeshManager &mesh_manager,
+        const vw::Model::Scene &scene,
         std::shared_ptr<const vw::DescriptorSetLayout> uniform_buffer_layout,
         vw::DescriptorSet descriptor_set, GBuffer gbuffer,
         std::shared_ptr<vw::MeshRenderer> mesh_renderer)
         : m_device{std::move(device)}
-        , m_mesh_manager{mesh_manager}
+        , m_scene{scene}
         , m_uniform_buffer_layout{uniform_buffer_layout}
         , m_descriptor_set{descriptor_set}
         , m_gbuffer(std::move(gbuffer))
@@ -112,11 +113,11 @@ class ColorSubpass : public vw::Subpass {
         cmd_buffer.setViewport(0, 1, &viewport);
         cmd_buffer.setScissor(0, 1, &render_area);
 
-        const auto &meshes = m_mesh_manager.meshes();
         auto descriptor_set_handle = m_descriptor_set.handle();
         std::span first_descriptor_sets = {&descriptor_set_handle, 1};
-        for (const auto &mesh : meshes) {
-            m_mesh_renderer->draw_mesh(cmd_buffer, mesh, first_descriptor_sets);
+        for (const auto &instance : m_scene.instances()) {
+            m_mesh_renderer->draw_mesh(cmd_buffer, instance.mesh,
+                                       first_descriptor_sets, instance.transform);
         }
     }
 
@@ -188,9 +189,9 @@ class ColorSubpass : public vw::Subpass {
                      vk::PipelineStageFlagBits2::eLateFragmentTests,
             .access = vk::AccessFlagBits2::eDepthStencilAttachmentRead});
 
-        for (const auto &mesh : m_mesh_manager.meshes()) {
+        for (const auto &instance : m_scene.instances()) {
             const auto &material_resources =
-                mesh.material().descriptor_set.resources();
+                instance.mesh.material().descriptor_set.resources();
             resources.insert(resources.end(), material_resources.begin(),
                              material_resources.end());
         }
@@ -200,7 +201,7 @@ class ColorSubpass : public vw::Subpass {
 
   private:
     std::shared_ptr<const vw::Device> m_device;
-    const vw::Model::MeshManager &m_mesh_manager;
+    const vw::Model::Scene &m_scene;
     std::shared_ptr<const vw::DescriptorSetLayout> m_uniform_buffer_layout;
     std::shared_ptr<vw::MeshRenderer> m_mesh_renderer;
     vw::DescriptorSet m_descriptor_set;

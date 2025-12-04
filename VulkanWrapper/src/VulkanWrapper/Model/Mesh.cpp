@@ -22,7 +22,8 @@ Material::MaterialTypeTag Mesh::material_type_tag() const noexcept {
 }
 
 void Mesh::draw(vk::CommandBuffer cmd_buffer, const PipelineLayout &layout,
-                uint32_t material_descriptor_set_index) const {
+                uint32_t material_descriptor_set_index,
+                const glm::mat4 &transform) const {
     vk::Buffer vb = m_full_vertex_buffer->handle();
     vk::Buffer ib = m_index_buffer->handle();
     vk::DeviceSize vbo = 0;
@@ -33,20 +34,21 @@ void Mesh::draw(vk::CommandBuffer cmd_buffer, const PipelineLayout &layout,
         vk::PipelineBindPoint::eGraphics, layout.handle(),
         material_descriptor_set_index, descriptor_set_handle, nullptr);
     cmd_buffer.pushConstants(layout.handle(), vk::ShaderStageFlagBits::eVertex,
-                             0, sizeof(glm::mat4), &m_transform);
+                             0, sizeof(glm::mat4), &transform);
     cmd_buffer.drawIndexed(m_indice_count, 1, m_first_index, m_vertex_offset,
                            0);
 }
 
 void Mesh::draw_zpass(vk::CommandBuffer cmd_buffer,
-                      const PipelineLayout &layout) const {
+                      const PipelineLayout &layout,
+                      const glm::mat4 &transform) const {
     vk::Buffer vb = m_vertex_buffer->handle();
     vk::Buffer ib = m_index_buffer->handle();
     vk::DeviceSize vbo = 0;
     cmd_buffer.bindVertexBuffers(0, vb, vbo);
     cmd_buffer.bindIndexBuffer(ib, 0, vk::IndexType::eUint32);
     cmd_buffer.pushConstants(layout.handle(), vk::ShaderStageFlagBits::eVertex,
-                             0, sizeof(glm::mat4), &m_transform);
+                             0, sizeof(glm::mat4), &transform);
     cmd_buffer.drawIndexed(m_indice_count, 1, m_first_index, m_vertex_offset,
                            0);
 }
