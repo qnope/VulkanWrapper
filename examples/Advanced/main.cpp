@@ -12,6 +12,7 @@
 #include <VulkanWrapper/Memory/AllocateBufferUtils.h>
 #include <VulkanWrapper/Memory/Barrier.h>
 #include <VulkanWrapper/Memory/StagingBufferManager.h>
+#include <VulkanWrapper/Memory/Transfer.h>
 #include <VulkanWrapper/Model/Importer.h>
 #include <VulkanWrapper/Model/Material/ColoredMaterialManager.h>
 #include <VulkanWrapper/Model/Material/TexturedMaterialManager.h>
@@ -524,51 +525,25 @@ int main() {
                              renderings)) {
             vw::CommandBufferRecorder recorder(commandBuffer);
 
+            // Use Transfer's resource tracker for the entire command buffer
+            vw::Transfer transfer;
+
             // Geometry Pass using Rendering
-            vw::Barrier::ResourceTracker resource_tracker;
-            rendering.execute(commandBuffer, resource_tracker);
+            rendering.execute(commandBuffer, transfer.resourceTracker());
 
             // Blit color to swapchain
-            resource_tracker.request(vw::Barrier::ImageState{
-                .image = gBuffer.light->image()->handle(),
-                .subresourceRange = gBuffer.light->subresource_range(),
-                .layout = vk::ImageLayout::eTransferSrcOptimal,
-                .stage = vk::PipelineStageFlagBits2::eTransfer,
-                .access = vk::AccessFlagBits2::eTransferRead});
+            transfer.blit(commandBuffer, gBuffer.light->image(),
+                          swapchainBuffer->image());
 
-            resource_tracker.request(vw::Barrier::ImageState{
-                .image = swapchainBuffer->image()->handle(),
-                .subresourceRange = swapchainBuffer->subresource_range(),
-                .layout = vk::ImageLayout::eTransferDstOptimal,
-                .stage = vk::PipelineStageFlagBits2::eTransfer,
-                .access = vk::AccessFlagBits2::eTransferWrite});
-
-            resource_tracker.flush(commandBuffer);
-
-            vk::ImageBlit blit{};
-            blit.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
-            blit.srcSubresource.layerCount = 1;
-            blit.srcOffsets[1] =
-                vk::Offset3D(int32_t(extent.width), int32_t(extent.height), 1);
-            blit.dstSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
-            blit.dstSubresource.layerCount = 1;
-            blit.dstOffsets[1] =
-                vk::Offset3D(int32_t(extent.width), int32_t(extent.height), 1);
-
-            commandBuffer.blitImage(gBuffer.light->image()->handle(),
-                                    vk::ImageLayout::eTransferSrcOptimal,
-                                    swapchainBuffer->image()->handle(),
-                                    vk::ImageLayout::eTransferDstOptimal, blit,
-                                    vk::Filter::eLinear);
-
-            resource_tracker.request(vw::Barrier::ImageState{
+            // Transition swapchain image to present layout
+            transfer.resourceTracker().request(vw::Barrier::ImageState{
                 .image = swapchainBuffer->image()->handle(),
                 .subresourceRange = swapchainBuffer->subresource_range(),
                 .layout = vk::ImageLayout::ePresentSrcKHR,
                 .stage = vk::PipelineStageFlagBits2::eNone,
                 .access = vk::AccessFlagBits2::eNone});
 
-            resource_tracker.flush(commandBuffer);
+            transfer.resourceTracker().flush(commandBuffer);
         }
 
         auto cmd_buffer = example.mesh_manager->fill_command_buffer();

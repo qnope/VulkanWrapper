@@ -6,17 +6,13 @@ namespace vw {
 void Transfer::blit(vk::CommandBuffer cmd,
                     const std::shared_ptr<const Image> &src,
                     const std::shared_ptr<const Image> &dst,
-                    vk::ImageSubresourceRange srcSubresource,
-                    vk::ImageSubresourceRange dstSubresource,
+                    std::optional<vk::ImageSubresourceRange> srcSubresourceOpt,
+                    std::optional<vk::ImageSubresourceRange> dstSubresourceOpt,
                     vk::Filter filter) {
-    
+
     // Use full range if not specified
-    if (srcSubresource.layerCount == 0) {
-        srcSubresource = src->full_range();
-    }
-    if (dstSubresource.layerCount == 0) {
-        dstSubresource = dst->full_range();
-    }
+    vk::ImageSubresourceRange srcSubresource = srcSubresourceOpt.value_or(src->full_range());
+    vk::ImageSubresourceRange dstSubresource = dstSubresourceOpt.value_or(dst->full_range());
 
     // Request source image in transfer src layout
     Barrier::ImageState srcState{
@@ -113,12 +109,10 @@ void Transfer::copyBufferToImage(vk::CommandBuffer cmd,
                                  vk::Buffer src,
                                  const std::shared_ptr<const Image> &dst,
                                  vk::DeviceSize srcOffset,
-                                 vk::ImageSubresourceRange dstSubresource) {
-    
+                                 std::optional<vk::ImageSubresourceRange> dstSubresourceOpt) {
+
     // Use full range if not specified
-    if (dstSubresource.layerCount == 0) {
-        dstSubresource = dst->full_range();
-    }
+    vk::ImageSubresourceRange dstSubresource = dstSubresourceOpt.value_or(dst->full_range());
 
     // Calculate buffer size needed (simplified - assumes tightly packed)
     vk::DeviceSize bufferSize = dst->extent3D().width * 

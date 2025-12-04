@@ -4,6 +4,7 @@
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include <memory>
+#include <optional>
 
 namespace vw {
 
@@ -23,15 +24,15 @@ class Transfer {
      * @param cmd Command buffer to record commands into
      * @param src Source image
      * @param dst Destination image
-     * @param srcSubresource Source subresource range (default: all mip levels and layers)
-     * @param dstSubresource Destination subresource range (default: all mip levels and layers)
+     * @param srcSubresource Source subresource range (default: derived from source image)
+     * @param dstSubresource Destination subresource range (default: derived from destination image)
      * @param filter Filter to use for the blit operation
      */
     void blit(vk::CommandBuffer cmd,
               const std::shared_ptr<const Image> &src,
               const std::shared_ptr<const Image> &dst,
-              vk::ImageSubresourceRange srcSubresource = {},
-              vk::ImageSubresourceRange dstSubresource = {},
+              std::optional<vk::ImageSubresourceRange> srcSubresource = std::nullopt,
+              std::optional<vk::ImageSubresourceRange> dstSubresource = std::nullopt,
               vk::Filter filter = vk::Filter::eLinear);
 
     /**
@@ -54,13 +55,13 @@ class Transfer {
      * @param src Source buffer handle
      * @param dst Destination image
      * @param srcOffset Offset in source buffer
-     * @param dstSubresource Destination subresource range
+     * @param dstSubresource Destination subresource range (default: derived from destination image)
      */
     void copyBufferToImage(vk::CommandBuffer cmd,
                            vk::Buffer src,
                            const std::shared_ptr<const Image> &dst,
                            vk::DeviceSize srcOffset,
-                           vk::ImageSubresourceRange dstSubresource = {});
+                           std::optional<vk::ImageSubresourceRange> dstSubresource = std::nullopt);
 
     /**
      * Returns the resource tracker for manual barrier management if needed.
