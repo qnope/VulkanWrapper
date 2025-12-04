@@ -18,8 +18,10 @@ vec3 get_world_pos(vec4 clipPosition)
 }
 
 vec3 get_view_direction() {
-    vec3 near = get_world_pos(vec4(in_position, 0.0, 1.0));
-    vec3 far = get_world_pos(vec4(in_position, 1.0, 1.0));
+    // Convert UV coordinates [0,1] to clip space [-1,1]
+    vec2 clip_pos = in_position * 2.0 - 1.0;
+    vec3 near = get_world_pos(vec4(clip_pos, 0.0, 1.0));
+    vec3 far = get_world_pos(vec4(clip_pos, 1.0, 1.0));
     return normalize(far - near);
 }
 
