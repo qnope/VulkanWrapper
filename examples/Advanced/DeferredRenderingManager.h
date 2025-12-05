@@ -39,7 +39,7 @@ class DeferredRenderingManager {
         const vw::Model::MeshManager &mesh_manager,
         const vw::Model::Scene &scene,
         const vw::Buffer<UBOData, true, vw::UniformBufferUsage> &uniform_buffer,
-        Config config);
+        vk::AccelerationStructureKHR tlas, Config config);
 
     DeferredRenderingManager(
         std::shared_ptr<vw::Device> device,
@@ -47,10 +47,11 @@ class DeferredRenderingManager {
         const vw::Swapchain &swapchain,
         const vw::Model::MeshManager &mesh_manager,
         const vw::Model::Scene &scene,
-        const vw::Buffer<UBOData, true, vw::UniformBufferUsage> &uniform_buffer)
+        const vw::Buffer<UBOData, true, vw::UniformBufferUsage> &uniform_buffer,
+        vk::AccelerationStructureKHR tlas)
         : DeferredRenderingManager(std::move(device), std::move(allocator),
-                                   swapchain, mesh_manager, scene, uniform_buffer,
-                                   Config{}) {}
+                                   swapchain, mesh_manager, scene,
+                                   uniform_buffer, tlas, Config{}) {}
 
     const std::vector<vw::Rendering> &renderings() const {
         return m_renderings;
@@ -75,7 +76,8 @@ class DeferredRenderingManager {
         const vw::Buffer<UBOData, true, vw::UniformBufferUsage>
             &uniform_buffer);
     void create_zpass_resources();
-    void create_color_pass_resources(const vw::Model::MeshManager &mesh_manager);
+    void
+    create_color_pass_resources(const vw::Model::MeshManager &mesh_manager);
     void create_sun_light_pass_resources();
     void create_sky_pass_resources();
     void create_renderings();
@@ -84,6 +86,7 @@ class DeferredRenderingManager {
     std::shared_ptr<vw::Allocator> m_allocator;
     const vw::Model::Scene &m_scene;
     Config m_config;
+    vk::AccelerationStructureKHR m_tlas;
 
     // Sun angle in degrees above horizon (90 = zenith)
     float m_sun_angle = 20.0f;

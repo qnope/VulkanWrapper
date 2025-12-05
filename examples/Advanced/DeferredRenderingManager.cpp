@@ -9,11 +9,13 @@ DeferredRenderingManager::DeferredRenderingManager(
     const vw::Model::MeshManager &mesh_manager,
     const vw::Model::Scene &scene,
     const vw::Buffer<UBOData, true, vw::UniformBufferUsage> &uniform_buffer,
+    vk::AccelerationStructureKHR tlas,
     Config config)
     : m_device{std::move(device)}
     , m_allocator{std::move(allocator)}
     , m_scene{scene}
-    , m_config{std::move(config)} {
+    , m_config{std::move(config)}
+    , m_tlas{tlas} {
 
     m_sampler = vw::SamplerBuilder(m_device).build();
 
@@ -95,7 +97,7 @@ void DeferredRenderingManager::create_sun_light_pass_resources() {
 
     for (const auto &gBuffer : m_gbuffers) {
         m_sunlight_descriptor_sets.push_back(create_sun_light_pass_descriptor_set(
-            *m_sunlight_descriptor_pool, m_sampler, gBuffer));
+            *m_sunlight_descriptor_pool, m_sampler, gBuffer, m_tlas));
     }
 }
 

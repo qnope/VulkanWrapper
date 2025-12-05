@@ -98,7 +98,7 @@ class VulkanExample {
         projectionMatrix[1][1] *= -1;
 
         viewMatrix =
-            glm::lookAt(glm::vec3(.0f, .0f, 2.f), glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::lookAt(glm::vec3(5.0f, 6.0f, 8.0f), glm::vec3(0.0f, 0.0f, 0.0f),
                         glm::vec3(0.0f, 1.0f, 0.0f));
     }
 
@@ -139,9 +139,12 @@ class VulkanExample {
        actual geometry (vertices, triangles)
     */
     void createBottomLevelAccelerationStructure() {
-        auto &blas = vw::rt::as::BottomLevelAccelerationStructureBuilder(device)
-                         .add_mesh(mesh_manager->meshes().front())
-                         .build_into(m_blasList);
+        // Create one BLAS per unique mesh geometry
+        for (const auto &mesh : mesh_manager->meshes()) {
+            vw::rt::as::BottomLevelAccelerationStructureBuilder(device)
+                .add_mesh(mesh)
+                .build_into(m_blasList);
+        }
 
         m_blasList.submit_and_wait();
     }
@@ -151,23 +154,25 @@ class VulkanExample {
         instances
     */
     void createTopLevelAccelerationStructure() {
-        // Create transformation matrix
-        glm::mat4 transform =
-            glm::mat4(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
-                      0.0f, 1.0f, 0.0f, 2.0f, 1.0f, -3.0f, 1.0f);
+        // Get BLAS device addresses (one per mesh in mesh_manager)
+        auto blasAddresses = m_blasList.device_addresses();
 
-        // Get BLAS device address
-        vk::DeviceAddress blasAddress = m_blasList.device_addresses().back();
-
-        // Build TLAS using the builder
+        // Build TLAS using the builder - add instances from scene
         auto commandBuffer = pool.allocate(1).front();
         std::ignore = commandBuffer.begin(vk::CommandBufferBeginInfo());
 
-        topLevelAS =
-            vw::rt::as::TopLevelAccelerationStructureBuilder(device, allocator)
-                .add_bottom_level_acceleration_structure_address(blasAddress,
-                                                                 transform)
-                .build(commandBuffer);
+        auto builder =
+            vw::rt::as::TopLevelAccelerationStructureBuilder(device, allocator);
+
+        // Scene instances are in the same order as meshes/BLAS
+        // (created in createMeshManager in same order as mesh_manager->meshes())
+        const auto &instances = scene.instances();
+        for (size_t i = 0; i < instances.size(); ++i) {
+            builder.add_bottom_level_acceleration_structure_address(
+                blasAddresses[i], instances[i].transform);
+        }
+
+        topLevelAS = builder.build(commandBuffer);
 
         std::ignore = commandBuffer.end();
         queue.enqueue_command_buffer(commandBuffer);
@@ -378,10 +383,10 @@ class VulkanExample {
             scene.add_mesh_instance(mesh_manager->meshes()[i], glm::mat4(1.0f));
         }
 
-        // Cube floating at (0, 2, 0)
+        // Cube floating at (0, 1, 0) - close enough to plane for visible shadow
         for (size_t i = planeCount; i < mesh_manager->meshes().size(); ++i) {
             glm::mat4 transform =
-                glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 2.0f, 0.0f));
+                glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
             scene.add_mesh_instance(mesh_manager->meshes()[i], transform);
         }
 
@@ -527,7 +532,7 @@ int main() {
         // Create the deferred rendering manager - handles all pass setup
         DeferredRenderingManager renderingManager(
             app.device, app.allocator, app.swapchain, *example.mesh_manager,
-            example.scene, uniform_buffer);
+            example.scene, uniform_buffer, example.topLevelAS->handle());
 
         auto commandPool = vw::CommandPoolBuilder(app.device).build();
         auto image_views = create_image_views(app.device, app.swapchain);
@@ -630,7 +635,6 @@ int main() {
             app.device->presentQueue().present(app.swapchain, index,
                                                renderFinishedSemaphore);
             app.device->wait_idle();
-            // break;
         }
 
         app.device->wait_idle();

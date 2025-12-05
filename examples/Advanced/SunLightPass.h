@@ -19,13 +19,15 @@ create_sun_light_pass_descriptor_layout(std::shared_ptr<const vw::Device> device
         .with_combined_image(vk::ShaderStageFlagBits::eFragment, 1) // Color
         .with_combined_image(vk::ShaderStageFlagBits::eFragment, 1) // Position
         .with_combined_image(vk::ShaderStageFlagBits::eFragment, 1) // Normal
+        .with_acceleration_structure(vk::ShaderStageFlagBits::eFragment) // TLAS
         .build();
 }
 
 inline vw::DescriptorSet create_sun_light_pass_descriptor_set(
     vw::DescriptorPool &pool,
     std::shared_ptr<const vw::Sampler> sampler,
-    const GBuffer &gbuffer) {
+    const GBuffer &gbuffer,
+    vk::AccelerationStructureKHR tlas) {
     vw::DescriptorAllocator allocator;
     allocator.add_combined_image(
         0, vw::CombinedImage(gbuffer.color, sampler),
@@ -39,6 +41,10 @@ inline vw::DescriptorSet create_sun_light_pass_descriptor_set(
         2, vw::CombinedImage(gbuffer.normal, sampler),
         vk::PipelineStageFlagBits2::eFragmentShader,
         vk::AccessFlagBits2::eShaderRead);
+    allocator.add_acceleration_structure(
+        3, tlas,
+        vk::PipelineStageFlagBits2::eFragmentShader,
+        vk::AccessFlagBits2::eAccelerationStructureReadKHR);
     return pool.allocate_set(allocator);
 }
 
