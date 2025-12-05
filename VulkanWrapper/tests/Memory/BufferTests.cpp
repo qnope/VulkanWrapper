@@ -1,6 +1,7 @@
 #include "utils/create_gpu.hpp"
 #include "VulkanWrapper/Memory/AllocateBufferUtils.h"
 #include "VulkanWrapper/Memory/Buffer.h"
+#include "VulkanWrapper/Memory/BufferList.h"
 #include <cstring>
 #include <gtest/gtest.h>
 #include <vector>
@@ -157,4 +158,151 @@ TEST(BufferTest, GenericCopy) {
     for (size_t i = 0; i < data.size(); ++i) {
         EXPECT_EQ(retrieved_data[i], data[i]);
     }
+}
+
+// BufferList tests
+
+TEST(BufferListTest, FirstAllocationStartsAtZero) {
+    auto &gpu = vw::tests::create_gpu();
+    using StorageBufferList =
+        vw::BufferList<std::byte, false, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT>;
+
+    StorageBufferList list(gpu.allocator);
+
+    auto info = list.create_buffer(100);
+
+    EXPECT_EQ(info.offset, 0);
+    EXPECT_NE(info.buffer, nullptr);
+}
+
+TEST(BufferListTest, FirstAllocationWithAlignmentStartsAtZero) {
+    auto &gpu = vw::tests::create_gpu();
+    using StorageBufferList =
+        vw::BufferList<std::byte, false, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT>;
+
+    StorageBufferList list(gpu.allocator);
+
+    // Even with 256-byte alignment, first allocation should start at 0
+    auto info = list.create_buffer(100, 256);
+
+    EXPECT_EQ(info.offset, 0);
+    EXPECT_NE(info.buffer, nullptr);
+}
+
+TEST(BufferListTest, SecondAllocationWithoutAlignment) {
+    auto &gpu = vw::tests::create_gpu();
+    using StorageBufferList =
+        vw::BufferList<std::byte, false, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT>;
+
+    StorageBufferList list(gpu.allocator);
+
+    auto info1 = list.create_buffer(100);
+    auto info2 = list.create_buffer(50);
+
+    // Without alignment, second allocation should start immediately after first
+    EXPECT_EQ(info1.offset, 0);
+    EXPECT_EQ(info2.offset, 100);
+    // Both should use the same underlying buffer
+    EXPECT_EQ(info1.buffer, info2.buffer);
+}
+
+TEST(BufferListTest, SecondAllocationWithAlignment) {
+    auto &gpu = vw::tests::create_gpu();
+    using StorageBufferList =
+        vw::BufferList<std::byte, false, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT>;
+
+    StorageBufferList list(gpu.allocator);
+
+    // First allocation: 100 bytes starting at 0
+    auto info1 = list.create_buffer(100);
+    // Second allocation with 256-byte alignment
+    auto info2 = list.create_buffer(50, 256);
+
+    EXPECT_EQ(info1.offset, 0);
+    // Second allocation should be aligned to 256 bytes
+    EXPECT_EQ(info2.offset, 256);
+    EXPECT_EQ(info2.offset % 256, 0);
+    // Both should use the same underlying buffer
+    EXPECT_EQ(info1.buffer, info2.buffer);
+}
+
+TEST(BufferListTest, MultipleAllocationsWithAlignment) {
+    auto &gpu = vw::tests::create_gpu();
+    using StorageBufferList =
+        vw::BufferList<std::byte, false, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT>;
+
+    StorageBufferList list(gpu.allocator);
+
+    // Allocate several buffers with 256-byte alignment
+    auto info1 = list.create_buffer(100, 256); // 0-99, next at 100
+    auto info2 = list.create_buffer(200, 256); // aligned to 256, 256-455
+    auto info3 = list.create_buffer(50, 256);  // aligned to 512, 512-561
+
+    EXPECT_EQ(info1.offset, 0);
+    EXPECT_EQ(info2.offset, 256);
+    EXPECT_EQ(info3.offset, 512);
+
+    // All offsets should be 256-byte aligned
+    EXPECT_EQ(info1.offset % 256, 0);
+    EXPECT_EQ(info2.offset % 256, 0);
+    EXPECT_EQ(info3.offset % 256, 0);
+}
+
+TEST(BufferListTest, MixedAlignmentAllocations) {
+    auto &gpu = vw::tests::create_gpu();
+    using StorageBufferList =
+        vw::BufferList<std::byte, false, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT>;
+
+    StorageBufferList list(gpu.allocator);
+
+    // Mix of aligned and unaligned allocations
+    auto info1 = list.create_buffer(100);     // 0-99, next at 100
+    auto info2 = list.create_buffer(50);      // 100-149, next at 150
+    auto info3 = list.create_buffer(30, 256); // aligned to 256, 256-285
+
+    EXPECT_EQ(info1.offset, 0);
+    EXPECT_EQ(info2.offset, 100);
+    EXPECT_EQ(info3.offset, 256);
+    EXPECT_EQ(info3.offset % 256, 0);
+}
+
+TEST(BufferListTest, AlignmentWithVariousPowersOfTwo) {
+    auto &gpu = vw::tests::create_gpu();
+    using StorageBufferList =
+        vw::BufferList<std::byte, false, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT>;
+
+    StorageBufferList list(gpu.allocator);
+
+    auto info1 = list.create_buffer(10);      // 0-9, next at 10
+    auto info2 = list.create_buffer(10, 16);  // aligned to 16, 16-25
+    auto info3 = list.create_buffer(10, 64);  // aligned to 64, 64-73
+    auto info4 = list.create_buffer(10, 128); // aligned to 128, 128-137
+
+    EXPECT_EQ(info1.offset, 0);
+    EXPECT_EQ(info2.offset, 16);
+    EXPECT_EQ(info3.offset, 64);
+    EXPECT_EQ(info4.offset, 128);
+
+    EXPECT_EQ(info2.offset % 16, 0);
+    EXPECT_EQ(info3.offset % 64, 0);
+    EXPECT_EQ(info4.offset % 128, 0);
+}
+
+TEST(BufferListTest, AlignmentDoesNotOverlapPreviousAllocation) {
+    auto &gpu = vw::tests::create_gpu();
+    using StorageBufferList =
+        vw::BufferList<std::byte, false, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT>;
+
+    StorageBufferList list(gpu.allocator);
+
+    // Allocate 200 bytes, which goes past 128 but not to 256
+    auto info1 = list.create_buffer(200); // 0-199, next at 200
+    // Next allocation with 128 alignment should go to 256, not 128
+    auto info2 = list.create_buffer(
+        50, 128); // aligned to 256 (next multiple of 128 >= 200)
+
+    EXPECT_EQ(info1.offset, 0);
+    EXPECT_EQ(info2.offset, 256); // 256 is the next multiple of 128 after 200
+    EXPECT_EQ(info2.offset % 128, 0);
+    EXPECT_GE(info2.offset, 200); // Must not overlap with first allocation
 }
