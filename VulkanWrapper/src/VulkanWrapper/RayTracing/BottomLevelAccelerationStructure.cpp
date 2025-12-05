@@ -37,7 +37,8 @@ BottomLevelAccelerationStructureList::BottomLevelAccelerationStructureList(
 BottomLevelAccelerationStructureList::AccelerationStructureBufferList::BufferInfo
 BottomLevelAccelerationStructureList::allocate_acceleration_structure_buffer(
     vk::DeviceSize size) {
-    return m_acceleration_structure_buffer_list.create_buffer(size);
+    // Acceleration structure offset must be 256-byte aligned
+    return m_acceleration_structure_buffer_list.create_buffer(size, 256);
 }
 
 BottomLevelAccelerationStructureList::ScratchBufferList::BufferInfo
