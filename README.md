@@ -56,9 +56,9 @@ ctest --test-dir build --verbose
 ### Instance and Device Creation
 
 ```cpp
-#include <VulkanWrapper/Vulkan/InstanceBuilder.h>
+#include <VulkanWrapper/Vulkan/Instance.h>
 #include <VulkanWrapper/Vulkan/DeviceFinder.h>
-#include <VulkanWrapper/Memory/AllocatorBuilder.h>
+#include <VulkanWrapper/Memory/Allocator.h>
 
 // Create Vulkan instance
 auto instance = vw::InstanceBuilder()
@@ -67,16 +67,14 @@ auto instance = vw::InstanceBuilder()
     .build();
 
 // Find and create a suitable GPU device
-auto device = instance.findGpu()
+auto device = instance->findGpu()
     .with_queue(vk::QueueFlagBits::eGraphics)
     .with_synchronization_2()
     .with_dynamic_rendering()
     .build();
 
 // Create memory allocator
-auto allocator = vw::AllocatorBuilder(device)
-    .set_flags(VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT)
-    .build();
+auto allocator = vw::AllocatorBuilder(instance, device).build();
 ```
 
 ### Type-Safe Buffers
@@ -91,14 +89,14 @@ struct Vertex {
 };
 
 // Host-visible vertex buffer (CPU-accessible)
-vw::Buffer<Vertex, true, vk::BufferUsageFlagBits::eVertexBuffer> hostBuffer;
+vw::Buffer<Vertex, true, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT> hostBuffer;
 
 // Device-local index buffer (GPU-only, high performance)
-vw::Buffer<uint32_t, false, vk::BufferUsageFlagBits::eIndexBuffer> deviceBuffer;
+vw::Buffer<uint32_t, false, VK_BUFFER_USAGE_INDEX_BUFFER_BIT> deviceBuffer;
 
-// Type-safe: copy_from_host() only available on host-visible buffers
-hostBuffer.copy_from_host(vertices);  // OK
-// deviceBuffer.copy_from_host(indices);  // Compile error!
+// Type-safe: copy() only available on host-visible buffers
+hostBuffer.copy(vertices, 0);  // OK
+// deviceBuffer.copy(indices, 0);  // Compile error!
 ```
 
 ### Automatic Resource Synchronization
@@ -106,33 +104,46 @@ hostBuffer.copy_from_host(vertices);  // OK
 ```cpp
 #include <VulkanWrapper/Synchronization/ResourceTracker.h>
 
-vw::ResourceTracker tracker;
+vw::Barrier::ResourceTracker tracker;
 
-// Track resource states - barriers generated automatically
-tracker.track_buffer_state(buffer, interval,
-    vk::PipelineStageFlagBits2::eTransfer,
-    vk::AccessFlagBits2::eTransferWrite);
+// Track initial buffer state
+tracker.track(vw::Barrier::BufferState{
+    .buffer = buffer,
+    .offset = 0,
+    .size = bufferSize,
+    .stage = vk::PipelineStageFlagBits2::eTransfer,
+    .access = vk::AccessFlagBits2::eTransferWrite
+});
 
-tracker.track_buffer_state(buffer, interval,
-    vk::PipelineStageFlagBits2::eVertexShader,
-    vk::AccessFlagBits2::eShaderRead);
+// Request new state - barriers generated automatically
+tracker.request(vw::Barrier::BufferState{
+    .buffer = buffer,
+    .offset = 0,
+    .size = bufferSize,
+    .stage = vk::PipelineStageFlagBits2::eVertexShader,
+    .access = vk::AccessFlagBits2::eShaderRead
+});
 
-// Generate optimal barriers
+// Flush pending barriers
 tracker.flush(commandBuffer);
 ```
 
 ### Graphics Pipeline
 
 ```cpp
-#include <VulkanWrapper/Pipeline/GraphicsPipelineBuilder.h>
+#include <VulkanWrapper/Pipeline/Pipeline.h>
+#include <VulkanWrapper/Pipeline/PipelineLayout.h>
 
-auto pipeline = vw::GraphicsPipelineBuilder(device)
+auto pipelineLayout = vw::PipelineLayoutBuilder(device).build();
+
+auto pipeline = vw::GraphicsPipelineBuilder(device, std::move(pipelineLayout))
     .add_shader(vk::ShaderStageFlagBits::eVertex, vertexShader)
     .add_shader(vk::ShaderStageFlagBits::eFragment, fragmentShader)
-    .set_vertex_input<Vertex>()
-    .set_primitive_topology(vk::PrimitiveTopology::eTriangleList)
-    .set_color_attachment_format(swapchain.format())
-    .set_depth_attachment_format(vk::Format::eD32Sfloat)
+    .add_vertex_binding<Vertex>()
+    .with_topology(vk::PrimitiveTopology::eTriangleList)
+    .add_color_attachment(swapchain.format())
+    .set_depth_format(vk::Format::eD32Sfloat)
+    .with_dynamic_viewport_scissor()
     .build();
 ```
 
