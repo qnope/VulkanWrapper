@@ -4,6 +4,9 @@
     {"name": "sdl3-image", "features":["png"]},
     "glm",
     "assimp",
+    "vulkan",
+    "vulkan-validationlayers",
+    {"name": "glslang", "features": ["tools"]},
     "vulkan-memory-allocator",
     "gtest"
   ]

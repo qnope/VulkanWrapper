@@ -97,9 +97,9 @@ class VulkanExample {
             glm::perspective(glm::radians(60.0f), 800.0f / 600.0f, 0.1f, 512.f);
         projectionMatrix[1][1] *= -1;
 
-        viewMatrix =
-            glm::lookAt(glm::vec3(5.0f, 6.0f, 8.0f), glm::vec3(0.0f, 0.0f, 0.0f),
-                        glm::vec3(0.0f, 1.0f, 0.0f));
+        viewMatrix = glm::lookAt(glm::vec3(5.0f, 6.0f, 8.0f),
+                                 glm::vec3(0.0f, 0.0f, 0.0f),
+                                 glm::vec3(0.0f, 1.0f, 0.0f));
     }
 
     /*
@@ -165,7 +165,8 @@ class VulkanExample {
             vw::rt::as::TopLevelAccelerationStructureBuilder(device, allocator);
 
         // Scene instances are in the same order as meshes/BLAS
-        // (created in createMeshManager in same order as mesh_manager->meshes())
+        // (created in createMeshManager in same order as
+        // mesh_manager->meshes())
         const auto &instances = scene.instances();
         for (size_t i = 0; i < instances.size(); ++i) {
             builder.add_bottom_level_acceleration_structure_address(
@@ -225,14 +226,15 @@ class VulkanExample {
         allocInfo.setDescriptorPool(*descriptorPool)
             .setSetLayouts(*descriptorSetLayout);
 
+        // Allocate the descriptor set
+        descriptorSet = device->handle().allocateDescriptorSets(allocInfo).value.front();
+
         // Sets per frame, just like the buffers themselves
         // Acceleration structure and storage image does not need to be
         // duplicated per frame, we use the same for each descriptor to keep
         // things simple
 
         for (auto i = 0; i < 1; i++) {
-            descriptorSet =
-                device->handle().allocateDescriptorSets(allocInfo)->front();
 
             // The fragment shader needs access to the ray tracing acceleration
             // structure, so we pass it as a descriptor
