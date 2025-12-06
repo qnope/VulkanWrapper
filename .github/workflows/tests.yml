@@ -86,6 +86,17 @@ jobs:
         set(VCPKG_LINKER_FLAGS "-stdlib=libc++ -lc++abi")
         EOF
 
+    - name: Cache vcpkg installed packages
+      uses: actions/cache@v4
+      id: vcpkg-cache
+      with:
+        path: |
+          ${{ github.workspace }}/build/vcpkg_installed
+        key: vcpkg-installed-${{ runner.os }}-${{ hashFiles('vcpkg.json', '.github/workflows/tests.yml') }}-v3
+        restore-keys: |
+          vcpkg-installed-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}-
+          vcpkg-installed-${{ runner.os }}-
+
     - name: Configure CMake
       run: |
         cmake -B build \
