@@ -75,6 +75,7 @@ jobs:
         vcpkgGitCommitId: '3a3285c4878c7f5a957202201ba41e6fdeba8db4'
 
     - name: Create vcpkg triplet for libc++
+      id: triplet
       run: |
         cat > ${{ github.workspace }}/vcpkg/triplets/x64-linux-clang.cmake << 'EOF'
         set(VCPKG_TARGET_ARCHITECTURE x64)
@@ -85,6 +86,28 @@ jobs:
         set(VCPKG_CXX_FLAGS "-stdlib=libc++")
         set(VCPKG_LINKER_FLAGS "-stdlib=libc++ -lc++abi")
         EOF
+        echo "hash=$(sha256sum ${{ github.workspace }}/vcpkg/triplets/x64-linux-clang.cmake | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+
+    - name: Cache vcpkg installed packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ github.workspace }}/build/vcpkg_installed
+        key: vcpkg-installed-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}-${{ steps.triplet.outputs.hash }}-${{ env.VCPKG_DEFAULT_TRIPLET }}
+        restore-keys: |
+          vcpkg-installed-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}-
+          vcpkg-installed-${{ runner.os }}-
+        save-always: true
+
+    - name: Cache vcpkg downloads
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ github.workspace }}/vcpkg/downloads
+        key: vcpkg-downloads-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+        restore-keys: |
+          vcpkg-downloads-${{ runner.os }}-
+        save-always: true
 
     - name: Configure CMake
       run: |
