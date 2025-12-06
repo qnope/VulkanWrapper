@@ -1,0 +1,56 @@
+#pragma once
+
+#include "VulkanWrapper/Descriptors/Vertex.h"
+#include "VulkanWrapper/3rd_party.h"
+#include "VulkanWrapper/Memory/Buffer.h"
+#include "VulkanWrapper/Model/Material/Material.h"
+
+namespace vw::Model {
+using Vertex3DBuffer = Buffer<Vertex3D, false, VertexBufferUsage>;
+using FullVertex3DBuffer = Buffer<FullVertex3D, false, VertexBufferUsage>;
+
+class Mesh {
+  public:
+    Mesh(std::shared_ptr<const Vertex3DBuffer> vertex_buffer,
+         std::shared_ptr<const FullVertex3DBuffer> full_vertex_buffer,
+         std::shared_ptr<const IndexBuffer> index_buffer,
+         Material::Material descriptor_material, uint32_t indice_count,
+         int vertex_offset, int first_index, int vertices_count);
+
+    [[nodiscard]] Material::MaterialTypeTag material_type_tag() const noexcept;
+
+    void draw(vk::CommandBuffer cmd_buffer,
+              const PipelineLayout &pipeline_layout,
+              uint32_t material_descriptor_set_index,
+              const glm::mat4 &transform) const;
+
+    void draw_zpass(vk::CommandBuffer cmd_buffer,
+                    const PipelineLayout &pipeline_layout,
+                    const glm::mat4 &transform) const;
+
+    [[nodiscard]] vk::AccelerationStructureGeometryKHR
+    acceleration_structure_geometry() const noexcept;
+
+    [[nodiscard]] vk::AccelerationStructureBuildRangeInfoKHR
+    acceleration_structure_range_info() const noexcept;
+
+    [[nodiscard]] uint32_t index_count() const noexcept {
+        return m_indice_count;
+    }
+
+    [[nodiscard]] const Material::Material &material() const noexcept {
+        return m_material;
+    }
+
+  private:
+    std::shared_ptr<const Vertex3DBuffer> m_vertex_buffer;
+    std::shared_ptr<const FullVertex3DBuffer> m_full_vertex_buffer;
+    std::shared_ptr<const IndexBuffer> m_index_buffer;
+    Material::Material m_material;
+
+    uint32_t m_indice_count;
+    int m_vertex_offset;
+    int m_first_index;
+    int m_vertices_count;
+};
+} // namespace vw::Model
