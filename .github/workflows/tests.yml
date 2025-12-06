@@ -47,7 +47,6 @@ jobs:
           cmake \
           ninja-build \
           pkg-config \
-          ccache \
           autoconf \
           autoconf-archive \
           automake \
@@ -63,11 +62,6 @@ jobs:
           libxkbcommon-dev \
           libasound2-dev \
           libpulse-dev
-
-    - name: Setup ccache
-      uses: hendrikmuhs/ccache-action@v1
-      with:
-        key: ${{ runner.os }}-ccache
 
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
@@ -109,8 +103,6 @@ jobs:
           -DCMAKE_C_FLAGS="-fPIC" \
           -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++ -lc++abi" \
           -DCMAKE_SHARED_LINKER_FLAGS="-stdlib=libc++ -lc++abi" \
-          -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
           -G Ninja
 
     - name: Build
