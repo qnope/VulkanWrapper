@@ -80,5 +80,3 @@ function(VwCompileShader TARGET_NAME SHADER_PATH RELATIVE_OUTPUT_PATH)
 
 endfunction()
 
-add_custom_command(TARGET VulkanWrapper::VW POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:VulkanWrapper::VW> ${CMAKE_SOURCE_DIR}/vw_rust/)
