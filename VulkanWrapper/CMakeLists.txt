@@ -11,10 +11,6 @@ find_package(SDL3_image REQUIRED)
 
 add_library(VulkanWrapperCoreLibrary SHARED)
 
-if(NOT Vulkan_GLSLANG_VALIDATOR_EXECUTABLE)
-    message(FATAL_ERROR "glslc not found")
-endif()
-
 add_subdirectory(include)
 add_subdirectory(src)
 
@@ -61,9 +57,11 @@ function(VwCompileShader TARGET_NAME SHADER_PATH RELATIVE_OUTPUT_PATH)
 
     # Destination finale du .spv
     set(OUTPUT_SHADER_DIR "${RUNTIME_DIR}")
-    file(MAKE_DIRECTORY "${OUTPUT_SHADER_DIR}")
-
     set(COMPILED_SHADER "${OUTPUT_SHADER_DIR}/${RELATIVE_OUTPUT_PATH}")
+
+    # Create the parent directory for the compiled shader (handles subdirectories in RELATIVE_OUTPUT_PATH)
+    get_filename_component(COMPILED_SHADER_DIR "${COMPILED_SHADER}" DIRECTORY)
+    file(MAKE_DIRECTORY "${COMPILED_SHADER_DIR}")
 
     add_custom_command(
         OUTPUT "${COMPILED_SHADER}"
