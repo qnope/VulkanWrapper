@@ -4,6 +4,7 @@
 #include "VulkanWrapper/3rd_party.h"
 #include "VulkanWrapper/Memory/Buffer.h"
 #include "VulkanWrapper/Model/Material/Material.h"
+#include <functional>
 
 namespace vw::Model {
 using Vertex3DBuffer = Buffer<Vertex3D, false, VertexBufferUsage>;
@@ -42,6 +43,14 @@ class Mesh {
         return m_material;
     }
 
+    /// Returns a hash of this mesh's geometry.
+    /// Meshes with the same geometry_hash() share identical triangle data.
+    [[nodiscard]] size_t geometry_hash() const noexcept;
+
+    /// Equality operator comparing geometry identity (not materials).
+    /// Two meshes are equal if they reference the same GPU geometry.
+    bool operator==(const Mesh &other) const noexcept;
+
   private:
     std::shared_ptr<const Vertex3DBuffer> m_vertex_buffer;
     std::shared_ptr<const FullVertex3DBuffer> m_full_vertex_buffer;
@@ -54,3 +63,10 @@ class Mesh {
     int m_vertices_count;
 };
 } // namespace vw::Model
+
+template <>
+struct std::hash<vw::Model::Mesh> {
+    size_t operator()(const vw::Model::Mesh &mesh) const noexcept {
+        return mesh.geometry_hash();
+    }
+};

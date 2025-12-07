@@ -85,4 +85,29 @@ Mesh::acceleration_structure_range_info() const noexcept {
         m_indice_count / 3);
 }
 
+size_t Mesh::geometry_hash() const noexcept {
+    // FNV-1a style hash combining
+    size_t h = 14695981039346656037ULL;
+    auto combine = [&h](auto value) {
+        h ^= static_cast<size_t>(value);
+        h *= 1099511628211ULL;
+    };
+    combine(m_vertex_buffer->device_address());
+    combine(m_vertex_offset);
+    combine(m_vertices_count);
+    combine(m_index_buffer->device_address());
+    combine(m_first_index);
+    combine(m_indice_count);
+    return h;
+}
+
+bool Mesh::operator==(const Mesh &other) const noexcept {
+    return m_vertex_buffer->device_address() == other.m_vertex_buffer->device_address() &&
+           m_vertex_offset == other.m_vertex_offset &&
+           m_vertices_count == other.m_vertices_count &&
+           m_index_buffer->device_address() == other.m_index_buffer->device_address() &&
+           m_first_index == other.m_first_index &&
+           m_indice_count == other.m_indice_count;
+}
+
 } // namespace vw::Model
