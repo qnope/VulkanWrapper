@@ -2,7 +2,7 @@
 
 #include "VulkanWrapper/Pipeline/PipelineLayout.h"
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
-
+#include "VulkanWrapper/Utils/Error.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 
 namespace vw {
@@ -128,13 +128,9 @@ std::shared_ptr<const Pipeline> GraphicsPipelineBuilder::build() && {
                           .setPRasterizationState(&rasterizationStateInfo)
                           .setLayout(m_pipelineLayout.handle());
 
-    auto [result, pipeline] = m_device->handle().createGraphicsPipelineUnique(
-        vk::PipelineCache(), info);
-
-    if (result != vk::Result::eSuccess) {
-        throw GraphicsPipelineCreationException{
-            std::source_location::current()};
-    }
+    auto pipeline = check_vk(
+        m_device->handle().createGraphicsPipelineUnique(vk::PipelineCache(), info),
+        "Failed to create graphics pipeline");
 
     return std::make_shared<Pipeline>(std::move(pipeline),
                                       std::move(m_pipelineLayout));

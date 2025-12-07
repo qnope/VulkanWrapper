@@ -1,5 +1,6 @@
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
 
+#include "VulkanWrapper/Utils/Error.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 #include <fstream>
 
@@ -12,14 +13,13 @@ static std::vector<uint32_t> readSpirVFile(const std::filesystem::path &path) {
     std::ifstream in(path, flags);
 
     if (!in) {
-        std::cout << path << " not found";
-        throw SpirVFileNotFoundException{std::source_location::current()};
+        throw FileException(path, "SPIR-V file not found");
     }
 
     const auto size = in.tellg();
 
     if (size == 0 || size % sizeof(std::uint32_t) != 0) {
-        throw SpirVIncorrectSizeException{std::source_location::current()};
+        throw FileException(path, "SPIR-V file has incorrect size (must be non-zero and multiple of 4 bytes)");
     }
 
     std::vector<std::uint32_t> result(size / sizeof(std::uint32_t));
@@ -37,11 +37,8 @@ ShaderModule::create_from_spirv(std::shared_ptr<const Device> device,
     auto info = vk::ShaderModuleCreateInfo()
                     .setCodeSize(spirV.size() * sizeof(std::uint32_t))
                     .setCode(spirV);
-    auto [result, module] = device->handle().createShaderModuleUnique(info);
-
-    if (result != vk::Result::eSuccess) {
-        throw SpirVInvalidException{std::source_location::current()};
-    }
+    auto module = check_vk(device->handle().createShaderModuleUnique(info),
+                           "Failed to create shader module from SPIR-V");
 
     return std::make_shared<ShaderModule>(std::move(module));
 }

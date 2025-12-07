@@ -1,7 +1,7 @@
 #include "VulkanWrapper/Vulkan/Instance.h"
 
 #include "VulkanWrapper/Utils/Algos.h"
-#include "VulkanWrapper/Utils/exceptions.h"
+#include "VulkanWrapper/Utils/Error.h"
 #include "VulkanWrapper/Vulkan/DeviceFinder.h"
 #include "VulkanWrapper/Vulkan/PhysicalDevice.h"
 
@@ -95,12 +95,8 @@ std::shared_ptr<Instance> InstanceBuilder::build() && {
 
     VULKAN_HPP_DEFAULT_DISPATCHER.init();
 
-    auto [result, instance] = vk::createInstanceUnique(info);
-
-    if (result != vk::Result::eSuccess) {
-        std::cout << unsigned(result) << std::endl;
-        throw InstanceCreationException{std::source_location::current()};
-    }
+    auto instance = check_vk(vk::createInstanceUnique(info),
+                             "Failed to create Vulkan instance");
 
     VULKAN_HPP_DEFAULT_DISPATCHER.init(*instance);
 

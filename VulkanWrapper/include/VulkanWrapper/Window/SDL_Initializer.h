@@ -1,10 +1,7 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
 
-#include "VulkanWrapper/Utils/exceptions.h"
-
 namespace vw {
-using InitializationException = TaggedException<struct InitializationTag>;
 
 class SDL_Initializer {
   public:

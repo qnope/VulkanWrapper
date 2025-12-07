@@ -1,6 +1,7 @@
 #include "VulkanWrapper/Vulkan/Swapchain.h"
 
 #include "VulkanWrapper/Synchronization/Semaphore.h"
+#include "VulkanWrapper/Utils/Error.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 
 namespace vw {
@@ -64,14 +65,10 @@ SwapchainBuilder::SwapchainBuilder(std::shared_ptr<const Device> device,
 }
 
 Swapchain SwapchainBuilder::build() && {
+    auto swapchain = check_vk(m_device->handle().createSwapchainKHRUnique(m_info),
+                              "Failed to create swapchain");
 
-    auto result = m_device->handle().createSwapchainKHRUnique(m_info);
-
-    if (result.result != vk::Result::eSuccess) {
-        throw 0;
-    }
-
-    return Swapchain{m_device, std::move(result.value), m_info.imageFormat,
+    return Swapchain{m_device, std::move(swapchain), m_info.imageFormat,
                      m_width, m_height};
 }
 

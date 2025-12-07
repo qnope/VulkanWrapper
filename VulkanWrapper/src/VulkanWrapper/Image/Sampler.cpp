@@ -1,5 +1,6 @@
 #include "VulkanWrapper/Image/Sampler.h"
 
+#include "VulkanWrapper/Utils/Error.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 
 vw::SamplerBuilder::SamplerBuilder(std::shared_ptr<const Device> device)
@@ -16,9 +17,7 @@ vw::SamplerBuilder::SamplerBuilder(std::shared_ptr<const Device> device)
 }
 
 std::shared_ptr<const vw::Sampler> vw::SamplerBuilder::build() {
-    auto [result, sampler] = m_device->handle().createSamplerUnique(m_info);
-
-    if (result != vk::Result::eSuccess)
-        throw SamplerCreateException{std::source_location::current()};
+    auto sampler = check_vk(m_device->handle().createSamplerUnique(m_info),
+                            "Failed to create sampler");
     return std::make_shared<Sampler>(std::move(sampler));
 }

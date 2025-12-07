@@ -2,6 +2,7 @@
 
 #include "VulkanWrapper/Memory/Allocator.h"
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
+#include "VulkanWrapper/Utils/Error.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 
 namespace vw::rt {
@@ -99,14 +100,10 @@ RayTracingPipeline RayTracingPipelineBuilder::build() && {
                           .setMaxPipelineRayRecursionDepth(1)
                           .setLayout(m_pipelineLayout.handle());
 
-    auto [result, pipeline] =
+    auto pipeline = check_vk(
         m_device->handle().createRayTracingPipelineKHRUnique(
-            vk::DeferredOperationKHR(), vk::PipelineCache(), info);
-
-    if (result != vk::Result::eSuccess) {
-        throw RayTracingPipelineCreationException{
-            std::source_location::current()};
-    }
+            vk::DeferredOperationKHR(), vk::PipelineCache(), info),
+        "Failed to create ray tracing pipeline");
 
     RayTracingPipeline rayTracingPipeline(
         m_device, std::move(pipeline), std::move(m_pipelineLayout),

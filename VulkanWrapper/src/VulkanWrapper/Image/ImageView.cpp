@@ -1,6 +1,7 @@
 #include "VulkanWrapper/Image/ImageView.h"
 
 #include "VulkanWrapper/Image/Image.h"
+#include "VulkanWrapper/Utils/Error.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 
 namespace vw {
@@ -39,11 +40,9 @@ std::shared_ptr<const ImageView> ImageViewBuilder::build() && {
                           .setComponents(m_componentMapping)
                           .setSubresourceRange(m_subResourceRange);
 
-    auto view = m_device->handle().createImageViewUnique(info);
-    if (view.result != vk::Result::eSuccess) {
-        throw ImageViewCreationException{std::source_location::current()};
-    }
-    return std::make_shared<const ImageView>(m_image, std::move(view.value),
+    auto view = check_vk(m_device->handle().createImageViewUnique(info),
+                         "Failed to create image view");
+    return std::make_shared<const ImageView>(m_image, std::move(view),
                                              m_subResourceRange);
 }
 

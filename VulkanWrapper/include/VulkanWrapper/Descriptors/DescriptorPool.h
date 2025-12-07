@@ -3,16 +3,9 @@
 #include "VulkanWrapper/Descriptors/DescriptorAllocator.h"
 #include "VulkanWrapper/Descriptors/DescriptorSet.h"
 #include "VulkanWrapper/fwd.h"
-#include "VulkanWrapper/Utils/exceptions.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
 
 namespace vw {
-
-using DescriptorPoolCreationException =
-    TaggedException<struct DescriptorPoolCreationTag>;
-
-using DescriptorSetAllocationException =
-    TaggedException<struct DescriptorSetAllocationTag>;
 
 namespace Internal {
 class DescriptorPoolImpl

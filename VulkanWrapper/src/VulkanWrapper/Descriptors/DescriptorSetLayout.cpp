@@ -1,7 +1,7 @@
 #include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
 
+#include "VulkanWrapper/Utils/Error.h"
 #include "VulkanWrapper/Vulkan/Device.h"
-#include <source_location>
 
 namespace vw {
 
@@ -118,12 +118,8 @@ DescriptorSetLayoutBuilder::with_storage_image(vk::ShaderStageFlags stages,
 std::shared_ptr<DescriptorSetLayout> DescriptorSetLayoutBuilder::build() && {
     const auto info =
         vk::DescriptorSetLayoutCreateInfo().setBindings(m_bindings);
-    auto [result, value] =
-        m_device->handle().createDescriptorSetLayoutUnique(info);
-    if (result != vk::Result::eSuccess) {
-        throw DescriptorSetLayoutCreationException{
-            std::source_location::current()};
-    }
+    auto value = check_vk(m_device->handle().createDescriptorSetLayoutUnique(info),
+                          "Failed to create descriptor set layout");
     return std::make_shared<DescriptorSetLayout>(std::move(m_bindings),
                                                  std::move(value));
 }

@@ -11,7 +11,7 @@
 #include <VulkanWrapper/Synchronization/Fence.h>
 #include <VulkanWrapper/Synchronization/ResourceTracker.h>
 #include <VulkanWrapper/Synchronization/Semaphore.h>
-#include <VulkanWrapper/Utils/exceptions.h>
+#include <VulkanWrapper/Utils/Error.h>
 #include <VulkanWrapper/Vulkan/Queue.h>
 
 std::vector<std::shared_ptr<const vw::ImageView>>
@@ -169,14 +169,15 @@ int main() {
             app.device->presentQueue().present(app.swapchain, index,
                                                renderFinishedSemaphore);
             app.device->wait_idle();
-            break;
+            // break;
         }
 
         app.device->wait_idle();
     } catch (const vw::Exception &exception) {
-        std::cout << exception.m_sourceLocation.function_name() << '\n';
-        std::cout << exception.m_sourceLocation.file_name() << ":"
-                  << exception.m_sourceLocation.line() << '\n';
+        std::cout << exception.location().function_name() << '\n';
+        std::cout << exception.location().file_name() << ":"
+                  << exception.location().line() << '\n';
+        std::cout << "Error: " << exception.what() << '\n';
         return 1;
     } catch (const std::exception &e) {
         std::cout << "std::exception: " << e.what() << '\n';

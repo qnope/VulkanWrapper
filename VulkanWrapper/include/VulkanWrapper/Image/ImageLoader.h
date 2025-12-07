@@ -1,12 +1,9 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
 
-#include "VulkanWrapper/Utils/exceptions.h"
 #include <span>
 
 namespace vw {
-
-using ImageNotFoundException = TaggedException<struct ImageNotFoundTag>;
 
 struct ImageDescription {
     Width width;

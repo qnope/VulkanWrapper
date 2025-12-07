@@ -2,17 +2,9 @@
 #include "VulkanWrapper/3rd_party.h"
 
 #include "VulkanWrapper/fwd.h"
-#include "VulkanWrapper/Utils/exceptions.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
 
 namespace vw {
-using SpirVFileNotFoundException =
-    vw::TaggedException<struct SpirVFileNotFoundTag>;
-
-using SpirVIncorrectSizeException =
-    vw::TaggedException<struct SpirVIncorrectSizeTag>;
-
-using SpirVInvalidException = vw::TaggedException<struct SpirVInvalidTag>;
 
 class ShaderModule : public ObjectWithUniqueHandle<vk::UniqueShaderModule> {
   public:

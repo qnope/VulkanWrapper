@@ -4,12 +4,9 @@
 #include "VulkanWrapper/Descriptors/Vertex.h"
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Pipeline/PipelineLayout.h"
-#include "VulkanWrapper/Utils/exceptions.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
 
 namespace vw {
-using GraphicsPipelineCreationException =
-    TaggedException<struct GraphicsPipelineCreationTag>;
 
 class Pipeline : public ObjectWithUniqueHandle<vk::UniquePipeline> {
     friend class GraphicsPipelineBuilder;
