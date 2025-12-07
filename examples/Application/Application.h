@@ -16,10 +16,11 @@ class App {
     App() = default;
 
   public:
-    std::shared_ptr<vw::SDL_Initializer> initializer = std::make_shared<vw::SDL_Initializer>();
+    std::shared_ptr<vw::SDL_Initializer> initializer =
+        std::make_shared<vw::SDL_Initializer>();
     vw::Window window = vw::WindowBuilder(initializer)
                             .with_title("Vulkan Wrapper")
-                            .sized(vw::Width(800), vw::Height(600))
+                            .sized(vw::Width(1600), vw::Height(900))
                             .build();
 
     std::shared_ptr<vw::Instance> instance =
@@ -45,6 +46,5 @@ class App {
     std::shared_ptr<vw::Allocator> allocator =
         vw::AllocatorBuilder(instance, device).build();
 
-    vw::Swapchain swapchain =
-        window.create_swapchain(device, surface.handle());
+    vw::Swapchain swapchain = window.create_swapchain(device, surface.handle());
 };
