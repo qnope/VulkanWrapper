@@ -44,8 +44,10 @@ class StagingBufferManager {
         m_transfer_functions.emplace_back(function);
     }
 
+#ifdef VW_HAS_SDL3_IMAGE
     [[nodiscard]] CombinedImage
     stage_image_from_path(const std::filesystem::path &path, bool mipmaps);
+#endif
 
   private:
     std::shared_ptr<const Device> m_device;

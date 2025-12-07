@@ -4,13 +4,15 @@
 
 namespace vw {
 template <typename Tag> class IdentifierTag {
-    friend class ::std::hash<IdentifierTag>;
-
   public:
-    constexpr IdentifierTag(std::type_index index) noexcept
+    IdentifierTag(std::type_index index) noexcept
         : m_index{index} {}
 
     std::strong_ordering operator<=>(const IdentifierTag &) const = default;
+
+    [[nodiscard]] std::size_t hash() const noexcept {
+        return m_index.hash_code();
+    }
 
   private:
     std::type_index m_index;
@@ -19,7 +21,7 @@ template <typename Tag> class IdentifierTag {
 
 template <typename Tag> struct std::hash<vw::IdentifierTag<Tag>> {
     [[nodiscard]] std::size_t
-    operator()(vw::IdentifierTag<Tag> tag) const noexcept {
-        return tag.m_index.hash_code();
+    operator()(const vw::IdentifierTag<Tag>& tag) const noexcept {
+        return tag.hash();
     }
 };

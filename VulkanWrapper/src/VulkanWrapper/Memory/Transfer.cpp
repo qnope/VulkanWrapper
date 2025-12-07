@@ -1,6 +1,8 @@
 #include "VulkanWrapper/Memory/Transfer.h"
 #include "VulkanWrapper/Image/Image.h"
+#ifdef VW_HAS_SDL3_IMAGE
 #include "VulkanWrapper/Image/ImageLoader.h"
+#endif
 #include "VulkanWrapper/Memory/Allocator.h"
 #include "VulkanWrapper/Memory/AllocateBufferUtils.h"
 #include "VulkanWrapper/Command/CommandPool.h"
@@ -224,6 +226,7 @@ vk::ImageSubresourceRange Transfer::getFullSubresourceRange(
     return image->full_range();
 }
 
+#ifdef VW_HAS_SDL3_IMAGE
 void Transfer::saveToFile(
     vk::CommandBuffer cmd,
     const Allocator &allocator,
@@ -279,5 +282,6 @@ void Transfer::saveToFile(
     save_image(path, Width(extent.width), Height(extent.height),
                std::span<const std::byte>(pixels));
 }
+#endif
 
 } // namespace vw

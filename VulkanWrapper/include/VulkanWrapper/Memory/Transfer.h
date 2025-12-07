@@ -104,6 +104,7 @@ class Transfer {
      * @param path File path to save to (format determined by extension: .png, .bmp, .jpg)
      * @param finalLayout Layout to transition the image to after copying (default: ePresentSrcKHR for swapchain images)
      */
+#ifdef VW_HAS_SDL3_IMAGE
     void saveToFile(
         vk::CommandBuffer cmd,
         const Allocator &allocator,
@@ -111,6 +112,7 @@ class Transfer {
         const std::shared_ptr<const Image> &image,
         const std::filesystem::path &path,
         vk::ImageLayout finalLayout = vk::ImageLayout::ePresentSrcKHR);
+#endif
 
   private:
     Barrier::ResourceTracker m_resourceTracker;

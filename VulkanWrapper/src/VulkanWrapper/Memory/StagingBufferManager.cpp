@@ -2,7 +2,9 @@
 
 #include "VulkanWrapper/Command/CommandPool.h"
 #include "VulkanWrapper/Image/CombinedImage.h"
+#ifdef VW_HAS_SDL3_IMAGE
 #include "VulkanWrapper/Image/ImageLoader.h"
+#endif
 #include "VulkanWrapper/Image/ImageView.h"
 #include "VulkanWrapper/Image/Mipmap.h"
 #include "VulkanWrapper/Image/Sampler.h"
@@ -45,6 +47,7 @@ vk::CommandBuffer StagingBufferManager::fill_command_buffer() {
     return cmd_buffer;
 }
 
+#ifdef VW_HAS_SDL3_IMAGE
 CombinedImage
 StagingBufferManager::stage_image_from_path(const std::filesystem::path &path,
                                             bool mipmaps) {
@@ -97,5 +100,6 @@ StagingBufferManager::stage_image_from_path(const std::filesystem::path &path,
 
     return {std::move(image_view), m_sampler};
 }
+#endif
 
 } // namespace vw

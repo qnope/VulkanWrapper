@@ -14,7 +14,7 @@ target_link_libraries(TestUtils
 target_include_directories(TestUtils PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Memory tests
-add_executable(MemoryTests
+set(MEMORY_TEST_SOURCES
     Memory/IntervalTests.cpp
     Memory/IntervalSetTests.cpp
     Memory/UniformBufferAllocatorTests.cpp
@@ -22,8 +22,13 @@ add_executable(MemoryTests
     Memory/BufferTests.cpp
     Memory/AllocatorTests.cpp
     Memory/StagingBufferManagerTests.cpp
-    Memory/TransferTests.cpp
 )
+
+if(TARGET SDL3_image::SDL3_image)
+    list(APPEND MEMORY_TEST_SOURCES Memory/TransferTests.cpp)
+endif()
+
+add_executable(MemoryTests ${MEMORY_TEST_SOURCES})
 
 target_link_libraries(MemoryTests
     PRIVATE
