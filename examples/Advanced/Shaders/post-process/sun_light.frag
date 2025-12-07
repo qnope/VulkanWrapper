@@ -6,19 +6,37 @@ layout (location = 0) in vec2 inUV;
 layout (location = 0) out vec4 outColor;
 
 layout (set = 0, binding = 0) uniform sampler2D samplerColor;
-layout (set = 0, binding = 1) uniform sampler2D samplerPosition;
+layout (set = 0, binding = 1) uniform sampler2D samplerDepth;
 layout (set = 0, binding = 2) uniform sampler2D samplerNormal;
 layout (set = 0, binding = 3) uniform accelerationStructureEXT topLevelAS;
 
 layout (push_constant) uniform PushConstants {
     vec4 sunDirection;
     vec4 sunColor;
+    mat4 inverseViewProj;
 } pushConstants;
+
+// Reconstruct world position from depth buffer
+vec3 reconstructWorldPosition(vec2 uv, float depth) {
+    // Convert UV [0,1] to NDC [-1,1]
+    // In Vulkan, Y is flipped by projection matrix, so we flip UV.y
+    vec2 ndc = vec2(uv.x * 2.0 - 1.0, (1.0 - uv.y) * 2.0 - 1.0);
+
+    // Vulkan depth range is [0,1]
+    vec4 clipPos = vec4(ndc, depth, 1.0);
+
+    // Transform from clip space to world space
+    vec4 worldPos = pushConstants.inverseViewProj * clipPos;
+
+    // Perspective divide
+    return worldPos.xyz / worldPos.w;
+}
 
 void main()
 {
     vec3 normal = texture(samplerNormal, inUV).rgb;
-    vec3 position = texture(samplerPosition, inUV).rgb;
+    float depth = texture(samplerDepth, inUV).r;
+    vec3 position = reconstructWorldPosition(inUV, depth);
     vec3 albedo = texture(samplerColor, inUV).rgb;
 
     // Direction TO the sun (negated sun direction which points FROM sun)
@@ -30,11 +48,13 @@ void main()
 
     // Only trace shadow ray if surface faces the sun
     if (NdotL > 0.0) {
-        // Small offset along normal to avoid self-intersection
-        vec3 rayOrigin = position + normal * 0.001;
+        // Offset along normal to avoid self-intersection
+        // Use distance-adaptive bias for numerical stability at large world coordinates
+        float bias = max(0.1, length(position) * 0.0005);
+        vec3 rayOrigin = position;
         vec3 rayDirection = L;
-        float tMin = 0.001;
-        float tMax = 1000.0;
+        float tMin = 1;
+        float tMax = 100001.0;
 
         rayQueryEXT rayQuery;
         rayQueryInitializeEXT(
@@ -55,11 +75,11 @@ void main()
 
         // Check if we hit anything
         if (rayQueryGetIntersectionTypeEXT(rayQuery, true) != gl_RayQueryCommittedIntersectionNoneEXT) {
-            shadow = 0.0;
+            shadow = 0.;
         }
     }
 
-    vec3 diffuse = albedo * pushConstants.sunColor.rgb * NdotL * shadow;
+    vec3 diffuse = albedo * (pushConstants.sunColor.rgb * NdotL * shadow + 0.2);
 
     outColor = vec4(diffuse, 1.0);
 }
