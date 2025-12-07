@@ -85,7 +85,7 @@ gtest_discover_tests(RayTracingTests)
 
 # Utils tests
 add_executable(UtilsTests
-    Utils/ErrorTests.cpp
+    utils/ErrorTests.cpp
 )
 
 target_link_libraries(UtilsTests
