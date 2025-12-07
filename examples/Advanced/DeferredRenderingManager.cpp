@@ -7,15 +7,13 @@ DeferredRenderingManager::DeferredRenderingManager(
     std::shared_ptr<vw::Device> device, std::shared_ptr<vw::Allocator> allocator,
     const vw::Swapchain &swapchain,
     const vw::Model::MeshManager &mesh_manager,
-    const vw::Model::Scene &scene,
+    const vw::rt::RayTracedScene &ray_traced_scene,
     const vw::Buffer<UBOData, true, vw::UniformBufferUsage> &uniform_buffer,
-    vk::AccelerationStructureKHR tlas,
     Config config)
     : m_device{std::move(device)}
     , m_allocator{std::move(allocator)}
-    , m_scene{scene}
-    , m_config{std::move(config)}
-    , m_tlas{tlas} {
+    , m_ray_traced_scene{ray_traced_scene}
+    , m_config{std::move(config)} {
 
     m_sampler = vw::SamplerBuilder(m_device).build();
 
@@ -97,7 +95,7 @@ void DeferredRenderingManager::create_sun_light_pass_resources() {
 
     for (const auto &gBuffer : m_gbuffers) {
         m_sunlight_descriptor_sets.push_back(create_sun_light_pass_descriptor_set(
-            *m_sunlight_descriptor_pool, m_sampler, gBuffer, m_tlas));
+            *m_sunlight_descriptor_pool, m_sampler, gBuffer, m_ray_traced_scene.tlas_handle()));
     }
 }
 
@@ -107,13 +105,14 @@ void DeferredRenderingManager::create_sky_pass_resources() {
 
 void DeferredRenderingManager::create_renderings() {
     int i = 0;
+    const auto &scene = m_ray_traced_scene.scene();
     for (const auto &gBuffer : m_gbuffers) {
         auto depth_subpass =
-            std::make_shared<ZPass>(m_device, m_scene, m_uniform_descriptor_layout,
+            std::make_shared<ZPass>(m_device, scene, m_uniform_descriptor_layout,
                                     *m_uniform_descriptor_set, gBuffer, m_zpass_pipeline);
 
         auto color_subpass = std::make_shared<ColorSubpass>(
-            m_device, m_scene, m_uniform_descriptor_layout,
+            m_device, scene, m_uniform_descriptor_layout,
             *m_uniform_descriptor_set, gBuffer, m_mesh_renderer);
 
         auto sunlight_pass =

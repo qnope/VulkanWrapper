@@ -14,6 +14,7 @@
 #include <VulkanWrapper/Model/MeshManager.h>
 #include <VulkanWrapper/Model/Scene.h>
 #include <VulkanWrapper/Pipeline/MeshRenderer.h>
+#include <VulkanWrapper/RayTracing/RayTracedScene.h>
 #include <VulkanWrapper/RenderPass/Rendering.h>
 #include <VulkanWrapper/Vulkan/Device.h>
 #include <VulkanWrapper/Vulkan/Swapchain.h>
@@ -37,21 +38,20 @@ class DeferredRenderingManager {
         std::shared_ptr<vw::Allocator> allocator,
         const vw::Swapchain &swapchain,
         const vw::Model::MeshManager &mesh_manager,
-        const vw::Model::Scene &scene,
+        const vw::rt::RayTracedScene &ray_traced_scene,
         const vw::Buffer<UBOData, true, vw::UniformBufferUsage> &uniform_buffer,
-        vk::AccelerationStructureKHR tlas, Config config);
+        Config config);
 
     DeferredRenderingManager(
         std::shared_ptr<vw::Device> device,
         std::shared_ptr<vw::Allocator> allocator,
         const vw::Swapchain &swapchain,
         const vw::Model::MeshManager &mesh_manager,
-        const vw::Model::Scene &scene,
-        const vw::Buffer<UBOData, true, vw::UniformBufferUsage> &uniform_buffer,
-        vk::AccelerationStructureKHR tlas)
+        const vw::rt::RayTracedScene &ray_traced_scene,
+        const vw::Buffer<UBOData, true, vw::UniformBufferUsage> &uniform_buffer)
         : DeferredRenderingManager(std::move(device), std::move(allocator),
-                                   swapchain, mesh_manager, scene,
-                                   uniform_buffer, tlas, Config{}) {}
+                                   swapchain, mesh_manager, ray_traced_scene,
+                                   uniform_buffer, Config{}) {}
 
     const std::vector<vw::Rendering> &renderings() const {
         return m_renderings;
@@ -84,9 +84,8 @@ class DeferredRenderingManager {
 
     std::shared_ptr<vw::Device> m_device;
     std::shared_ptr<vw::Allocator> m_allocator;
-    const vw::Model::Scene &m_scene;
+    const vw::rt::RayTracedScene &m_ray_traced_scene;
     Config m_config;
-    vk::AccelerationStructureKHR m_tlas;
 
     // Sun angle in degrees above horizon (90 = zenith)
     float m_sun_angle = 20.0f;
