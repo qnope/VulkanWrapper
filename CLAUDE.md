@@ -29,6 +29,12 @@ ctest --test-dir build-Clang20Debug
 ctest --test-dir build-Clang20Debug --verbose
 ```
 
+If test with screenshot asked
+```bash
+cd directory_of_the_executable
+SDL_VULKAN_LIBRARY=../../vcpkg_installed/arm64-osx/lib/libvulkan.dylib ./Main
+```
+
 ### Debugging tests
 You can use lldb to debug tests
 
