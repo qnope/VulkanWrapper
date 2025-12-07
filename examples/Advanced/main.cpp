@@ -17,14 +17,12 @@
 #include <VulkanWrapper/Model/Material/ColoredMaterialManager.h>
 #include <VulkanWrapper/Model/Material/TexturedMaterialManager.h>
 #include <VulkanWrapper/Model/MeshManager.h>
-#include <VulkanWrapper/Model/Scene.h>
 #include <VulkanWrapper/Pipeline/MeshRenderer.h>
 #include <VulkanWrapper/Pipeline/Pipeline.h>
 #include <VulkanWrapper/Pipeline/PipelineLayout.h>
 #include <VulkanWrapper/Pipeline/ShaderModule.h>
-#include <VulkanWrapper/RayTracing/BottomLevelAccelerationStructure.h>
+#include <VulkanWrapper/RayTracing/RayTracedScene.h>
 #include <VulkanWrapper/RayTracing/ShaderBindingTable.h>
-#include <VulkanWrapper/RayTracing/TopLevelAccelerationStructure.h>
 #include <VulkanWrapper/RenderPass/Rendering.h>
 #include <VulkanWrapper/RenderPass/Subpass.h>
 #include <VulkanWrapper/Synchronization/Fence.h>
@@ -47,15 +45,13 @@ class VulkanExample {
     vk::PhysicalDeviceAccelerationStructureFeaturesKHR
         accelerationStructureFeatures{};
 
-    vw::rt::as::BottomLevelAccelerationStructureList m_blasList;
-    std::optional<vw::rt::as::TopLevelAccelerationStructure> topLevelAS;
+    std::optional<vw::rt::RayTracedScene> m_rayTracedScene;
 
     std::optional<vw::Buffer<vw::Vertex3D, true, vw::VertexBufferUsage>>
         vertexBuffer;
     std::optional<vw::Buffer<uint32_t, true, vw::IndexBufferUsage>> indexBuffer;
 
     std::optional<vw::Model::MeshManager> mesh_manager;
-    vw::Model::Scene scene;
 
     uint32_t indexCount{0};
 
@@ -91,8 +87,9 @@ class VulkanExample {
                   vw::Swapchain &swapchain)
         : device{std::move(device)}
         , allocator{std::move(allocator)}
-        , swapchain(swapchain)
-        , m_blasList(this->device, this->allocator) {
+        , swapchain(swapchain) {
+        m_rayTracedScene.emplace(this->device, this->allocator);
+
         projectionMatrix =
             glm::perspective(glm::radians(60.0f), 800.0f / 600.0f, 0.1f, 512.f);
         projectionMatrix[1][1] *= -1;
@@ -131,52 +128,6 @@ class VulkanExample {
                                                        storageImage.image);
         std::ignore = cmdBuffer.end();
         queue.enqueue_command_buffer(cmdBuffer);
-        queue.submit({}, {}, {}).wait();
-    }
-
-    /*
-            Create the bottom level acceleration structure contains the scene's
-       actual geometry (vertices, triangles)
-    */
-    void createBottomLevelAccelerationStructure() {
-        // Create one BLAS per unique mesh geometry
-        for (const auto &mesh : mesh_manager->meshes()) {
-            vw::rt::as::BottomLevelAccelerationStructureBuilder(device)
-                .add_mesh(mesh)
-                .build_into(m_blasList);
-        }
-
-        m_blasList.submit_and_wait();
-    }
-
-    /*
-        The top level acceleration structure contains the scene's object
-        instances
-    */
-    void createTopLevelAccelerationStructure() {
-        // Get BLAS device addresses (one per mesh in mesh_manager)
-        auto blasAddresses = m_blasList.device_addresses();
-
-        // Build TLAS using the builder - add instances from scene
-        auto commandBuffer = pool.allocate(1).front();
-        std::ignore = commandBuffer.begin(vk::CommandBufferBeginInfo());
-
-        auto builder =
-            vw::rt::as::TopLevelAccelerationStructureBuilder(device, allocator);
-
-        // Scene instances are in the same order as meshes/BLAS
-        // (created in createMeshManager in same order as
-        // mesh_manager->meshes())
-        const auto &instances = scene.instances();
-        for (size_t i = 0; i < instances.size(); ++i) {
-            builder.add_bottom_level_acceleration_structure_address(
-                blasAddresses[i], instances[i].transform);
-        }
-
-        topLevelAS = builder.build(commandBuffer);
-
-        std::ignore = commandBuffer.end();
-        queue.enqueue_command_buffer(commandBuffer);
         queue.submit({}, {}, {}).wait();
     }
 
@@ -227,7 +178,8 @@ class VulkanExample {
             .setSetLayouts(*descriptorSetLayout);
 
         // Allocate the descriptor set
-        descriptorSet = device->handle().allocateDescriptorSets(allocInfo).value.front();
+        descriptorSet =
+            device->handle().allocateDescriptorSets(allocInfo).value.front();
 
         // Sets per frame, just like the buffers themselves
         // Acceleration structure and storage image does not need to be
@@ -241,7 +193,7 @@ class VulkanExample {
 
             vk::WriteDescriptorSetAccelerationStructureKHR
                 descriptorAccelerationStructureInfo{};
-            vk::AccelerationStructureKHR handle = topLevelAS->handle();
+            vk::AccelerationStructureKHR handle = m_rayTracedScene->tlas_handle();
             descriptorAccelerationStructureInfo.setAccelerationStructures(
                 handle);
 
@@ -373,23 +325,23 @@ class VulkanExample {
     void createMeshManager() {
         mesh_manager.emplace(device, allocator);
 
-        // Load all models first (to avoid vector reallocation invalidating
-        // pointers)
+        // Load all models first
         mesh_manager->read_file("../../../Models/plane.obj");
         size_t planeCount = mesh_manager->meshes().size();
         mesh_manager->read_file("../../../Models/cube.obj");
 
-        // Now add mesh instances to the scene (vector won't resize anymore)
-        // Plane at origin (already at y=0 in obj)
+        // Add instances directly using the simplified API.
+        // Meshes are automatically registered and deduplicated via geometry_id().
+        // The embedded Scene is also populated for rasterization.
         for (size_t i = 0; i < planeCount; ++i) {
-            scene.add_mesh_instance(mesh_manager->meshes()[i], glm::mat4(1.0f));
+            std::ignore = m_rayTracedScene->add_instance(mesh_manager->meshes()[i], glm::mat4(1.0f));
         }
 
         // Cube floating at (0, 1, 0) - close enough to plane for visible shadow
         for (size_t i = planeCount; i < mesh_manager->meshes().size(); ++i) {
             glm::mat4 transform =
                 glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-            scene.add_mesh_instance(mesh_manager->meshes()[i], transform);
+            std::ignore = m_rayTracedScene->add_instance(mesh_manager->meshes()[i], transform);
         }
 
         auto cmd_buffer = mesh_manager->fill_command_buffer();
@@ -398,11 +350,9 @@ class VulkanExample {
     }
 
     void prepare() {
-        // Create the acceleration structures used to render the ray traced
-        // scene
+        // Create the acceleration structures used to render the ray traced scene
         createMeshManager();
-        createBottomLevelAccelerationStructure();
-        createTopLevelAccelerationStructure();
+        m_rayTracedScene->build();
 
         createStorageImage();
         createUniformBuffer();
@@ -532,9 +482,11 @@ int main() {
         example.prepare();
 
         // Create the deferred rendering manager - handles all pass setup
+        // Uses the RayTracedScene which contains both the acceleration structures
+        // and the embedded Scene for rasterization
         DeferredRenderingManager renderingManager(
             app.device, app.allocator, app.swapchain, *example.mesh_manager,
-            example.scene, uniform_buffer, example.topLevelAS->handle());
+            *example.m_rayTracedScene, uniform_buffer);
 
         auto commandPool = vw::CommandPoolBuilder(app.device).build();
         auto image_views = create_image_views(app.device, app.swapchain);
@@ -637,6 +589,7 @@ int main() {
             app.device->presentQueue().present(app.swapchain, index,
                                                renderFinishedSemaphore);
             app.device->wait_idle();
+            break;
         }
 
         app.device->wait_idle();
