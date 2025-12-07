@@ -45,12 +45,11 @@ void DeferredRenderingManager::create_gbuffers(const vw::Swapchain &swapchain) {
 
     for (int i = 0; i < swapchain.number_images(); ++i) {
         auto img_color = create_img(m_config.gbuffer_color_formats[0]);
-        auto img_position = create_img(m_config.gbuffer_color_formats[1]);
-        auto img_normal = create_img(m_config.gbuffer_color_formats[2]);
-        auto img_tangeant = create_img(m_config.gbuffer_color_formats[3]);
-        auto img_biTangeant = create_img(m_config.gbuffer_color_formats[4]);
+        auto img_normal = create_img(m_config.gbuffer_color_formats[1]);
+        auto img_tangeant = create_img(m_config.gbuffer_color_formats[2]);
+        auto img_biTangeant = create_img(m_config.gbuffer_color_formats[3]);
         auto img_light =
-            create_img(m_config.gbuffer_color_formats[5], vk::ImageUsageFlagBits::eStorage);
+            create_img(m_config.gbuffer_color_formats[4], vk::ImageUsageFlagBits::eStorage);
 
         auto img_depth = m_allocator->create_image_2D(
             swapchain.width(), swapchain.height(), false, m_config.depth_format,
@@ -58,7 +57,6 @@ void DeferredRenderingManager::create_gbuffers(const vw::Swapchain &swapchain) {
                 vk::ImageUsageFlagBits::eSampled);
 
         m_gbuffers.push_back({create_img_view(img_color),
-                              create_img_view(img_position),
                               create_img_view(img_normal),
                               create_img_view(img_tangeant),
                               create_img_view(img_biTangeant),
@@ -118,7 +116,7 @@ void DeferredRenderingManager::create_renderings() {
         auto sunlight_pass =
             create_sun_light_pass(m_device, m_sunlight_descriptor_layout,
                                   m_sunlight_descriptor_sets[i], gBuffer.light,
-                                  &m_sun_angle);
+                                  &m_sun_angle, &m_ubo_data);
 
         auto sky_pass = create_sky_pass(m_device, m_uniform_descriptor_layout,
                                         *m_uniform_descriptor_set, gBuffer.light,

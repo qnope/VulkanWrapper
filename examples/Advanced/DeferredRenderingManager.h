@@ -24,7 +24,6 @@ class DeferredRenderingManager {
     struct Config {
         std::vector<vk::Format> gbuffer_color_formats = {
             vk::Format::eR8G8B8A8Unorm,      // color
-            vk::Format::eR32G32B32A32Sfloat, // position
             vk::Format::eR32G32B32A32Sfloat, // normal
             vk::Format::eR32G32B32A32Sfloat, // tangent
             vk::Format::eR32G32B32A32Sfloat, // bitangent
@@ -86,9 +85,10 @@ class DeferredRenderingManager {
     std::shared_ptr<vw::Allocator> m_allocator;
     const vw::rt::RayTracedScene &m_ray_traced_scene;
     Config m_config;
+    UBOData m_ubo_data;
 
     // Sun angle in degrees above horizon (90 = zenith)
-    float m_sun_angle = 20.0f;
+    float m_sun_angle = 90.0f;
 
     // GBuffers (one per swapchain image)
     std::vector<GBuffer> m_gbuffers;

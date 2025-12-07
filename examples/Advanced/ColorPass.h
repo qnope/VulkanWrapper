@@ -125,7 +125,7 @@ class ColorSubpass : public vw::Subpass {
         AttachmentInfo attachments;
 
         std::vector<std::shared_ptr<const vw::ImageView>> color_attachments = {
-            m_gbuffer.color,    m_gbuffer.position,   m_gbuffer.normal,
+            m_gbuffer.color,    m_gbuffer.normal,
             m_gbuffer.tangeant, m_gbuffer.biTangeant, m_gbuffer.light};
 
         for (const auto &view : color_attachments) {
@@ -169,7 +169,7 @@ class ColorSubpass : public vw::Subpass {
             m_descriptor_set.resources();
 
         std::vector<std::shared_ptr<const vw::ImageView>> color_attachments = {
-            m_gbuffer.color,    m_gbuffer.position,   m_gbuffer.normal,
+            m_gbuffer.color,    m_gbuffer.normal,
             m_gbuffer.tangeant, m_gbuffer.biTangeant, m_gbuffer.light};
 
         for (const auto &view : color_attachments) {
