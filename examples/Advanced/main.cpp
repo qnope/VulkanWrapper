@@ -3,450 +3,16 @@
 #include <VulkanWrapper/3rd_party.h>
 #include <VulkanWrapper/Command/CommandBuffer.h>
 #include <VulkanWrapper/Command/CommandPool.h>
-#include <VulkanWrapper/Descriptors/DescriptorAllocator.h>
-#include <VulkanWrapper/Descriptors/DescriptorPool.h>
-#include <VulkanWrapper/Descriptors/DescriptorSetLayout.h>
-#include <VulkanWrapper/Image/CombinedImage.h>
-#include <VulkanWrapper/Image/ImageLoader.h>
-#include <VulkanWrapper/Image/Sampler.h>
-#include <VulkanWrapper/Memory/AllocateBufferUtils.h>
+#include <VulkanWrapper/Image/ImageView.h>
 #include <VulkanWrapper/Memory/Barrier.h>
-#include <VulkanWrapper/Memory/StagingBufferManager.h>
 #include <VulkanWrapper/Memory/Transfer.h>
-#include <VulkanWrapper/Model/Importer.h>
-#include <VulkanWrapper/Model/Material/ColoredMaterialManager.h>
-#include <VulkanWrapper/Model/Material/TexturedMaterialManager.h>
 #include <VulkanWrapper/Model/MeshManager.h>
-#include <VulkanWrapper/Pipeline/MeshRenderer.h>
-#include <VulkanWrapper/Pipeline/Pipeline.h>
-#include <VulkanWrapper/Pipeline/PipelineLayout.h>
-#include <VulkanWrapper/Pipeline/ShaderModule.h>
 #include <VulkanWrapper/RayTracing/RayTracedScene.h>
-#include <VulkanWrapper/RayTracing/ShaderBindingTable.h>
-#include <VulkanWrapper/RenderPass/Rendering.h>
-#include <VulkanWrapper/RenderPass/Subpass.h>
 #include <VulkanWrapper/Synchronization/Fence.h>
 #include <VulkanWrapper/Synchronization/ResourceTracker.h>
 #include <VulkanWrapper/Synchronization/Semaphore.h>
 #include <VulkanWrapper/Utils/exceptions.h>
 #include <VulkanWrapper/Vulkan/Queue.h>
-
-class VulkanExample {
-  public:
-    std::shared_ptr<vw::Device> device;
-    std::shared_ptr<vw::Allocator> allocator;
-    vw::Swapchain &swapchain;
-
-    vw::Queue queue = device->graphicsQueue();
-    vw::CommandPool pool = vw::CommandPoolBuilder(device).build();
-
-    vk::PhysicalDeviceRayTracingPipelinePropertiesKHR
-        rayTracingPipelineProperties{};
-    vk::PhysicalDeviceAccelerationStructureFeaturesKHR
-        accelerationStructureFeatures{};
-
-    std::optional<vw::rt::RayTracedScene> m_rayTracedScene;
-
-    std::optional<vw::Buffer<vw::Vertex3D, true, vw::VertexBufferUsage>>
-        vertexBuffer;
-    std::optional<vw::Buffer<uint32_t, true, vw::IndexBufferUsage>> indexBuffer;
-
-    std::optional<vw::Model::MeshManager> mesh_manager;
-
-    uint32_t indexCount{0};
-
-    struct StorageImage {
-        std::shared_ptr<const vw::Image> image;
-        std::shared_ptr<const vw::ImageView> view;
-        vk::Format format;
-    } storageImage{};
-
-    struct UniformData {
-        glm::mat4 viewInverse;
-        glm::mat4 projInverse;
-    } uniformData;
-
-    using UniformBuffer = vw::Buffer<UniformData, true, vw::UniformBufferUsage>;
-
-    std::optional<UniformBuffer> uniformBuffer;
-
-    std::optional<vw::rt::RayTracingPipeline> pipeline;
-    std::optional<vw::PipelineLayout> pipelineLayout;
-    vk::UniqueDescriptorSetLayout descriptorSetLayout{};
-    vk::UniqueDescriptorPool descriptorPool;
-    vk::DescriptorSet descriptorSet;
-    std::optional<vw::CommandPool> commandPool;
-    std::vector<vk::CommandBuffer> drawCmdBuffers;
-    std::optional<vw::rt::ShaderBindingTable> shaderBindingTable;
-
-    glm::mat4 projectionMatrix;
-    glm::mat4 viewMatrix;
-
-    VulkanExample(std::shared_ptr<vw::Device> device,
-                  std::shared_ptr<vw::Allocator> allocator,
-                  vw::Swapchain &swapchain)
-        : device{std::move(device)}
-        , allocator{std::move(allocator)}
-        , swapchain(swapchain) {
-        m_rayTracedScene.emplace(this->device, this->allocator);
-
-        projectionMatrix =
-            glm::perspective(glm::radians(60.0f), 800.0f / 600.0f, 0.1f, 512.f);
-        projectionMatrix[1][1] *= -1;
-
-        viewMatrix = glm::lookAt(glm::vec3(5.0f, 6.0f, 8.0f),
-                                 glm::vec3(0.0f, 0.0f, 0.0f),
-                                 glm::vec3(0.0f, 1.0f, 0.0f));
-    }
-
-    /*
-            Gets the device address from a buffer that's required for some of
-       the buffers used for ray tracing
-    */
-    uint64_t getBufferDeviceAddress(const auto &buffer) {
-        return buffer->device_address();
-    }
-
-    /*
-            Set up a storage image that the ray generation shader will be
-       writing to
-    */
-    void createStorageImage() {
-        storageImage.image = allocator->create_image_2D(
-            swapchain.width(), swapchain.height(), false,
-            vk::Format::eR32G32B32A32Sfloat,
-            vk::ImageUsageFlagBits::eStorage |
-                vk::ImageUsageFlagBits::eTransferSrc);
-
-        storageImage.view = vw::ImageViewBuilder(device, storageImage.image)
-                                .setImageType(vk::ImageViewType::e2D)
-                                .build();
-
-        vk::CommandBuffer cmdBuffer = pool.allocate(1).front();
-        std::ignore = cmdBuffer.begin(vk::CommandBufferBeginInfo());
-        vw::execute_image_barrier_undefined_to_general(cmdBuffer,
-                                                       storageImage.image);
-        std::ignore = cmdBuffer.end();
-        queue.enqueue_command_buffer(cmdBuffer);
-        queue.submit({}, {}, {}).wait();
-    }
-
-    /*
-            Create the Shader Binding Tables that binds the programs and
-       top-level acceleration structure
-
-                 SBT Layout used in this sample:
-
-                          /-----------\
-                          | raygen    |
-                          |-----------|
-                          | miss      |
-                          |-----------|
-                          | hit       |
-                          \-----------/
-
-     */
-    void createShaderBindingTable() {
-        shaderBindingTable.emplace(allocator,
-                                   pipeline->ray_generation_handle());
-
-        shaderBindingTable->add_miss_record(pipeline->miss_handles().front(),
-                                            glm::vec3(.0, .0, .0));
-        shaderBindingTable->add_hit_record(
-            pipeline->closest_hit_handles().front(), glm::vec3(1.0, 1.0, 0.5));
-    }
-
-    /*
-            Create the descriptor sets used for the ray tracing dispatch
-    */
-    void createDescriptorSets() {
-        // Pool
-        std::vector<vk::DescriptorPoolSize> poolSizes = {
-            {vk::DescriptorType::eAccelerationStructureKHR, 1},
-            {vk::DescriptorType::eStorageImage, 1},
-            {vk::DescriptorType::eUniformBuffer, 1}};
-        vk::DescriptorPoolCreateInfo descriptorPoolCreateInfo;
-        descriptorPoolCreateInfo.setPoolSizes(poolSizes).setMaxSets(10);
-
-        descriptorPool =
-            device->handle()
-                .createDescriptorPoolUnique(descriptorPoolCreateInfo)
-                .value;
-
-        vk::DescriptorSetAllocateInfo allocInfo;
-        allocInfo.setDescriptorPool(*descriptorPool)
-            .setSetLayouts(*descriptorSetLayout);
-
-        // Allocate the descriptor set
-        descriptorSet =
-            device->handle().allocateDescriptorSets(allocInfo).value.front();
-
-        // Sets per frame, just like the buffers themselves
-        // Acceleration structure and storage image does not need to be
-        // duplicated per frame, we use the same for each descriptor to keep
-        // things simple
-
-        for (auto i = 0; i < 1; i++) {
-
-            // The fragment shader needs access to the ray tracing acceleration
-            // structure, so we pass it as a descriptor
-
-            vk::WriteDescriptorSetAccelerationStructureKHR
-                descriptorAccelerationStructureInfo{};
-            vk::AccelerationStructureKHR handle = m_rayTracedScene->tlas_handle();
-            descriptorAccelerationStructureInfo.setAccelerationStructures(
-                handle);
-
-            vk::WriteDescriptorSet accelerationStructureWrite{};
-            // The specialized acceleration structure descriptor has to be
-            // chained
-            accelerationStructureWrite.pNext =
-                &descriptorAccelerationStructureInfo;
-            accelerationStructureWrite.dstSet = descriptorSet;
-            accelerationStructureWrite.dstBinding = 0;
-            accelerationStructureWrite.descriptorCount = 1;
-            accelerationStructureWrite.descriptorType =
-                vk::DescriptorType::eAccelerationStructureKHR;
-
-            vk::DescriptorImageInfo storageImageDescriptor{};
-            storageImageDescriptor.imageView = storageImage.view->handle();
-            storageImageDescriptor.imageLayout = vk::ImageLayout::eGeneral;
-
-            vk::WriteDescriptorSet resultImageWrite;
-            resultImageWrite.setDescriptorCount(1)
-                .setDescriptorType(vk::DescriptorType::eStorageImage)
-                .setImageInfo(storageImageDescriptor)
-                .setDstSet(descriptorSet)
-                .setDstBinding(1);
-
-            vk::DescriptorBufferInfo bufferInfoDescriptor;
-            bufferInfoDescriptor.setBuffer(uniformBuffer->handle())
-                .setOffset(0)
-                .setRange(sizeof(UniformData));
-
-            vk::WriteDescriptorSet uniformBufferWrite;
-            uniformBufferWrite.setDescriptorCount(1)
-                .setDescriptorType(vk::DescriptorType::eUniformBuffer)
-                .setBufferInfo(bufferInfoDescriptor)
-                .setDstSet(descriptorSet)
-                .setDstBinding(2);
-
-            std::vector<vk::WriteDescriptorSet> writeDescriptorSets = {
-                accelerationStructureWrite, resultImageWrite,
-                uniformBufferWrite};
-
-            device->handle().updateDescriptorSets(writeDescriptorSets, nullptr);
-        }
-    }
-
-    /*
-            Create our ray tracing pipeline
-    */
-    void createRayTracingPipeline() {
-        vk::DescriptorSetLayoutBinding accelerationStructureLayoutBinding{};
-        accelerationStructureLayoutBinding.binding = 0;
-        accelerationStructureLayoutBinding.descriptorType =
-            vk::DescriptorType::eAccelerationStructureKHR;
-        accelerationStructureLayoutBinding.descriptorCount = 1;
-        accelerationStructureLayoutBinding.stageFlags =
-            vk::ShaderStageFlagBits::eRaygenKHR;
-
-        vk::DescriptorSetLayoutBinding resultImageLayoutBinding{};
-        resultImageLayoutBinding.binding = 1;
-        resultImageLayoutBinding.descriptorType =
-            vk::DescriptorType::eStorageImage;
-        resultImageLayoutBinding.descriptorCount = 1;
-        resultImageLayoutBinding.stageFlags =
-            vk::ShaderStageFlagBits::eRaygenKHR;
-
-        vk::DescriptorSetLayoutBinding uniformBufferBinding{};
-        uniformBufferBinding.binding = 2;
-        uniformBufferBinding.descriptorType =
-            vk::DescriptorType::eUniformBuffer;
-        uniformBufferBinding.descriptorCount = 1;
-        uniformBufferBinding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
-
-        std::vector<vk::DescriptorSetLayoutBinding> bindings(
-            {accelerationStructureLayoutBinding, resultImageLayoutBinding,
-             uniformBufferBinding});
-
-        vk::DescriptorSetLayoutCreateInfo descriptorSetlayoutCI{};
-        descriptorSetlayoutCI.setBindings(bindings);
-        descriptorSetLayout =
-            device->handle()
-                .createDescriptorSetLayoutUnique(descriptorSetlayoutCI)
-                .value;
-
-        vk::PipelineLayoutCreateInfo pipelineLayoutCI{};
-        pipelineLayoutCI.setSetLayouts(*descriptorSetLayout);
-        pipelineLayout =
-            device->handle().createPipelineLayoutUnique(pipelineLayoutCI).value;
-
-        /*
-                Setup ray tracing shader groups
-        */
-        std::vector<vk::PipelineShaderStageCreateInfo> shaderStages;
-
-        auto raygen = vw::ShaderModule::create_from_spirv_file(
-            device, "Shaders/RayTracing/raygen.rgen.spv");
-        auto miss = vw::ShaderModule::create_from_spirv_file(
-            device, "Shaders/RayTracing/miss.rmiss.spv");
-        auto hit = vw::ShaderModule::create_from_spirv_file(
-            device, "Shaders/RayTracing/hit.rchit.spv");
-
-        /*
-                Create the ray tracing pipeline
-        */
-        pipeline = vw::rt::RayTracingPipelineBuilder(device, allocator,
-                                                     std::move(*pipelineLayout))
-                       .set_ray_generation_shader(raygen)
-                       .add_miss_shader(miss)
-                       .add_closest_hit_shader(hit)
-                       .build();
-    }
-
-    /*
-            Create the uniform buffer used to pass matrices to the ray tracing
-       ray generation shader
-    */
-    void createUniformBuffer() {
-        uniformBuffer =
-            vw::create_buffer<UniformData, true, vw::UniformBufferUsage>(
-                *allocator, 1);
-        uniformBuffer->copy(std::span(&uniformData, 1), 0);
-    }
-
-    void updateUniformBuffers() {
-        uniformData.projInverse = glm::inverse(projectionMatrix);
-        uniformData.viewInverse = glm::inverse(viewMatrix);
-        uniformBuffer->copy(std::span(&uniformData, 1), 0);
-    }
-
-    void createMeshManager() {
-        mesh_manager.emplace(device, allocator);
-
-        // Load all models first
-        mesh_manager->read_file("../../../Models/plane.obj");
-        size_t planeCount = mesh_manager->meshes().size();
-        mesh_manager->read_file("../../../Models/cube.obj");
-
-        // Add instances directly using the simplified API.
-        // Meshes are automatically registered and deduplicated via geometry_id().
-        // The embedded Scene is also populated for rasterization.
-        for (size_t i = 0; i < planeCount; ++i) {
-            std::ignore = m_rayTracedScene->add_instance(mesh_manager->meshes()[i], glm::mat4(1.0f));
-        }
-
-        // Cube floating at (0, 1, 0) - close enough to plane for visible shadow
-        for (size_t i = planeCount; i < mesh_manager->meshes().size(); ++i) {
-            glm::mat4 transform =
-                glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-            std::ignore = m_rayTracedScene->add_instance(mesh_manager->meshes()[i], transform);
-        }
-
-        auto cmd_buffer = mesh_manager->fill_command_buffer();
-        queue.enqueue_command_buffer(cmd_buffer);
-        queue.submit({}, {}, {});
-    }
-
-    void prepare() {
-        // Create the acceleration structures used to render the ray traced scene
-        createMeshManager();
-        m_rayTracedScene->build();
-
-        createStorageImage();
-        createUniformBuffer();
-        createRayTracingPipeline();
-        createShaderBindingTable();
-        createDescriptorSets();
-        commandPool = vw::CommandPoolBuilder(device).build();
-        drawCmdBuffers = commandPool->allocate(3);
-
-        buildCommandBuffer(0);
-        buildCommandBuffer(1);
-        buildCommandBuffer(2);
-        updateUniformBuffers();
-    }
-
-    void buildCommandBuffer(int currentImageIndex) {
-        vk::CommandBuffer cmdBuffer = drawCmdBuffers[currentImageIndex];
-
-        vk::CommandBufferBeginInfo cmdBufInfo;
-        std::ignore = cmdBuffer.begin(cmdBufInfo);
-        vk::ImageSubresourceRange subresourceRange = {
-            vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
-
-        /*
-                Setup the buffer regions pointing to the shaders in our shader
-           binding table
-        */
-
-        const uint32_t handleSizeAligned =
-            std::max(rayTracingPipelineProperties.shaderGroupHandleSize,
-                     rayTracingPipelineProperties
-                         .shaderGroupHandleAlignment); // aligned size
-
-        auto raygenShaderSbtEntry = shaderBindingTable->raygen_region();
-        auto missShaderSbtEntry = shaderBindingTable->miss_region();
-        auto hitShaderSbtEntry = shaderBindingTable->hit_region();
-
-        VkStridedDeviceAddressRegionKHR callableShaderSbtEntry{};
-
-        /*
-                Dispatch the ray tracing commands
-        */
-        cmdBuffer.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR,
-                               pipeline->handle());
-        cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR,
-                                     pipeline->handle_layout(), 0,
-                                     descriptorSet, nullptr);
-
-        cmdBuffer.traceRaysKHR(raygenShaderSbtEntry, missShaderSbtEntry,
-                               hitShaderSbtEntry, callableShaderSbtEntry, 800,
-                               600, 1);
-
-        /*
-                Copy ray tracing output to swap chain image
-        */
-
-        auto swapchainImage = swapchain.images()[currentImageIndex];
-
-        vw::execute_image_transition(cmdBuffer, swapchainImage,
-                                     vk::ImageLayout::eUndefined,
-                                     vk::ImageLayout::eTransferDstOptimal);
-
-        // Prepare ray tracing output image as transfer source
-        vw::execute_image_transition(cmdBuffer, storageImage.image,
-                                     vk::ImageLayout::eGeneral,
-                                     vk::ImageLayout::eTransferSrcOptimal);
-
-        vk::ImageBlit copyRegion{};
-        copyRegion.setSrcSubresource(
-            {vk::ImageAspectFlagBits::eColor, 0, 0, 1});
-        copyRegion.srcOffsets =
-            std::array{vk::Offset3D{0, 0, 0}, vk::Offset3D(800, 600, 1)};
-        copyRegion.dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
-        copyRegion.dstOffsets =
-            std::array{vk::Offset3D{0, 0, 0}, vk::Offset3D(800, 600, 1)};
-        cmdBuffer.blitImage(
-            storageImage.image->handle(), vk::ImageLayout::eTransferSrcOptimal,
-            swapchainImage->handle(), vk::ImageLayout::eTransferDstOptimal,
-            copyRegion, vk::Filter::eLinear);
-
-        // Transition swap chain image back for presentation
-        vw::execute_image_transition(cmdBuffer, swapchainImage,
-                                     vk::ImageLayout::eTransferDstOptimal,
-                                     vk::ImageLayout::ePresentSrcKHR);
-
-        // Transition ray tracing output image back to general layout
-
-        vw::execute_image_transition(cmdBuffer, storageImage.image,
-                                     vk::ImageLayout::eTransferSrcOptimal,
-                                     vk::ImageLayout::eGeneral);
-
-        std::ignore = cmdBuffer.end();
-    }
-};
 
 std::vector<std::shared_ptr<const vw::ImageView>>
 create_image_views(std::shared_ptr<const vw::Device> device,
@@ -478,15 +44,33 @@ int main() {
 
         auto uniform_buffer = createUbo(*app.allocator);
 
-        VulkanExample example(app.device, app.allocator, app.swapchain);
-        example.prepare();
+        // Create mesh manager and ray traced scene directly
+        vw::Model::MeshManager mesh_manager(app.device, app.allocator);
+        vw::rt::RayTracedScene rayTracedScene(app.device, app.allocator);
+
+        // Load Sponza Atrium
+        mesh_manager.read_file("../../../Models/Sponza/sponza.obj");
+
+        // Add all meshes as instances to the ray traced scene
+        for (const auto &mesh : mesh_manager.meshes()) {
+            std::ignore = rayTracedScene.add_instance(mesh, glm::mat4(1.0f));
+        }
+
+        // Upload mesh data to GPU
+        auto meshUploadCmd = mesh_manager.fill_command_buffer();
+        app.device->graphicsQueue().enqueue_command_buffer(meshUploadCmd);
+        app.device->graphicsQueue().submit({}, {}, {}).wait();
+
+        // Build acceleration structures for ray-traced shadows
+        rayTracedScene.build();
 
         // Create the deferred rendering manager - handles all pass setup
-        // Uses the RayTracedScene which contains both the acceleration structures
-        // and the embedded Scene for rasterization
+        // Uses the RayTracedScene which contains both the acceleration
+        // structures (for ray queries/shadows) and the embedded Scene for
+        // rasterization
         DeferredRenderingManager renderingManager(
-            app.device, app.allocator, app.swapchain, *example.mesh_manager,
-            *example.m_rayTracedScene, uniform_buffer);
+            app.device, app.allocator, app.swapchain, mesh_manager,
+            rayTracedScene, uniform_buffer);
 
         auto commandPool = vw::CommandPoolBuilder(app.device).build();
         auto image_views = create_image_views(app.device, app.swapchain);
@@ -523,10 +107,6 @@ int main() {
 
             transfer.resourceTracker().flush(commandBuffer);
         }
-
-        auto cmd_buffer = example.mesh_manager->fill_command_buffer();
-
-        app.device->graphicsQueue().enqueue_command_buffer(cmd_buffer);
 
         auto renderFinishedSemaphore = vw::SemaphoreBuilder(app.device).build();
         auto imageAvailableSemaphore = vw::SemaphoreBuilder(app.device).build();
@@ -595,5 +175,11 @@ int main() {
         app.device->wait_idle();
     } catch (const vw::Exception &exception) {
         std::cout << exception.m_sourceLocation.function_name() << '\n';
+        std::cout << exception.m_sourceLocation.file_name() << ":"
+                  << exception.m_sourceLocation.line() << '\n';
+        return 1;
+    } catch (const std::exception &e) {
+        std::cout << "std::exception: " << e.what() << '\n';
+        return 1;
     }
 }
