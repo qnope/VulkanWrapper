@@ -67,3 +67,18 @@ target_link_libraries(VulkanTests
 )
 
 gtest_discover_tests(VulkanTests)
+
+# RayTracing tests
+add_executable(RayTracingTests
+    RayTracing/RayTracedSceneTests.cpp
+)
+
+target_link_libraries(RayTracingTests
+    PRIVATE
+    TestUtils
+    VulkanWrapperCoreLibrary
+    GTest::gtest
+    GTest::gtest_main
+)
+
+gtest_discover_tests(RayTracingTests)
