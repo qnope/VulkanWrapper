@@ -3,12 +3,9 @@
 
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Image/Image.h"
-#include "VulkanWrapper/Utils/exceptions.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
 
 namespace vw {
-
-using ImageViewCreationException = TaggedException<struct ImageViewCreationTag>;
 
 class ImageView : public ObjectWithUniqueHandle<vk::UniqueImageView> {
   public:

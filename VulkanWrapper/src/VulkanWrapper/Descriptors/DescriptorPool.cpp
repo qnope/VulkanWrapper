@@ -1,6 +1,7 @@
 #include "VulkanWrapper/Descriptors/DescriptorPool.h"
 
 #include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
+#include "VulkanWrapper/Utils/Error.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 
 namespace vw {
@@ -17,11 +18,8 @@ DescriptorPoolImpl::DescriptorPoolImpl(
                           .setDescriptorPool(handle())
                           .setSetLayouts(layouts);
 
-    auto [result, sets] = device->handle().allocateDescriptorSets(info);
-    if (result != vk::Result::eSuccess) {
-        throw DescriptorSetAllocationException{std::source_location::current()};
-    }
-    m_sets = std::move(sets);
+    m_sets = check_vk(device->handle().allocateDescriptorSets(info),
+                      "Failed to allocate descriptor sets");
 }
 
 std::optional<vk::DescriptorSet> DescriptorPoolImpl::allocate_set() {
@@ -78,10 +76,8 @@ vk::DescriptorSet DescriptorPool::allocate_descriptor_set_from_last_pool() {
                           .setMaxSets(MAX_DESCRIPTOR_SET_BY_POOL)
                           .setPoolSizes(pool_sizes);
 
-    auto [result, pool] = m_device->handle().createDescriptorPoolUnique(info);
-    if (result != vk::Result::eSuccess) {
-        throw DescriptorPoolCreationException(std::source_location::current());
-    }
+    auto pool = check_vk(m_device->handle().createDescriptorPoolUnique(info),
+                         "Failed to create descriptor pool");
 
     auto set =
         m_descriptor_pools.emplace_back(std::move(pool), m_device, m_layout)

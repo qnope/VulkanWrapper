@@ -2,6 +2,7 @@
 
 #include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
 #include "VulkanWrapper/Utils/Algos.h"
+#include "VulkanWrapper/Utils/Error.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 
 namespace vw {
@@ -28,11 +29,8 @@ PipelineLayout PipelineLayoutBuilder::build() && {
                           .setSetLayouts(layouts)
                           .setPushConstantRanges(m_pushConstantRanges);
 
-    auto [result, layout] = m_device->handle().createPipelineLayoutUnique(info);
-
-    if (result != vk::Result::eSuccess) {
-        throw PipelineLayoutCreationException{std::source_location::current()};
-    }
+    auto layout = check_vk(m_device->handle().createPipelineLayoutUnique(info),
+                           "Failed to create pipeline layout");
 
     return {std::move(layout)};
 }

@@ -1,3 +1,3 @@
 target_sources(VulkanWrapperCoreLibrary PRIVATE
-    exceptions.cpp
+    Error.cpp
 )

@@ -2,7 +2,6 @@
 
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/3rd_party.h"
-#include "VulkanWrapper/Utils/exceptions.h"
 #include "VulkanWrapper/Utils/IdentifierTag.h"
 #include <span>
 #include <vulkan/vulkan.hpp>
@@ -11,9 +10,6 @@
 #include <optional>
 
 namespace vw {
-
-using SubpassNotManagingDepthException =
-    TaggedException<struct SubpassNotManagingDepthTag>;
 
 class Subpass {
   public:

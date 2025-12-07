@@ -12,6 +12,7 @@
 #include "VulkanWrapper/Pipeline/Pipeline.h"
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
 #include "VulkanWrapper/RenderPass/Subpass.h"
+#include "VulkanWrapper/Utils/Error.h"
 #include <span>
 
 inline std::shared_ptr<vw::DescriptorSetLayout>
@@ -141,8 +142,7 @@ class ColorSubpass : public vw::Subpass {
 
         const auto &depth_attachment = m_gbuffer.depth;
         if (!depth_attachment) {
-            throw vw::SubpassNotManagingDepthException(
-                std::source_location::current());
+            throw vw::LogicException::null_pointer("GBuffer depth attachment");
         }
 
         attachments.depth =
@@ -161,8 +161,7 @@ class ColorSubpass : public vw::Subpass {
         const auto &depth_attachment = m_gbuffer.depth;
 
         if (!depth_attachment) {
-            throw vw::SubpassNotManagingDepthException(
-                std::source_location::current());
+            throw vw::LogicException::null_pointer("GBuffer depth attachment");
         }
 
         std::vector<vw::Barrier::ResourceState> resources =

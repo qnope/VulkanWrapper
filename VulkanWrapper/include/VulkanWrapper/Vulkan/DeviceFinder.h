@@ -2,11 +2,9 @@
 #include "VulkanWrapper/3rd_party.h"
 
 #include "VulkanWrapper/fwd.h"
-#include "VulkanWrapper/Utils/exceptions.h"
 #include "VulkanWrapper/Vulkan/PhysicalDevice.h"
 
 namespace vw {
-using DeviceNotFoundException = TaggedException<struct DeviceNotFoundTag>;
 
 class DeviceFinder {
   public:

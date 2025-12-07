@@ -1,5 +1,6 @@
 #include "VulkanWrapper/Window/Window.h"
 
+#include "VulkanWrapper/Utils/Error.h"
 #include "VulkanWrapper/Vulkan/Instance.h"
 #include "VulkanWrapper/Vulkan/Surface.h"
 #include "VulkanWrapper/Vulkan/Swapchain.h"
@@ -16,23 +17,18 @@ Window::Window(std::shared_ptr<const SDL_Initializer> initializer, std::string_v
     : m_initializer{std::move(initializer)}
     , m_width{width}
     , m_height{height} {
-    auto *window = SDL_CreateWindow(name.data(), int(width), int(height),
-                                    SDL_WINDOW_VULKAN);
-
-    if (window == nullptr) {
-        throw WindowInitializationException{std::source_location::current()};
-    }
+    auto *window = check_sdl(
+        SDL_CreateWindow(name.data(), int(width), int(height), SDL_WINDOW_VULKAN),
+        "Failed to create SDL window");
 
     m_window.reset(window);
 }
 
 Surface Window::create_surface(const Instance &instance) const {
     VkSurfaceKHR surface{};
-    auto x = SDL_Vulkan_CreateSurface(m_window.get(), instance.handle(),
-                                      nullptr, &surface);
-
-    if (!x)
-        throw SurfaceCreationException{std::source_location::current()};
+    check_sdl(SDL_Vulkan_CreateSurface(m_window.get(), instance.handle(),
+                                       nullptr, &surface),
+              "Failed to create Vulkan surface");
 
     return Surface{vk::UniqueSurfaceKHR(surface, instance.handle())};
 }

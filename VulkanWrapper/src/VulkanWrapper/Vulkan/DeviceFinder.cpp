@@ -1,7 +1,7 @@
 #include "VulkanWrapper/Vulkan/DeviceFinder.h"
 
 #include "VulkanWrapper/Utils/Algos.h"
-#include "VulkanWrapper/Utils/exceptions.h"
+#include "VulkanWrapper/Utils/Error.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 #include "VulkanWrapper/Vulkan/PhysicalDevice.h"
 #include "VulkanWrapper/Vulkan/PresentQueue.h"
@@ -157,7 +157,8 @@ void DeviceFinder::remove_device_not_supporting_extension(
 
 std::shared_ptr<Device> DeviceFinder::build() && {
     if (m_physicalDevicesInformation.empty()) {
-        throw DeviceNotFoundException{std::source_location::current()};
+        throw LogicException::invalid_state(
+            "No suitable GPU found matching requested features");
     }
 
     auto information =
@@ -208,12 +209,8 @@ std::shared_ptr<Device> DeviceFinder::build() && {
 
     info.setPNext(&m_features.get<vk::PhysicalDeviceFeatures2>());
 
-    auto [result, device] =
-        information.device.device().createDeviceUnique(info);
-
-    if (result != vk::Result::eSuccess) {
-        throw DeviceCreationException{std::source_location::current()};
-    }
+    auto device = check_vk(information.device.device().createDeviceUnique(info),
+                           "Failed to create logical device");
 
     std::vector<Queue> queues;
 

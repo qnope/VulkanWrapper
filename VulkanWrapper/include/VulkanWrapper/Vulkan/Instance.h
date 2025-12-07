@@ -2,11 +2,9 @@
 #include "VulkanWrapper/3rd_party.h"
 
 #include "VulkanWrapper/fwd.h"
-#include "VulkanWrapper/Utils/exceptions.h"
 #include <memory>
 
 namespace vw {
-using InstanceCreationException = TaggedException<struct InstanceCreationTag>;
 
 class Instance {
     friend class InstanceBuilder;

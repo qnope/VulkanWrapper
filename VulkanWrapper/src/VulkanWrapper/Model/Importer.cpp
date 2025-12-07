@@ -7,6 +7,7 @@
 #include "VulkanWrapper/Model/Material/TexturedMaterialManager.h"
 #include "VulkanWrapper/Model/MeshManager.h"
 #include "VulkanWrapper/Utils/Algos.h"
+#include "VulkanWrapper/Utils/Error.h"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
@@ -31,7 +32,7 @@ void import_model(const std::filesystem::path &path,
     const auto *scene = importer.ReadFile(path.string().c_str(), post_process);
 
     if (scene == nullptr) {
-        throw ModelNotFoundException{std::source_location::current()};
+        throw AssimpException(importer.GetErrorString(), path);
     }
 
     std::vector<Internal::MeshInfo> meshes =

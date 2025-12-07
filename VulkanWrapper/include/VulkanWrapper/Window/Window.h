@@ -2,15 +2,10 @@
 #include "VulkanWrapper/3rd_party.h"
 
 #include "VulkanWrapper/fwd.h"
-#include "VulkanWrapper/Utils/exceptions.h"
 
 struct SDL_Window;
 
 namespace vw {
-using WindowInitializationException =
-    TaggedException<struct WindowInitializationTag>;
-
-using SurfaceCreationException = TaggedException<struct SurfaceCreationTag>;
 
 class Window {
     struct WindowDeleter {

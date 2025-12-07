@@ -1,12 +1,10 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
 #include "VulkanWrapper/fwd.h"
-#include "VulkanWrapper/Utils/exceptions.h"
 #include "VulkanWrapper/Vulkan/PresentQueue.h"
 #include <memory>
 
 namespace vw {
-using DeviceCreationException = TaggedException<struct DeviceCreationTag>;
 
 // Private implementation - definition in Device.cpp
 struct DeviceImpl;

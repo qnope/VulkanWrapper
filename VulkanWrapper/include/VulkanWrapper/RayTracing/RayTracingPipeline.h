@@ -3,16 +3,12 @@
 
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Pipeline/PipelineLayout.h"
-#include "VulkanWrapper/Utils/exceptions.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
 
 namespace vw::rt {
 
 constexpr uint64_t ShaderBindingTableHandleSizeAlignment = 64;
 using ShaderBindingTableHandle = std::vector<std::byte>;
-
-using RayTracingPipelineCreationException =
-    TaggedException<struct RayTracingPipelineCreationTag>;
 
 class RayTracingPipeline : public ObjectWithUniqueHandle<vk::UniquePipeline> {
     friend class RayTracingPipelineBuilder;

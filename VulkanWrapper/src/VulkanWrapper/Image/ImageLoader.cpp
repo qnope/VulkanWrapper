@@ -1,6 +1,7 @@
 #include "VulkanWrapper/Image/ImageLoader.h"
 
 #include "VulkanWrapper/Utils/Algos.h"
+#include "VulkanWrapper/Utils/Error.h"
 #include <SDL3/SDL.h>
 #include <SDL3_image/SDL_image.h>
 
@@ -9,14 +10,12 @@ using static_function = std::integral_constant<decltype(f), f>;
 
 namespace vw {
 
-using ImageSaveException = TaggedException<struct ImageSaveTag>;
-
 ImageDescription load_image(const std::filesystem::path &path) {
     std::unique_ptr<SDL_Surface, static_function<SDL_DestroySurface>> img{
         IMG_Load(path.string().c_str())};
 
     if (!img) {
-        throw ImageNotFoundException{std::source_location::current()};
+        throw FileException(path, "Failed to load image");
     }
 
     SDL_PixelFormat format = SDL_PIXELFORMAT_ABGR8888;
@@ -47,7 +46,7 @@ void save_image(const std::filesystem::path &path, Width width, Height height,
                               pitch)};
 
     if (!surface) {
-        throw ImageSaveException{std::source_location::current()};
+        throw SDLException("Failed to create SDL surface for image saving");
     }
 
     // Determine the format from the file extension and save
@@ -67,7 +66,7 @@ void save_image(const std::filesystem::path &path, Width width, Height height,
     }
 
     if (!success) {
-        throw ImageSaveException{std::source_location::current()};
+        throw FileException(path, "Failed to save image");
     }
 }
 
