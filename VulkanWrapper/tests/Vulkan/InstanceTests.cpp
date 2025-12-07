@@ -4,7 +4,6 @@
 
 TEST(InstanceTest, CreateInstance) {
     auto instance = vw::InstanceBuilder()
-                        .setDebug()
                         .setApiVersion(vw::ApiVersion::e13)
                         .build();
 
@@ -13,7 +12,6 @@ TEST(InstanceTest, CreateInstance) {
 
 TEST(InstanceTest, FindGpu) {
     auto instance = vw::InstanceBuilder()
-                        .setDebug()
                         .setApiVersion(vw::ApiVersion::e13)
                         .build();
 

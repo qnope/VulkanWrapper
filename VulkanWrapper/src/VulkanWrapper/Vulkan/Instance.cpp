@@ -86,7 +86,6 @@ std::shared_ptr<Instance> InstanceBuilder::build() && {
     vk::InstanceCreateInfo info;
     info.setFlags(m_flags)
         .setPEnabledExtensionNames(m_extensions)
-        .setPEnabledLayerNames(layers)
         .setPApplicationInfo(&appInfo);
 
     if (m_debug) {

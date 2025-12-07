@@ -124,7 +124,6 @@ TEST(AllocatorTest, CreateSeparateAllocator) {
 
 TEST(AllocatorTest, AllocatorBuilder) {
     auto instance = vw::InstanceBuilder()
-                        .setDebug()
                         .setApiVersion(vw::ApiVersion::e13)
                         .build();
 
@@ -132,7 +131,6 @@ TEST(AllocatorTest, AllocatorBuilder) {
                       .with_queue(vk::QueueFlagBits::eGraphics)
                       .with_synchronization_2()
                       .with_dynamic_rendering()
-                      .with_ray_tracing()
                       .build();
 
     auto allocator = vw::AllocatorBuilder(instance, device).build();

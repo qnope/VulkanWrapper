@@ -9,7 +9,7 @@ GPU &create_gpu() {
     // The OS will clean up memory when the test process exits
     static GPU *gpu = []() {
         auto instance =
-            InstanceBuilder().setDebug().setApiVersion(ApiVersion::e13).build();
+            InstanceBuilder().setApiVersion(ApiVersion::e13).build();
 
         auto device = instance->findGpu()
                           .with_queue(vk::QueueFlagBits::eGraphics)
