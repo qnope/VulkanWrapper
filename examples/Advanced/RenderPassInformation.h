@@ -8,7 +8,6 @@
 
 struct GBuffer {
     std::shared_ptr<const vw::ImageView> color;
-    std::shared_ptr<const vw::ImageView> position;
     std::shared_ptr<const vw::ImageView> normal;
     std::shared_ptr<const vw::ImageView> tangeant;
     std::shared_ptr<const vw::ImageView> biTangeant;
@@ -27,16 +26,21 @@ struct TonemapInformation {
 
 struct UBOData {
     glm::mat4 proj = [] {
-        auto proj =
-            glm::perspective(glm::radians(60.0f), 800.0f / 600.0f, 0.1f, 512.f);
+        auto proj = glm::perspective(glm::radians(60.0f), 800.0f / 600.0f, 0.1f,
+                                     3000.f);
 
         proj[1][1] *= -1;
         return proj;
     }();
-    // Camera positioned to see sun (at +X, 30° elevation), cube diagonal view, and plane
+    // Camera positioned in Sponza atrium looking down the corridor
+    // Elevated position to see column shadows on the floor
     glm::mat4 view =
-        glm::lookAt(glm::vec3(-4.0f, 5.0f, 5.0f), glm::vec3(3.0f, 1.5f, 0.0f),
-                    glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::lookAt(glm::vec3(-900.0f, 300.0f, 100.0f), // eye position
+                    glm::vec3(500.0f, 100.0f, 0.0f),    // look at center
+                    glm::vec3(0.0f, 1.0f, 0.0f));       // up vector
+
+    // Inverse view-projection for reconstructing world position from depth
+    glm::mat4 inverseViewProj = glm::inverse(proj * view);
 };
 
 // Push constant data for per-object transformation
