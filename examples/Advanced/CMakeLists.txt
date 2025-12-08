@@ -5,6 +5,7 @@ add_executable(Main main.cpp
     ColorPass.h
     SkyPass.h
     SunLightPass.h
+    AmbientOcclusionPass.h
     DeferredRenderingManager.h
     DeferredRenderingManager.cpp
 )
@@ -27,3 +28,4 @@ VwCompileShader(Main Shaders/RayTracing/hit.rchit Shaders/RayTracing/hit.rchit.s
 
 VwCompileShader(Main ../../VulkanWrapper/Shaders/fullscreen.vert Shaders/fullscreen.spv)
 VwCompileShader(Main Shaders/post-process/sun_light.frag Shaders/post-process/sun_light.spv --target-env vulkan1.2)
+VwCompileShader(Main Shaders/post-process/ao.frag Shaders/post-process/ao.spv --target-env vulkan1.2)

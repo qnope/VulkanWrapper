@@ -1,5 +1,6 @@
 #pragma once
 
+#include "AmbientOcclusionPass.h"
 #include "ColorPass.h"
 #include "RenderPassInformation.h"
 #include "SkyPass.h"
@@ -29,6 +30,7 @@ class DeferredRenderingManager {
             vk::Format::eR32G32B32A32Sfloat, // bitangent
             vk::Format::eR32G32B32A32Sfloat  // light
         };
+        vk::Format ao_format = vk::Format::eR8G8B8A8Unorm; // AO (grayscale stored in RGB)
         vk::Format depth_format = vk::Format::eD32Sfloat;
     };
 
@@ -78,6 +80,7 @@ class DeferredRenderingManager {
     void
     create_color_pass_resources(const vw::Model::MeshManager &mesh_manager);
     void create_sun_light_pass_resources();
+    void create_ao_pass_resources();
     void create_sky_pass_resources();
     void create_renderings();
 
@@ -108,6 +111,11 @@ class DeferredRenderingManager {
     std::shared_ptr<vw::DescriptorSetLayout> m_sunlight_descriptor_layout;
     std::optional<vw::DescriptorPool> m_sunlight_descriptor_pool;
     std::vector<vw::DescriptorSet> m_sunlight_descriptor_sets;
+
+    // AO pass resources
+    std::shared_ptr<vw::DescriptorSetLayout> m_ao_descriptor_layout;
+    std::optional<vw::DescriptorPool> m_ao_descriptor_pool;
+    std::vector<vw::DescriptorSet> m_ao_descriptor_sets;
 
     // Sampler for post-process passes
     std::shared_ptr<const vw::Sampler> m_sampler;

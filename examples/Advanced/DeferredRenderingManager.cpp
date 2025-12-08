@@ -22,6 +22,7 @@ DeferredRenderingManager::DeferredRenderingManager(
     create_zpass_resources();
     create_color_pass_resources(mesh_manager);
     create_sun_light_pass_resources();
+    create_ao_pass_resources();
     create_sky_pass_resources();
     create_renderings();
 }
@@ -50,6 +51,7 @@ void DeferredRenderingManager::create_gbuffers(const vw::Swapchain &swapchain) {
         auto img_biTangeant = create_img(m_config.gbuffer_color_formats[3]);
         auto img_light =
             create_img(m_config.gbuffer_color_formats[4], vk::ImageUsageFlagBits::eStorage);
+        auto img_ao = create_img(m_config.ao_format);
 
         auto img_depth = m_allocator->create_image_2D(
             swapchain.width(), swapchain.height(), false, m_config.depth_format,
@@ -61,6 +63,7 @@ void DeferredRenderingManager::create_gbuffers(const vw::Swapchain &swapchain) {
                               create_img_view(img_tangeant),
                               create_img_view(img_biTangeant),
                               create_img_view(img_light),
+                              create_img_view(img_ao),
                               create_img_view(img_depth)});
     }
 }
@@ -97,6 +100,17 @@ void DeferredRenderingManager::create_sun_light_pass_resources() {
     }
 }
 
+void DeferredRenderingManager::create_ao_pass_resources() {
+    m_ao_descriptor_layout = create_ao_pass_descriptor_layout(m_device);
+    m_ao_descriptor_pool =
+        vw::DescriptorPoolBuilder(m_device, m_ao_descriptor_layout).build();
+
+    for (const auto &gBuffer : m_gbuffers) {
+        m_ao_descriptor_sets.push_back(create_ao_pass_descriptor_set(
+            *m_ao_descriptor_pool, m_sampler, gBuffer, m_ray_traced_scene.tlas_handle()));
+    }
+}
+
 void DeferredRenderingManager::create_sky_pass_resources() {
     // Sky pass uses the uniform descriptor layout directly
 }
@@ -113,6 +127,10 @@ void DeferredRenderingManager::create_renderings() {
             m_device, scene, m_uniform_descriptor_layout,
             *m_uniform_descriptor_set, gBuffer, m_mesh_renderer);
 
+        auto ao_pass =
+            create_ao_pass(m_device, m_ao_descriptor_layout,
+                           m_ao_descriptor_sets[i], gBuffer.ao, &m_ubo_data);
+
         auto sunlight_pass =
             create_sun_light_pass(m_device, m_sunlight_descriptor_layout,
                                   m_sunlight_descriptor_sets[i], gBuffer.light,
@@ -125,6 +143,7 @@ void DeferredRenderingManager::create_renderings() {
         m_renderings.emplace_back(vw::RenderingBuilder()
                                       .add_subpass(depth_subpass)
                                       .add_subpass(color_subpass)
+                                      .add_subpass(ao_pass)
                                       .add_subpass(sunlight_pass)
                                       .add_subpass(sky_pass)
                                       .build());

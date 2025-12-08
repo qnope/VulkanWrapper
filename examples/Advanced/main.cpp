@@ -93,8 +93,8 @@ int main() {
             // Geometry Pass using Rendering
             rendering.execute(commandBuffer, transfer.resourceTracker());
 
-            // Blit color to swapchain
-            transfer.blit(commandBuffer, gBuffer.light->image(),
+            // Blit AO to swapchain (for visualization)
+            transfer.blit(commandBuffer, gBuffer.ao->image(),
                           swapchainBuffer->image());
 
             // Transition swapchain image to present layout
@@ -169,7 +169,7 @@ int main() {
             app.device->presentQueue().present(app.swapchain, index,
                                                renderFinishedSemaphore);
             app.device->wait_idle();
-            // break;
+            break;
         }
 
         app.device->wait_idle();

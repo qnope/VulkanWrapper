@@ -12,6 +12,7 @@ struct GBuffer {
     std::shared_ptr<const vw::ImageView> tangeant;
     std::shared_ptr<const vw::ImageView> biTangeant;
     std::shared_ptr<const vw::ImageView> light;
+    std::shared_ptr<const vw::ImageView> ao;
     std::shared_ptr<const vw::ImageView> depth;
 };
 
