@@ -97,3 +97,63 @@ target_link_libraries(UtilsTests
 )
 
 gtest_discover_tests(UtilsTests)
+
+# Command tests
+add_executable(CommandTests
+    Command/CommandPoolTests.cpp
+)
+
+target_link_libraries(CommandTests
+    PRIVATE
+    TestUtils
+    VulkanWrapperCoreLibrary
+    GTest::gtest
+    GTest::gtest_main
+)
+
+gtest_discover_tests(CommandTests)
+
+# Descriptor tests
+add_executable(DescriptorTests
+    Descriptors/DescriptorTests.cpp
+)
+
+target_link_libraries(DescriptorTests
+    PRIVATE
+    TestUtils
+    VulkanWrapperCoreLibrary
+    GTest::gtest
+    GTest::gtest_main
+)
+
+gtest_discover_tests(DescriptorTests)
+
+# Pipeline tests
+add_executable(PipelineTests
+    Pipeline/PipelineTests.cpp
+)
+
+target_link_libraries(PipelineTests
+    PRIVATE
+    TestUtils
+    VulkanWrapperCoreLibrary
+    GTest::gtest
+    GTest::gtest_main
+)
+
+gtest_discover_tests(PipelineTests)
+
+# Synchronization tests
+add_executable(SynchronizationTests
+    Synchronization/SynchronizationTests.cpp
+)
+
+target_link_libraries(SynchronizationTests
+    PRIVATE
+    TestUtils
+    VulkanWrapperCoreLibrary
+    GTest::gtest
+    GTest::gtest_main
+)
+
+gtest_discover_tests(SynchronizationTests)
