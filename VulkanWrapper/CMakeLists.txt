@@ -25,6 +25,8 @@ target_link_libraries(VulkanWrapperCoreLibrary
         Vulkan::Vulkan
         GPUOpen::VulkanMemoryAllocator
         SDL3_image::SDL3_image
+        PRIVATE
+        $<$<BOOL:${ENABLE_COVERAGE}>:coverage_options>
 )
 
 # Add tests subdirectory

@@ -38,7 +38,7 @@ jobs:
         wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
         sudo add-apt-repository -y "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-20 main"
         sudo apt-get update
-        sudo apt-get install -y clang-20 libc++-20-dev libc++abi-20-dev
+        sudo apt-get install -y clang-20 libc++-20-dev libc++abi-20-dev llvm-20
 
     - name: Install system dependencies
       run: |
@@ -94,7 +94,8 @@ jobs:
     - name: Configure CMake
       run: |
         cmake -B build \
-          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DENABLE_COVERAGE=ON \
           -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake \
           -DVCPKG_TARGET_TRIPLET=x64-linux-clang \
           -DCMAKE_C_COMPILER=clang-20 \
@@ -108,6 +109,9 @@ jobs:
     - name: Build
       run: cmake --build build --parallel
 
+    - name: Create coverage directory
+      run: mkdir -p build/coverage
+
     - name: Run tests
       run: |
         ctest --test-dir build --output-on-failure --timeout 120
@@ -117,3 +121,18 @@ jobs:
         # Add validation layers from vcpkg
         VK_ADD_LAYER_PATH: ${{ github.workspace }}/build/vcpkg_installed/x64-linux-clang/share/vulkan/explicit_layer.d
         LIBGL_ALWAYS_SOFTWARE: 1
+        # Coverage profiling output
+        LLVM_PROFILE_FILE: ${{ github.workspace }}/build/coverage/%p-%m.profraw
+
+    - name: Generate coverage report
+      run: |
+        llvm-profdata-20 merge -sparse build/coverage/*.profraw -o build/coverage.profdata
+
+        echo "## Coverage Summary" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        llvm-cov-20 report \
+          build/VulkanWrapper/libVulkanWrapperCoreLibrary.so \
+          -instr-profile=build/coverage.profdata \
+          -ignore-filename-regex='.*/(vcpkg_installed|tests|examples)/.*' \
+          >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
