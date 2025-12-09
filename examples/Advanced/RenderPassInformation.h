@@ -32,12 +32,10 @@ struct UBOData {
         proj[1][1] *= -1;
         return proj;
     }();
-    // Camera positioned in Sponza atrium looking down the corridor
-    // Elevated position to see column shadows on the floor
-    glm::mat4 view =
-        glm::lookAt(glm::vec3(-900.0f, 300.0f, 100.0f), // eye position
-                    glm::vec3(500.0f, 100.0f, 0.0f),    // look at center
-                    glm::vec3(0.0f, 1.0f, 0.0f));       // up vector
+    // Camera positioned to view plane and cube
+    glm::mat4 view = glm::lookAt(glm::vec3(3.0f, 4.0f, 2.0f),  // eye position
+                                 glm::vec3(0.0f, 0.0f, 0.0f),  // look at origin
+                                 glm::vec3(0.0f, 1.0f, 0.0f)); // up vector
 
     // Inverse view-projection for reconstructing world position from depth
     glm::mat4 inverseViewProj = glm::inverse(proj * view);
