@@ -23,7 +23,12 @@ layout(location = 3) out vec2 outTexCoord;
 void main() {
     gl_Position = proj * view * model * vec4(inPosition, 1.0);
     outTexCoord = inTexCoord;
-    outNormal = inNormal;
-    outTangeant = inTangeant;
-    outBiTangeant = inBitangeant;
+
+    // Transform TBN vectors by the model matrix (normal matrix for correct transformation)
+    // For uniform scaling, mat3(model) is sufficient; for non-uniform scaling,
+    // use transpose(inverse(mat3(model)))
+    mat3 normalMatrix = mat3(model);
+    outNormal = normalize(normalMatrix * inNormal);
+    outTangeant = normalize(normalMatrix * inTangeant);
+    outBiTangeant = normalize(normalMatrix * inBitangeant);
 }

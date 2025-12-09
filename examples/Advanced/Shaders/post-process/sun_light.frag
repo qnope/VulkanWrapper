@@ -19,8 +19,8 @@ layout (push_constant) uniform PushConstants {
 // Reconstruct world position from depth buffer
 vec3 reconstructWorldPosition(vec2 uv, float depth) {
     // Convert UV [0,1] to NDC [-1,1]
-    // In Vulkan, Y is flipped by projection matrix, so we flip UV.y
-    vec2 ndc = vec2(uv.x * 2.0 - 1.0, (1.0 - uv.y) * 2.0 - 1.0);
+    // The projection matrix already flips Y, so we don't flip UV.y here
+    vec2 ndc = vec2(uv.x * 2.0 - 1.0, uv.y * 2.0 - 1.0);
 
     // Vulkan depth range is [0,1]
     vec4 clipPos = vec4(ndc, depth, 1.0);

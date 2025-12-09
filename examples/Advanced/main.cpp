@@ -48,12 +48,23 @@ int main() {
         vw::Model::MeshManager mesh_manager(app.device, app.allocator);
         vw::rt::RayTracedScene rayTracedScene(app.device, app.allocator);
 
-        // Load Sponza Atrium
-        mesh_manager.read_file("../../../Models/Sponza/sponza.obj");
+        // Load plane and cube
+        mesh_manager.read_file("../../../Models/plane.obj");
+        size_t planeCount = mesh_manager.meshes().size();
+        mesh_manager.read_file("../../../Models/cube.obj");
 
-        // Add all meshes as instances to the ray traced scene
-        for (const auto &mesh : mesh_manager.meshes()) {
-            std::ignore = rayTracedScene.add_instance(mesh, glm::mat4(1.0f));
+        // Add plane instances (identity transform)
+        for (size_t i = 0; i < planeCount; ++i) {
+            std::ignore = rayTracedScene.add_instance(mesh_manager.meshes()[i],
+                                                      glm::mat4(1.0f));
+        }
+
+        // Add cube at (0, 2, 0)
+        for (size_t i = planeCount; i < mesh_manager.meshes().size(); ++i) {
+            glm::mat4 transform =
+                glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+            std::ignore = rayTracedScene.add_instance(mesh_manager.meshes()[i],
+                                                      transform);
         }
 
         // Upload mesh data to GPU
