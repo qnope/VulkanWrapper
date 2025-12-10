@@ -114,7 +114,16 @@ jobs:
 
     - name: Run tests
       run: |
-        ctest --test-dir build --output-on-failure --timeout 120
+        failed=0
+        for test_exe in build/VulkanWrapper/tests/*Tests; do
+          if [ -x "$test_exe" ]; then
+            echo "Running $test_exe..."
+            if ! "$test_exe"; then
+              failed=1
+            fi
+          fi
+        done
+        exit $failed
       env:
         # Use Mesa's software renderer for Vulkan tests
         VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
