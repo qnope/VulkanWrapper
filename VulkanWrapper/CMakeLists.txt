@@ -8,6 +8,7 @@ find_package(SDL3 REQUIRED COMPONENTS SDL3)
 find_package(Vulkan REQUIRED COMPONENTS glslangValidator)
 find_package(VulkanMemoryAllocator REQUIRED)
 find_package(SDL3_image REQUIRED)
+find_package(unofficial-shaderc CONFIG REQUIRED)
 
 add_library(VulkanWrapperCoreLibrary SHARED)
 
@@ -27,6 +28,7 @@ target_link_libraries(VulkanWrapperCoreLibrary
         SDL3_image::SDL3_image
         PRIVATE
         $<$<BOOL:${ENABLE_COVERAGE}>:coverage_options>
+        unofficial::shaderc::shaderc
 )
 
 # Add tests subdirectory
