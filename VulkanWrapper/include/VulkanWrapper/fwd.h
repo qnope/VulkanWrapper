@@ -27,6 +27,7 @@ class Swapchain;
 class Surface;
 
 class ShaderModule;
+class ShaderCompiler;
 class Pipeline;
 class PipelineLayout;
 class RayTracingPipeline;
