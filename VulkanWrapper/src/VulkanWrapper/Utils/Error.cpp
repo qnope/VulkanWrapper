@@ -168,6 +168,39 @@ void AssimpException::build_what() const {
                                m_assimp_error);
 }
 
+// ShaderCompilationException
+
+ShaderCompilationException::ShaderCompilationException(std::string shader_name,
+                                                       vk::ShaderStageFlagBits stage,
+                                                       std::string compilation_log,
+                                                       std::source_location location)
+    : Exception("Shader compilation failed", location),
+      m_shader_name(std::move(shader_name)),
+      m_stage(stage),
+      m_compilation_log(std::move(compilation_log)) {}
+
+const std::string &ShaderCompilationException::shader_name() const noexcept {
+    return m_shader_name;
+}
+
+vk::ShaderStageFlagBits ShaderCompilationException::stage() const noexcept {
+    return m_stage;
+}
+
+const std::string &ShaderCompilationException::compilation_log() const noexcept {
+    return m_compilation_log;
+}
+
+void ShaderCompilationException::build_what() const {
+    m_what_cache = std::format("[{}:{}] {}\n  Shader: {} ({})\n  Log:\n{}",
+                               extract_filename(m_location.file_name()),
+                               m_location.line(),
+                               m_location.function_name(),
+                               m_shader_name,
+                               vk::to_string(m_stage),
+                               m_compilation_log);
+}
+
 // LogicException factory methods
 
 LogicException LogicException::out_of_range(std::string_view what_is_invalid,

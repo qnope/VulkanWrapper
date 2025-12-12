@@ -97,3 +97,18 @@ target_link_libraries(UtilsTests
 )
 
 gtest_discover_tests(UtilsTests)
+
+# Shader tests
+add_executable(ShaderTests
+    Shader/ShaderCompilerTests.cpp
+)
+
+target_link_libraries(ShaderTests
+    PRIVATE
+    TestUtils
+    VulkanWrapperCoreLibrary
+    GTest::gtest
+    GTest::gtest_main
+)
+
+gtest_discover_tests(ShaderTests)

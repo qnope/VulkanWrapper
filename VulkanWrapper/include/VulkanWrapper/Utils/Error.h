@@ -115,6 +115,27 @@ private:
     std::filesystem::path m_path;
 };
 
+// Shader compilation errors (GLSL to SPIR-V)
+class ShaderCompilationException : public Exception {
+public:
+    ShaderCompilationException(std::string shader_name,
+                               vk::ShaderStageFlagBits stage,
+                               std::string compilation_log,
+                               std::source_location location = std::source_location::current());
+
+    const std::string &shader_name() const noexcept;
+    vk::ShaderStageFlagBits stage() const noexcept;
+    const std::string &compilation_log() const noexcept;
+
+protected:
+    void build_what() const override;
+
+private:
+    std::string m_shader_name;
+    vk::ShaderStageFlagBits m_stage;
+    std::string m_compilation_log;
+};
+
 // Logic/state errors (invalid arguments, precondition violations, bounds errors)
 // Replaces std::out_of_range and std::runtime_error for consistency
 class LogicException : public Exception {
