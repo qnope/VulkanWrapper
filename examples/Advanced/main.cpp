@@ -48,23 +48,12 @@ int main() {
         vw::Model::MeshManager mesh_manager(app.device, app.allocator);
         vw::rt::RayTracedScene rayTracedScene(app.device, app.allocator);
 
-        // Load plane and cube
-        mesh_manager.read_file("../../../Models/plane.obj");
-        size_t planeCount = mesh_manager.meshes().size();
-        mesh_manager.read_file("../../../Models/cube.obj");
+        // Load Sponza
+        mesh_manager.read_file("../../../Models/Sponza/sponza.obj");
 
-        // Add plane instances (identity transform)
-        for (size_t i = 0; i < planeCount; ++i) {
-            std::ignore = rayTracedScene.add_instance(mesh_manager.meshes()[i],
-                                                      glm::mat4(1.0f));
-        }
-
-        // Add cube at (0, 2, 0)
-        for (size_t i = planeCount; i < mesh_manager.meshes().size(); ++i) {
-            glm::mat4 transform =
-                glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-            std::ignore = rayTracedScene.add_instance(mesh_manager.meshes()[i],
-                                                      transform);
+        // Add all Sponza meshes with identity transform
+        for (const auto &mesh : mesh_manager.meshes()) {
+            std::ignore = rayTracedScene.add_instance(mesh, glm::mat4(1.0f));
         }
 
         // Upload mesh data to GPU
@@ -104,8 +93,8 @@ int main() {
             // Geometry Pass using Rendering
             rendering.execute(commandBuffer, transfer.resourceTracker());
 
-            // Blit color to swapchain
-            transfer.blit(commandBuffer, gBuffer.light->image(),
+            // Blit AO to swapchain
+            transfer.blit(commandBuffer, gBuffer.ao->image(),
                           swapchainBuffer->image());
 
             // Transition swapchain image to present layout
@@ -180,7 +169,7 @@ int main() {
             app.device->presentQueue().present(app.swapchain, index,
                                                renderFinishedSemaphore);
             app.device->wait_idle();
-            // break;
+            break;
         }
 
         app.device->wait_idle();

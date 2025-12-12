@@ -4,8 +4,8 @@
 #include <VulkanWrapper/Memory/Allocator.h>
 
 DeferredRenderingManager::DeferredRenderingManager(
-    std::shared_ptr<vw::Device> device, std::shared_ptr<vw::Allocator> allocator,
-    const vw::Swapchain &swapchain,
+    std::shared_ptr<vw::Device> device,
+    std::shared_ptr<vw::Allocator> allocator, const vw::Swapchain &swapchain,
     const vw::Model::MeshManager &mesh_manager,
     const vw::rt::RayTracedScene &ray_traced_scene,
     const vw::Buffer<UBOData, true, vw::UniformBufferUsage> &uniform_buffer,
@@ -23,6 +23,7 @@ DeferredRenderingManager::DeferredRenderingManager(
     create_color_pass_resources(mesh_manager);
     create_sun_light_pass_resources();
     create_sky_pass_resources();
+    create_ao_pass_resources();
     create_renderings();
 }
 
@@ -32,9 +33,11 @@ void DeferredRenderingManager::create_gbuffers(const vw::Swapchain &swapchain) {
                                 vk::ImageUsageFlagBits::eSampled |
                                 vk::ImageUsageFlagBits::eTransferSrc;
 
-    auto create_img = [&](vk::Format format, vk::ImageUsageFlags otherFlags = {}) {
-        return m_allocator->create_image_2D(swapchain.width(), swapchain.height(),
-                                            false, format, usageFlags | otherFlags);
+    auto create_img = [&](vk::Format format,
+                          vk::ImageUsageFlags otherFlags = {}) {
+        return m_allocator->create_image_2D(swapchain.width(),
+                                            swapchain.height(), false, format,
+                                            usageFlags | otherFlags);
     };
 
     auto create_img_view = [&](auto img) {
@@ -48,20 +51,22 @@ void DeferredRenderingManager::create_gbuffers(const vw::Swapchain &swapchain) {
         auto img_normal = create_img(m_config.gbuffer_color_formats[1]);
         auto img_tangeant = create_img(m_config.gbuffer_color_formats[2]);
         auto img_biTangeant = create_img(m_config.gbuffer_color_formats[3]);
-        auto img_light =
-            create_img(m_config.gbuffer_color_formats[4], vk::ImageUsageFlagBits::eStorage);
+        auto img_position = create_img(m_config.gbuffer_color_formats[4]);
+        auto img_light = create_img(m_config.gbuffer_color_formats[5],
+                                    vk::ImageUsageFlagBits::eStorage);
 
         auto img_depth = m_allocator->create_image_2D(
             swapchain.width(), swapchain.height(), false, m_config.depth_format,
             vk::ImageUsageFlagBits::eDepthStencilAttachment |
                 vk::ImageUsageFlagBits::eSampled);
 
-        m_gbuffers.push_back({create_img_view(img_color),
-                              create_img_view(img_normal),
-                              create_img_view(img_tangeant),
-                              create_img_view(img_biTangeant),
-                              create_img_view(img_light),
-                              create_img_view(img_depth)});
+        auto img_ao = create_img(m_config.ao_format);
+
+        m_gbuffers.push_back(
+            {create_img_view(img_color), create_img_view(img_normal),
+             create_img_view(img_tangeant), create_img_view(img_biTangeant),
+             create_img_view(img_position), create_img_view(img_light),
+             create_img_view(img_depth), create_img_view(img_ao)});
     }
 }
 
@@ -69,7 +74,8 @@ void DeferredRenderingManager::create_uniform_descriptors(
     const vw::Buffer<UBOData, true, vw::UniformBufferUsage> &uniform_buffer) {
     m_uniform_descriptor_layout = create_zpass_descriptor_layout(m_device);
     m_uniform_descriptor_pool =
-        vw::DescriptorPoolBuilder(m_device, m_uniform_descriptor_layout).build();
+        vw::DescriptorPoolBuilder(m_device, m_uniform_descriptor_layout)
+            .build();
     m_uniform_descriptor_set =
         create_zpass_descriptor_set(*m_uniform_descriptor_pool, uniform_buffer);
 }
@@ -81,19 +87,23 @@ void DeferredRenderingManager::create_zpass_resources() {
 
 void DeferredRenderingManager::create_color_pass_resources(
     const vw::Model::MeshManager &mesh_manager) {
-    m_mesh_renderer =
-        create_renderer(m_device, m_config.gbuffer_color_formats,
-                        m_config.depth_format, mesh_manager, m_uniform_descriptor_layout);
+    m_mesh_renderer = create_renderer(m_device, m_config.gbuffer_color_formats,
+                                      m_config.depth_format, mesh_manager,
+                                      m_uniform_descriptor_layout);
 }
 
 void DeferredRenderingManager::create_sun_light_pass_resources() {
-    m_sunlight_descriptor_layout = create_sun_light_pass_descriptor_layout(m_device);
+    m_sunlight_descriptor_layout =
+        create_sun_light_pass_descriptor_layout(m_device);
     m_sunlight_descriptor_pool =
-        vw::DescriptorPoolBuilder(m_device, m_sunlight_descriptor_layout).build();
+        vw::DescriptorPoolBuilder(m_device, m_sunlight_descriptor_layout)
+            .build();
 
     for (const auto &gBuffer : m_gbuffers) {
-        m_sunlight_descriptor_sets.push_back(create_sun_light_pass_descriptor_set(
-            *m_sunlight_descriptor_pool, m_sampler, gBuffer, m_ray_traced_scene.tlas_handle()));
+        m_sunlight_descriptor_sets.push_back(
+            create_sun_light_pass_descriptor_set(
+                *m_sunlight_descriptor_pool, m_sampler, gBuffer,
+                m_ray_traced_scene.tlas_handle()));
     }
 }
 
@@ -101,32 +111,41 @@ void DeferredRenderingManager::create_sky_pass_resources() {
     // Sky pass uses the uniform descriptor layout directly
 }
 
+void DeferredRenderingManager::create_ao_pass_resources() {
+    m_ao_descriptor_layout = create_ao_pass_descriptor_layout(m_device);
+    m_ao_descriptor_pool =
+        vw::DescriptorPoolBuilder(m_device, m_ao_descriptor_layout).build();
+
+    // Create the AO samples buffer with random values
+    m_ao_samples_buffer = create_ao_samples_buffer(*m_allocator);
+
+    for (const auto &gBuffer : m_gbuffers) {
+        m_ao_descriptor_sets.push_back(create_ao_pass_descriptor_set(
+            *m_ao_descriptor_pool, m_sampler, gBuffer,
+            m_ray_traced_scene.tlas_handle(), *m_ao_samples_buffer));
+    }
+}
+
 void DeferredRenderingManager::create_renderings() {
     int i = 0;
     const auto &scene = m_ray_traced_scene.scene();
     for (const auto &gBuffer : m_gbuffers) {
-        auto depth_subpass =
-            std::make_shared<ZPass>(m_device, scene, m_uniform_descriptor_layout,
-                                    *m_uniform_descriptor_set, gBuffer, m_zpass_pipeline);
+        auto depth_subpass = std::make_shared<ZPass>(
+            m_device, scene, m_uniform_descriptor_layout,
+            *m_uniform_descriptor_set, gBuffer, m_zpass_pipeline);
 
         auto color_subpass = std::make_shared<ColorSubpass>(
             m_device, scene, m_uniform_descriptor_layout,
             *m_uniform_descriptor_set, gBuffer, m_mesh_renderer);
 
-        auto sunlight_pass =
-            create_sun_light_pass(m_device, m_sunlight_descriptor_layout,
-                                  m_sunlight_descriptor_sets[i], gBuffer.light,
-                                  &m_sun_angle, &m_ubo_data);
-
-        auto sky_pass = create_sky_pass(m_device, m_uniform_descriptor_layout,
-                                        *m_uniform_descriptor_set, gBuffer.light,
-                                        gBuffer.depth, &m_sun_angle);
+        auto ao_pass =
+            create_ao_pass(m_device, m_ao_descriptor_layout,
+                           m_ao_descriptor_sets[i], gBuffer.ao, 100.0f, 32);
 
         m_renderings.emplace_back(vw::RenderingBuilder()
                                       .add_subpass(depth_subpass)
                                       .add_subpass(color_subpass)
-                                      .add_subpass(sunlight_pass)
-                                      .add_subpass(sky_pass)
+                                      .add_subpass(ao_pass)
                                       .build());
         i++;
     }

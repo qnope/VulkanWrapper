@@ -19,10 +19,13 @@ layout(location = 0) out vec3 outNormal;
 layout(location = 1) out vec3 outTangeant;
 layout(location = 2) out vec3 outBiTangeant;
 layout(location = 3) out vec2 outTexCoord;
+layout(location = 4) out vec3 outWorldPosition;
 
 void main() {
-    gl_Position = proj * view * model * vec4(inPosition, 1.0);
+    vec4 worldPos = model * vec4(inPosition, 1.0);
+    gl_Position = proj * view * worldPos;
     outTexCoord = inTexCoord;
+    outWorldPosition = worldPos.xyz;
 
     // Transform TBN vectors by the model matrix (normal matrix for correct transformation)
     // For uniform scaling, mat3(model) is sufficient; for non-uniform scaling,
