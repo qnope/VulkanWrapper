@@ -101,28 +101,29 @@ class DeferredRenderingManager {
                                              frame_index, scene, depth_view,
                                              uniform_buffer);
 
-        // 3. Sky Pass: render sky where depth == 1.0 (far plane)
-        auto light_view = m_sky_pass->execute(cmd, tracker, width, height,
-                                              frame_index, depth_view, sun_angle,
-                                              ubo_data.inverseViewProj);
-
-        // 4. Sun Light Pass: add sun lighting with ray-traced shadows
-        m_sun_light_pass->execute(cmd, tracker,
-                                  light_view,        // from SkyPass
-                                  depth_view,        // from ZPass
-                                  gbuffer.color,     // albedo from ColorPass
-                                  gbuffer.position,  // from ColorPass
-                                  gbuffer.normal,    // from ColorPass
-                                  sun_angle);
-
-        // 5. AO Pass: screen-space ambient occlusion (computed but not used)
+        // 3. AO Pass: screen-space ambient occlusion
         auto ao_view = m_ao_pass->execute(cmd, tracker, width, height,
                                           frame_index, depth_view,
                                           gbuffer.position, gbuffer.normal,
                                           gbuffer.tangent, gbuffer.bitangent,
                                           num_ao_samples, ao_radius);
 
-        // Return light buffer (sky + sun) as final output
+        // 4. Sky Pass: render sky where depth == 1.0 (far plane)
+        auto light_view = m_sky_pass->execute(cmd, tracker, width, height,
+                                              frame_index, depth_view, sun_angle,
+                                              ubo_data.inverseViewProj);
+
+        // 5. Sun Light Pass: add sun lighting with ray-traced shadows and AO
+        m_sun_light_pass->execute(cmd, tracker,
+                                  light_view,        // from SkyPass
+                                  depth_view,        // from ZPass
+                                  gbuffer.color,     // albedo from ColorPass
+                                  gbuffer.position,  // from ColorPass
+                                  gbuffer.normal,    // from ColorPass
+                                  ao_view,           // from AO Pass
+                                  sun_angle);
+
+        // Return light buffer (sky + sun + AO) as final output
         return light_view;
     }
 

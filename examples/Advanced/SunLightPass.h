@@ -56,6 +56,7 @@ class SunLightPass : public vw::ScreenSpacePass<SunLightPassSlot> {
      * @param color_view Color G-Buffer view
      * @param position_view Position G-Buffer view
      * @param normal_view Normal G-Buffer view
+     * @param ao_view Ambient occlusion buffer view
      * @param sun_angle Sun angle in degrees above horizon (90 = zenith)
      */
     void execute(vk::CommandBuffer cmd, vw::Barrier::ResourceTracker &tracker,
@@ -64,6 +65,7 @@ class SunLightPass : public vw::ScreenSpacePass<SunLightPassSlot> {
                  std::shared_ptr<const vw::ImageView> color_view,
                  std::shared_ptr<const vw::ImageView> position_view,
                  std::shared_ptr<const vw::ImageView> normal_view,
+                 std::shared_ptr<const vw::ImageView> ao_view,
                  float sun_angle) {
 
         vk::Extent2D extent = light_view->image()->extent2D();
@@ -85,6 +87,10 @@ class SunLightPass : public vw::ScreenSpacePass<SunLightPassSlot> {
         descriptor_allocator.add_acceleration_structure(
             3, m_tlas, vk::PipelineStageFlagBits2::eFragmentShader,
             vk::AccessFlagBits2::eAccelerationStructureReadKHR);
+        descriptor_allocator.add_combined_image(
+            4, vw::CombinedImage(ao_view, m_sampler),
+            vk::PipelineStageFlagBits2::eFragmentShader,
+            vk::AccessFlagBits2::eShaderRead);
 
         auto descriptor_set =
             m_descriptor_pool.allocate_set(descriptor_allocator);
@@ -158,6 +164,8 @@ class SunLightPass : public vw::ScreenSpacePass<SunLightPassSlot> {
                                      1) // Normal
                 .with_acceleration_structure(
                     vk::ShaderStageFlagBits::eFragment) // TLAS
+                .with_combined_image(vk::ShaderStageFlagBits::eFragment,
+                                     1) // AO
                 .build();
 
         // Create pipeline
