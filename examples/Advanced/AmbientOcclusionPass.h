@@ -191,7 +191,8 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
 
         // Render fullscreen quad with depth testing
         render_fullscreen(cmd, extent, color_attachment, &depth_attachment,
-                          *m_pipeline, descriptor_set, constants);
+                          *m_pipeline, descriptor_set, &constants,
+                          sizeof(constants));
 
         return output.view;
     }

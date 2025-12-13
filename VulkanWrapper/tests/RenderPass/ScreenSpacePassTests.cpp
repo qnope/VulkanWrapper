@@ -128,7 +128,8 @@ class TestScreenSpacePass : public vw::ScreenSpacePass<SlotEnum> {
                                 const vw::DescriptorSet &descriptor_set,
                                 const PushConstantsType &push_constants) {
         this->render_fullscreen(cmd, extent, color_attachment, depth_attachment,
-                                pipeline, descriptor_set, push_constants);
+                                pipeline, descriptor_set, &push_constants,
+                                sizeof(push_constants));
     }
 
     void test_render_fullscreen_no_push(vk::CommandBuffer cmd, vk::Extent2D extent,

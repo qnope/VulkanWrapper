@@ -112,7 +112,8 @@ class SkyPass : public vw::ScreenSpacePass<SkyPassSlot> {
         // Render fullscreen quad with depth testing (sky only where depth
         // == 1.0)
         render_fullscreen(cmd, extent, color_attachment, &depth_attachment,
-                          *m_pipeline, constants);
+                          *m_pipeline, std::nullopt, &constants,
+                          sizeof(constants));
 
         return light.view;
     }
@@ -129,7 +130,7 @@ class SkyPass : public vw::ScreenSpacePass<SkyPassSlot> {
                                   sizeof(PushConstants))};
 
         return vw::create_screen_space_pipeline(
-            m_device, vertex_shader, fragment_shader, m_light_format,
+            m_device, vertex_shader, fragment_shader, nullptr, m_light_format,
             m_depth_format, vk::CompareOp::eEqual, push_constants);
     }
 
