@@ -90,8 +90,8 @@ struct FullVertex3D
                  glm::vec3 bitangeant)
         : position{position}
         , normal{normal}
-        , tangeant{normal}
-        , bitangeant{normal} {}
+        , tangeant{tangeant}
+        , bitangeant{bitangeant} {}
 
     FullVertex3D(glm::vec3 position, glm::vec3 normal, glm::vec3 tangeant,
                  glm::vec3 bitangeant, glm::vec2 uv)
