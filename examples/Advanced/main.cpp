@@ -51,10 +51,30 @@ int main() {
 
         // Load Sponza
         mesh_manager.read_file("../../../Models/Sponza/sponza.obj");
+        auto sponza_mesh_count = mesh_manager.meshes().size();
 
         // Add all Sponza meshes with identity transform
-        for (const auto &mesh : mesh_manager.meshes()) {
-            std::ignore = rayTracedScene.add_instance(mesh, glm::mat4(1.0f));
+        for (size_t i = 0; i < sponza_mesh_count; ++i) {
+            std::ignore = rayTracedScene.add_instance(mesh_manager.meshes()[i],
+                                                      glm::mat4(1.0f));
+        }
+
+        // Load and add a cube in the middle of the scene
+        mesh_manager.read_file("../../../Models/cube.obj");
+
+        // Create transform: scale by 300 and position in the center of Sponza
+        // Sponza's courtyard is roughly at origin, raise cube slightly above
+        // ground
+        glm::mat4 cube_transform = glm::mat4(1.0f);
+        cube_transform =
+            glm::translate(cube_transform, glm::vec3(0.0f, 200.0f, 50.0f));
+        cube_transform = glm::scale(cube_transform, glm::vec3(200.0f));
+
+        // Add cube mesh (the last mesh loaded)
+        for (size_t i = sponza_mesh_count; i < mesh_manager.meshes().size();
+             ++i) {
+            std::ignore = rayTracedScene.add_instance(mesh_manager.meshes()[i],
+                                                      cube_transform);
         }
 
         // Upload mesh data to GPU
@@ -67,8 +87,8 @@ int main() {
 
         // Create the deferred rendering manager with functional passes
         // No swapchain needed - dimensions are passed at execute time
-        DeferredRenderingManager renderingManager(
-            app.device, app.allocator, mesh_manager, rayTracedScene);
+        DeferredRenderingManager renderingManager(app.device, app.allocator,
+                                                  mesh_manager, rayTracedScene);
 
         auto commandPool = vw::CommandPoolBuilder(app.device).build();
         auto image_views = create_image_views(app.device, app.swapchain);
@@ -88,11 +108,11 @@ int main() {
             // Execute deferred rendering pipeline functionally
             // Returns the AO image view which we'll blit to swapchain
             auto ao_view = renderingManager.execute(
-                commandBuffers[i], transfer.resourceTracker(),
-                width, height, i,  // frame_index
+                commandBuffers[i], transfer.resourceTracker(), width, height,
+                i, // frame_index
                 uniform_buffer,
-                32,     // num_ao_samples
-                100.0f  // ao_radius
+                32,    // num_ao_samples
+                200.0f // ao_radius
             );
 
             // Blit AO to swapchain

@@ -29,7 +29,7 @@ struct TonemapInformation {
 struct UBOData {
     glm::mat4 proj = [] {
         auto proj =
-            glm::perspective(glm::radians(60.0f), 16.0f / 9.0f, 2.f, 10'000.f);
+            glm::perspective(glm::radians(60.0f), 16.0f / 9.0f, 2.f, 5'000.f);
 
         proj[1][1] *= -1;
         return proj;
