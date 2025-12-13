@@ -116,6 +116,7 @@ gtest_discover_tests(ShaderTests)
 # RenderPass tests
 add_executable(RenderPassTests
     RenderPass/SubpassTests.cpp
+    RenderPass/ScreenSpacePassTests.cpp
 )
 
 target_link_libraries(RenderPassTests
