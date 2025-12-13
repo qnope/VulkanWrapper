@@ -106,17 +106,18 @@ int main() {
             vw::Transfer transfer;
 
             // Execute deferred rendering pipeline functionally
-            // Returns the AO image view which we'll blit to swapchain
-            auto ao_view = renderingManager.execute(
+            // Returns the light image view (sky + sun) which we'll blit to swapchain
+            auto light_view = renderingManager.execute(
                 commandBuffers[i], transfer.resourceTracker(), width, height,
                 i, // frame_index
                 uniform_buffer,
-                32,    // num_ao_samples
-                200.0f // ao_radius
+                90.0f,  // sun_angle = zenith (90 degrees)
+                32,     // num_ao_samples
+                200.0f  // ao_radius
             );
 
-            // Blit AO to swapchain
-            transfer.blit(commandBuffers[i], ao_view->image(),
+            // Blit light buffer to swapchain
+            transfer.blit(commandBuffers[i], light_view->image(),
                           image_views[i]->image());
 
             // Transition swapchain image to present layout

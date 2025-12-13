@@ -12,7 +12,6 @@
 #include "VulkanWrapper/RenderPass/ScreenSpacePass.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include "VulkanWrapper/Vulkan/Device.h"
-
 #include <cmath>
 #include <glm/glm.hpp>
 #include <glm/trigonometric.hpp>
@@ -24,14 +23,14 @@ enum class SunLightPassSlot {};
  * @brief Functional Sun Light pass (no image allocation)
  *
  * This pass renders sun light contribution additively onto the light buffer.
- * It does not allocate any images - it uses the light buffer from SkyPass as input/output.
+ * It does not allocate any images - it uses the light buffer from SkyPass as
+ * input/output.
  */
 class SunLightPass : public vw::ScreenSpacePass<SunLightPassSlot> {
   public:
     struct PushConstants {
         glm::vec4 sunDirection;
         glm::vec4 sunColor;
-        glm::mat4 inverseViewProj;
     };
 
     SunLightPass(std::shared_ptr<vw::Device> device,
@@ -53,21 +52,21 @@ class SunLightPass : public vw::ScreenSpacePass<SunLightPassSlot> {
      * @param cmd Command buffer to record into
      * @param tracker Resource tracker for barrier management
      * @param light_view Light buffer to render into (from SkyPass)
+     * @param depth_view Depth buffer view (for depth testing)
      * @param color_view Color G-Buffer view
-     * @param depth_view Depth G-Buffer view
+     * @param position_view Position G-Buffer view
      * @param normal_view Normal G-Buffer view
      * @param sun_angle Sun angle in degrees above horizon (90 = zenith)
-     * @param inverse_view_proj Inverse view-projection matrix
      */
     void execute(vk::CommandBuffer cmd, vw::Barrier::ResourceTracker &tracker,
                  std::shared_ptr<const vw::ImageView> light_view,
-                 std::shared_ptr<const vw::ImageView> color_view,
                  std::shared_ptr<const vw::ImageView> depth_view,
+                 std::shared_ptr<const vw::ImageView> color_view,
+                 std::shared_ptr<const vw::ImageView> position_view,
                  std::shared_ptr<const vw::ImageView> normal_view,
-                 float sun_angle, const glm::mat4 &inverse_view_proj) {
+                 float sun_angle) {
 
-        vk::Extent2D extent{light_view->image()->width(),
-                            light_view->image()->height()};
+        vk::Extent2D extent = light_view->image()->extent2D();
 
         // Create descriptor set with current input images
         vw::DescriptorAllocator descriptor_allocator;
@@ -76,7 +75,7 @@ class SunLightPass : public vw::ScreenSpacePass<SunLightPassSlot> {
             vk::PipelineStageFlagBits2::eFragmentShader,
             vk::AccessFlagBits2::eShaderRead);
         descriptor_allocator.add_combined_image(
-            1, vw::CombinedImage(depth_view, m_sampler),
+            1, vw::CombinedImage(position_view, m_sampler),
             vk::PipelineStageFlagBits2::eFragmentShader,
             vk::AccessFlagBits2::eShaderRead);
         descriptor_allocator.add_combined_image(
@@ -95,7 +94,8 @@ class SunLightPass : public vw::ScreenSpacePass<SunLightPassSlot> {
             tracker.request(resource);
         }
 
-        // Light image needs to be in color attachment layout for additive rendering
+        // Light image needs to be in color attachment layout for additive
+        // rendering
         tracker.request(vw::Barrier::ImageState{
             .image = light_view->image()->handle(),
             .subresourceRange = light_view->subresource_range(),
@@ -103,6 +103,15 @@ class SunLightPass : public vw::ScreenSpacePass<SunLightPassSlot> {
             .stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
             .access = vk::AccessFlagBits2::eColorAttachmentRead |
                       vk::AccessFlagBits2::eColorAttachmentWrite});
+
+        // Depth image for reading
+        tracker.request(vw::Barrier::ImageState{
+            .image = depth_view->image()->handle(),
+            .subresourceRange = depth_view->subresource_range(),
+            .layout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
+            .stage = vk::PipelineStageFlagBits2::eEarlyFragmentTests |
+                     vk::PipelineStageFlagBits2::eLateFragmentTests,
+            .access = vk::AccessFlagBits2::eDepthStencilAttachmentRead});
 
         // Flush barriers
         tracker.flush(cmd);
@@ -115,17 +124,24 @@ class SunLightPass : public vw::ScreenSpacePass<SunLightPassSlot> {
                 .setLoadOp(vk::AttachmentLoadOp::eLoad)
                 .setStoreOp(vk::AttachmentStoreOp::eStore);
 
+        // Setup depth attachment (read-only for depth testing)
+        vk::RenderingAttachmentInfo depth_attachment =
+            vk::RenderingAttachmentInfo()
+                .setImageView(depth_view->handle())
+                .setImageLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+                .setLoadOp(vk::AttachmentLoadOp::eLoad)
+                .setStoreOp(vk::AttachmentStoreOp::eNone);
+
         // Push constants
         // Sun direction is FROM sun TO surface (negative of direction to sun)
         float angle_rad = glm::radians(sun_angle);
-        PushConstants constants{
-            .sunDirection =
-                glm::vec4(-std::cos(angle_rad), -std::sin(angle_rad), 0.0f, 0.0f),
-            .sunColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
-            .inverseViewProj = inverse_view_proj};
+        PushConstants constants{.sunDirection =
+                                    glm::vec4(-std::cos(angle_rad),
+                                              -std::sin(angle_rad), 0.0f, 0.0f),
+                                .sunColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)};
 
-        // Render fullscreen quad
-        render_fullscreen(cmd, extent, color_attachment, nullptr,
+        // Render fullscreen quad with depth testing
+        render_fullscreen(cmd, extent, color_attachment, &depth_attachment,
                           *m_pipeline, descriptor_set, constants);
     }
 
@@ -134,10 +150,14 @@ class SunLightPass : public vw::ScreenSpacePass<SunLightPassSlot> {
         // Create descriptor layout
         m_descriptor_layout =
             vw::DescriptorSetLayoutBuilder(m_device)
-                .with_combined_image(vk::ShaderStageFlagBits::eFragment, 1) // Color
-                .with_combined_image(vk::ShaderStageFlagBits::eFragment, 1) // Depth
-                .with_combined_image(vk::ShaderStageFlagBits::eFragment, 1) // Normal
-                .with_acceleration_structure(vk::ShaderStageFlagBits::eFragment) // TLAS
+                .with_combined_image(vk::ShaderStageFlagBits::eFragment,
+                                     1) // Color
+                .with_combined_image(vk::ShaderStageFlagBits::eFragment,
+                                     1) // Position
+                .with_combined_image(vk::ShaderStageFlagBits::eFragment,
+                                     1) // Normal
+                .with_acceleration_structure(
+                    vk::ShaderStageFlagBits::eFragment) // TLAS
                 .build();
 
         // Create pipeline
@@ -152,7 +172,7 @@ class SunLightPass : public vw::ScreenSpacePass<SunLightPassSlot> {
 
         m_pipeline = vw::create_screen_space_pipeline(
             m_device, vertex_shader, fragment_shader, m_descriptor_layout,
-            m_light_format, vk::Format::eUndefined, false, vk::CompareOp::eAlways,
+            m_light_format, vk::Format::eD32Sfloat, vk::CompareOp::eGreater,
             push_constants);
 
         return vw::DescriptorPoolBuilder(m_device, m_descriptor_layout).build();

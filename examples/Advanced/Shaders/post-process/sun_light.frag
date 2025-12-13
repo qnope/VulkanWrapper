@@ -6,37 +6,20 @@ layout (location = 0) in vec2 inUV;
 layout (location = 0) out vec4 outColor;
 
 layout (set = 0, binding = 0) uniform sampler2D samplerColor;
-layout (set = 0, binding = 1) uniform sampler2D samplerDepth;
+layout (set = 0, binding = 1) uniform sampler2D samplerPosition;
 layout (set = 0, binding = 2) uniform sampler2D samplerNormal;
 layout (set = 0, binding = 3) uniform accelerationStructureEXT topLevelAS;
 
 layout (push_constant) uniform PushConstants {
     vec4 sunDirection;
     vec4 sunColor;
-    mat4 inverseViewProj;
 } pushConstants;
-
-// Reconstruct world position from depth buffer
-vec3 reconstructWorldPosition(vec2 uv, float depth) {
-    // Convert UV [0,1] to NDC [-1,1]
-    // The projection matrix already flips Y, so we don't flip UV.y here
-    vec2 ndc = vec2(uv.x * 2.0 - 1.0, uv.y * 2.0 - 1.0);
-
-    // Vulkan depth range is [0,1]
-    vec4 clipPos = vec4(ndc, depth, 1.0);
-
-    // Transform from clip space to world space
-    vec4 worldPos = pushConstants.inverseViewProj * clipPos;
-
-    // Perspective divide
-    return worldPos.xyz / worldPos.w;
-}
 
 void main()
 {
     vec3 normal = texture(samplerNormal, inUV).rgb;
-    float depth = texture(samplerDepth, inUV).r;
-    vec3 position = reconstructWorldPosition(inUV, depth);
+
+    vec3 position = texture(samplerPosition, inUV).rgb;
     vec3 albedo = texture(samplerColor, inUV).rgb;
 
     // Direction TO the sun (negated sun direction which points FROM sun)

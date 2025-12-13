@@ -1,8 +1,5 @@
 #pragma once
 
-#include "VulkanWrapper/Descriptors/DescriptorAllocator.h"
-#include "VulkanWrapper/Descriptors/DescriptorPool.h"
-#include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
 #include "VulkanWrapper/Image/ImageView.h"
 #include "VulkanWrapper/Memory/Allocator.h"
 #include "VulkanWrapper/Pipeline/Pipeline.h"
@@ -10,7 +7,6 @@
 #include "VulkanWrapper/RenderPass/ScreenSpacePass.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include "VulkanWrapper/Vulkan/Device.h"
-
 #include <cmath>
 #include <glm/glm.hpp>
 #include <glm/trigonometric.hpp>
@@ -21,13 +17,14 @@ enum class SkyPassSlot { Light };
  * @brief Functional Sky pass with lazy image allocation
  *
  * This pass lazily allocates its light output image on first execute() call.
- * Images are cached by (width, height, frame_index) and reused on subsequent calls.
- * The sky is rendered where depth == 1.0 (far plane).
+ * Images are cached by (width, height, frame_index) and reused on subsequent
+ * calls. The sky is rendered where depth == 1.0 (far plane).
  */
 class SkyPass : public vw::ScreenSpacePass<SkyPassSlot> {
   public:
     struct PushConstants {
-        glm::vec4 sunDirection; // xyz = direction to sun, w = unused
+        glm::vec4 sunDirection;    // xyz = direction to sun, w = unused
+        glm::mat4 inverseViewProj; // inverse(projection * view)
     };
 
     SkyPass(std::shared_ptr<vw::Device> device,
@@ -37,7 +34,7 @@ class SkyPass : public vw::ScreenSpacePass<SkyPassSlot> {
         : ScreenSpacePass(device, allocator)
         , m_light_format(light_format)
         , m_depth_format(depth_format)
-        , m_descriptor_pool(create_descriptor_pool()) {}
+        , m_pipeline(create_pipeline()) {}
 
     /**
      * @brief Execute the sky rendering pass
@@ -49,12 +46,14 @@ class SkyPass : public vw::ScreenSpacePass<SkyPassSlot> {
      * @param frame_index Frame index for multi-buffering
      * @param depth_view Depth buffer view (for depth testing at far plane)
      * @param sun_angle Sun angle in degrees above horizon (90 = zenith)
+     * @param inverse_view_proj Inverse view-projection matrix
      * @return The output light image view
      */
     std::shared_ptr<const vw::ImageView>
     execute(vk::CommandBuffer cmd, vw::Barrier::ResourceTracker &tracker,
             vw::Width width, vw::Height height, size_t frame_index,
-            std::shared_ptr<const vw::ImageView> depth_view, float sun_angle) {
+            std::shared_ptr<const vw::ImageView> depth_view, float sun_angle,
+            const glm::mat4 &inverse_view_proj) {
 
         // Lazy allocation of light image
         const auto &light = get_or_create_image(
@@ -66,12 +65,6 @@ class SkyPass : public vw::ScreenSpacePass<SkyPassSlot> {
         vk::Extent2D extent{static_cast<uint32_t>(width),
                             static_cast<uint32_t>(height)};
 
-        // Create empty descriptor set (sky shader doesn't need inputs)
-        vw::DescriptorAllocator descriptor_allocator;
-        auto descriptor_set =
-            m_descriptor_pool.allocate_set(descriptor_allocator);
-
-        // Request resource states for barriers
         // Light image needs to be in color attachment layout
         tracker.request(vw::Barrier::ImageState{
             .image = light.image->handle(),
@@ -111,24 +104,21 @@ class SkyPass : public vw::ScreenSpacePass<SkyPassSlot> {
 
         // Push constants
         float angle_rad = glm::radians(sun_angle);
-        PushConstants constants{.sunDirection = glm::vec4(
-                                    std::cos(angle_rad), std::sin(angle_rad),
-                                    0.0f, 0.0f)};
+        PushConstants constants{
+            .sunDirection =
+                glm::vec4(std::cos(angle_rad), std::sin(angle_rad), 0.0f, 0.0f),
+            .inverseViewProj = inverse_view_proj};
 
-        // Render fullscreen quad with depth testing
+        // Render fullscreen quad with depth testing (sky only where depth
+        // == 1.0)
         render_fullscreen(cmd, extent, color_attachment, &depth_attachment,
-                          *m_pipeline, descriptor_set, constants);
+                          *m_pipeline, constants);
 
         return light.view;
     }
 
   private:
-    vw::DescriptorPool create_descriptor_pool() {
-        // Create empty descriptor layout (sky shader doesn't need inputs)
-        m_descriptor_layout =
-            vw::DescriptorSetLayoutBuilder(m_device).build();
-
-        // Create pipeline
+    std::shared_ptr<const vw::Pipeline> create_pipeline() {
         auto vertex_shader = vw::ShaderModule::create_from_spirv_file(
             m_device, "Shaders/fullscreen.spv");
         auto fragment_shader = vw::ShaderModule::create_from_spirv_file(
@@ -138,19 +128,12 @@ class SkyPass : public vw::ScreenSpacePass<SkyPassSlot> {
             vk::PushConstantRange(vk::ShaderStageFlagBits::eFragment, 0,
                                   sizeof(PushConstants))};
 
-        m_pipeline = vw::create_screen_space_pipeline(
-            m_device, vertex_shader, fragment_shader, m_descriptor_layout,
-            m_light_format, m_depth_format, true, vk::CompareOp::eEqual,
-            push_constants);
-
-        return vw::DescriptorPoolBuilder(m_device, m_descriptor_layout).build();
+        return vw::create_screen_space_pipeline(
+            m_device, vertex_shader, fragment_shader, m_light_format,
+            m_depth_format, vk::CompareOp::eEqual, push_constants);
     }
 
     vk::Format m_light_format;
     vk::Format m_depth_format;
-
-    // Resources (order matters!)
-    std::shared_ptr<vw::DescriptorSetLayout> m_descriptor_layout;
     std::shared_ptr<const vw::Pipeline> m_pipeline;
-    vw::DescriptorPool m_descriptor_pool;
 };
