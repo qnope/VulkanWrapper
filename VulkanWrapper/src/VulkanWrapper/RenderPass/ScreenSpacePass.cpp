@@ -28,17 +28,17 @@ void ScreenSpacePass::execute(vk::CommandBuffer cmd_buffer) const noexcept {
     cmd_buffer.setViewport(0, 1, &viewport);
     cmd_buffer.setScissor(0, 1, &render_area);
 
-    cmd_buffer.bindPipeline(pipeline_bind_point(), m_pipeline->handle());
+    cmd_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline->handle());
 
     auto descriptor_set_handle = m_descriptor_set.handle();
-    cmd_buffer.bindDescriptorSets(pipeline_bind_point(),
+    cmd_buffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
                                   m_pipeline->layout().handle(), 0, 1,
                                   &descriptor_set_handle, 0, nullptr);
 
     cmd_buffer.draw(4, 1, 0, 0);
 }
 
-Subpass::AttachmentInfo ScreenSpacePass::attachment_information() const {
+ScreenSpacePass::AttachmentInfo ScreenSpacePass::attachment_information() const {
     AttachmentInfo attachments;
 
     attachments.color.push_back(

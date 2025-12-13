@@ -2,12 +2,18 @@
 
 #include "VulkanWrapper/Descriptors/DescriptorSet.h"
 #include "VulkanWrapper/Pipeline/Pipeline.h"
-#include "VulkanWrapper/RenderPass/Subpass.h"
 #include "VulkanWrapper/Image/ImageView.h"
+#include "VulkanWrapper/Synchronization/ResourceTracker.h"
 
 namespace vw {
 
-class ScreenSpacePass : public Subpass {
+/**
+ * @brief Utility class for fullscreen rendering passes
+ *
+ * This class provides common functionality for screen-space post-processing passes.
+ * It handles viewport/scissor setup, pipeline binding, and fullscreen quad rendering.
+ */
+class ScreenSpacePass {
   public:
     ScreenSpacePass(std::shared_ptr<const Device> device,
                     std::shared_ptr<const Pipeline> pipeline,
@@ -15,11 +21,17 @@ class ScreenSpacePass : public Subpass {
                     std::shared_ptr<const ImageView> output_image,
                     std::shared_ptr<const ImageView> depth_image = nullptr);
 
-    void execute(vk::CommandBuffer cmd_buffer) const noexcept override;
+    void execute(vk::CommandBuffer cmd_buffer) const noexcept;
 
-    AttachmentInfo attachment_information() const override;
+    struct AttachmentInfo {
+        std::vector<vk::RenderingAttachmentInfo> color;
+        std::optional<vk::RenderingAttachmentInfo> depth;
+        vk::Rect2D render_area;
+    };
 
-    std::vector<Barrier::ResourceState> resource_states() const override;
+    AttachmentInfo attachment_information() const;
+
+    std::vector<Barrier::ResourceState> resource_states() const;
 
   protected:
     std::shared_ptr<const Device> m_device;
