@@ -9,6 +9,7 @@ layout (set = 0, binding = 0) uniform sampler2D samplerColor;
 layout (set = 0, binding = 1) uniform sampler2D samplerPosition;
 layout (set = 0, binding = 2) uniform sampler2D samplerNormal;
 layout (set = 0, binding = 3) uniform accelerationStructureEXT topLevelAS;
+layout (set = 0, binding = 4) uniform sampler2D samplerAO;
 
 layout (push_constant) uniform PushConstants {
     vec4 sunDirection;
@@ -62,7 +63,11 @@ void main()
         }
     }
 
-    vec3 diffuse = albedo * (pushConstants.sunColor.rgb * NdotL * shadow + 0.2);
+    // Sample ambient occlusion
+    float ao = texture(samplerAO, inUV).r;
+
+    // Apply AO to ambient term only
+    vec3 diffuse = albedo * (pushConstants.sunColor.rgb * NdotL * shadow + 0.2 * ao);
 
     outColor = vec4(diffuse, 1.0);
 }
