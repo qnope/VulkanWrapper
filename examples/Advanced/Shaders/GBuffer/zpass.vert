@@ -12,5 +12,8 @@ layout(push_constant) uniform PushConstants {
 layout(location = 0) in vec3 inPosition;
 
 void main() {
-    gl_Position = proj * view * model * vec4(inPosition, 1.0);
+    // Compute gl_Position in the same order as gbuffer.vert to ensure
+    // identical depth values for the eEqual depth test in ColorPass
+    vec4 worldPos = model * vec4(inPosition, 1.0);
+    gl_Position = proj * view * worldPos;
 }
