@@ -32,7 +32,7 @@ ctest --test-dir build-Clang20Debug --verbose
 If test with screenshot asked
 ```bash
 cd directory_of_the_executable
-SDL_VULKAN_LIBRARY=../../vcpkg_installed/arm64-osx/lib/libvulkan.dylib ./Main
+DYLD_LIBRARY_PATH=../../vcpkg_installed/arm64-osx/lib/libvulkan.dylib:$DYLD_LIBRARY_PATH ./Main
 ```
 
 ### Debugging tests

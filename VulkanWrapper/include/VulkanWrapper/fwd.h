@@ -20,8 +20,6 @@ class Sampler;
 class CombinedImage;
 class Framebuffer;
 
-class Subpass;
-
 class SwapchainBuilder;
 class Swapchain;
 class Surface;
@@ -45,9 +43,6 @@ using IndexBuffer = Buffer<uint32_t, false, IndexBufferUsage>;
 enum class QueueType;
 
 class DescriptorSetLayout;
-
-class Rendering;
-class RenderingBuilder;
 
 namespace Model {
 class Mesh;
