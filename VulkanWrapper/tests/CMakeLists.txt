@@ -112,3 +112,18 @@ target_link_libraries(ShaderTests
 )
 
 gtest_discover_tests(ShaderTests)
+
+# RenderPass tests
+add_executable(RenderPassTests
+    RenderPass/SubpassTests.cpp
+)
+
+target_link_libraries(RenderPassTests
+    PRIVATE
+    TestUtils
+    VulkanWrapperCoreLibrary
+    GTest::gtest
+    GTest::gtest_main
+)
+
+gtest_discover_tests(RenderPassTests)
