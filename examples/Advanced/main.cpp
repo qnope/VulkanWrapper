@@ -1,5 +1,6 @@
 #include "Application.h"
 #include "DeferredRenderingManager.h"
+#include "RenderPassInformation.h"
 #include <VulkanWrapper/3rd_party.h>
 #include <VulkanWrapper/Command/CommandBuffer.h>
 #include <VulkanWrapper/Command/CommandPool.h>
@@ -64,48 +65,49 @@ int main() {
         // Build acceleration structures for ray-traced shadows
         rayTracedScene.build();
 
-        // Create the deferred rendering manager - handles all pass setup
-        // Uses the RayTracedScene which contains both the acceleration
-        // structures (for ray queries/shadows) and the embedded Scene for
-        // rasterization
+        // Create the deferred rendering manager with functional passes
+        // No swapchain needed - dimensions are passed at execute time
         DeferredRenderingManager renderingManager(
-            app.device, app.allocator, app.swapchain, mesh_manager,
-            rayTracedScene, uniform_buffer);
+            app.device, app.allocator, mesh_manager, rayTracedScene);
 
         auto commandPool = vw::CommandPoolBuilder(app.device).build();
         auto image_views = create_image_views(app.device, app.swapchain);
         auto commandBuffers = commandPool.allocate(image_views.size());
 
-        const vk::Extent2D extent(uint32_t(app.swapchain.width()),
-                                  uint32_t(app.swapchain.height()));
+        // Get render dimensions
+        vw::Width width = static_cast<vw::Width>(app.swapchain.width());
+        vw::Height height = static_cast<vw::Height>(app.swapchain.height());
 
-        const auto &gBuffers = renderingManager.gbuffers();
-        const auto &renderings = renderingManager.renderings();
-
-        for (auto [gBuffer, commandBuffer, swapchainBuffer, rendering] :
-             std::views::zip(gBuffers, commandBuffers, image_views,
-                             renderings)) {
-            vw::CommandBufferRecorder recorder(commandBuffer);
+        // Record command buffers - one per swapchain image
+        for (size_t i = 0; i < image_views.size(); ++i) {
+            vw::CommandBufferRecorder recorder(commandBuffers[i]);
 
             // Use Transfer's resource tracker for the entire command buffer
             vw::Transfer transfer;
 
-            // Geometry Pass using Rendering
-            rendering.execute(commandBuffer, transfer.resourceTracker());
+            // Execute deferred rendering pipeline functionally
+            // Returns the AO image view which we'll blit to swapchain
+            auto ao_view = renderingManager.execute(
+                commandBuffers[i], transfer.resourceTracker(),
+                width, height, i,  // frame_index
+                uniform_buffer,
+                32,     // num_ao_samples
+                100.0f  // ao_radius
+            );
 
             // Blit AO to swapchain
-            transfer.blit(commandBuffer, gBuffer.ao->image(),
-                          swapchainBuffer->image());
+            transfer.blit(commandBuffers[i], ao_view->image(),
+                          image_views[i]->image());
 
             // Transition swapchain image to present layout
             transfer.resourceTracker().request(vw::Barrier::ImageState{
-                .image = swapchainBuffer->image()->handle(),
-                .subresourceRange = swapchainBuffer->subresource_range(),
+                .image = image_views[i]->image()->handle(),
+                .subresourceRange = image_views[i]->subresource_range(),
                 .layout = vk::ImageLayout::ePresentSrcKHR,
                 .stage = vk::PipelineStageFlagBits2::eNone,
                 .access = vk::AccessFlagBits2::eNone});
 
-            transfer.resourceTracker().flush(commandBuffer);
+            transfer.resourceTracker().flush(commandBuffers[i]);
         }
 
         auto renderFinishedSemaphore = vw::SemaphoreBuilder(app.device).build();

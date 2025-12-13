@@ -2,126 +2,120 @@
 
 #include "AmbientOcclusionPass.h"
 #include "ColorPass.h"
-#include "RenderPassInformation.h"
-#include "SkyPass.h"
-#include "SunLightPass.h"
 #include "ZPass.h"
 #include <memory>
-#include <vector>
-#include <VulkanWrapper/Descriptors/DescriptorPool.h>
-#include <VulkanWrapper/Descriptors/DescriptorSetLayout.h>
-#include <VulkanWrapper/Image/Sampler.h>
 #include <VulkanWrapper/Memory/Buffer.h>
 #include <VulkanWrapper/Model/MeshManager.h>
 #include <VulkanWrapper/Model/Scene.h>
-#include <VulkanWrapper/Pipeline/MeshRenderer.h>
 #include <VulkanWrapper/RayTracing/RayTracedScene.h>
-#include <VulkanWrapper/RenderPass/Rendering.h>
+#include <VulkanWrapper/Synchronization/ResourceTracker.h>
 #include <VulkanWrapper/Vulkan/Device.h>
-#include <VulkanWrapper/Vulkan/Swapchain.h>
 
+/**
+ * @brief Manages deferred rendering passes with functional API and lazy allocation
+ *
+ * This class orchestrates the deferred rendering pipeline using functional
+ * passes. Each pass lazily allocates its output images on first use.
+ *
+ * @code
+ * DeferredRenderingManager renderer(device, allocator, mesh_manager,
+ *                                   ray_traced_scene);
+ *
+ * // In render loop:
+ * auto ao_view = renderer.execute(cmd, tracker, width, height, frame_index,
+ *                                 uniform_buffer);
+ * transfer.blit(cmd, ao_view->image(), swapchain_image);
+ * @endcode
+ */
 class DeferredRenderingManager {
   public:
-    struct Config {
-        std::vector<vk::Format> gbuffer_color_formats = {
-            vk::Format::eR8G8B8A8Unorm,      // color
-            vk::Format::eR32G32B32A32Sfloat, // normal
-            vk::Format::eR32G32B32A32Sfloat, // tangent
-            vk::Format::eR32G32B32A32Sfloat, // bitangent
-            vk::Format::eR32G32B32A32Sfloat, // position
-            vk::Format::eR32G32B32A32Sfloat  // light
-        };
-        vk::Format depth_format = vk::Format::eD32Sfloat;
-        vk::Format ao_format = vk::Format::eR8G8B8A8Unorm; // AO output (greyscale RGBA)
-    };
-
     DeferredRenderingManager(
         std::shared_ptr<vw::Device> device,
         std::shared_ptr<vw::Allocator> allocator,
-        const vw::Swapchain &swapchain,
         const vw::Model::MeshManager &mesh_manager,
         const vw::rt::RayTracedScene &ray_traced_scene,
-        const vw::Buffer<UBOData, true, vw::UniformBufferUsage> &uniform_buffer,
-        Config config);
+        vk::Format depth_format = vk::Format::eD32Sfloat,
+        vk::Format ao_format = vk::Format::eR8G8B8A8Unorm)
+        : m_device(std::move(device))
+        , m_allocator(std::move(allocator))
+        , m_ray_traced_scene(ray_traced_scene) {
 
-    DeferredRenderingManager(
-        std::shared_ptr<vw::Device> device,
-        std::shared_ptr<vw::Allocator> allocator,
-        const vw::Swapchain &swapchain,
-        const vw::Model::MeshManager &mesh_manager,
-        const vw::rt::RayTracedScene &ray_traced_scene,
-        const vw::Buffer<UBOData, true, vw::UniformBufferUsage> &uniform_buffer)
-        : DeferredRenderingManager(std::move(device), std::move(allocator),
-                                   swapchain, mesh_manager, ray_traced_scene,
-                                   uniform_buffer, Config{}) {}
+        // Create functional passes - each owns its output images lazily
+        m_zpass = std::make_unique<ZPass>(m_device, m_allocator, depth_format);
 
-    const std::vector<vw::Rendering> &renderings() const {
-        return m_renderings;
+        m_color_pass = std::make_unique<ColorPass>(
+            m_device, m_allocator, mesh_manager, depth_format);
+
+        m_ao_pass = std::make_unique<AmbientOcclusionPass>(
+            m_device, m_allocator, ray_traced_scene.tlas_handle(), ao_format);
     }
 
-    const std::vector<GBuffer> &gbuffers() const { return m_gbuffers; }
+    /**
+     * @brief Execute the full deferred rendering pipeline
+     *
+     * This method chains all rendering passes functionally:
+     * 1. Z-Pass: depth prepass
+     * 2. Color Pass: G-Buffer fill
+     * 3. AO Pass: screen-space ambient occlusion
+     *
+     * @param cmd Command buffer to record into
+     * @param tracker Resource tracker for barrier management
+     * @param width Render width
+     * @param height Render height
+     * @param frame_index Frame index for multi-buffering
+     * @param uniform_buffer Uniform buffer with view/projection matrices
+     * @param num_ao_samples Number of AO samples (default: 32)
+     * @param ao_radius AO sampling radius (default: 100.0)
+     * @return The final AO image view (can be blitted to swapchain)
+     */
+    template <typename UBOType>
+    std::shared_ptr<const vw::ImageView>
+    execute(vk::CommandBuffer cmd, vw::Barrier::ResourceTracker &tracker,
+            vw::Width width, vw::Height height, size_t frame_index,
+            const vw::Buffer<UBOType, true, vw::UniformBufferUsage>
+                &uniform_buffer,
+            int32_t num_ao_samples = 32, float ao_radius = 100.0f) {
 
-    std::shared_ptr<vw::DescriptorSetLayout> uniform_descriptor_layout() const {
-        return m_uniform_descriptor_layout;
+        const auto &scene = m_ray_traced_scene.scene();
+
+        // 1. Z-Pass: depth prepass
+        auto depth_view = m_zpass->execute(cmd, tracker, width, height,
+                                           frame_index, scene, uniform_buffer);
+
+        // 2. Color Pass: G-Buffer fill
+        auto gbuffer = m_color_pass->execute(cmd, tracker, width, height,
+                                             frame_index, scene, depth_view,
+                                             uniform_buffer);
+
+        // 3. AO Pass: screen-space ambient occlusion
+        auto ao_view = m_ao_pass->execute(cmd, tracker, width, height,
+                                          frame_index, gbuffer.position,
+                                          gbuffer.normal, gbuffer.tangent,
+                                          gbuffer.bitangent, num_ao_samples,
+                                          ao_radius);
+
+        return ao_view;
     }
 
-    vw::DescriptorSet uniform_descriptor_set() const {
-        return *m_uniform_descriptor_set;
-    }
+    /** @brief Access the Z-Pass for custom usage */
+    ZPass &zpass() { return *m_zpass; }
+    const ZPass &zpass() const { return *m_zpass; }
 
-    void set_sun_angle(float angle_degrees) { m_sun_angle = angle_degrees; }
-    float sun_angle() const { return m_sun_angle; }
+    /** @brief Access the Color Pass for custom usage */
+    ColorPass &color_pass() { return *m_color_pass; }
+    const ColorPass &color_pass() const { return *m_color_pass; }
+
+    /** @brief Access the AO Pass for custom usage */
+    AmbientOcclusionPass &ao_pass() { return *m_ao_pass; }
+    const AmbientOcclusionPass &ao_pass() const { return *m_ao_pass; }
 
   private:
-    void create_gbuffers(const vw::Swapchain &swapchain);
-    void create_uniform_descriptors(
-        const vw::Buffer<UBOData, true, vw::UniformBufferUsage>
-            &uniform_buffer);
-    void create_zpass_resources();
-    void
-    create_color_pass_resources(const vw::Model::MeshManager &mesh_manager);
-    void create_sun_light_pass_resources();
-    void create_sky_pass_resources();
-    void create_ao_pass_resources();
-    void create_renderings();
-
     std::shared_ptr<vw::Device> m_device;
     std::shared_ptr<vw::Allocator> m_allocator;
     const vw::rt::RayTracedScene &m_ray_traced_scene;
-    Config m_config;
-    UBOData m_ubo_data;
 
-    // Sun angle in degrees above horizon (90 = zenith)
-    float m_sun_angle = 90.0f;
-
-    // GBuffers (one per swapchain image)
-    std::vector<GBuffer> m_gbuffers;
-
-    // Shared uniform buffer descriptor
-    std::shared_ptr<vw::DescriptorSetLayout> m_uniform_descriptor_layout;
-    std::optional<vw::DescriptorPool> m_uniform_descriptor_pool;
-    std::optional<vw::DescriptorSet> m_uniform_descriptor_set;
-
-    // ZPass resources
-    std::shared_ptr<const vw::Pipeline> m_zpass_pipeline;
-
-    // Color pass resources
-    std::shared_ptr<vw::MeshRenderer> m_mesh_renderer;
-
-    // Sun light pass resources
-    std::shared_ptr<vw::DescriptorSetLayout> m_sunlight_descriptor_layout;
-    std::optional<vw::DescriptorPool> m_sunlight_descriptor_pool;
-    std::vector<vw::DescriptorSet> m_sunlight_descriptor_sets;
-
-    // Sampler for post-process passes
-    std::shared_ptr<const vw::Sampler> m_sampler;
-
-    // AO pass resources
-    std::shared_ptr<vw::DescriptorSetLayout> m_ao_descriptor_layout;
-    std::optional<vw::DescriptorPool> m_ao_descriptor_pool;
-    std::vector<vw::DescriptorSet> m_ao_descriptor_sets;
-    std::optional<vw::Buffer<AOSamplesUBO, true, vw::UniformBufferUsage>> m_ao_samples_buffer;
-
-    // Final renderings (one per swapchain image)
-    std::vector<vw::Rendering> m_renderings;
+    // Functional passes (each owns its output images lazily)
+    std::unique_ptr<ZPass> m_zpass;
+    std::unique_ptr<ColorPass> m_color_pass;
+    std::unique_ptr<AmbientOcclusionPass> m_ao_pass;
 };
