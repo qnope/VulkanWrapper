@@ -5,6 +5,8 @@
 #include "VulkanWrapper/Image/Sampler.h"
 #include "VulkanWrapper/Pipeline/Pipeline.h"
 
+#include <optional>
+
 namespace vw {
 
 /**
@@ -49,27 +51,27 @@ class ScreenSpacePass : public Subpass<SlotEnum> {
      * - Setting up vk::RenderingInfo with color and optional depth attachment
      * - Beginning rendering
      * - Setting viewport and scissor
-     * - Binding pipeline and descriptor sets
-     * - Pushing constants
+     * - Binding pipeline and descriptor sets (if provided)
+     * - Pushing constants (if provided)
      * - Drawing fullscreen quad (4 vertices, triangle strip)
      * - Ending rendering
      *
-     * @tparam PushConstantsType Type of the push constants structure
      * @param cmd Command buffer to record into
      * @param extent Render extent (width, height)
      * @param color_attachment Color attachment info (setup by caller with load/clear ops)
      * @param depth_attachment Optional depth attachment info (nullptr if none)
      * @param pipeline Pipeline to bind
-     * @param descriptor_set Descriptor set to bind
-     * @param push_constants Push constants to push
+     * @param descriptor_set Optional descriptor set to bind
+     * @param push_constants Optional push constants data (nullptr if none)
+     * @param push_constants_size Size of push constants in bytes (0 if none)
      */
-    template <typename PushConstantsType>
     void render_fullscreen(vk::CommandBuffer cmd, vk::Extent2D extent,
                            const vk::RenderingAttachmentInfo &color_attachment,
                            const vk::RenderingAttachmentInfo *depth_attachment,
                            const Pipeline &pipeline,
-                           const DescriptorSet &descriptor_set,
-                           const PushConstantsType &push_constants) {
+                           std::optional<DescriptorSet> descriptor_set = std::nullopt,
+                           const void *push_constants = nullptr,
+                           size_t push_constants_size = 0) {
 
         vk::RenderingInfo rendering_info =
             vk::RenderingInfo()
@@ -91,111 +93,18 @@ class ScreenSpacePass : public Subpass<SlotEnum> {
 
         cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.handle());
 
-        auto descriptor_handle = descriptor_set.handle();
-        cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-                               pipeline.layout().handle(), 0, 1,
-                               &descriptor_handle, 0, nullptr);
-
-        cmd.pushConstants(pipeline.layout().handle(),
-                          vk::ShaderStageFlagBits::eFragment, 0,
-                          sizeof(PushConstantsType), &push_constants);
-
-        cmd.draw(4, 1, 0, 0);
-
-        cmd.endRendering();
-    }
-
-    /**
-     * @brief Render a fullscreen quad without push constants
-     *
-     * Overload for passes that don't use push constants.
-     *
-     * @param cmd Command buffer to record into
-     * @param extent Render extent (width, height)
-     * @param color_attachment Color attachment info
-     * @param depth_attachment Optional depth attachment info (nullptr if none)
-     * @param pipeline Pipeline to bind
-     * @param descriptor_set Descriptor set to bind
-     */
-    void render_fullscreen(vk::CommandBuffer cmd, vk::Extent2D extent,
-                           const vk::RenderingAttachmentInfo &color_attachment,
-                           const vk::RenderingAttachmentInfo *depth_attachment,
-                           const Pipeline &pipeline,
-                           const DescriptorSet &descriptor_set) {
-
-        vk::RenderingInfo rendering_info =
-            vk::RenderingInfo()
-                .setRenderArea(vk::Rect2D({0, 0}, extent))
-                .setLayerCount(1)
-                .setColorAttachments(color_attachment);
-
-        if (depth_attachment) {
-            rendering_info.setPDepthAttachment(depth_attachment);
+        if (descriptor_set) {
+            auto descriptor_handle = descriptor_set->handle();
+            cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+                                   pipeline.layout().handle(), 0, 1,
+                                   &descriptor_handle, 0, nullptr);
         }
 
-        cmd.beginRendering(rendering_info);
-
-        vk::Viewport viewport(0.0f, 0.0f, static_cast<float>(extent.width),
-                              static_cast<float>(extent.height), 0.0f, 1.0f);
-        vk::Rect2D scissor({0, 0}, extent);
-        cmd.setViewport(0, 1, &viewport);
-        cmd.setScissor(0, 1, &scissor);
-
-        cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.handle());
-
-        auto descriptor_handle = descriptor_set.handle();
-        cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-                               pipeline.layout().handle(), 0, 1,
-                               &descriptor_handle, 0, nullptr);
-
-        cmd.draw(4, 1, 0, 0);
-
-        cmd.endRendering();
-    }
-
-    /**
-     * @brief Render a fullscreen quad without descriptor sets
-     *
-     * Overload for passes that only use push constants.
-     *
-     * @tparam PushConstantsType Type of the push constants structure
-     * @param cmd Command buffer to record into
-     * @param extent Render extent (width, height)
-     * @param color_attachment Color attachment info
-     * @param depth_attachment Optional depth attachment info (nullptr if none)
-     * @param pipeline Pipeline to bind
-     * @param push_constants Push constants to push
-     */
-    template <typename PushConstantsType>
-    void render_fullscreen(vk::CommandBuffer cmd, vk::Extent2D extent,
-                           const vk::RenderingAttachmentInfo &color_attachment,
-                           const vk::RenderingAttachmentInfo *depth_attachment,
-                           const Pipeline &pipeline,
-                           const PushConstantsType &push_constants) {
-
-        vk::RenderingInfo rendering_info =
-            vk::RenderingInfo()
-                .setRenderArea(vk::Rect2D({0, 0}, extent))
-                .setLayerCount(1)
-                .setColorAttachments(color_attachment);
-
-        if (depth_attachment) {
-            rendering_info.setPDepthAttachment(depth_attachment);
+        if (push_constants && push_constants_size > 0) {
+            cmd.pushConstants(pipeline.layout().handle(),
+                              vk::ShaderStageFlagBits::eFragment, 0,
+                              push_constants_size, push_constants);
         }
-
-        cmd.beginRendering(rendering_info);
-
-        vk::Viewport viewport(0.0f, 0.0f, static_cast<float>(extent.width),
-                              static_cast<float>(extent.height), 0.0f, 1.0f);
-        vk::Rect2D scissor({0, 0}, extent);
-        cmd.setViewport(0, 1, &viewport);
-        cmd.setScissor(0, 1, &scissor);
-
-        cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.handle());
-
-        cmd.pushConstants(pipeline.layout().handle(),
-                          vk::ShaderStageFlagBits::eFragment, 0,
-                          sizeof(PushConstantsType), &push_constants);
 
         cmd.draw(4, 1, 0, 0);
 
@@ -215,10 +124,9 @@ class ScreenSpacePass : public Subpass<SlotEnum> {
  * @param device Device to create pipeline on
  * @param vertex_shader Vertex shader module
  * @param fragment_shader Fragment shader module
- * @param descriptor_set_layout Descriptor set layout
+ * @param descriptor_set_layout Descriptor set layout (nullptr if none)
  * @param color_format Format of the color attachment
  * @param depth_format Format of depth attachment (eUndefined if no depth)
- * @param depth_test Enable depth testing
  * @param depth_compare_op Depth comparison operator
  * @param push_constants Push constant ranges
  * @return Shared pointer to created pipeline
@@ -228,19 +136,6 @@ std::shared_ptr<const Pipeline> create_screen_space_pipeline(
     std::shared_ptr<const ShaderModule> vertex_shader,
     std::shared_ptr<const ShaderModule> fragment_shader,
     std::shared_ptr<const DescriptorSetLayout> descriptor_set_layout,
-    vk::Format color_format, vk::Format depth_format = vk::Format::eUndefined,
-    vk::CompareOp depth_compare_op = vk::CompareOp::eAlways,
-    std::vector<vk::PushConstantRange> push_constants = {});
-
-/**
- * @brief Create a graphics pipeline for screen-space rendering without descriptors
- *
- * Creates a pipeline using only push constants (no descriptor sets).
- */
-std::shared_ptr<const Pipeline> create_screen_space_pipeline(
-    std::shared_ptr<const Device> device,
-    std::shared_ptr<const ShaderModule> vertex_shader,
-    std::shared_ptr<const ShaderModule> fragment_shader,
     vk::Format color_format, vk::Format depth_format = vk::Format::eUndefined,
     vk::CompareOp depth_compare_op = vk::CompareOp::eAlways,
     std::vector<vk::PushConstantRange> push_constants = {});
