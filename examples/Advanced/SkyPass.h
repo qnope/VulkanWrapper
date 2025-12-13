@@ -1,77 +1,184 @@
 #pragma once
 
-#include "VulkanWrapper/RenderPass/ScreenSpacePass.h"
-#include "VulkanWrapper/Pipeline/ShaderModule.h"
-#include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
+#include "VulkanWrapper/Descriptors/DescriptorAllocator.h"
 #include "VulkanWrapper/Descriptors/DescriptorPool.h"
+#include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
+#include "VulkanWrapper/Image/ImageView.h"
+#include "VulkanWrapper/Memory/Allocator.h"
+#include "VulkanWrapper/Pipeline/Pipeline.h"
+#include "VulkanWrapper/Pipeline/ShaderModule.h"
+#include "VulkanWrapper/RenderPass/ScreenSpacePass.h"
+#include "VulkanWrapper/RenderPass/Subpass.h"
+#include "VulkanWrapper/Synchronization/ResourceTracker.h"
+#include "VulkanWrapper/Vulkan/Device.h"
 
+#include <cmath>
 #include <glm/glm.hpp>
 #include <glm/trigonometric.hpp>
-#include <cmath>
 
-inline std::shared_ptr<vw::DescriptorSetLayout>
-create_sky_pass_descriptor_layout(std::shared_ptr<const vw::Device> device) {
-    return vw::DescriptorSetLayoutBuilder(device)
-        .with_uniform_buffer(vk::ShaderStageFlagBits::eFragment, 1)
-        .build();
-}
+enum class SkyPassSlot { Light };
 
-class SkyPass : public vw::ScreenSpacePass {
+/**
+ * @brief Functional Sky pass with lazy image allocation
+ *
+ * This pass lazily allocates its light output image on first execute() call.
+ * Images are cached by (width, height, frame_index) and reused on subsequent calls.
+ * The sky is rendered where depth == 1.0 (far plane).
+ */
+class SkyPass : public vw::Subpass<SkyPassSlot> {
   public:
     struct PushConstants {
         glm::vec4 sunDirection; // xyz = direction to sun, w = unused
     };
 
-    SkyPass(std::shared_ptr<const vw::Device> device,
-            std::shared_ptr<const vw::Pipeline> pipeline,
-            vw::DescriptorSet descriptor_set,
-            std::shared_ptr<const vw::ImageView> output_image,
-            std::shared_ptr<const vw::ImageView> depth_image,
-            const float* sun_angle)
-        : ScreenSpacePass(std::move(device), std::move(pipeline),
-                          std::move(descriptor_set), std::move(output_image),
-                          std::move(depth_image)),
-          m_sun_angle(sun_angle) {}
+    SkyPass(std::shared_ptr<vw::Device> device,
+            std::shared_ptr<vw::Allocator> allocator,
+            vk::Format light_format = vk::Format::eR16G16B16A16Sfloat,
+            vk::Format depth_format = vk::Format::eD32Sfloat)
+        : Subpass(device, allocator)
+        , m_light_format(light_format)
+        , m_depth_format(depth_format)
+        , m_descriptor_pool(create_descriptor_pool()) {}
 
-    void execute(vk::CommandBuffer cmd_buffer) const noexcept override {
-        float angle_rad = glm::radians(*m_sun_angle);
-        PushConstants constants{
-            .sunDirection = glm::vec4(std::cos(angle_rad), std::sin(angle_rad),
-                                      0.0f, 0.0f)};
+    /**
+     * @brief Execute the sky rendering pass
+     *
+     * @param cmd Command buffer to record into
+     * @param tracker Resource tracker for barrier management
+     * @param width Render width
+     * @param height Render height
+     * @param frame_index Frame index for multi-buffering
+     * @param depth_view Depth buffer view (for depth testing at far plane)
+     * @param sun_angle Sun angle in degrees above horizon (90 = zenith)
+     * @return The output light image view
+     */
+    std::shared_ptr<const vw::ImageView>
+    execute(vk::CommandBuffer cmd, vw::Barrier::ResourceTracker &tracker,
+            vw::Width width, vw::Height height, size_t frame_index,
+            std::shared_ptr<const vw::ImageView> depth_view, float sun_angle) {
 
-        cmd_buffer.pushConstants(m_pipeline->layout().handle(),
-                                 vk::ShaderStageFlagBits::eFragment, 0,
-                                 sizeof(PushConstants), &constants);
+        // Lazy allocation of light image
+        const auto &light = get_or_create_image(
+            SkyPassSlot::Light, width, height, frame_index, m_light_format,
+            vk::ImageUsageFlagBits::eColorAttachment |
+                vk::ImageUsageFlagBits::eSampled |
+                vk::ImageUsageFlagBits::eTransferSrc);
 
-        ScreenSpacePass::execute(cmd_buffer);
+        vk::Extent2D extent{static_cast<uint32_t>(width),
+                            static_cast<uint32_t>(height)};
+
+        // Create empty descriptor set (sky shader doesn't need inputs)
+        vw::DescriptorAllocator descriptor_allocator;
+        auto descriptor_set =
+            m_descriptor_pool.allocate_set(descriptor_allocator);
+
+        // Request resource states for barriers
+        // Light image needs to be in color attachment layout
+        tracker.request(vw::Barrier::ImageState{
+            .image = light.image->handle(),
+            .subresourceRange = light.view->subresource_range(),
+            .layout = vk::ImageLayout::eColorAttachmentOptimal,
+            .stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+            .access = vk::AccessFlagBits2::eColorAttachmentWrite});
+
+        // Depth image for reading
+        tracker.request(vw::Barrier::ImageState{
+            .image = depth_view->image()->handle(),
+            .subresourceRange = depth_view->subresource_range(),
+            .layout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
+            .stage = vk::PipelineStageFlagBits2::eEarlyFragmentTests |
+                     vk::PipelineStageFlagBits2::eLateFragmentTests,
+            .access = vk::AccessFlagBits2::eDepthStencilAttachmentRead});
+
+        // Flush barriers
+        tracker.flush(cmd);
+
+        // Setup rendering
+        vk::RenderingAttachmentInfo color_attachment =
+            vk::RenderingAttachmentInfo()
+                .setImageView(light.view->handle())
+                .setImageLayout(vk::ImageLayout::eColorAttachmentOptimal)
+                .setLoadOp(vk::AttachmentLoadOp::eClear)
+                .setStoreOp(vk::AttachmentStoreOp::eStore)
+                .setClearValue(vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f));
+
+        vk::RenderingAttachmentInfo depth_attachment =
+            vk::RenderingAttachmentInfo()
+                .setImageView(depth_view->handle())
+                .setImageLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+                .setLoadOp(vk::AttachmentLoadOp::eLoad)
+                .setStoreOp(vk::AttachmentStoreOp::eNone);
+
+        vk::RenderingInfo rendering_info =
+            vk::RenderingInfo()
+                .setRenderArea(vk::Rect2D({0, 0}, extent))
+                .setLayerCount(1)
+                .setColorAttachments(color_attachment)
+                .setPDepthAttachment(&depth_attachment);
+
+        cmd.beginRendering(rendering_info);
+
+        // Set viewport and scissor
+        vk::Viewport viewport(0.0f, 0.0f, static_cast<float>(extent.width),
+                              static_cast<float>(extent.height), 0.0f, 1.0f);
+        vk::Rect2D scissor({0, 0}, extent);
+        cmd.setViewport(0, 1, &viewport);
+        cmd.setScissor(0, 1, &scissor);
+
+        // Bind pipeline and descriptors
+        cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline->handle());
+
+        auto descriptor_handle = descriptor_set.handle();
+        cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+                               m_pipeline->layout().handle(), 0, 1,
+                               &descriptor_handle, 0, nullptr);
+
+        // Push constants
+        float angle_rad = glm::radians(sun_angle);
+        PushConstants constants{.sunDirection = glm::vec4(
+                                    std::cos(angle_rad), std::sin(angle_rad),
+                                    0.0f, 0.0f)};
+        cmd.pushConstants(m_pipeline->layout().handle(),
+                          vk::ShaderStageFlagBits::eFragment, 0,
+                          sizeof(PushConstants), &constants);
+
+        // Draw fullscreen quad
+        cmd.draw(4, 1, 0, 0);
+
+        cmd.endRendering();
+
+        return light.view;
     }
 
   private:
-    const float* m_sun_angle; // degrees above horizon (90 = zenith)
+    vw::DescriptorPool create_descriptor_pool() {
+        // Create empty descriptor layout (sky shader doesn't need inputs)
+        m_descriptor_layout =
+            vw::DescriptorSetLayoutBuilder(m_device).build();
+
+        // Create pipeline
+        auto vertex_shader = vw::ShaderModule::create_from_spirv_file(
+            m_device, "Shaders/fullscreen.spv");
+        auto fragment_shader = vw::ShaderModule::create_from_spirv_file(
+            m_device, "Shaders/post-process/sky.spv");
+
+        std::vector<vk::PushConstantRange> push_constants = {
+            vk::PushConstantRange(vk::ShaderStageFlagBits::eFragment, 0,
+                                  sizeof(PushConstants))};
+
+        m_pipeline = vw::create_screen_space_pipeline(
+            m_device, vertex_shader, fragment_shader, m_descriptor_layout,
+            m_light_format, m_depth_format, true, vk::CompareOp::eEqual,
+            push_constants);
+
+        return vw::DescriptorPoolBuilder(m_device, m_descriptor_layout).build();
+    }
+
+    vk::Format m_light_format;
+    vk::Format m_depth_format;
+
+    // Resources (order matters!)
+    std::shared_ptr<vw::DescriptorSetLayout> m_descriptor_layout;
+    std::shared_ptr<const vw::Pipeline> m_pipeline;
+    vw::DescriptorPool m_descriptor_pool;
 };
-
-inline std::shared_ptr<SkyPass> create_sky_pass(
-    std::shared_ptr<const vw::Device> device,
-    std::shared_ptr<const vw::DescriptorSetLayout> descriptor_set_layout,
-    vw::DescriptorSet descriptor_set,
-    std::shared_ptr<const vw::ImageView> output_image,
-    std::shared_ptr<const vw::ImageView> depth_image,
-    const float* sun_angle) {
-
-    auto vertex_shader = vw::ShaderModule::create_from_spirv_file(
-        device, "Shaders/fullscreen.spv");
-    auto fragment_shader = vw::ShaderModule::create_from_spirv_file(
-        device, "Shaders/post-process/sky.spv");
-
-    std::vector<vk::PushConstantRange> push_constants = {
-        vk::PushConstantRange(vk::ShaderStageFlagBits::eFragment, 0,
-                              sizeof(SkyPass::PushConstants))};
-
-    auto pipeline = vw::create_screen_space_pipeline(
-        device, vertex_shader, fragment_shader, descriptor_set_layout,
-        output_image->image()->format(), depth_image->image()->format(), true,
-        vk::CompareOp::eEqual, push_constants);
-
-    return std::make_shared<SkyPass>(device, pipeline, descriptor_set,
-                                     output_image, depth_image, sun_angle);
-}

@@ -7,7 +7,6 @@ add_executable(Main main.cpp
     SunLightPass.h
     AmbientOcclusionPass.h
     DeferredRenderingManager.h
-    DeferredRenderingManager.cpp
 )
 
 target_link_libraries(Main PRIVATE App)
