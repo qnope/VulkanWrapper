@@ -17,13 +17,16 @@
 #include <glm/glm.hpp>
 #include <glm/trigonometric.hpp>
 
+// Empty slot enum - SunLightPass doesn't allocate images
+enum class SunLightPassSlot {};
+
 /**
  * @brief Functional Sun Light pass (no image allocation)
  *
  * This pass renders sun light contribution additively onto the light buffer.
  * It does not allocate any images - it uses the light buffer from SkyPass as input/output.
  */
-class SunLightPass {
+class SunLightPass : public vw::ScreenSpacePass<SunLightPassSlot> {
   public:
     struct PushConstants {
         glm::vec4 sunDirection;
@@ -35,14 +38,11 @@ class SunLightPass {
                  std::shared_ptr<vw::Allocator> allocator,
                  vk::AccelerationStructureKHR tlas,
                  vk::Format light_format = vk::Format::eR16G16B16A16Sfloat)
-        : m_device(std::move(device))
-        , m_allocator(std::move(allocator))
+        : ScreenSpacePass(device, allocator)
         , m_tlas(tlas)
         , m_light_format(light_format)
-        , m_descriptor_pool(create_descriptor_pool()) {
-        // Create sampler for input images
-        m_sampler = vw::SamplerBuilder(m_device).build();
-    }
+        , m_sampler(create_default_sampler())
+        , m_descriptor_pool(create_descriptor_pool()) {}
 
     /**
      * @brief Execute the sun light rendering pass
@@ -107,36 +107,13 @@ class SunLightPass {
         // Flush barriers
         tracker.flush(cmd);
 
-        // Setup rendering with additive blending (load existing content)
+        // Setup color attachment with additive blending (load existing content)
         vk::RenderingAttachmentInfo color_attachment =
             vk::RenderingAttachmentInfo()
                 .setImageView(light_view->handle())
                 .setImageLayout(vk::ImageLayout::eColorAttachmentOptimal)
                 .setLoadOp(vk::AttachmentLoadOp::eLoad)
                 .setStoreOp(vk::AttachmentStoreOp::eStore);
-
-        vk::RenderingInfo rendering_info =
-            vk::RenderingInfo()
-                .setRenderArea(vk::Rect2D({0, 0}, extent))
-                .setLayerCount(1)
-                .setColorAttachments(color_attachment);
-
-        cmd.beginRendering(rendering_info);
-
-        // Set viewport and scissor
-        vk::Viewport viewport(0.0f, 0.0f, static_cast<float>(extent.width),
-                              static_cast<float>(extent.height), 0.0f, 1.0f);
-        vk::Rect2D scissor({0, 0}, extent);
-        cmd.setViewport(0, 1, &viewport);
-        cmd.setScissor(0, 1, &scissor);
-
-        // Bind pipeline and descriptors
-        cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline->handle());
-
-        auto descriptor_handle = descriptor_set.handle();
-        cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-                               m_pipeline->layout().handle(), 0, 1,
-                               &descriptor_handle, 0, nullptr);
 
         // Push constants
         // Sun direction is FROM sun TO surface (negative of direction to sun)
@@ -146,14 +123,10 @@ class SunLightPass {
                 glm::vec4(-std::cos(angle_rad), -std::sin(angle_rad), 0.0f, 0.0f),
             .sunColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
             .inverseViewProj = inverse_view_proj};
-        cmd.pushConstants(m_pipeline->layout().handle(),
-                          vk::ShaderStageFlagBits::eFragment, 0,
-                          sizeof(PushConstants), &constants);
 
-        // Draw fullscreen quad
-        cmd.draw(4, 1, 0, 0);
-
-        cmd.endRendering();
+        // Render fullscreen quad
+        render_fullscreen(cmd, extent, color_attachment, nullptr,
+                          *m_pipeline, descriptor_set, constants);
     }
 
   private:
@@ -185,8 +158,6 @@ class SunLightPass {
         return vw::DescriptorPoolBuilder(m_device, m_descriptor_layout).build();
     }
 
-    std::shared_ptr<vw::Device> m_device;
-    std::shared_ptr<vw::Allocator> m_allocator;
     vk::AccelerationStructureKHR m_tlas;
     vk::Format m_light_format;
 

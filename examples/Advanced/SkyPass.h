@@ -8,7 +8,6 @@
 #include "VulkanWrapper/Pipeline/Pipeline.h"
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
 #include "VulkanWrapper/RenderPass/ScreenSpacePass.h"
-#include "VulkanWrapper/RenderPass/Subpass.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 
@@ -25,7 +24,7 @@ enum class SkyPassSlot { Light };
  * Images are cached by (width, height, frame_index) and reused on subsequent calls.
  * The sky is rendered where depth == 1.0 (far plane).
  */
-class SkyPass : public vw::Subpass<SkyPassSlot> {
+class SkyPass : public vw::ScreenSpacePass<SkyPassSlot> {
   public:
     struct PushConstants {
         glm::vec4 sunDirection; // xyz = direction to sun, w = unused
@@ -35,7 +34,7 @@ class SkyPass : public vw::Subpass<SkyPassSlot> {
             std::shared_ptr<vw::Allocator> allocator,
             vk::Format light_format = vk::Format::eR16G16B16A16Sfloat,
             vk::Format depth_format = vk::Format::eD32Sfloat)
-        : Subpass(device, allocator)
+        : ScreenSpacePass(device, allocator)
         , m_light_format(light_format)
         , m_depth_format(depth_format)
         , m_descriptor_pool(create_descriptor_pool()) {}
@@ -93,7 +92,7 @@ class SkyPass : public vw::Subpass<SkyPassSlot> {
         // Flush barriers
         tracker.flush(cmd);
 
-        // Setup rendering
+        // Setup color attachment (clear)
         vk::RenderingAttachmentInfo color_attachment =
             vk::RenderingAttachmentInfo()
                 .setImageView(light.view->handle())
@@ -102,6 +101,7 @@ class SkyPass : public vw::Subpass<SkyPassSlot> {
                 .setStoreOp(vk::AttachmentStoreOp::eStore)
                 .setClearValue(vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f));
 
+        // Setup depth attachment (read-only)
         vk::RenderingAttachmentInfo depth_attachment =
             vk::RenderingAttachmentInfo()
                 .setImageView(depth_view->handle())
@@ -109,43 +109,15 @@ class SkyPass : public vw::Subpass<SkyPassSlot> {
                 .setLoadOp(vk::AttachmentLoadOp::eLoad)
                 .setStoreOp(vk::AttachmentStoreOp::eNone);
 
-        vk::RenderingInfo rendering_info =
-            vk::RenderingInfo()
-                .setRenderArea(vk::Rect2D({0, 0}, extent))
-                .setLayerCount(1)
-                .setColorAttachments(color_attachment)
-                .setPDepthAttachment(&depth_attachment);
-
-        cmd.beginRendering(rendering_info);
-
-        // Set viewport and scissor
-        vk::Viewport viewport(0.0f, 0.0f, static_cast<float>(extent.width),
-                              static_cast<float>(extent.height), 0.0f, 1.0f);
-        vk::Rect2D scissor({0, 0}, extent);
-        cmd.setViewport(0, 1, &viewport);
-        cmd.setScissor(0, 1, &scissor);
-
-        // Bind pipeline and descriptors
-        cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline->handle());
-
-        auto descriptor_handle = descriptor_set.handle();
-        cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-                               m_pipeline->layout().handle(), 0, 1,
-                               &descriptor_handle, 0, nullptr);
-
         // Push constants
         float angle_rad = glm::radians(sun_angle);
         PushConstants constants{.sunDirection = glm::vec4(
                                     std::cos(angle_rad), std::sin(angle_rad),
                                     0.0f, 0.0f)};
-        cmd.pushConstants(m_pipeline->layout().handle(),
-                          vk::ShaderStageFlagBits::eFragment, 0,
-                          sizeof(PushConstants), &constants);
 
-        // Draw fullscreen quad
-        cmd.draw(4, 1, 0, 0);
-
-        cmd.endRendering();
+        // Render fullscreen quad with depth testing
+        render_fullscreen(cmd, extent, color_attachment, &depth_attachment,
+                          *m_pipeline, descriptor_set, constants);
 
         return light.view;
     }

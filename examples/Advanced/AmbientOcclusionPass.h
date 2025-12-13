@@ -12,7 +12,6 @@
 #include "VulkanWrapper/Pipeline/Pipeline.h"
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
 #include "VulkanWrapper/RenderPass/ScreenSpacePass.h"
-#include "VulkanWrapper/RenderPass/Subpass.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 #include <array>
@@ -52,7 +51,7 @@ enum class AOPassSlot { Output };
  * This pass lazily allocates its output image on first execute() call.
  * Images are cached by (width, height, frame_index) and reused on subsequent calls.
  */
-class AmbientOcclusionPass : public vw::Subpass<AOPassSlot> {
+class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
   public:
     struct PushConstants {
         float aoRadius;
@@ -63,16 +62,14 @@ class AmbientOcclusionPass : public vw::Subpass<AOPassSlot> {
                          std::shared_ptr<vw::Allocator> allocator,
                          vk::AccelerationStructureKHR tlas,
                          vk::Format output_format = vk::Format::eR8G8B8A8Unorm)
-        : Subpass(device, allocator)
+        : ScreenSpacePass(device, allocator)
         , m_tlas(tlas)
         , m_output_format(output_format)
+        , m_sampler(create_default_sampler())
         , m_ao_samples_buffer(
               vw::create_buffer<AOSamplesUBO, true, vw::UniformBufferUsage>(
                   *m_allocator, 1))
         , m_descriptor_pool(create_descriptor_pool()) {
-        // Create sampler for input images
-        m_sampler = vw::SamplerBuilder(m_device).build();
-
         // Initialize AO samples buffer
         auto samples = generate_ao_samples();
         m_ao_samples_buffer.copy(samples, 0);
@@ -158,7 +155,7 @@ class AmbientOcclusionPass : public vw::Subpass<AOPassSlot> {
         // Flush barriers
         tracker.flush(cmd);
 
-        // Setup rendering
+        // Setup color attachment (clear)
         vk::RenderingAttachmentInfo color_attachment =
             vk::RenderingAttachmentInfo()
                 .setImageView(output.view->handle())
@@ -167,41 +164,14 @@ class AmbientOcclusionPass : public vw::Subpass<AOPassSlot> {
                 .setStoreOp(vk::AttachmentStoreOp::eStore)
                 .setClearValue(vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f));
 
-        vk::RenderingInfo rendering_info =
-            vk::RenderingInfo()
-                .setRenderArea(vk::Rect2D({0, 0}, extent))
-                .setLayerCount(1)
-                .setColorAttachments(color_attachment);
-
-        cmd.beginRendering(rendering_info);
-
-        // Set viewport and scissor
-        vk::Viewport viewport(0.0f, 0.0f, static_cast<float>(extent.width),
-                              static_cast<float>(extent.height), 0.0f, 1.0f);
-        vk::Rect2D scissor({0, 0}, extent);
-        cmd.setViewport(0, 1, &viewport);
-        cmd.setScissor(0, 1, &scissor);
-
-        // Bind pipeline and descriptors
-        cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline->handle());
-
-        auto descriptor_handle = descriptor_set.handle();
-        cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-                               m_pipeline->layout().handle(), 0, 1,
-                               &descriptor_handle, 0, nullptr);
-
         // Push constants
         PushConstants constants{
             .aoRadius = ao_radius,
             .numSamples = std::clamp(num_samples, 1, AO_MAX_SAMPLES)};
-        cmd.pushConstants(m_pipeline->layout().handle(),
-                          vk::ShaderStageFlagBits::eFragment, 0,
-                          sizeof(PushConstants), &constants);
 
-        // Draw fullscreen quad
-        cmd.draw(4, 1, 0, 0);
-
-        cmd.endRendering();
+        // Render fullscreen quad
+        render_fullscreen(cmd, extent, color_attachment, nullptr,
+                          *m_pipeline, descriptor_set, constants);
 
         return output.view;
     }
