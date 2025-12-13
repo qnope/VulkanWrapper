@@ -37,7 +37,7 @@ struct UBOData {
     // Camera positioned to view curtains and lion head in Sponza
     glm::mat4 view =
         glm::lookAt(glm::vec3(-900.0f, 300.0f, 100.0f), // eye position
-                    glm::vec3(500.0f, 100.0f, 0.0f),
+                    glm::vec3(500.0f, 500.0f, 0.0f),
                     glm::vec3(0.0f, 1.0f, 0.0f)); // up vector
 
     // Inverse view-projection for reconstructing world position from depth

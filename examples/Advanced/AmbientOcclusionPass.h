@@ -49,7 +49,8 @@ enum class AOPassSlot { Output };
  * @brief Functional Ambient Occlusion pass with lazy image allocation
  *
  * This pass lazily allocates its output image on first execute() call.
- * Images are cached by (width, height, frame_index) and reused on subsequent calls.
+ * Images are cached by (width, height, frame_index) and reused on subsequent
+ * calls.
  */
 class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
   public:
@@ -83,6 +84,7 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
      * @param width Render width
      * @param height Render height
      * @param frame_index Frame index for multi-buffering
+     * @param depth_view Depth buffer view (for depth testing)
      * @param position Position G-Buffer view
      * @param normal Normal G-Buffer view
      * @param tangent Tangent G-Buffer view
@@ -94,11 +96,12 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
     std::shared_ptr<const vw::ImageView>
     execute(vk::CommandBuffer cmd, vw::Barrier::ResourceTracker &tracker,
             vw::Width width, vw::Height height, size_t frame_index,
+            std::shared_ptr<const vw::ImageView> depth_view,
             std::shared_ptr<const vw::ImageView> position,
             std::shared_ptr<const vw::ImageView> normal,
             std::shared_ptr<const vw::ImageView> tangent,
-            std::shared_ptr<const vw::ImageView> bitangent,
-            int32_t num_samples, float ao_radius) {
+            std::shared_ptr<const vw::ImageView> bitangent, int32_t num_samples,
+            float ao_radius) {
 
         // Lazy allocation of output image
         const auto &output = get_or_create_image(
@@ -152,6 +155,15 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
             .stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
             .access = vk::AccessFlagBits2::eColorAttachmentWrite});
 
+        // Depth image for reading
+        tracker.request(vw::Barrier::ImageState{
+            .image = depth_view->image()->handle(),
+            .subresourceRange = depth_view->subresource_range(),
+            .layout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
+            .stage = vk::PipelineStageFlagBits2::eEarlyFragmentTests |
+                     vk::PipelineStageFlagBits2::eLateFragmentTests,
+            .access = vk::AccessFlagBits2::eDepthStencilAttachmentRead});
+
         // Flush barriers
         tracker.flush(cmd);
 
@@ -164,13 +176,21 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
                 .setStoreOp(vk::AttachmentStoreOp::eStore)
                 .setClearValue(vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f));
 
-        // Push constants
-        PushConstants constants{
-            .aoRadius = ao_radius,
-            .numSamples = std::clamp(num_samples, 1, AO_MAX_SAMPLES)};
+        // Setup depth attachment (read-only for depth testing)
+        vk::RenderingAttachmentInfo depth_attachment =
+            vk::RenderingAttachmentInfo()
+                .setImageView(depth_view->handle())
+                .setImageLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+                .setLoadOp(vk::AttachmentLoadOp::eLoad)
+                .setStoreOp(vk::AttachmentStoreOp::eNone);
 
-        // Render fullscreen quad
-        render_fullscreen(cmd, extent, color_attachment, nullptr,
+        // Push constants
+        PushConstants constants{.aoRadius = ao_radius,
+                                .numSamples =
+                                    std::clamp(num_samples, 1, AO_MAX_SAMPLES)};
+
+        // Render fullscreen quad with depth testing
+        render_fullscreen(cmd, extent, color_attachment, &depth_attachment,
                           *m_pipeline, descriptor_set, constants);
 
         return output.view;
@@ -207,7 +227,7 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
 
         m_pipeline = vw::create_screen_space_pipeline(
             m_device, vertex_shader, fragment_shader, m_descriptor_layout,
-            m_output_format, vk::Format::eUndefined, false, vk::CompareOp::eAlways,
+            m_output_format, vk::Format::eD32Sfloat, vk::CompareOp::eGreater,
             push_constants);
 
         return vw::DescriptorPoolBuilder(m_device, m_descriptor_layout).build();

@@ -2,21 +2,16 @@
 
 layout(location = 0) in vec2 in_position;
 
-layout(set = 0, binding = 0, std140) uniform Block {
-    mat4 perspective;
-    mat4 view;
-};
-
 layout(push_constant) uniform PushConstants {
-    vec4 sunDirection; // xyz = direction to sun, w = unused
+    vec4 sunDirection;    // xyz = direction to sun, w = unused
+    mat4 inverseViewProj; // inverse(projection * view)
 } pushConstants;
 
 layout(location = 0) out vec4 out_color;
 
 vec3 get_world_pos(vec4 clipPosition)
 {
-    mat4 invMatrix = inverse(perspective * view);
-    vec4 world = invMatrix * clipPosition;
+    vec4 world = pushConstants.inverseViewProj * clipPosition;
     world /= world.w;
     return world.xyz;
 }
@@ -160,5 +155,4 @@ void main() {
     luminance += direct_light_from_sun(view_direction, view_out, sun_dir);
 
     out_color = vec4(luminance, 1.0);
-    //out_color = vec4(1.0, 1.0, 1.0, 1.0);
 }

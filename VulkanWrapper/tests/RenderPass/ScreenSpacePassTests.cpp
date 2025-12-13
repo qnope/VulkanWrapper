@@ -436,7 +436,7 @@ TEST_F(ScreenSpacePassTest, RenderWithPushConstants) {
 
     auto pipeline = vw::create_screen_space_pipeline(
         device, vertexShader, fragmentShader, descriptorLayout,
-        vk::Format::eR8G8B8A8Unorm, vk::Format::eUndefined, false,
+        vk::Format::eR8G8B8A8Unorm, vk::Format::eUndefined,
         vk::CompareOp::eAlways, pushConstants);
 
     // Create descriptor pool and allocate empty set
@@ -802,7 +802,7 @@ TEST_F(ScreenSpacePassTest, CreateScreenSpacePipelineFunction) {
     // Test with depth format
     auto pipeline2 = vw::create_screen_space_pipeline(
         device, vertexShader, fragmentShader, descriptorLayout,
-        vk::Format::eR8G8B8A8Unorm, vk::Format::eD32Sfloat, true, vk::CompareOp::eLess);
+        vk::Format::eR8G8B8A8Unorm, vk::Format::eD32Sfloat, vk::CompareOp::eLess);
 
     ASSERT_NE(pipeline2, nullptr);
     EXPECT_TRUE(pipeline2->handle());
@@ -813,7 +813,7 @@ TEST_F(ScreenSpacePassTest, CreateScreenSpacePipelineFunction) {
 
     auto pipeline3 = vw::create_screen_space_pipeline(
         device, vertexShader, fragmentShader, descriptorLayout,
-        vk::Format::eR8G8B8A8Unorm, vk::Format::eUndefined, false,
+        vk::Format::eR8G8B8A8Unorm, vk::Format::eUndefined,
         vk::CompareOp::eAlways, pushConstants);
 
     ASSERT_NE(pipeline3, nullptr);

@@ -2,6 +2,8 @@
 
 #include "AmbientOcclusionPass.h"
 #include "ColorPass.h"
+#include "SkyPass.h"
+#include "SunLightPass.h"
 #include "ZPass.h"
 #include <memory>
 #include <VulkanWrapper/Memory/Buffer.h>
@@ -35,7 +37,8 @@ class DeferredRenderingManager {
         const vw::Model::MeshManager &mesh_manager,
         const vw::rt::RayTracedScene &ray_traced_scene,
         vk::Format depth_format = vk::Format::eD32Sfloat,
-        vk::Format ao_format = vk::Format::eR8G8B8A8Unorm)
+        vk::Format ao_format = vk::Format::eR8G8B8A8Unorm,
+        vk::Format light_format = vk::Format::eR16G16B16A16Sfloat)
         : m_device(std::move(device))
         , m_allocator(std::move(allocator))
         , m_ray_traced_scene(ray_traced_scene) {
@@ -48,6 +51,12 @@ class DeferredRenderingManager {
 
         m_ao_pass = std::make_unique<AmbientOcclusionPass>(
             m_device, m_allocator, ray_traced_scene.tlas_handle(), ao_format);
+
+        m_sky_pass = std::make_unique<SkyPass>(
+            m_device, m_allocator, light_format, depth_format);
+
+        m_sun_light_pass = std::make_unique<SunLightPass>(
+            m_device, m_allocator, ray_traced_scene.tlas_handle(), light_format);
     }
 
     /**
@@ -64,9 +73,10 @@ class DeferredRenderingManager {
      * @param height Render height
      * @param frame_index Frame index for multi-buffering
      * @param uniform_buffer Uniform buffer with view/projection matrices
+     * @param sun_angle Sun angle in degrees above horizon (90 = zenith)
      * @param num_ao_samples Number of AO samples (default: 32)
      * @param ao_radius AO sampling radius (default: 100.0)
-     * @return The final AO image view (can be blitted to swapchain)
+     * @return The final light image view (can be blitted to swapchain)
      */
     template <typename UBOType>
     std::shared_ptr<const vw::ImageView>
@@ -74,9 +84,13 @@ class DeferredRenderingManager {
             vw::Width width, vw::Height height, size_t frame_index,
             const vw::Buffer<UBOType, true, vw::UniformBufferUsage>
                 &uniform_buffer,
+            float sun_angle = 90.0f,
             int32_t num_ao_samples = 32, float ao_radius = 100.0f) {
 
         const auto &scene = m_ray_traced_scene.scene();
+
+        // Read UBO data for matrices
+        auto ubo_data = uniform_buffer.as_vector(0, 1)[0];
 
         // 1. Z-Pass: depth prepass
         auto depth_view = m_zpass->execute(cmd, tracker, width, height,
@@ -87,14 +101,29 @@ class DeferredRenderingManager {
                                              frame_index, scene, depth_view,
                                              uniform_buffer);
 
-        // 3. AO Pass: screen-space ambient occlusion
-        auto ao_view = m_ao_pass->execute(cmd, tracker, width, height,
-                                          frame_index, gbuffer.position,
-                                          gbuffer.normal, gbuffer.tangent,
-                                          gbuffer.bitangent, num_ao_samples,
-                                          ao_radius);
+        // 3. Sky Pass: render sky where depth == 1.0 (far plane)
+        auto light_view = m_sky_pass->execute(cmd, tracker, width, height,
+                                              frame_index, depth_view, sun_angle,
+                                              ubo_data.inverseViewProj);
 
-        return ao_view;
+        // 4. Sun Light Pass: add sun lighting with ray-traced shadows
+        m_sun_light_pass->execute(cmd, tracker,
+                                  light_view,        // from SkyPass
+                                  depth_view,        // from ZPass
+                                  gbuffer.color,     // albedo from ColorPass
+                                  gbuffer.position,  // from ColorPass
+                                  gbuffer.normal,    // from ColorPass
+                                  sun_angle);
+
+        // 5. AO Pass: screen-space ambient occlusion (computed but not used)
+        auto ao_view = m_ao_pass->execute(cmd, tracker, width, height,
+                                          frame_index, depth_view,
+                                          gbuffer.position, gbuffer.normal,
+                                          gbuffer.tangent, gbuffer.bitangent,
+                                          num_ao_samples, ao_radius);
+
+        // Return light buffer (sky + sun) as final output
+        return light_view;
     }
 
     /** @brief Access the Z-Pass for custom usage */
@@ -109,6 +138,14 @@ class DeferredRenderingManager {
     AmbientOcclusionPass &ao_pass() { return *m_ao_pass; }
     const AmbientOcclusionPass &ao_pass() const { return *m_ao_pass; }
 
+    /** @brief Access the Sky Pass for custom usage */
+    SkyPass &sky_pass() { return *m_sky_pass; }
+    const SkyPass &sky_pass() const { return *m_sky_pass; }
+
+    /** @brief Access the Sun Light Pass for custom usage */
+    SunLightPass &sun_light_pass() { return *m_sun_light_pass; }
+    const SunLightPass &sun_light_pass() const { return *m_sun_light_pass; }
+
   private:
     std::shared_ptr<vw::Device> m_device;
     std::shared_ptr<vw::Allocator> m_allocator;
@@ -118,4 +155,6 @@ class DeferredRenderingManager {
     std::unique_ptr<ZPass> m_zpass;
     std::unique_ptr<ColorPass> m_color_pass;
     std::unique_ptr<AmbientOcclusionPass> m_ao_pass;
+    std::unique_ptr<SkyPass> m_sky_pass;
+    std::unique_ptr<SunLightPass> m_sun_light_pass;
 };
