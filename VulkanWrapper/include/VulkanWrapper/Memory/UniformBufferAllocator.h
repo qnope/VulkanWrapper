@@ -3,6 +3,7 @@
 #include "VulkanWrapper/3rd_party.h"
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Memory/Buffer.h"
+#include "VulkanWrapper/Utils/Error.h"
 #include <vector>
 #include <optional>
 #include <cstddef>
@@ -31,7 +32,7 @@ struct UniformBufferChunk {
 
     void copy(const T& value) {
         if (!buffer_ref) {
-            throw std::runtime_error("Buffer reference is null");
+            throw LogicException::null_pointer("buffer reference");
         }
         BufferBase* base_ptr = static_cast<BufferBase*>(buffer_ref.get());
         base_ptr->generic_copy(&value, sizeof(T), offset);
@@ -39,7 +40,7 @@ struct UniformBufferChunk {
 
     void copy(std::span<const T> data) {
         if (!buffer_ref) {
-            throw std::runtime_error("Buffer reference is null");
+            throw LogicException::null_pointer("buffer reference");
         }
         static_cast<BufferBase*>(buffer_ref.get())->generic_copy(data.data(), data.size_bytes(), offset);
     }

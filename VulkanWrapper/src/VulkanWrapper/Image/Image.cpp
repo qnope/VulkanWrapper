@@ -1,6 +1,7 @@
 #include "VulkanWrapper/Image/Image.h"
 
 #include "VulkanWrapper/Memory/Allocator.h"
+#include "VulkanWrapper/Utils/Error.h"
 
 namespace vw {
 
@@ -80,8 +81,11 @@ vk::Extent3D Image::extent3D() const noexcept {
     return {uint32_t(m_width), uint32_t(m_height), uint32_t(m_depth)};
 }
 
-vk::Extent3D Image::mip_level_extent3D(MipLevel mip_level) const noexcept {
-    assert(mip_level < m_mip_levels);
+vk::Extent3D Image::mip_level_extent3D(MipLevel mip_level) const {
+    if (mip_level >= m_mip_levels) {
+        throw LogicException::out_of_range("mip level", std::size_t(mip_level),
+                                           std::size_t(m_mip_levels));
+    }
     auto width = uint32_t(m_width) >> uint32_t(mip_level);
     auto height = uint32_t(m_height) >> uint32_t(mip_level);
     auto depth = uint32_t(m_depth) >> uint32_t(mip_level);

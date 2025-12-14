@@ -17,7 +17,7 @@ class RayTracingPipeline : public ObjectWithUniqueHandle<vk::UniquePipeline> {
                        vk::UniquePipeline pipeline,
                        PipelineLayout pipeline_layout,
                        uint32_t number_miss_shader,
-                       uint32_t number_close_hit_shader) noexcept;
+                       uint32_t number_close_hit_shader);
 
   public:
     [[nodiscard]] const PipelineLayout &layout() const noexcept;

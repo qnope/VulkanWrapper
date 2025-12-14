@@ -22,7 +22,7 @@ class BufferBase : public ObjectWithHandle<vk::Buffer> {
     BufferBase &operator=(BufferBase &&other) noexcept = default;
 
     [[nodiscard]] VkDeviceSize size_bytes() const noexcept;
-    [[nodiscard]] vk::DeviceAddress device_address() const noexcept;
+    [[nodiscard]] vk::DeviceAddress device_address() const;
 
     void generic_copy(const void *data, VkDeviceSize size, VkDeviceSize offset);
     [[nodiscard]] std::vector<std::byte> generic_as_vector(VkDeviceSize offset, VkDeviceSize size) const;

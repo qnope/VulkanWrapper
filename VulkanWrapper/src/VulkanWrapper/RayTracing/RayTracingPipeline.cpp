@@ -10,7 +10,7 @@ namespace vw::rt {
 RayTracingPipeline::RayTracingPipeline(
     std::shared_ptr<const Device> device, vk::UniquePipeline pipeline,
     PipelineLayout pipeline_layout, uint32_t number_miss_shader,
-    uint32_t number_close_hit_shader) noexcept
+    uint32_t number_close_hit_shader)
     : ObjectWithUniqueHandle<vk::UniquePipeline>(std::move(pipeline))
     , m_layout(std::move(pipeline_layout))
     , m_number_miss_shader{number_miss_shader}
@@ -34,7 +34,10 @@ RayTracingPipeline::RayTracingPipeline(
                 handle(), 0, groupCount, handleSize * groupCount)
             .value;
 
-    assert(shaderHandleStorage.size() % handleSize == 0);
+    if (shaderHandleStorage.size() % handleSize != 0) {
+        throw LogicException::invalid_state(
+            "Shader handle storage size is not aligned to handle size");
+    }
     for (int i = 0; i < shaderHandleStorage.size(); i += handleSize)
         m_handles.emplace_back(&shaderHandleStorage[i],
                                &shaderHandleStorage[i] + handleSize);

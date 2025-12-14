@@ -24,7 +24,7 @@ DeviceFinder::DeviceFinder(std::span<PhysicalDevice> physicalDevices) noexcept {
     }
 }
 
-DeviceFinder &&DeviceFinder::with_queue(vk::QueueFlags queueFlags) && noexcept {
+DeviceFinder &&DeviceFinder::with_queue(vk::QueueFlags queueFlags) && {
     auto queueFamilyHandled = [queueFlags](const QueueFamilyInformation &info) {
         return info.numberAsked < info.numberAvailable &&
                (queueFlags & info.flags) == queueFlags;
@@ -40,7 +40,10 @@ DeviceFinder &&DeviceFinder::with_queue(vk::QueueFlags queueFlags) && noexcept {
     for (auto &information : m_physicalDevicesInformation) {
         auto index =
             index_if(information.queuesInformation, queueFamilyHandled);
-        assert(index);
+        if (!index) {
+            throw LogicException::invalid_state(
+                "Internal error: queue family should exist after filtering");
+        }
         ++information.queuesInformation[*index].numberAsked;
         ++information.numberOfQueuesToCreate[*index];
     }

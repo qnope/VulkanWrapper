@@ -1,6 +1,7 @@
 #include "VulkanWrapper/Memory/Buffer.h"
 
 #include "VulkanWrapper/Memory/Allocator.h"
+#include "VulkanWrapper/Utils/Error.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 
 namespace vw {
@@ -16,45 +17,38 @@ VkDeviceSize BufferBase::size_bytes() const noexcept {
     return m_data->m_size_in_bytes;
 }
 
-vk::DeviceAddress BufferBase::device_address() const noexcept {
+vk::DeviceAddress BufferBase::device_address() const {
     vk::BufferDeviceAddressInfoKHR addressInfo;
     addressInfo.setBuffer(handle());
     auto result = m_data->m_device->handle().getBufferAddress(addressInfo);
-    assert(result != 0);
+    if (result == 0) {
+        throw LogicException::invalid_state(
+            "Buffer device address is 0 - buffer may not have been created "
+            "with VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT");
+    }
     return result;
 }
 
 void BufferBase::generic_copy(const void *data, VkDeviceSize size,
                               VkDeviceSize offset) {
     if (!m_data || !m_data->m_allocation) {
-        throw std::runtime_error("Invalid allocation");
+        throw LogicException::invalid_state("Buffer has invalid allocation");
     }
     if (offset + size > m_data->m_size_in_bytes) {
-        throw std::runtime_error("Copy would exceed buffer size");
+        throw LogicException::out_of_range("buffer copy", offset + size,
+                                           m_data->m_size_in_bytes);
     }
-    VkResult res = vmaCopyMemoryToAllocation(
-        m_data->m_allocator->handle(),
-        data,
-        m_data->m_allocation,
-        offset,
-        size);
-    if (res != VK_SUCCESS) {
-        throw std::runtime_error("Failed to copy memory to allocation");
-    }
+    check_vma(vmaCopyMemoryToAllocation(m_data->m_allocator->handle(), data,
+                                        m_data->m_allocation, offset, size),
+              "Failed to copy memory to allocation");
 }
 
 std::vector<std::byte> BufferBase::generic_as_vector(VkDeviceSize offset, VkDeviceSize size) const {
     std::vector<std::byte> result(size);
-    VkResult res = vmaCopyAllocationToMemory(
-        m_data->m_allocator->handle(),
-        m_data->m_allocation,
-        offset,
-        result.data(),
-        size);
-    if (res != VK_SUCCESS) {
-        throw std::runtime_error("Failed to copy memory from allocation");
-    }
-    
+    check_vma(vmaCopyAllocationToMemory(m_data->m_allocator->handle(),
+                                        m_data->m_allocation, offset,
+                                        result.data(), size),
+              "Failed to copy memory from allocation");
     return result;
 }
 

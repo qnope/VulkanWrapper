@@ -1,5 +1,6 @@
 #include "VulkanWrapper/Vulkan/Device.h"
 
+#include "VulkanWrapper/Utils/Error.h"
 #include "VulkanWrapper/Vulkan/Queue.h"
 
 namespace vw {
@@ -28,7 +29,10 @@ Device::Device(vk::UniqueDevice device, vk::PhysicalDevice physicalDevice,
 Queue &Device::graphicsQueue() { return m_impl->queues[0]; }
 
 const PresentQueue &Device::presentQueue() const {
-    assert(m_impl->presentQueue);
+    if (!m_impl->presentQueue) {
+        throw LogicException::invalid_state(
+            "Device was not created with presentation support");
+    }
     return m_impl->presentQueue.value();
 }
 
