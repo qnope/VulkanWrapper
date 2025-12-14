@@ -13,17 +13,46 @@ const vk::detail::DispatchLoaderDynamic &DefaultDispatcher() {
     return VULKAN_HPP_DEFAULT_DISPATCHER;
 }
 
-Instance::Impl::Impl(vk::UniqueInstance inst, std::span<const char *> exts,
-                      ApiVersion apiVersion) noexcept
+namespace {
+
+vk::Bool32
+debugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
+              vk::DebugUtilsMessageTypeFlagsEXT type,
+              const vk::DebugUtilsMessengerCallbackDataEXT *pCallbackData,
+              void * /*pUserData*/) {
+
+    // Throw exception immediately for validation errors
+    if (severity & vk::DebugUtilsMessageSeverityFlagBitsEXT::eError) {
+        throw ValidationLayerException(severity, type, pCallbackData->pMessage);
+    }
+
+    // Print warnings to stderr
+    if (severity & vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning) {
+        std::cerr << "[VALIDATION WARNING] " << pCallbackData->pMessage
+                  << std::endl;
+    }
+
+    return vk::False;
+}
+
+} // namespace
+
+Instance::Impl::Impl(vk::UniqueInstance inst,
+                     vk::UniqueDebugUtilsMessengerEXT debugMsgr,
+                     std::span<const char *> exts,
+                     ApiVersion apiVersion) noexcept
     : instance{std::move(inst)}
+    , debugMessenger{std::move(debugMsgr)}
     , extensions{exts.begin(), exts.end()}
     , version{apiVersion} {}
 
 Instance::Instance(vk::UniqueInstance instance,
+                   vk::UniqueDebugUtilsMessengerEXT debugMessenger,
                    std::span<const char *> extensions,
                    ApiVersion apiVersion) noexcept
-    : m_impl{std::make_shared<Impl>(std::move(instance), extensions,
-                                     apiVersion)} {}
+    : m_impl{std::make_shared<Impl>(std::move(instance),
+                                    std::move(debugMessenger), extensions,
+                                    apiVersion)} {}
 
 vk::Instance Instance::handle() const noexcept { return *m_impl->instance; }
 
@@ -66,6 +95,7 @@ InstanceBuilder::addExtensions(std::span<char const *const> extensions) && {
 
 InstanceBuilder &&InstanceBuilder::setDebug() && {
     m_debug = true;
+    m_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     return std::move(*this);
 }
 
@@ -83,10 +113,13 @@ std::shared_ptr<Instance> InstanceBuilder::build() && {
                        .setPEngineName("3D Renderer")
                        .setEngineVersion(VK_MAKE_VERSION(1, 0, 0));
 
+    // Add debug utils extension if debug mode is enabled
+    if (m_debug) {
+    }
+
     vk::InstanceCreateInfo info;
     info.setFlags(m_flags)
         .setPEnabledExtensionNames(m_extensions)
-        .setPEnabledLayerNames(layers)
         .setPApplicationInfo(&appInfo);
 
     if (m_debug) {
@@ -100,8 +133,28 @@ std::shared_ptr<Instance> InstanceBuilder::build() && {
 
     VULKAN_HPP_DEFAULT_DISPATCHER.init(*instance);
 
-    return std::shared_ptr<Instance>(
-        new Instance(std::move(instance), m_extensions, m_version));
+    // Create debug messenger if debug mode is enabled
+    vk::UniqueDebugUtilsMessengerEXT debugMessenger;
+    if (m_debug) {
+        auto messengerInfo =
+            vk::DebugUtilsMessengerCreateInfoEXT()
+                .setMessageSeverity(
+                    vk::DebugUtilsMessageSeverityFlagBitsEXT::eError |
+                    vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning)
+                .setMessageType(
+                    vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+                    vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
+                    vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral)
+                .setPfnUserCallback(debugCallback);
+
+        debugMessenger = check_vk(
+            instance->createDebugUtilsMessengerEXTUnique(messengerInfo),
+            "Failed to create debug messenger");
+    }
+
+    return std::shared_ptr<Instance>(new Instance(std::move(instance),
+                                                  std::move(debugMessenger),
+                                                  m_extensions, m_version));
 }
 
 } // namespace vw

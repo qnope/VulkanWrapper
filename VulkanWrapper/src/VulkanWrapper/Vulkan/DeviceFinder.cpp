@@ -207,6 +207,22 @@ std::shared_ptr<Device> DeviceFinder::build() && {
     m_features.get<vk::PhysicalDeviceVulkan12Features>().setBufferDeviceAddress(
         1U);
 
+    // Unlink ray tracing feature structures if ray tracing wasn't requested
+    // This prevents validation errors about features in pNext without extensions
+    auto& accelFeatures = m_features.get<vk::PhysicalDeviceAccelerationStructureFeaturesKHR>();
+    auto& rayQueryFeatures = m_features.get<vk::PhysicalDeviceRayQueryFeaturesKHR>();
+    auto& rtPipelineFeatures = m_features.get<vk::PhysicalDeviceRayTracingPipelineFeaturesKHR>();
+
+    if (!accelFeatures.accelerationStructure) {
+        m_features.unlink<vk::PhysicalDeviceAccelerationStructureFeaturesKHR>();
+    }
+    if (!rayQueryFeatures.rayQuery) {
+        m_features.unlink<vk::PhysicalDeviceRayQueryFeaturesKHR>();
+    }
+    if (!rtPipelineFeatures.rayTracingPipeline) {
+        m_features.unlink<vk::PhysicalDeviceRayTracingPipelineFeaturesKHR>();
+    }
+
     info.setPNext(&m_features.get<vk::PhysicalDeviceFeatures2>());
 
     auto device = check_vk(information.device.device().createDeviceUnique(info),
