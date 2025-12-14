@@ -28,6 +28,7 @@ class App {
             .addPortability()
             .addExtensions(window.get_required_instance_extensions())
             .setApiVersion(vw::ApiVersion::e13)
+            .setDebug()
             .build();
 
     vw::Surface surface = window.create_surface(*instance);

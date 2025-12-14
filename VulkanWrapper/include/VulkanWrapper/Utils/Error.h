@@ -136,6 +136,27 @@ private:
     std::string m_compilation_log;
 };
 
+// Vulkan validation layer errors (debug messenger callback)
+class ValidationLayerException : public Exception {
+public:
+    ValidationLayerException(vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
+                             vk::DebugUtilsMessageTypeFlagsEXT type,
+                             std::string validation_message,
+                             std::source_location location = std::source_location::current());
+
+    vk::DebugUtilsMessageSeverityFlagBitsEXT severity() const noexcept;
+    vk::DebugUtilsMessageTypeFlagsEXT type() const noexcept;
+    const std::string &validation_message() const noexcept;
+
+protected:
+    void build_what() const override;
+
+private:
+    vk::DebugUtilsMessageSeverityFlagBitsEXT m_severity;
+    vk::DebugUtilsMessageTypeFlagsEXT m_type;
+    std::string m_validation_message;
+};
+
 // Logic/state errors (invalid arguments, precondition violations, bounds errors)
 // Replaces std::out_of_range and std::runtime_error for consistency
 class LogicException : public Exception {

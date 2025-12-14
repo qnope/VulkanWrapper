@@ -222,4 +222,57 @@ LogicException LogicException::null_pointer(std::string_view what_is_null,
     return LogicException(std::format("{} is null", what_is_null), location);
 }
 
+// ValidationLayerException
+
+ValidationLayerException::ValidationLayerException(
+    vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
+    vk::DebugUtilsMessageTypeFlagsEXT type,
+    std::string validation_message,
+    std::source_location location)
+    : Exception("Validation layer error", location),
+      m_severity(severity),
+      m_type(type),
+      m_validation_message(std::move(validation_message)) {}
+
+vk::DebugUtilsMessageSeverityFlagBitsEXT
+ValidationLayerException::severity() const noexcept {
+    return m_severity;
+}
+
+vk::DebugUtilsMessageTypeFlagsEXT ValidationLayerException::type() const noexcept {
+    return m_type;
+}
+
+const std::string &ValidationLayerException::validation_message() const noexcept {
+    return m_validation_message;
+}
+
+void ValidationLayerException::build_what() const {
+    std::string severity_str;
+    if (m_severity & vk::DebugUtilsMessageSeverityFlagBitsEXT::eError)
+        severity_str = "ERROR";
+    else if (m_severity & vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning)
+        severity_str = "WARNING";
+    else if (m_severity & vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo)
+        severity_str = "INFO";
+    else
+        severity_str = "VERBOSE";
+
+    std::string type_str;
+    if (m_type & vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation)
+        type_str = "VALIDATION";
+    else if (m_type & vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance)
+        type_str = "PERFORMANCE";
+    else
+        type_str = "GENERAL";
+
+    m_what_cache = std::format("[{}:{}] {}\n  [{}][{}] {}",
+                               extract_filename(m_location.file_name()),
+                               m_location.line(),
+                               m_location.function_name(),
+                               severity_str,
+                               type_str,
+                               m_validation_message);
+}
+
 } // namespace vw

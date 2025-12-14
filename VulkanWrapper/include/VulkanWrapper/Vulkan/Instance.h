@@ -1,6 +1,5 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
-
 #include "VulkanWrapper/fwd.h"
 #include <memory>
 
@@ -21,16 +20,20 @@ class Instance {
     [[nodiscard]] DeviceFinder findGpu() const noexcept;
 
   private:
-    Instance(vk::UniqueInstance instance, std::span<const char *> extensions,
+    Instance(vk::UniqueInstance instance,
+             vk::UniqueDebugUtilsMessengerEXT debugMessenger,
+             std::span<const char *> extensions,
              ApiVersion apiVersion) noexcept;
 
     struct Impl {
         vk::UniqueInstance instance;
+        vk::UniqueDebugUtilsMessengerEXT debugMessenger;
         std::vector<const char *> extensions;
         ApiVersion version;
 
-        Impl(vk::UniqueInstance inst, std::span<const char *> exts,
-             ApiVersion apiVersion) noexcept;
+        Impl(vk::UniqueInstance inst,
+             vk::UniqueDebugUtilsMessengerEXT debugMsgr,
+             std::span<const char *> exts, ApiVersion apiVersion) noexcept;
 
         Impl(const Impl &) = delete;
         Impl &operator=(const Impl &) = delete;
@@ -55,7 +58,7 @@ class InstanceBuilder {
     vk::InstanceCreateFlags m_flags;
     std::vector<const char *> m_extensions;
     std::vector<const char *> m_layers;
-    bool m_debug = true;
+    bool m_debug = false;
     ApiVersion m_version = ApiVersion::e10;
 };
 
