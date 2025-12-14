@@ -4,17 +4,21 @@
 #include "VulkanWrapper/Model/Material/Material.h"
 #include "VulkanWrapper/Model/Material/MaterialManager.h"
 #include "VulkanWrapper/Model/Material/MaterialTypeTag.h"
+#include "VulkanWrapper/Utils/Error.h"
 
 namespace vw::Model::Material {
 class MaterialManagerMap {
   public:
     [[nodiscard]] std::shared_ptr<const DescriptorSetLayout>
-    layout(MaterialTypeTag tag) const noexcept;
+    layout(MaterialTypeTag tag) const;
 
     template <const MaterialTypeTag *tag>
     ConcreteMaterialManager<tag> &manager() const {
         auto it = m_material_managers.find(*tag);
-        assert(it != m_material_managers.end());
+        if (it == m_material_managers.end()) {
+            throw LogicException::invalid_state(
+                "No material manager registered for material type");
+        }
         return *static_cast<ConcreteMaterialManager<tag> *>(it->second.get());
     }
 

@@ -40,7 +40,7 @@ class Image : public ObjectWithHandle<vk::Image> {
     [[nodiscard]] vk::Extent3D extent3D() const noexcept;
 
     [[nodiscard]] vk::Extent3D
-    mip_level_extent3D(MipLevel mip_level) const noexcept;
+    mip_level_extent3D(MipLevel mip_level) const;
 
     [[nodiscard]] std::array<vk::Offset3D, 2>
     mip_level_offsets(MipLevel mip_level) const noexcept;

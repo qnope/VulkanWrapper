@@ -82,7 +82,10 @@ vk::DescriptorSet DescriptorPool::allocate_descriptor_set_from_last_pool() {
     auto set =
         m_descriptor_pools.emplace_back(std::move(pool), m_device, m_layout)
             .allocate_set();
-    assert(set);
+    if (!set) {
+        throw LogicException::invalid_state(
+            "Failed to allocate descriptor set from newly created pool");
+    }
     return *set;
 }
 

@@ -1,6 +1,7 @@
 #include "VulkanWrapper/Pipeline/MeshRenderer.h"
 
 #include "VulkanWrapper/Model/Mesh.h"
+#include "VulkanWrapper/Utils/Error.h"
 
 namespace vw {
 
@@ -14,7 +15,10 @@ void MeshRenderer::draw_mesh(
     std::span<const vk::DescriptorSet> first_descriptor_sets,
     const glm::mat4 &transform) const {
     auto it = m_pipelines.find(mesh.material_type_tag());
-    assert(it != m_pipelines.end());
+    if (it == m_pipelines.end()) {
+        throw LogicException::invalid_state(
+            "No pipeline registered for material type");
+    }
     cmd_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
                             it->second->handle());
     cmd_buffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,

@@ -3,11 +3,11 @@
 #include "VulkanWrapper/Command/CommandPool.h"
 #include "VulkanWrapper/Model/Mesh.h"
 #include "VulkanWrapper/Synchronization/Fence.h"
+#include "VulkanWrapper/Utils/Error.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 #include "VulkanWrapper/Vulkan/Queue.h"
 
 #include <algorithm>
-#include <stdexcept>
 
 namespace vw::rt {
 
@@ -52,12 +52,13 @@ InstanceId RayTracedScene::add_instance(const Model::Mesh &mesh, const glm::mat4
 
 void RayTracedScene::set_transform(InstanceId instance_id, const glm::mat4 &transform) {
     if (instance_id.value >= m_instances.size()) {
-        throw std::out_of_range("Invalid InstanceId");
+        throw LogicException::out_of_range("instance id", instance_id.value,
+                                           m_instances.size());
     }
 
     auto &instance = m_instances[instance_id.value];
     if (!instance.active) {
-        throw std::runtime_error("Instance has been removed");
+        throw LogicException::invalid_state("Instance has been removed");
     }
 
     instance.transform = transform;
@@ -66,12 +67,13 @@ void RayTracedScene::set_transform(InstanceId instance_id, const glm::mat4 &tran
 
 const glm::mat4 &RayTracedScene::get_transform(InstanceId instance_id) const {
     if (instance_id.value >= m_instances.size()) {
-        throw std::out_of_range("Invalid InstanceId");
+        throw LogicException::out_of_range("instance id", instance_id.value,
+                                           m_instances.size());
     }
 
     const auto &instance = m_instances[instance_id.value];
     if (!instance.active) {
-        throw std::runtime_error("Instance has been removed");
+        throw LogicException::invalid_state("Instance has been removed");
     }
 
     return instance.transform;
@@ -79,12 +81,13 @@ const glm::mat4 &RayTracedScene::get_transform(InstanceId instance_id) const {
 
 void RayTracedScene::set_visible(InstanceId instance_id, bool visible) {
     if (instance_id.value >= m_instances.size()) {
-        throw std::out_of_range("Invalid InstanceId");
+        throw LogicException::out_of_range("instance id", instance_id.value,
+                                           m_instances.size());
     }
 
     auto &instance = m_instances[instance_id.value];
     if (!instance.active) {
-        throw std::runtime_error("Instance has been removed");
+        throw LogicException::invalid_state("Instance has been removed");
     }
 
     if (instance.visible != visible) {
@@ -95,12 +98,13 @@ void RayTracedScene::set_visible(InstanceId instance_id, bool visible) {
 
 bool RayTracedScene::is_visible(InstanceId instance_id) const {
     if (instance_id.value >= m_instances.size()) {
-        throw std::out_of_range("Invalid InstanceId");
+        throw LogicException::out_of_range("instance id", instance_id.value,
+                                           m_instances.size());
     }
 
     const auto &instance = m_instances[instance_id.value];
     if (!instance.active) {
-        throw std::runtime_error("Instance has been removed");
+        throw LogicException::invalid_state("Instance has been removed");
     }
 
     return instance.visible;
@@ -108,12 +112,13 @@ bool RayTracedScene::is_visible(InstanceId instance_id) const {
 
 void RayTracedScene::set_sbt_offset(InstanceId instance_id, uint32_t offset) {
     if (instance_id.value >= m_instances.size()) {
-        throw std::out_of_range("Invalid InstanceId");
+        throw LogicException::out_of_range("instance id", instance_id.value,
+                                           m_instances.size());
     }
 
     auto &instance = m_instances[instance_id.value];
     if (!instance.active) {
-        throw std::runtime_error("Instance has been removed");
+        throw LogicException::invalid_state("Instance has been removed");
     }
 
     instance.sbt_offset = offset;
@@ -122,12 +127,13 @@ void RayTracedScene::set_sbt_offset(InstanceId instance_id, uint32_t offset) {
 
 uint32_t RayTracedScene::get_sbt_offset(InstanceId instance_id) const {
     if (instance_id.value >= m_instances.size()) {
-        throw std::out_of_range("Invalid InstanceId");
+        throw LogicException::out_of_range("instance id", instance_id.value,
+                                           m_instances.size());
     }
 
     const auto &instance = m_instances[instance_id.value];
     if (!instance.active) {
-        throw std::runtime_error("Instance has been removed");
+        throw LogicException::invalid_state("Instance has been removed");
     }
 
     return instance.sbt_offset;
@@ -135,12 +141,13 @@ uint32_t RayTracedScene::get_sbt_offset(InstanceId instance_id) const {
 
 void RayTracedScene::set_custom_index(InstanceId instance_id, uint32_t custom_index) {
     if (instance_id.value >= m_instances.size()) {
-        throw std::out_of_range("Invalid InstanceId");
+        throw LogicException::out_of_range("instance id", instance_id.value,
+                                           m_instances.size());
     }
 
     auto &instance = m_instances[instance_id.value];
     if (!instance.active) {
-        throw std::runtime_error("Instance has been removed");
+        throw LogicException::invalid_state("Instance has been removed");
     }
 
     instance.custom_index = custom_index;
@@ -149,12 +156,13 @@ void RayTracedScene::set_custom_index(InstanceId instance_id, uint32_t custom_in
 
 uint32_t RayTracedScene::get_custom_index(InstanceId instance_id) const {
     if (instance_id.value >= m_instances.size()) {
-        throw std::out_of_range("Invalid InstanceId");
+        throw LogicException::out_of_range("instance id", instance_id.value,
+                                           m_instances.size());
     }
 
     const auto &instance = m_instances[instance_id.value];
     if (!instance.active) {
-        throw std::runtime_error("Instance has been removed");
+        throw LogicException::invalid_state("Instance has been removed");
     }
 
     return instance.custom_index;
@@ -162,12 +170,13 @@ uint32_t RayTracedScene::get_custom_index(InstanceId instance_id) const {
 
 void RayTracedScene::remove_instance(InstanceId instance_id) {
     if (instance_id.value >= m_instances.size()) {
-        throw std::out_of_range("Invalid InstanceId");
+        throw LogicException::out_of_range("instance id", instance_id.value,
+                                           m_instances.size());
     }
 
     auto &instance = m_instances[instance_id.value];
     if (!instance.active) {
-        throw std::runtime_error("Instance already removed");
+        throw LogicException::invalid_state("Instance already removed");
     }
 
     instance.active = false;
@@ -184,7 +193,7 @@ bool RayTracedScene::is_valid(InstanceId instance_id) const {
 
 void RayTracedScene::build() {
     if (m_mesh_to_blas_index.empty()) {
-        throw std::runtime_error("No meshes registered");
+        throw LogicException::invalid_state("No meshes registered");
     }
 
     build_blas();
@@ -196,11 +205,12 @@ void RayTracedScene::build() {
 
 void RayTracedScene::update() {
     if (!m_blas_list.has_value()) {
-        throw std::runtime_error("Must call build() before update()");
+        throw LogicException::invalid_state("Must call build() before update()");
     }
 
     if (m_blas_dirty) {
-        throw std::runtime_error("New meshes registered, must call build() instead of update()");
+        throw LogicException::invalid_state(
+            "New meshes registered, must call build() instead of update()");
     }
 
     if (m_tlas_dirty) {
@@ -219,14 +229,14 @@ bool RayTracedScene::needs_update() const noexcept {
 
 vk::DeviceAddress RayTracedScene::tlas_device_address() const {
     if (!m_tlas.has_value()) {
-        throw std::runtime_error("TLAS not built yet");
+        throw LogicException::invalid_state("TLAS not built yet");
     }
     return m_tlas->device_address();
 }
 
 vk::AccelerationStructureKHR RayTracedScene::tlas_handle() const {
     if (!m_tlas.has_value()) {
-        throw std::runtime_error("TLAS not built yet");
+        throw LogicException::invalid_state("TLAS not built yet");
     }
     return m_tlas->handle();
 }
