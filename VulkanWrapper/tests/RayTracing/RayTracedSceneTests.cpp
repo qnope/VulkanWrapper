@@ -3,6 +3,7 @@
 #include "VulkanWrapper/Model/Mesh.h"
 #include "VulkanWrapper/Model/MeshManager.h"
 #include "VulkanWrapper/Synchronization/Fence.h"
+#include "VulkanWrapper/Utils/Error.h"
 #include "VulkanWrapper/Vulkan/DeviceFinder.h"
 #include "VulkanWrapper/Vulkan/Queue.h"
 #include <gtest/gtest.h>
@@ -163,7 +164,7 @@ TEST_F(RayTracedSceneTest, SetTransform) {
 TEST_F(RayTracedSceneTest, SetTransformWithInvalidId) {
     vw::rt::RayTracedScene scene(gpu->device, gpu->allocator);
 
-    EXPECT_THROW(scene.set_transform(vw::rt::InstanceId{999}, glm::mat4(1.0f)), std::out_of_range);
+    EXPECT_THROW(scene.set_transform(vw::rt::InstanceId{999}, glm::mat4(1.0f)), vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, SetVisible) {
@@ -208,7 +209,7 @@ TEST_F(RayTracedSceneTest, RemoveInstanceTwice) {
 
     scene.remove_instance(instance_id);
 
-    EXPECT_THROW(scene.remove_instance(instance_id), std::runtime_error);
+    EXPECT_THROW(scene.remove_instance(instance_id), vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, OperationsOnRemovedInstance) {
@@ -218,10 +219,10 @@ TEST_F(RayTracedSceneTest, OperationsOnRemovedInstance) {
 
     scene.remove_instance(instance_id);
 
-    EXPECT_THROW(scene.set_transform(instance_id, glm::mat4(1.0f)), std::runtime_error);
-    EXPECT_THROW((void)scene.get_transform(instance_id), std::runtime_error);
-    EXPECT_THROW(scene.set_visible(instance_id, true), std::runtime_error);
-    EXPECT_THROW((void)scene.is_visible(instance_id), std::runtime_error);
+    EXPECT_THROW(scene.set_transform(instance_id, glm::mat4(1.0f)), vw::LogicException);
+    EXPECT_THROW((void)scene.get_transform(instance_id), vw::LogicException);
+    EXPECT_THROW(scene.set_visible(instance_id, true), vw::LogicException);
+    EXPECT_THROW((void)scene.is_visible(instance_id), vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, SetSbtOffset) {
@@ -263,7 +264,7 @@ TEST_F(RayTracedSceneTest, DirtyFlags) {
 TEST_F(RayTracedSceneTest, BuildWithNoMeshes) {
     vw::rt::RayTracedScene scene(gpu->device, gpu->allocator);
 
-    EXPECT_THROW(scene.build(), std::runtime_error);
+    EXPECT_THROW(scene.build(), vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, UpdateBeforeBuild) {
@@ -271,7 +272,7 @@ TEST_F(RayTracedSceneTest, UpdateBeforeBuild) {
     const auto &mesh = gpu->get_mesh();
     [[maybe_unused]] auto inst = scene.add_instance(mesh);
 
-    EXPECT_THROW(scene.update(), std::runtime_error);
+    EXPECT_THROW(scene.update(), vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, TlasAccessBeforeBuild) {
@@ -279,8 +280,8 @@ TEST_F(RayTracedSceneTest, TlasAccessBeforeBuild) {
     const auto &mesh = gpu->get_mesh();
     [[maybe_unused]] auto inst = scene.add_instance(mesh);
 
-    EXPECT_THROW((void)scene.tlas_device_address(), std::runtime_error);
-    EXPECT_THROW((void)scene.tlas_handle(), std::runtime_error);
+    EXPECT_THROW((void)scene.tlas_device_address(), vw::LogicException);
+    EXPECT_THROW((void)scene.tlas_handle(), vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, BuildAndAccess) {
@@ -466,8 +467,8 @@ TEST_F(RayTracedSceneTest, SbtOffsetOnRemovedInstance) {
 
     scene.remove_instance(instance_id);
 
-    EXPECT_THROW(scene.set_sbt_offset(instance_id, 1), std::runtime_error);
-    EXPECT_THROW((void)scene.get_sbt_offset(instance_id), std::runtime_error);
+    EXPECT_THROW(scene.set_sbt_offset(instance_id, 1), vw::LogicException);
+    EXPECT_THROW((void)scene.get_sbt_offset(instance_id), vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, CustomIndexOnRemovedInstance) {
@@ -477,8 +478,8 @@ TEST_F(RayTracedSceneTest, CustomIndexOnRemovedInstance) {
 
     scene.remove_instance(instance_id);
 
-    EXPECT_THROW(scene.set_custom_index(instance_id, 1), std::runtime_error);
-    EXPECT_THROW((void)scene.get_custom_index(instance_id), std::runtime_error);
+    EXPECT_THROW(scene.set_custom_index(instance_id, 1), vw::LogicException);
+    EXPECT_THROW((void)scene.get_custom_index(instance_id), vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, RebuildAfterAlreadyBuilt) {
@@ -1004,7 +1005,7 @@ TEST_F(RayTracedSceneTest, EmbeddedSceneWithMultipleMeshTypes) {
 TEST_F(RayTracedSceneTest, GetTransformWithInvalidId) {
     vw::rt::RayTracedScene scene(gpu->device, gpu->allocator);
 
-    EXPECT_THROW((void)scene.get_transform(vw::rt::InstanceId{999}), std::out_of_range);
+    EXPECT_THROW((void)scene.get_transform(vw::rt::InstanceId{999}), vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, IsValidWithInvalidId) {
@@ -1017,43 +1018,43 @@ TEST_F(RayTracedSceneTest, IsValidWithInvalidId) {
 TEST_F(RayTracedSceneTest, SetVisibleOnInvalidId) {
     vw::rt::RayTracedScene scene(gpu->device, gpu->allocator);
 
-    EXPECT_THROW(scene.set_visible(vw::rt::InstanceId{999}, true), std::out_of_range);
+    EXPECT_THROW(scene.set_visible(vw::rt::InstanceId{999}, true), vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, IsVisibleOnInvalidId) {
     vw::rt::RayTracedScene scene(gpu->device, gpu->allocator);
 
-    EXPECT_THROW((void)scene.is_visible(vw::rt::InstanceId{999}), std::out_of_range);
+    EXPECT_THROW((void)scene.is_visible(vw::rt::InstanceId{999}), vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, SetSbtOffsetOnInvalidId) {
     vw::rt::RayTracedScene scene(gpu->device, gpu->allocator);
 
-    EXPECT_THROW(scene.set_sbt_offset(vw::rt::InstanceId{999}, 0), std::out_of_range);
+    EXPECT_THROW(scene.set_sbt_offset(vw::rt::InstanceId{999}, 0), vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, GetSbtOffsetOnInvalidId) {
     vw::rt::RayTracedScene scene(gpu->device, gpu->allocator);
 
-    EXPECT_THROW((void)scene.get_sbt_offset(vw::rt::InstanceId{999}), std::out_of_range);
+    EXPECT_THROW((void)scene.get_sbt_offset(vw::rt::InstanceId{999}), vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, SetCustomIndexOnInvalidId) {
     vw::rt::RayTracedScene scene(gpu->device, gpu->allocator);
 
-    EXPECT_THROW(scene.set_custom_index(vw::rt::InstanceId{999}, 0), std::out_of_range);
+    EXPECT_THROW(scene.set_custom_index(vw::rt::InstanceId{999}, 0), vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, GetCustomIndexOnInvalidId) {
     vw::rt::RayTracedScene scene(gpu->device, gpu->allocator);
 
-    EXPECT_THROW((void)scene.get_custom_index(vw::rt::InstanceId{999}), std::out_of_range);
+    EXPECT_THROW((void)scene.get_custom_index(vw::rt::InstanceId{999}), vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, RemoveInvalidId) {
     vw::rt::RayTracedScene scene(gpu->device, gpu->allocator);
 
-    EXPECT_THROW(scene.remove_instance(vw::rt::InstanceId{999}), std::out_of_range);
+    EXPECT_THROW(scene.remove_instance(vw::rt::InstanceId{999}), vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, DoubleSetSameTransform) {
