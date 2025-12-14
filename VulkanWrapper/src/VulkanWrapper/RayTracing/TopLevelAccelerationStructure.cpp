@@ -58,7 +58,7 @@ TopLevelAccelerationStructureBuilder::build(vk::CommandBuffer command_buffer) {
         create_buffer<InstanceBuffer>(*m_allocator, m_instances.size());
 
     // Upload instances to buffer
-    instance_buffer.copy(m_instances, 0);
+    instance_buffer.write(m_instances, 0);
 
     // Build geometry info
     vk::AccelerationStructureGeometryKHR geometry;

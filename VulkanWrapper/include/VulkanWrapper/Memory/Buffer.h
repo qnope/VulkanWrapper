@@ -24,8 +24,8 @@ class BufferBase : public ObjectWithHandle<vk::Buffer> {
     [[nodiscard]] VkDeviceSize size_bytes() const noexcept;
     [[nodiscard]] vk::DeviceAddress device_address() const;
 
-    void generic_copy(const void *data, VkDeviceSize size, VkDeviceSize offset);
-    [[nodiscard]] std::vector<std::byte> generic_as_vector(VkDeviceSize offset, VkDeviceSize size) const;
+    void write_bytes(const void *data, VkDeviceSize size, VkDeviceSize offset);
+    [[nodiscard]] std::vector<std::byte> read_bytes(VkDeviceSize offset, VkDeviceSize size) const;
 
     ~BufferBase();
 
@@ -53,22 +53,22 @@ class Buffer : public BufferBase {
     Buffer(BufferBase &&bufferBase)
         : BufferBase(std::move(bufferBase)) {}
 
-    void copy(std::span<const T> span, std::size_t offset)
+    void write(std::span<const T> data, std::size_t offset)
         requires(HostVisible)
     {
-        BufferBase::generic_copy(span.data(), span.size_bytes(),
+        BufferBase::write_bytes(data.data(), data.size_bytes(),
                                  offset * sizeof(T));
     }
 
-    void copy(const T &object, std::size_t offset)
+    void write(const T &element, std::size_t offset)
         requires(HostVisible)
     {
-        BufferBase::generic_copy(&object, sizeof(T), offset * sizeof(T));
+        BufferBase::write_bytes(&element, sizeof(T), offset * sizeof(T));
     }
 
     template <typename U>
-    void generic_copy(std::span<const U> span, std::size_t offset) {
-        BufferBase::generic_copy(span.data(), span.size_bytes(),
+    void write_bytes(std::span<const U> data, std::size_t offset) {
+        BufferBase::write_bytes(data.data(), data.size_bytes(),
                                  offset * sizeof(T));
     }
 
@@ -76,10 +76,10 @@ class Buffer : public BufferBase {
         return size_bytes() / sizeof(T);
     }
 
-    [[nodiscard]] std::vector<T> as_vector(std::size_t offset, std::size_t count) const
+    [[nodiscard]] std::vector<T> read_as_vector(std::size_t offset, std::size_t count) const
         requires(HostVisible)
     {
-        auto bytes = BufferBase::generic_as_vector(offset * sizeof(T), count * sizeof(T));
+        auto bytes = BufferBase::read_bytes(offset * sizeof(T), count * sizeof(T));
         std::vector<T> result(count);
         std::memcpy(result.data(), bytes.data(), bytes.size());
         return result;

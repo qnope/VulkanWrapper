@@ -32,7 +32,7 @@ TEST(TransferTest, CopyBuffer) {
 
     // Fill source buffer
     std::vector<float> testData = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f};
-    srcBuffer.copy(std::span<const float>(testData), 0);
+    srcBuffer.write(std::span<const float>(testData), 0);
 
     // Perform transfer
     auto cmdPool = vw::CommandPoolBuilder(gpu.device).build();
@@ -51,7 +51,7 @@ TEST(TransferTest, CopyBuffer) {
     gpu.queue().submit({}, {}, {}).wait();
 
     // Verify
-    auto retrieved = dstBuffer.as_vector(0, testData.size());
+    auto retrieved = dstBuffer.read_as_vector(0, testData.size());
     ASSERT_EQ(retrieved.size(), testData.size());
 
     for (size_t i = 0; i < testData.size(); ++i) {
@@ -74,7 +74,7 @@ TEST(TransferTest, CopyBufferWithOffset) {
 
     // Fill source buffer starting at offset 5
     std::vector<float> testData = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f};
-    srcBuffer.copy(std::span<const float>(testData), 5);
+    srcBuffer.write(std::span<const float>(testData), 5);
 
     auto cmdPool = vw::CommandPoolBuilder(gpu.device).build();
     auto cmd = cmdPool.allocate(1)[0];
@@ -94,7 +94,7 @@ TEST(TransferTest, CopyBufferWithOffset) {
     gpu.queue().submit({}, {}, {}).wait();
 
     // Verify data at offset 10
-    auto retrieved = dstBuffer.as_vector(10, testData.size());
+    auto retrieved = dstBuffer.read_as_vector(10, testData.size());
     ASSERT_EQ(retrieved.size(), testData.size());
 
     for (size_t i = 0; i < testData.size(); ++i) {
@@ -123,7 +123,7 @@ TEST(TransferTest, CopyBufferToImage) {
         pixels[i * 4 + 2] = static_cast<std::byte>(0);        // B
         pixels[i * 4 + 3] = static_cast<std::byte>(255);      // A
     }
-    stagingBuffer.copy(std::span<const std::byte>(pixels), 0);
+    stagingBuffer.write(std::span<const std::byte>(pixels), 0);
 
     // Create destination image
     auto image = gpu.allocator->create_image_2D(
@@ -176,7 +176,7 @@ TEST(TransferTest, CopyImageToBuffer) {
         sourcePixels[i * 4 + 2] = static_cast<std::byte>(128);      // B
         sourcePixels[i * 4 + 3] = static_cast<std::byte>(255);      // A
     }
-    stagingBufferSrc.copy(std::span<const std::byte>(sourcePixels), 0);
+    stagingBufferSrc.write(std::span<const std::byte>(sourcePixels), 0);
 
     // First, copy buffer to image
     auto cmdPool = vw::CommandPoolBuilder(gpu.device).build();
@@ -211,7 +211,7 @@ TEST(TransferTest, CopyImageToBuffer) {
     gpu.queue().submit({}, {}, {}).wait();
 
     // Verify the data matches
-    auto retrieved = stagingBufferDst.as_vector(0, bufferSize);
+    auto retrieved = stagingBufferDst.read_as_vector(0, bufferSize);
     ASSERT_EQ(retrieved.size(), sourcePixels.size());
 
     for (size_t i = 0; i < sourcePixels.size(); ++i) {
@@ -253,7 +253,7 @@ TEST(TransferTest, BlitImage) {
         srcPixels[i * 4 + 2] = static_cast<std::byte>(0);    // B
         srcPixels[i * 4 + 3] = static_cast<std::byte>(255);  // A
     }
-    stagingBuffer.copy(std::span<const std::byte>(srcPixels), 0);
+    stagingBuffer.write(std::span<const std::byte>(srcPixels), 0);
 
     auto cmdPool = vw::CommandPoolBuilder(gpu.device).build();
     auto cmd1 = cmdPool.allocate(1)[0];
@@ -316,7 +316,7 @@ TEST(TransferTest, CopyImageToBufferAndSaveToDisk) {
             sourcePixels[i * 4 + 3] = static_cast<std::byte>(255);                 // A opaque
         }
     }
-    stagingBufferSrc.copy(std::span<const std::byte>(sourcePixels), 0);
+    stagingBufferSrc.write(std::span<const std::byte>(sourcePixels), 0);
 
     // Copy buffer to image
     auto cmdPool = vw::CommandPoolBuilder(gpu.device).build();
@@ -350,7 +350,7 @@ TEST(TransferTest, CopyImageToBufferAndSaveToDisk) {
     gpu.queue().submit({}, {}, {}).wait();
 
     // Get pixel data and save to file
-    auto retrievedPixels = stagingBufferDst.as_vector(0, bufferSize);
+    auto retrievedPixels = stagingBufferDst.read_as_vector(0, bufferSize);
 
     // Save to a temporary file
     std::filesystem::path tempPath = std::filesystem::temp_directory_path() / "transfer_test_output.png";
@@ -390,7 +390,7 @@ TEST(TransferTest, MultipleTransferOperations) {
 
     // Fill buffer1
     std::vector<float> data1 = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f};
-    buffer1.copy(std::span<const float>(data1), 0);
+    buffer1.write(std::span<const float>(data1), 0);
 
     auto cmdPool = vw::CommandPoolBuilder(gpu.device).build();
     auto cmd = cmdPool.allocate(1)[0];
@@ -411,8 +411,8 @@ TEST(TransferTest, MultipleTransferOperations) {
     gpu.queue().submit({}, {}, {}).wait();
 
     // Verify both buffers
-    auto retrieved2 = buffer2.as_vector(0, data1.size());
-    auto retrieved3 = buffer3.as_vector(0, data1.size());
+    auto retrieved2 = buffer2.read_as_vector(0, data1.size());
+    auto retrieved3 = buffer3.read_as_vector(0, data1.size());
 
     for (size_t i = 0; i < data1.size(); ++i) {
         EXPECT_FLOAT_EQ(retrieved2[i], data1[i]) << "Buffer2 mismatch at index " << i;

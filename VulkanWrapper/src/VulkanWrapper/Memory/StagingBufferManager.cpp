@@ -89,7 +89,7 @@ StagingBufferManager::stage_image_from_path(const std::filesystem::path &path,
     };
 
     m_transfer_functions.emplace_back(function);
-    staging_buffer->copy(img_description.pixels, offset);
+    staging_buffer->write(img_description.pixels, offset);
 
     auto image_view = ImageViewBuilder(m_device, image)
                           .setImageType(vk::ImageViewType::e2D)

@@ -73,7 +73,7 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
         , m_descriptor_pool(create_descriptor_pool()) {
         // Initialize AO samples buffer
         auto samples = generate_ao_samples();
-        m_ao_samples_buffer.copy(samples, 0);
+        m_ao_samples_buffer.write(samples, 0);
     }
 
     /**

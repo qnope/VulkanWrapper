@@ -29,7 +29,7 @@ TEST(UniformBufferAllocatorTest, CopyToChunk) {
     ASSERT_TRUE(chunk.has_value());
     
     float value = 123.456f;
-    chunk->copy(value);
+    chunk->write(value);
     SUCCEED();
 }
 
@@ -41,11 +41,11 @@ TEST(UniformBufferAllocatorTest, AllocateAndCopyFloat) {
     ASSERT_TRUE(chunk.has_value());
     
     float value = 123.456f;
-    chunk->copy(value);
+    chunk->write(value);
     
     const auto& buffer = uboAllocator.buffer_ref();
     // Read only sizeof(float) bytes, not the aligned size
-    auto data = buffer->as_vector(static_cast<std::size_t>(chunk->offset), static_cast<std::size_t>(sizeof(float)));
+    auto data = buffer->read_as_vector(static_cast<std::size_t>(chunk->offset), static_cast<std::size_t>(sizeof(float)));
     
     ASSERT_EQ(data.size(), sizeof(float));
     float loadedValue;
@@ -79,16 +79,16 @@ TEST(UniformBufferAllocatorTest, AllocateSameStructureMultipleTimes) {
     TestStruct value2{4.0f, 5.0f, 6.0f, 200};
     TestStruct value3{7.0f, 8.0f, 9.0f, 300};
     
-    chunk1->copy(value1);
-    chunk2->copy(value2);
-    chunk3->copy(value3);
+    chunk1->write(value1);
+    chunk2->write(value2);
+    chunk3->write(value3);
     
     // Retrieve and verify each one
     const auto& buffer = uboAllocator.buffer_ref();
     
-    auto data1 = buffer->as_vector(static_cast<std::size_t>(chunk1->offset), sizeof(TestStruct));
-    auto data2 = buffer->as_vector(static_cast<std::size_t>(chunk2->offset), sizeof(TestStruct));
-    auto data3 = buffer->as_vector(static_cast<std::size_t>(chunk3->offset), sizeof(TestStruct));
+    auto data1 = buffer->read_as_vector(static_cast<std::size_t>(chunk1->offset), sizeof(TestStruct));
+    auto data2 = buffer->read_as_vector(static_cast<std::size_t>(chunk2->offset), sizeof(TestStruct));
+    auto data3 = buffer->read_as_vector(static_cast<std::size_t>(chunk3->offset), sizeof(TestStruct));
     
     ASSERT_EQ(data1.size(), sizeof(TestStruct));
     ASSERT_EQ(data2.size(), sizeof(TestStruct));
@@ -155,16 +155,16 @@ TEST(UniformBufferAllocatorTest, AllocateDifferentStructures) {
         12345
     };
     
-    chunk1->copy(value1);
-    chunk2->copy(value2);
-    chunk3->copy(value3);
+    chunk1->write(value1);
+    chunk2->write(value2);
+    chunk3->write(value3);
     
     // Retrieve and verify each one
     const auto& buffer = uboAllocator.buffer_ref();
     
-    auto data1 = buffer->as_vector(static_cast<std::size_t>(chunk1->offset), sizeof(SmallStruct));
-    auto data2 = buffer->as_vector(static_cast<std::size_t>(chunk2->offset), sizeof(MediumStruct));
-    auto data3 = buffer->as_vector(static_cast<std::size_t>(chunk3->offset), sizeof(LargeStruct));
+    auto data1 = buffer->read_as_vector(static_cast<std::size_t>(chunk1->offset), sizeof(SmallStruct));
+    auto data2 = buffer->read_as_vector(static_cast<std::size_t>(chunk2->offset), sizeof(MediumStruct));
+    auto data3 = buffer->read_as_vector(static_cast<std::size_t>(chunk3->offset), sizeof(LargeStruct));
     
     ASSERT_EQ(data1.size(), sizeof(SmallStruct));
     ASSERT_EQ(data2.size(), sizeof(MediumStruct));
@@ -217,11 +217,11 @@ TEST(UniformBufferAllocatorTest, AllocateSameStructureWithVector) {
     }
     
     // Copy the entire vector
-    chunk->copy(std::span<const Vec3>(values));
+    chunk->write(std::span<const Vec3>(values));
     
     // Retrieve using as_vector
     const auto& buffer = uboAllocator.buffer_ref();
-    auto data = buffer->as_vector(static_cast<std::size_t>(chunk->offset), count * sizeof(Vec3));
+    auto data = buffer->read_as_vector(static_cast<std::size_t>(chunk->offset), count * sizeof(Vec3));
     
     ASSERT_EQ(data.size(), count * sizeof(Vec3));
     

@@ -90,7 +90,7 @@ class DeferredRenderingManager {
         const auto &scene = m_ray_traced_scene.scene();
 
         // Read UBO data for matrices
-        auto ubo_data = uniform_buffer.as_vector(0, 1)[0];
+        auto ubo_data = uniform_buffer.read_as_vector(0, 1)[0];
 
         // 1. Z-Pass: depth prepass
         auto depth_view = m_zpass->execute(cmd, tracker, width, height,
