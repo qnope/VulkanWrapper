@@ -37,28 +37,28 @@ TEST(BufferTest, CreateHostVisibleBuffer) {
     SUCCEED();
 }
 
-TEST(BufferTest, CopySingleElementToHostVisibleBuffer) {
+TEST(BufferTest, WriteSingleElementToHostVisibleBuffer) {
     auto &gpu = vw::tests::create_gpu();
     using HostUniformBuffer = vw::Buffer<float, true, vw::UniformBufferUsage>;
     auto buffer = vw::create_buffer<HostUniformBuffer>(*gpu.allocator, 10);
 
     float value = 42.5f;
-    buffer.copy(value, 0);
+    buffer.write(value, 0);
 
-    auto retrieved = buffer.as_vector(0, 1);
+    auto retrieved = buffer.read_as_vector(0, 1);
     ASSERT_EQ(retrieved.size(), 1);
     EXPECT_FLOAT_EQ(retrieved[0], value);
 }
 
-TEST(BufferTest, CopyMultipleElementsToHostVisibleBuffer) {
+TEST(BufferTest, WriteMultipleElementsToHostVisibleBuffer) {
     auto &gpu = vw::tests::create_gpu();
     using HostUniformBuffer = vw::Buffer<float, true, vw::UniformBufferUsage>;
     auto buffer = vw::create_buffer<HostUniformBuffer>(*gpu.allocator, 100);
 
     std::vector<float> values = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f};
-    buffer.copy(std::span<const float>(values), 0);
+    buffer.write(std::span<const float>(values), 0);
 
-    auto retrieved = buffer.as_vector(0, values.size());
+    auto retrieved = buffer.read_as_vector(0, values.size());
     ASSERT_EQ(retrieved.size(), values.size());
 
     for (size_t i = 0; i < values.size(); ++i) {
@@ -66,7 +66,7 @@ TEST(BufferTest, CopyMultipleElementsToHostVisibleBuffer) {
     }
 }
 
-TEST(BufferTest, CopyWithOffset) {
+TEST(BufferTest, WriteWithOffset) {
     auto &gpu = vw::tests::create_gpu();
     using HostUniformBuffer = vw::Buffer<int32_t, true, vw::UniformBufferUsage>;
     auto buffer = vw::create_buffer<HostUniformBuffer>(*gpu.allocator, 20);
@@ -74,11 +74,11 @@ TEST(BufferTest, CopyWithOffset) {
     std::vector<int32_t> values1 = {10, 20, 30};
     std::vector<int32_t> values2 = {40, 50, 60};
 
-    buffer.copy(std::span<const int32_t>(values1), 0);
-    buffer.copy(std::span<const int32_t>(values2), 5);
+    buffer.write(std::span<const int32_t>(values1), 0);
+    buffer.write(std::span<const int32_t>(values2), 5);
 
-    auto retrieved1 = buffer.as_vector(0, 3);
-    auto retrieved2 = buffer.as_vector(5, 3);
+    auto retrieved1 = buffer.read_as_vector(0, 3);
+    auto retrieved2 = buffer.read_as_vector(5, 3);
 
     ASSERT_EQ(retrieved1.size(), 3);
     ASSERT_EQ(retrieved2.size(), 3);
@@ -103,9 +103,9 @@ TEST(BufferTest, CreateBufferWithStruct) {
     EXPECT_EQ(buffer.size(), 50);
 
     DataStruct v{1.0f, 2.0f, 3.0f, 0.5f, 0.5f, 0.5f};
-    buffer.copy(v, 0);
+    buffer.write(v, 0);
 
-    auto retrieved = buffer.as_vector(0, 1);
+    auto retrieved = buffer.read_as_vector(0, 1);
     ASSERT_EQ(retrieved.size(), 1);
 
     EXPECT_FLOAT_EQ(retrieved[0].x, v.x);
@@ -122,11 +122,11 @@ TEST(BufferTest, MoveBuffer) {
     auto buffer1 = vw::create_buffer<HostUniformBuffer>(*gpu.allocator, 10);
 
     float value = 123.456f;
-    buffer1.copy(value, 0);
+    buffer1.write(value, 0);
 
     auto buffer2 = std::move(buffer1);
 
-    auto retrieved = buffer2.as_vector(0, 1);
+    auto retrieved = buffer2.read_as_vector(0, 1);
     ASSERT_EQ(retrieved.size(), 1);
     EXPECT_FLOAT_EQ(retrieved[0], value);
 }
@@ -141,15 +141,15 @@ TEST(BufferTest, CreateLargeBuffer) {
     EXPECT_EQ(buffer.size_bytes(), largeSize * sizeof(float));
 }
 
-TEST(BufferTest, GenericCopy) {
+TEST(BufferTest, WriteBytes) {
     auto &gpu = vw::tests::create_gpu();
     using HostByteBuffer = vw::Buffer<std::byte, true, vw::UniformBufferUsage>;
     auto buffer = vw::create_buffer<HostByteBuffer>(*gpu.allocator, 100);
 
     std::vector<uint32_t> data = {0x12345678, 0xABCDEF00, 0xDEADBEEF};
-    buffer.generic_copy(std::span<const uint32_t>(data), 0);
+    buffer.write_bytes(std::span<const uint32_t>(data), 0);
 
-    auto retrieved = buffer.as_vector(0, data.size() * sizeof(uint32_t));
+    auto retrieved = buffer.read_as_vector(0, data.size() * sizeof(uint32_t));
 
     std::vector<uint32_t> retrieved_data(data.size());
     std::memcpy(retrieved_data.data(), retrieved.data(),

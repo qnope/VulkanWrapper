@@ -259,7 +259,7 @@ void Transfer::saveToFile(
     queue.submit({}, {}, {}).wait();
 
     // Get pixel data
-    auto pixels = stagingBuffer.as_vector(0, bufferSize);
+    auto pixels = stagingBuffer.read_as_vector(0, bufferSize);
 
     // Check if we need to convert BGRA to RGBA
     // Common BGRA formats used by swapchains

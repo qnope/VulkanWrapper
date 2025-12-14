@@ -26,7 +26,7 @@ class StagingBufferManager {
         static_assert((Usage & VK_BUFFER_USAGE_TRANSFER_DST_BIT) ==
                       VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 
-        staging_buffer->generic_copy(data, offset_src);
+        staging_buffer->write_bytes(data, offset_src);
 
         auto function = [src_buffer_handle = staging_buffer->handle(), &buffer,
                          size = data.size_bytes(),

@@ -33,7 +33,7 @@ createUbo(const vw::Allocator &allocator) {
     auto buffer =
         vw::create_buffer<UBOData, true, vw::UniformBufferUsage>(allocator, 1);
     UBOData data;
-    buffer.copy(data, 0);
+    buffer.write(data, 0);
     return buffer;
 }
 

@@ -29,8 +29,8 @@ vk::DeviceAddress BufferBase::device_address() const {
     return result;
 }
 
-void BufferBase::generic_copy(const void *data, VkDeviceSize size,
-                              VkDeviceSize offset) {
+void BufferBase::write_bytes(const void *data, VkDeviceSize size,
+                             VkDeviceSize offset) {
     if (!m_data || !m_data->m_allocation) {
         throw LogicException::invalid_state("Buffer has invalid allocation");
     }
@@ -43,7 +43,7 @@ void BufferBase::generic_copy(const void *data, VkDeviceSize size,
               "Failed to copy memory to allocation");
 }
 
-std::vector<std::byte> BufferBase::generic_as_vector(VkDeviceSize offset, VkDeviceSize size) const {
+std::vector<std::byte> BufferBase::read_bytes(VkDeviceSize offset, VkDeviceSize size) const {
     std::vector<std::byte> result(size);
     check_vma(vmaCopyAllocationToMemory(m_data->m_allocator->handle(),
                                         m_data->m_allocation, offset,

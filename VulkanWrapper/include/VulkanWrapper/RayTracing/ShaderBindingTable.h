@@ -38,14 +38,14 @@ class ShaderBindingTable {
     void add_miss_record(const ShaderBindingTableHandle &handle,
                          const auto &...object) {
         ShaderBindingTableRecord record{handle, object...};
-        m_sbt_ray_generation_and_miss_buffer.copy(record,
+        m_sbt_ray_generation_and_miss_buffer.write(record,
                                                   m_number_raygen_miss++);
     }
 
     void add_hit_record(const ShaderBindingTableHandle &handle,
                         const auto &...object) {
         ShaderBindingTableRecord record{handle, object...};
-        m_sbt_closest_hit_buffer.copy(record, m_number_hit++);
+        m_sbt_closest_hit_buffer.write(record, m_number_hit++);
     }
 
     [[nodiscard]] vk::StridedDeviceAddressRegionKHR raygen_region() const;

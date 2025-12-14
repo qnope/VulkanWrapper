@@ -66,7 +66,7 @@ TEST(StagingBufferManagerTest, TransferDataToDeviceBuffer) {
     readback_fence.wait();
 
     // Verify the data
-    auto retrieved = host_buffer.as_vector(0, test_data.size());
+    auto retrieved = host_buffer.read_as_vector(0, test_data.size());
     ASSERT_EQ(retrieved.size(), test_data.size());
 
     for (size_t i = 0; i < test_data.size(); ++i) {
@@ -125,7 +125,7 @@ TEST(StagingBufferManagerTest, TransferIntegerData) {
     auto readback_fence = queue.submit({}, {}, {});
     readback_fence.wait();
 
-    auto retrieved = host_buffer.as_vector(0, test_data.size());
+    auto retrieved = host_buffer.read_as_vector(0, test_data.size());
     ASSERT_EQ(retrieved.size(), test_data.size());
 
     for (size_t i = 0; i < test_data.size(); ++i) {
@@ -184,7 +184,7 @@ TEST(StagingBufferManagerTest, TransferDoubleData) {
     auto readback_fence = queue.submit({}, {}, {});
     readback_fence.wait();
 
-    auto retrieved = host_buffer.as_vector(0, test_data.size());
+    auto retrieved = host_buffer.read_as_vector(0, test_data.size());
     ASSERT_EQ(retrieved.size(), test_data.size());
 
     for (size_t i = 0; i < test_data.size(); ++i) {
@@ -258,7 +258,7 @@ TEST(StagingBufferManagerTest, TransferSimpleStructData) {
     auto readback_fence = queue.submit({}, {}, {});
     readback_fence.wait();
 
-    auto retrieved = host_buffer.as_vector(0, test_data.size());
+    auto retrieved = host_buffer.read_as_vector(0, test_data.size());
     ASSERT_EQ(retrieved.size(), test_data.size());
 
     for (size_t i = 0; i < test_data.size(); ++i) {
@@ -345,7 +345,7 @@ TEST(StagingBufferManagerTest, TransferComplexStructData) {
     auto readback_fence = queue.submit({}, {}, {});
     readback_fence.wait();
 
-    auto retrieved = host_buffer.as_vector(0, test_data.size());
+    auto retrieved = host_buffer.read_as_vector(0, test_data.size());
     ASSERT_EQ(retrieved.size(), test_data.size());
 
     for (size_t i = 0; i < test_data.size(); ++i) {
@@ -407,7 +407,7 @@ TEST(StagingBufferManagerTest, TransferWithOffset) {
     auto readback_fence = queue.submit({}, {}, {});
     readback_fence.wait();
 
-    auto retrieved = host_buffer.as_vector(0, 20);
+    auto retrieved = host_buffer.read_as_vector(0, 20);
 
     // Verify first transfer
     for (size_t i = 0; i < first_data.size(); ++i) {
@@ -480,9 +480,9 @@ TEST(StagingBufferManagerTest, TransferMultipleSequential) {
     readback_fence.wait();
 
     // Verify all buffers
-    auto retrieved1 = host_buffer1.as_vector(0, 5);
-    auto retrieved2 = host_buffer2.as_vector(0, 5);
-    auto retrieved3 = host_buffer3.as_vector(0, 5);
+    auto retrieved1 = host_buffer1.read_as_vector(0, 5);
+    auto retrieved2 = host_buffer2.read_as_vector(0, 5);
+    auto retrieved3 = host_buffer3.read_as_vector(0, 5);
 
     for (size_t i = 0; i < 5; ++i) {
         EXPECT_FLOAT_EQ(retrieved1[i], data1[i]) << "Buffer1 mismatch at index " << i;
@@ -543,7 +543,7 @@ TEST(StagingBufferManagerTest, TransferLargeDataSet) {
     auto readback_fence = queue.submit({}, {}, {});
     readback_fence.wait();
 
-    auto retrieved = host_buffer.as_vector(0, element_count);
+    auto retrieved = host_buffer.read_as_vector(0, element_count);
     ASSERT_EQ(retrieved.size(), test_data.size());
 
     // Verify first 100 elements

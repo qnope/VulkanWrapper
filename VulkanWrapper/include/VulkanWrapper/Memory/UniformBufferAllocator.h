@@ -30,19 +30,19 @@ struct UniformBufferChunk {
         return vk::DescriptorBufferInfo(handle, offset, size);
     }
 
-    void copy(const T& value) {
+    void write(const T& value) {
         if (!buffer_ref) {
             throw LogicException::null_pointer("buffer reference");
         }
         BufferBase* base_ptr = static_cast<BufferBase*>(buffer_ref.get());
-        base_ptr->generic_copy(&value, sizeof(T), offset);
+        base_ptr->write_bytes(&value, sizeof(T), offset);
     }
 
-    void copy(std::span<const T> data) {
+    void write(std::span<const T> data) {
         if (!buffer_ref) {
             throw LogicException::null_pointer("buffer reference");
         }
-        static_cast<BufferBase*>(buffer_ref.get())->generic_copy(data.data(), data.size_bytes(), offset);
+        static_cast<BufferBase*>(buffer_ref.get())->write_bytes(data.data(), data.size_bytes(), offset);
     }
 };
 

@@ -230,7 +230,7 @@ TEST_F(ScreenSpacePassTest, ClearImageDiagnostic) {
     queue->submit({}, {}, {}).wait();
 
     // Verify output - should be solid red
-    auto pixels = stagingBuffer.as_vector(0, bufferSize);
+    auto pixels = stagingBuffer.read_as_vector(0, bufferSize);
 
     EXPECT_EQ(static_cast<uint8_t>(pixels[0]), 255) << "R should be 255";
     EXPECT_EQ(static_cast<uint8_t>(pixels[1]), 0) << "G should be 0";
@@ -304,7 +304,7 @@ TEST_F(ScreenSpacePassTest, DynamicRenderingClearDiagnostic) {
     queue->submit({}, {}, {}).wait();
 
     // Verify output - should be solid green
-    auto pixels = stagingBuffer.as_vector(0, bufferSize);
+    auto pixels = stagingBuffer.read_as_vector(0, bufferSize);
 
     EXPECT_EQ(static_cast<uint8_t>(pixels[0]), 0) << "R should be 0";
     EXPECT_EQ(static_cast<uint8_t>(pixels[1]), 255) << "G should be 255";
@@ -394,7 +394,7 @@ TEST_F(ScreenSpacePassTest, RenderSolidColor) {
     queue->submit({}, {}, {}).wait();
 
     // Verify output - should be solid red
-    auto pixels = stagingBuffer.as_vector(0, bufferSize);
+    auto pixels = stagingBuffer.read_as_vector(0, bufferSize);
 
     // Check first pixel is red (R=255, G=0, B=0, A=255)
     EXPECT_EQ(static_cast<uint8_t>(pixels[0]), 255) << "R should be 255";
@@ -503,7 +503,7 @@ TEST_F(ScreenSpacePassTest, RenderWithPushConstants) {
     queue->submit({}, {}, {}).wait();
 
     // Verify output - should be solid green
-    auto pixels = stagingBuffer.as_vector(0, bufferSize);
+    auto pixels = stagingBuffer.read_as_vector(0, bufferSize);
 
     EXPECT_EQ(static_cast<uint8_t>(pixels[0]), 0) << "R should be 0";
     EXPECT_EQ(static_cast<uint8_t>(pixels[1]), 255) << "G should be 255";
@@ -587,7 +587,7 @@ TEST_F(ScreenSpacePassTest, RenderUVGradient) {
     queue->submit({}, {}, {}).wait();
 
     // Verify UV gradient
-    auto pixels = stagingBuffer.as_vector(0, bufferSize);
+    auto pixels = stagingBuffer.read_as_vector(0, bufferSize);
 
     // Check corners - note: pixel centers are at (x+0.5)/width, so corner pixels
     // don't have exactly 0 or 1 UV values. For 64x64:
@@ -673,7 +673,7 @@ TEST_F(ScreenSpacePassTest, RenderWithTextureInput) {
         bluePixels[i * 4 + 2] = static_cast<std::byte>(255);  // B
         bluePixels[i * 4 + 3] = static_cast<std::byte>(255);  // A
     }
-    inputStagingBuffer.copy(std::span<const std::byte>(bluePixels), 0);
+    inputStagingBuffer.write(std::span<const std::byte>(bluePixels), 0);
 
     // Upload input texture
     auto cmd1 = cmdPool->allocate(1)[0];
@@ -747,7 +747,7 @@ TEST_F(ScreenSpacePassTest, RenderWithTextureInput) {
     queue->submit({}, {}, {}).wait();
 
     // Verify output is blue (same as input)
-    auto pixels = outputStagingBuffer.as_vector(0, inputBufferSize);
+    auto pixels = outputStagingBuffer.read_as_vector(0, inputBufferSize);
 
     EXPECT_EQ(static_cast<uint8_t>(pixels[0]), 0) << "R should be 0";
     EXPECT_EQ(static_cast<uint8_t>(pixels[1]), 0) << "G should be 0";
