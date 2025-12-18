@@ -11,6 +11,7 @@ class CommandPool : public ObjectWithUniqueHandle<vk::UniqueCommandPool> {
 
   public:
     std::vector<vk::CommandBuffer> allocate(std::size_t number);
+    void reset(vk::CommandPoolResetFlags flags = {});
 
   private:
     CommandPool(std::shared_ptr<const Device> device,
@@ -22,10 +23,15 @@ class CommandPool : public ObjectWithUniqueHandle<vk::UniqueCommandPool> {
 class CommandPoolBuilder {
   public:
     CommandPoolBuilder(std::shared_ptr<const Device> device);
+
+    CommandPoolBuilder &&with_reset_command_buffer() &&;
+    CommandPoolBuilder &&transient() &&;
+
     CommandPool build() &&;
 
   private:
     std::shared_ptr<const Device> m_device;
+    vk::CommandPoolCreateFlags m_flags{};
 };
 
 } // namespace vw

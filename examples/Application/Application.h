@@ -21,6 +21,7 @@ class App {
     vw::Window window = vw::WindowBuilder(initializer)
                             .with_title("Vulkan Wrapper")
                             .sized(vw::Width(1980), vw::Height(1080))
+                            .resizable()
                             .build();
 
     std::shared_ptr<vw::Instance> instance =

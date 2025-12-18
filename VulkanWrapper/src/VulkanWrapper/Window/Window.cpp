@@ -13,12 +13,17 @@ void Window::WindowDeleter::operator()(SDL_Window *window) const noexcept {
 };
 
 Window::Window(std::shared_ptr<const SDL_Initializer> initializer, std::string_view name,
-               Width width, Height height)
+               Width width, Height height, bool resizable)
     : m_initializer{std::move(initializer)}
     , m_width{width}
     , m_height{height} {
+    SDL_WindowFlags flags = SDL_WINDOW_VULKAN;
+    if (resizable) {
+        flags |= SDL_WINDOW_RESIZABLE;
+    }
+
     auto *window = check_sdl(
-        SDL_CreateWindow(name.data(), int(width), int(height), SDL_WINDOW_VULKAN),
+        SDL_CreateWindow(name.data(), int(width), int(height), flags),
         "Failed to create SDL window");
 
     m_window.reset(window);
@@ -34,11 +39,26 @@ Surface Window::create_surface(const Instance &instance) const {
 }
 
 Swapchain Window::create_swapchain(std::shared_ptr<const Device> device,
-                                   vk::SurfaceKHR surface) const {
-    return SwapchainBuilder(std::move(device), surface, m_width, m_height).build();
+                                   vk::SurfaceKHR surface,
+                                   vk::SwapchainKHR oldSwapchain) const {
+    return SwapchainBuilder(std::move(device), surface, m_width, m_height)
+        .setOldSwapchain(oldSwapchain)
+        .build();
 }
 
 bool Window::is_close_requested() const noexcept { return m_closeRequested; }
+
+bool Window::is_resized() const noexcept { return m_resized; }
+
+void Window::reset_resize_flag() noexcept { m_resized = false; }
+
+Width Window::width() const noexcept { return m_width; }
+
+Height Window::height() const noexcept { return m_height; }
+
+vk::Extent2D Window::extent() const noexcept {
+    return vk::Extent2D{static_cast<uint32_t>(m_width), static_cast<uint32_t>(m_height)};
+}
 
 std::span<char const *const>
 Window::get_required_instance_extensions() noexcept {
@@ -54,6 +74,12 @@ void Window::update() noexcept {
         switch (event.type) {
         case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
             m_closeRequested = true;
+            break;
+        case SDL_EVENT_WINDOW_RESIZED:
+            m_width = Width(event.window.data1);
+            m_height = Height(event.window.data2);
+            m_resized = true;
+            break;
         default:
             break;
         }
@@ -74,8 +100,13 @@ WindowBuilder &&WindowBuilder::sized(Width width, Height height) && {
     return std::move(*this);
 }
 
+WindowBuilder &&WindowBuilder::resizable(bool value) && {
+    m_resizable = value;
+    return std::move(*this);
+}
+
 Window WindowBuilder::build() && {
-    return Window{std::move(initializer), name, width, height};
+    return Window{std::move(initializer), name, width, height, m_resizable};
 }
 
 } // namespace vw

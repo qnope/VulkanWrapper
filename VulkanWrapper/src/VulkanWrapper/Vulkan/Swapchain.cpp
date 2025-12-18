@@ -27,6 +27,10 @@ Width Swapchain::width() const noexcept { return m_width; }
 
 Height Swapchain::height() const noexcept { return m_height; }
 
+vk::Extent2D Swapchain::extent() const noexcept {
+    return vk::Extent2D{static_cast<uint32_t>(m_width), static_cast<uint32_t>(m_height)};
+}
+
 vk::Format Swapchain::format() const noexcept { return m_format; }
 
 std::span<const std::shared_ptr<const Image>>
@@ -36,11 +40,21 @@ Swapchain::images() const noexcept {
 
 int Swapchain::number_images() const noexcept { return m_images.size(); }
 
-uint64_t
+AcquireImageResult
 Swapchain::acquire_next_image(const Semaphore &semaphore) const noexcept {
-    return m_device->handle()
-        .acquireNextImageKHR(handle(), UINT64_MAX, semaphore.handle())
-        .value;
+    auto [result, index] = m_device->handle()
+        .acquireNextImageKHR(handle(), UINT64_MAX, semaphore.handle());
+
+    switch (result) {
+    case vk::Result::eSuccess:
+        return {index, AcquireResult::Success};
+    case vk::Result::eSuboptimalKHR:
+        return {index, AcquireResult::Suboptimal};
+    case vk::Result::eErrorOutOfDateKHR:
+        return {0, AcquireResult::OutOfDate};
+    default:
+        return {0, AcquireResult::OutOfDate};
+    }
 }
 
 SwapchainBuilder::SwapchainBuilder(std::shared_ptr<const Device> device,
@@ -62,6 +76,11 @@ SwapchainBuilder::SwapchainBuilder(std::shared_ptr<const Device> device,
         .setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
         .setClipped(1U)
         .setMinImageCount(3);
+}
+
+SwapchainBuilder &SwapchainBuilder::setOldSwapchain(vk::SwapchainKHR oldSwapchain) noexcept {
+    m_info.setOldSwapchain(oldSwapchain);
+    return *this;
 }
 
 Swapchain SwapchainBuilder::build() && {

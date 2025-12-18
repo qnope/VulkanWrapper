@@ -27,10 +27,18 @@ class Fence : public ObjectWithUniqueHandle<vk::UniqueFence> {
 
 class FenceBuilder {
     friend class Queue;
-    FenceBuilder(vk::Device device);
+
+  public:
+    FenceBuilder(std::shared_ptr<const Device> device);
+
+    FenceBuilder &&signaled() &&;
+
     Fence build() &&;
 
   private:
+    FenceBuilder(vk::Device device);
+
     vk::Device m_device;
+    vk::FenceCreateFlags m_flags{};
 };
 } // namespace vw

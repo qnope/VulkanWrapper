@@ -24,8 +24,16 @@ Fence::~Fence() {
 FenceBuilder::FenceBuilder(vk::Device device)
     : m_device{std::move(device)} {}
 
+FenceBuilder::FenceBuilder(std::shared_ptr<const Device> device)
+    : m_device{device->handle()} {}
+
+FenceBuilder &&FenceBuilder::signaled() && {
+    m_flags |= vk::FenceCreateFlagBits::eSignaled;
+    return std::move(*this);
+}
+
 Fence FenceBuilder::build() && {
-    const auto info = vk::FenceCreateInfo();
+    const auto info = vk::FenceCreateInfo().setFlags(m_flags);
 
     auto [result, fence] = m_device.createFenceUnique(info);
 

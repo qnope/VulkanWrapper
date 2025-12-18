@@ -7,6 +7,26 @@
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
 
 namespace vw {
+
+enum class AcquireResult {
+    Success,
+    OutOfDate,
+    Suboptimal
+};
+
+struct AcquireImageResult {
+    uint32_t imageIndex;
+    AcquireResult result;
+
+    [[nodiscard]] bool needs_recreation() const noexcept {
+        return result == AcquireResult::OutOfDate;
+    }
+
+    [[nodiscard]] bool is_suboptimal() const noexcept {
+        return result == AcquireResult::Suboptimal;
+    }
+};
+
 class Swapchain : public ObjectWithUniqueHandle<vk::UniqueSwapchainKHR> {
   public:
     Swapchain(std::shared_ptr<const Device> device,
@@ -15,6 +35,7 @@ class Swapchain : public ObjectWithUniqueHandle<vk::UniqueSwapchainKHR> {
 
     [[nodiscard]] Width width() const noexcept;
     [[nodiscard]] Height height() const noexcept;
+    [[nodiscard]] vk::Extent2D extent() const noexcept;
     [[nodiscard]] vk::Format format() const noexcept;
 
     [[nodiscard]] std::span<const std::shared_ptr<const Image>>
@@ -22,7 +43,7 @@ class Swapchain : public ObjectWithUniqueHandle<vk::UniqueSwapchainKHR> {
 
     [[nodiscard]] int number_images() const noexcept;
 
-    [[nodiscard]] uint64_t
+    [[nodiscard]] AcquireImageResult
     acquire_next_image(const Semaphore &semaphore) const noexcept;
 
   private:
@@ -37,6 +58,9 @@ class SwapchainBuilder {
   public:
     SwapchainBuilder(std::shared_ptr<const Device> device, vk::SurfaceKHR surface,
                      Width width, Height height) noexcept;
+
+    SwapchainBuilder &setOldSwapchain(vk::SwapchainKHR oldSwapchain) noexcept;
+
     Swapchain build() &&;
 
   private:
