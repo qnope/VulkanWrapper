@@ -1,19 +1,18 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
-
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Memory/BufferUsage.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
-#include <vk_mem_alloc.h>
 #include <cstring>
+#include <vk_mem_alloc.h>
 
 namespace vw {
 
 class BufferBase : public ObjectWithHandle<vk::Buffer> {
   public:
     BufferBase(std::shared_ptr<const Device> device,
-               std::shared_ptr<const Allocator> allocator,
-               vk::Buffer buffer, VmaAllocation allocation, VkDeviceSize size);
+               std::shared_ptr<const Allocator> allocator, vk::Buffer buffer,
+               VmaAllocation allocation, VkDeviceSize size);
 
     BufferBase(const BufferBase &) = delete;
     BufferBase &operator=(const BufferBase &) = delete;
@@ -25,7 +24,8 @@ class BufferBase : public ObjectWithHandle<vk::Buffer> {
     [[nodiscard]] vk::DeviceAddress device_address() const;
 
     void write_bytes(const void *data, VkDeviceSize size, VkDeviceSize offset);
-    [[nodiscard]] std::vector<std::byte> read_bytes(VkDeviceSize offset, VkDeviceSize size) const;
+    [[nodiscard]] std::vector<std::byte> read_bytes(VkDeviceSize offset,
+                                                    VkDeviceSize size) const;
 
     ~BufferBase();
 
@@ -57,7 +57,7 @@ class Buffer : public BufferBase {
         requires(HostVisible)
     {
         BufferBase::write_bytes(data.data(), data.size_bytes(),
-                                 offset * sizeof(T));
+                                offset * sizeof(T));
     }
 
     void write(const T &element, std::size_t offset)
@@ -69,17 +69,19 @@ class Buffer : public BufferBase {
     template <typename U>
     void write_bytes(std::span<const U> data, std::size_t offset) {
         BufferBase::write_bytes(data.data(), data.size_bytes(),
-                                 offset * sizeof(T));
+                                offset * sizeof(T));
     }
 
     [[nodiscard]] std::size_t size() const noexcept {
         return size_bytes() / sizeof(T);
     }
 
-    [[nodiscard]] std::vector<T> read_as_vector(std::size_t offset, std::size_t count) const
+    [[nodiscard]] std::vector<T> read_as_vector(std::size_t offset,
+                                                std::size_t count) const
         requires(HostVisible)
     {
-        auto bytes = BufferBase::read_bytes(offset * sizeof(T), count * sizeof(T));
+        auto bytes =
+            BufferBase::read_bytes(offset * sizeof(T), count * sizeof(T));
         std::vector<T> result(count);
         std::memcpy(result.data(), bytes.data(), bytes.size());
         return result;

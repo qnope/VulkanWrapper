@@ -360,6 +360,35 @@ namespace vw::tests {
 - **Dynamic dispatcher**: Configured via `3rd_party.h` (no global dispatcher)
 - **GLM config**: `GLM_FORCE_RADIANS`, `GLM_FORCE_DEPTH_ZERO_TO_ONE`
 
+### Code Formatting (clang-format)
+
+The project uses clang-format for consistent code formatting. Configuration is in `.clang-format` at the repository root.
+
+**Key formatting settings:**
+- Column limit: 80 characters
+- Indentation: 4 spaces (no tabs)
+- Pointer/reference alignment: Right (`int *ptr`, `int &ref`)
+- Brace style: Attach (K&R style)
+- Constructor initializers: Break before comma
+
+**Format all source files:**
+```bash
+# Using find + xargs (recommended)
+find . -type f \( -name "*.h" -o -name "*.cpp" \) ! -path "*/build*" ! -path "*/vcpkg*" -print0 | xargs -0 clang-format -i
+
+# Or format a single file
+clang-format -i path/to/file.cpp
+```
+
+**Check formatting without modifying:**
+```bash
+clang-format --dry-run -Werror path/to/file.cpp
+```
+
+**IDE integration:**
+- Most IDEs (CLion, VS Code, etc.) detect `.clang-format` automatically
+- Enable "Format on Save" for seamless formatting
+
 ### Development Workflow
 
 1. **Explore** the codebase to understand existing patterns

@@ -1,13 +1,12 @@
 #include "VulkanWrapper/Shader/ShaderCompiler.h"
+
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
 #include "VulkanWrapper/Utils/Error.h"
-
 #include <fstream>
 #include <map>
 #include <set>
-#include <sstream>
-
 #include <shaderc/shaderc.hpp>
+#include <sstream>
 
 namespace vw {
 
@@ -105,7 +104,8 @@ class VwIncluder : public shaderc::CompileOptions::IncluderInterface {
         shaderc_include_result result;
 
         IncludeData(std::string name, std::string cont)
-            : source_name(std::move(name)), content(std::move(cont)) {
+            : source_name(std::move(name))
+            , content(std::move(cont)) {
             result.source_name = source_name.c_str();
             result.source_name_length = source_name.size();
             result.content = content.c_str();
@@ -114,13 +114,13 @@ class VwIncluder : public shaderc::CompileOptions::IncluderInterface {
         }
     };
 
-public:
+  public:
     VwIncluder(const std::vector<std::filesystem::path> &include_paths,
                const IncludeMap &virtual_includes,
                std::set<std::filesystem::path> &included_files)
-        : m_include_paths(include_paths),
-          m_virtual_includes(virtual_includes),
-          m_included_files(included_files) {}
+        : m_include_paths(include_paths)
+        , m_virtual_includes(virtual_includes)
+        , m_included_files(included_files) {}
 
     shaderc_include_result *GetInclude(const char *requested_source,
                                        shaderc_include_type type,
@@ -128,10 +128,12 @@ public:
                                        size_t /*include_depth*/) override {
         bool is_system = (type == shaderc_include_type_standard);
         std::filesystem::path requester_path =
-            requesting_source ? std::filesystem::path(requesting_source) : std::filesystem::path();
+            requesting_source ? std::filesystem::path(requesting_source)
+                              : std::filesystem::path();
 
         // Try virtual includes first
-        if (auto it = m_virtual_includes.find(requested_source); it != m_virtual_includes.end()) {
+        if (auto it = m_virtual_includes.find(requested_source);
+            it != m_virtual_includes.end()) {
             m_included_files.insert(std::filesystem::path(it->first));
             return make_include_result(it->first, it->second);
         }
@@ -143,7 +145,8 @@ public:
             if (std::filesystem::exists(candidate)) {
                 auto canonical = std::filesystem::canonical(candidate);
                 m_included_files.insert(canonical);
-                return make_include_result(canonical.string(), read_file_contents(canonical));
+                return make_include_result(canonical.string(),
+                                           read_file_contents(canonical));
             }
         }
 
@@ -153,21 +156,25 @@ public:
             if (std::filesystem::exists(candidate)) {
                 auto canonical = std::filesystem::canonical(candidate);
                 m_included_files.insert(canonical);
-                return make_include_result(canonical.string(), read_file_contents(canonical));
+                return make_include_result(canonical.string(),
+                                           read_file_contents(canonical));
             }
         }
 
         // Not found - return error
-        return make_include_result("", "Include file not found: " + std::string(requested_source));
+        return make_include_result("", "Include file not found: " +
+                                           std::string(requested_source));
     }
 
     void ReleaseInclude(shaderc_include_result * /*result*/) override {
         // Data owned by m_includes, released when includer is destroyed
     }
 
-private:
-    shaderc_include_result *make_include_result(std::string path, std::string content) {
-        m_includes.push_back(std::make_unique<IncludeData>(std::move(path), std::move(content)));
+  private:
+    shaderc_include_result *make_include_result(std::string path,
+                                                std::string content) {
+        m_includes.push_back(
+            std::make_unique<IncludeData>(std::move(path), std::move(content)));
         return &m_includes.back()->result;
     }
 
@@ -190,19 +197,22 @@ struct ShaderCompiler::Impl {
     bool optimize = false;
 };
 
-ShaderCompiler::ShaderCompiler() : m_impl(std::make_unique<Impl>()) {}
+ShaderCompiler::ShaderCompiler()
+    : m_impl(std::make_unique<Impl>()) {}
 
 ShaderCompiler::~ShaderCompiler() = default;
 
 ShaderCompiler::ShaderCompiler(ShaderCompiler &&) noexcept = default;
 ShaderCompiler &ShaderCompiler::operator=(ShaderCompiler &&) noexcept = default;
 
-ShaderCompiler &ShaderCompiler::add_include_path(const std::filesystem::path &path) {
+ShaderCompiler &
+ShaderCompiler::add_include_path(const std::filesystem::path &path) {
     m_impl->includePaths.push_back(path);
     return *this;
 }
 
-ShaderCompiler &ShaderCompiler::add_include(std::string_view name, std::string_view content) {
+ShaderCompiler &ShaderCompiler::add_include(std::string_view name,
+                                            std::string_view content) {
     m_impl->virtualIncludes[std::string(name)] = std::string(content);
     return *this;
 }
@@ -217,7 +227,8 @@ ShaderCompiler &ShaderCompiler::set_target_vulkan_version(uint32_t version) {
     return *this;
 }
 
-ShaderCompiler &ShaderCompiler::add_macro(std::string_view name, std::string_view value) {
+ShaderCompiler &ShaderCompiler::add_macro(std::string_view name,
+                                          std::string_view value) {
     m_impl->macros.emplace_back(std::string(name), std::string(value));
     return *this;
 }
@@ -232,9 +243,9 @@ ShaderCompiler &ShaderCompiler::set_optimize(bool enable) {
     return *this;
 }
 
-ShaderCompilationResult ShaderCompiler::compile(std::string_view source,
-                                                vk::ShaderStageFlagBits stage,
-                                                std::string_view sourceName) const {
+ShaderCompilationResult
+ShaderCompiler::compile(std::string_view source, vk::ShaderStageFlagBits stage,
+                        std::string_view sourceName) const {
     shaderc::CompileOptions options;
 
     // Set target environment
@@ -267,16 +278,18 @@ ShaderCompilationResult ShaderCompiler::compile(std::string_view source,
     std::set<std::filesystem::path> included_files;
 
     // Set includer
-    options.SetIncluder(
-        std::make_unique<VwIncluder>(m_impl->includePaths, m_impl->virtualIncludes, included_files));
+    options.SetIncluder(std::make_unique<VwIncluder>(
+        m_impl->includePaths, m_impl->virtualIncludes, included_files));
 
     // Compile
     shaderc_shader_kind kind = to_shaderc_kind(stage);
     shaderc::SpvCompilationResult result = m_impl->compiler.CompileGlslToSpv(
-        source.data(), source.size(), kind, std::string(sourceName).c_str(), options);
+        source.data(), source.size(), kind, std::string(sourceName).c_str(),
+        options);
 
     if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
-        throw ShaderCompilationException(std::string(sourceName), stage, result.GetErrorMessage());
+        throw ShaderCompilationException(std::string(sourceName), stage,
+                                         result.GetErrorMessage());
     }
 
     std::vector<std::uint32_t> spirv(result.cbegin(), result.cend());
@@ -285,12 +298,14 @@ ShaderCompilationResult ShaderCompiler::compile(std::string_view source,
                                    .includedFiles = std::move(included_files)};
 }
 
-ShaderCompilationResult ShaderCompiler::compile_from_file(const std::filesystem::path &path) const {
+ShaderCompilationResult
+ShaderCompiler::compile_from_file(const std::filesystem::path &path) const {
     return compile_from_file(path, detect_stage_from_extension(path));
 }
 
-ShaderCompilationResult ShaderCompiler::compile_from_file(const std::filesystem::path &path,
-                                                          vk::ShaderStageFlagBits stage) const {
+ShaderCompilationResult
+ShaderCompiler::compile_from_file(const std::filesystem::path &path,
+                                  vk::ShaderStageFlagBits stage) const {
     std::string source = read_file_contents(path);
 
     // Add the file's directory to include paths for this compilation
@@ -304,8 +319,8 @@ ShaderCompilationResult ShaderCompiler::compile_from_file(const std::filesystem:
 
     // Add parent directory as first include path
     auto parent_dir = std::filesystem::canonical(path).parent_path();
-    compiler_copy.m_impl->includePaths.insert(compiler_copy.m_impl->includePaths.begin(),
-                                              parent_dir);
+    compiler_copy.m_impl->includePaths.insert(
+        compiler_copy.m_impl->includePaths.begin(), parent_dir);
 
     auto result = compiler_copy.compile(source, stage, path.string());
 
@@ -316,10 +331,8 @@ ShaderCompilationResult ShaderCompiler::compile_from_file(const std::filesystem:
 }
 
 std::shared_ptr<const ShaderModule> ShaderCompiler::compile_to_module(
-    std::shared_ptr<const Device> device,
-    std::string_view source,
-    vk::ShaderStageFlagBits stage,
-    std::string_view sourceName) const {
+    std::shared_ptr<const Device> device, std::string_view source,
+    vk::ShaderStageFlagBits stage, std::string_view sourceName) const {
     auto result = compile(source, stage, sourceName);
     return ShaderModule::create_from_spirv(std::move(device), result.spirv);
 }
@@ -331,35 +344,37 @@ std::shared_ptr<const ShaderModule> ShaderCompiler::compile_file_to_module(
     return ShaderModule::create_from_spirv(std::move(device), result.spirv);
 }
 
-vk::ShaderStageFlagBits ShaderCompiler::detect_stage_from_extension(
-    const std::filesystem::path &path) {
+vk::ShaderStageFlagBits
+ShaderCompiler::detect_stage_from_extension(const std::filesystem::path &path) {
     // Map of extensions to shader stages
     // Supports both single extension (.vert) and double extension (.vert.glsl)
-    static const std::map<std::string, vk::ShaderStageFlagBits> extension_map = {
-        // Standard extensions
-        {".vert", vk::ShaderStageFlagBits::eVertex},
-        {".frag", vk::ShaderStageFlagBits::eFragment},
-        {".comp", vk::ShaderStageFlagBits::eCompute},
-        {".geom", vk::ShaderStageFlagBits::eGeometry},
-        {".tesc", vk::ShaderStageFlagBits::eTessellationControl},
-        {".tese", vk::ShaderStageFlagBits::eTessellationEvaluation},
-        // Ray tracing extensions
-        {".rgen", vk::ShaderStageFlagBits::eRaygenKHR},
-        {".rahit", vk::ShaderStageFlagBits::eAnyHitKHR},
-        {".rchit", vk::ShaderStageFlagBits::eClosestHitKHR},
-        {".rmiss", vk::ShaderStageFlagBits::eMissKHR},
-        {".rint", vk::ShaderStageFlagBits::eIntersectionKHR},
-        {".rcall", vk::ShaderStageFlagBits::eCallableKHR},
-        // Mesh shader extensions
-        {".task", vk::ShaderStageFlagBits::eTaskEXT},
-        {".mesh", vk::ShaderStageFlagBits::eMeshEXT},
-    };
+    static const std::map<std::string, vk::ShaderStageFlagBits> extension_map =
+        {
+            // Standard extensions
+            {".vert", vk::ShaderStageFlagBits::eVertex},
+            {".frag", vk::ShaderStageFlagBits::eFragment},
+            {".comp", vk::ShaderStageFlagBits::eCompute},
+            {".geom", vk::ShaderStageFlagBits::eGeometry},
+            {".tesc", vk::ShaderStageFlagBits::eTessellationControl},
+            {".tese", vk::ShaderStageFlagBits::eTessellationEvaluation},
+            // Ray tracing extensions
+            {".rgen", vk::ShaderStageFlagBits::eRaygenKHR},
+            {".rahit", vk::ShaderStageFlagBits::eAnyHitKHR},
+            {".rchit", vk::ShaderStageFlagBits::eClosestHitKHR},
+            {".rmiss", vk::ShaderStageFlagBits::eMissKHR},
+            {".rint", vk::ShaderStageFlagBits::eIntersectionKHR},
+            {".rcall", vk::ShaderStageFlagBits::eCallableKHR},
+            // Mesh shader extensions
+            {".task", vk::ShaderStageFlagBits::eTaskEXT},
+            {".mesh", vk::ShaderStageFlagBits::eMeshEXT},
+        };
 
     std::string filename = path.filename().string();
 
     // Try to find stage extension in filename (handles .vert.glsl, etc.)
     for (const auto &[ext, stage] : extension_map) {
-        // Check if extension appears in filename (before any secondary extension)
+        // Check if extension appears in filename (before any secondary
+        // extension)
         auto pos = filename.find(ext);
         if (pos != std::string::npos) {
             // Make sure it's at the end or followed by another extension
@@ -377,8 +392,9 @@ vk::ShaderStageFlagBits ShaderCompiler::detect_stage_from_extension(
         return it->second;
     }
 
-    throw ShaderCompilationException(path.string(), vk::ShaderStageFlagBits::eVertex,
-                                     "Cannot detect shader stage from extension: " + extension);
+    throw ShaderCompilationException(
+        path.string(), vk::ShaderStageFlagBits::eVertex,
+        "Cannot detect shader stage from extension: " + extension);
 }
 
 } // namespace vw

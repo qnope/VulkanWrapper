@@ -23,8 +23,9 @@ static CommandPool create_command_pool(std::shared_ptr<const Device> device) {
     return CommandPoolBuilder(device).build();
 }
 
-StagingBufferManager::StagingBufferManager(std::shared_ptr<const Device> device,
-                                           std::shared_ptr<const Allocator> allocator)
+StagingBufferManager::StagingBufferManager(
+    std::shared_ptr<const Device> device,
+    std::shared_ptr<const Allocator> allocator)
     : m_device{device}
     , m_allocator{allocator}
     , m_command_pool(create_command_pool(device))

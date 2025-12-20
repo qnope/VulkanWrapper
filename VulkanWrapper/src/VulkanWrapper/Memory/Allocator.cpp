@@ -26,7 +26,8 @@ Allocator::Impl::~Impl() {
     }
 }
 
-Allocator::Allocator(std::shared_ptr<const Device> device, VmaAllocator allocator)
+Allocator::Allocator(std::shared_ptr<const Device> device,
+                     VmaAllocator allocator)
     : m_impl{std::make_shared<Impl>(std::move(device), allocator)} {}
 
 VmaAllocator Allocator::handle() const noexcept { return m_impl->allocator; }
@@ -89,7 +90,8 @@ BufferBase Allocator::allocate_buffer(VkDeviceSize size, bool host_visible,
                                  &allocation_info, DefaultBufferAlignment,
                                  &buffer, &allocation, nullptr);
 
-    return BufferBase{m_impl->device, shared_from_this(), buffer, allocation, size};
+    return BufferBase{m_impl->device, shared_from_this(), buffer, allocation,
+                      size};
 }
 
 AllocatorBuilder::AllocatorBuilder(std::shared_ptr<const Instance> instance,

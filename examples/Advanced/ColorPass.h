@@ -36,7 +36,8 @@ struct ColorPassOutput {
  * @brief Functional G-Buffer fill pass with lazy image allocation
  *
  * This pass lazily allocates its G-Buffer images on first execute() call.
- * Images are cached by (width, height, frame_index) and reused on subsequent calls.
+ * Images are cached by (width, height, frame_index) and reused on subsequent
+ * calls.
  */
 class ColorPass : public vw::Subpass<ColorPassSlot> {
   public:
@@ -55,7 +56,8 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
               std::span<const vk::Format> color_formats = default_color_formats)
         : Subpass(std::move(device), std::move(allocator))
         , m_color_formats(color_formats.begin(), color_formats.end())
-        , m_descriptor_pool(create_descriptor_pool(mesh_manager, depth_format)) {}
+        , m_descriptor_pool(
+              create_descriptor_pool(mesh_manager, depth_format)) {}
 
     /**
      * @brief Execute the G-Buffer fill pass
@@ -85,21 +87,21 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
                                     vk::ImageUsageFlagBits::eTransferSrc;
 
         // Lazy allocation of 5 G-Buffer images
-        const auto &color = get_or_create_image(
-            ColorPassSlot::Color, width, height, frame_index,
-            m_color_formats[0], usageFlags);
-        const auto &normal = get_or_create_image(
-            ColorPassSlot::Normal, width, height, frame_index,
-            m_color_formats[1], usageFlags);
-        const auto &tangent = get_or_create_image(
-            ColorPassSlot::Tangent, width, height, frame_index,
-            m_color_formats[2], usageFlags);
-        const auto &bitangent = get_or_create_image(
-            ColorPassSlot::Bitangent, width, height, frame_index,
-            m_color_formats[3], usageFlags);
-        const auto &position = get_or_create_image(
-            ColorPassSlot::Position, width, height, frame_index,
-            m_color_formats[4], usageFlags);
+        const auto &color =
+            get_or_create_image(ColorPassSlot::Color, width, height,
+                                frame_index, m_color_formats[0], usageFlags);
+        const auto &normal =
+            get_or_create_image(ColorPassSlot::Normal, width, height,
+                                frame_index, m_color_formats[1], usageFlags);
+        const auto &tangent =
+            get_or_create_image(ColorPassSlot::Tangent, width, height,
+                                frame_index, m_color_formats[2], usageFlags);
+        const auto &bitangent =
+            get_or_create_image(ColorPassSlot::Bitangent, width, height,
+                                frame_index, m_color_formats[3], usageFlags);
+        const auto &position =
+            get_or_create_image(ColorPassSlot::Position, width, height,
+                                frame_index, m_color_formats[4], usageFlags);
 
         vk::Extent2D extent{static_cast<uint32_t>(width),
                             static_cast<uint32_t>(height)};
@@ -194,18 +196,17 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
         auto descriptor_handle = descriptor_set.handle();
         std::span first_descriptor_sets = {&descriptor_handle, 1};
         for (const auto &instance : scene.instances()) {
-            m_mesh_renderer->draw_mesh(cmd, instance.mesh, first_descriptor_sets,
-                                       instance.transform);
+            m_mesh_renderer->draw_mesh(
+                cmd, instance.mesh, first_descriptor_sets, instance.transform);
         }
 
         cmd.endRendering();
 
-        return ColorPassOutput{
-            .color = color.view,
-            .normal = normal.view,
-            .tangent = tangent.view,
-            .bitangent = bitangent.view,
-            .position = position.view};
+        return ColorPassOutput{.color = color.view,
+                               .normal = normal.view,
+                               .tangent = tangent.view,
+                               .bitangent = bitangent.view,
+                               .position = position.view};
     }
 
   private:
@@ -236,35 +237,36 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
         auto fragment_colored = vw::ShaderModule::create_from_spirv_file(
             m_device, "Shaders/GBuffer/gbuffer_colored.spv");
 
-        auto create_pipeline = [&](std::shared_ptr<const vw::ShaderModule>
-                                       fragment,
-                                   std::shared_ptr<const vw::DescriptorSetLayout>
-                                       material_layout) {
-            auto pipelineLayout =
-                vw::PipelineLayoutBuilder(m_device)
-                    .with_descriptor_set_layout(m_descriptor_layout)
-                    .with_descriptor_set_layout(material_layout)
-                    .with_push_constant_range(
-                        vk::PushConstantRange()
-                            .setStageFlags(vk::ShaderStageFlagBits::eVertex)
-                            .setOffset(0)
-                            .setSize(sizeof(glm::mat4)))
-                    .build();
+        auto create_pipeline =
+            [&](std::shared_ptr<const vw::ShaderModule> fragment,
+                std::shared_ptr<const vw::DescriptorSetLayout>
+                    material_layout) {
+                auto pipelineLayout =
+                    vw::PipelineLayoutBuilder(m_device)
+                        .with_descriptor_set_layout(m_descriptor_layout)
+                        .with_descriptor_set_layout(material_layout)
+                        .with_push_constant_range(
+                            vk::PushConstantRange()
+                                .setStageFlags(vk::ShaderStageFlagBits::eVertex)
+                                .setOffset(0)
+                                .setSize(sizeof(glm::mat4)))
+                        .build();
 
-            vw::GraphicsPipelineBuilder builder(m_device, std::move(pipelineLayout));
-            builder.add_vertex_binding<vw::FullVertex3D>()
-                   .add_shader(vk::ShaderStageFlagBits::eVertex, vertexShader)
-                   .add_shader(vk::ShaderStageFlagBits::eFragment, fragment)
-                   .with_dynamic_viewport_scissor()
-                   .with_depth_test(false, vk::CompareOp::eEqual)
-                   .set_depth_format(depth_format);
+                vw::GraphicsPipelineBuilder builder(m_device,
+                                                    std::move(pipelineLayout));
+                builder.add_vertex_binding<vw::FullVertex3D>()
+                    .add_shader(vk::ShaderStageFlagBits::eVertex, vertexShader)
+                    .add_shader(vk::ShaderStageFlagBits::eFragment, fragment)
+                    .with_dynamic_viewport_scissor()
+                    .with_depth_test(false, vk::CompareOp::eEqual)
+                    .set_depth_format(depth_format);
 
-            for (auto format : m_color_formats) {
-                builder.add_color_attachment(format);
-            }
+                for (auto format : m_color_formats) {
+                    builder.add_color_attachment(format);
+                }
 
-            return builder.build();
-        };
+                return builder.build();
+            };
 
         auto textured_pipeline = create_pipeline(
             fragment_textured, mesh_manager.material_manager_map().layout(

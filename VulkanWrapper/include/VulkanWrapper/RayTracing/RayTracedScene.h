@@ -1,10 +1,10 @@
 #pragma once
 
 #include "VulkanWrapper/3rd_party.h"
+#include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Model/Scene.h"
 #include "VulkanWrapper/RayTracing/BottomLevelAccelerationStructure.h"
 #include "VulkanWrapper/RayTracing/TopLevelAccelerationStructure.h"
-#include "VulkanWrapper/fwd.h"
 #include <glm/glm.hpp>
 #include <memory>
 #include <optional>
@@ -32,8 +32,9 @@ class RayTracedScene {
     /// Add an instance of a mesh. The mesh geometry is automatically
     /// registered if not already known (deduplication via geometry hash).
     /// This also adds the mesh to the embedded Scene for rasterization.
-    [[nodiscard]] InstanceId add_instance(const Model::Mesh &mesh,
-                                          const glm::mat4 &transform = glm::mat4(1.0f));
+    [[nodiscard]] InstanceId
+    add_instance(const Model::Mesh &mesh,
+                 const glm::mat4 &transform = glm::mat4(1.0f));
 
     void set_transform(InstanceId instance_id, const glm::mat4 &transform);
 

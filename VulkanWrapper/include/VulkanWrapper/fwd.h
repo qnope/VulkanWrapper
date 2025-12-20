@@ -35,8 +35,7 @@ class Fence;
 
 class Allocator;
 class BufferBase;
-template <typename T, bool HostVisible, VkBufferUsageFlags Flags>
-class Buffer;
+template <typename T, bool HostVisible, VkBufferUsageFlags Flags> class Buffer;
 
 using IndexBuffer = Buffer<uint32_t, false, IndexBufferUsage>;
 

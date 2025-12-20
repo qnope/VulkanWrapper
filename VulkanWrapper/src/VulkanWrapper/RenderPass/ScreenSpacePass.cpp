@@ -19,7 +19,8 @@ std::shared_ptr<const Pipeline> create_screen_space_pipeline(
     PipelineLayoutBuilder pipeline_layout_builder(device);
 
     if (descriptor_set_layout) {
-        pipeline_layout_builder.with_descriptor_set_layout(descriptor_set_layout);
+        pipeline_layout_builder.with_descriptor_set_layout(
+            descriptor_set_layout);
     }
 
     for (const auto &pc : push_constants) {
@@ -29,16 +30,18 @@ std::shared_ptr<const Pipeline> create_screen_space_pipeline(
     auto pipeline_layout = pipeline_layout_builder.build();
 
     GraphicsPipelineBuilder builder(device, std::move(pipeline_layout));
-    builder.add_shader(vk::ShaderStageFlagBits::eVertex, std::move(vertex_shader))
-           .add_shader(vk::ShaderStageFlagBits::eFragment, std::move(fragment_shader))
-           .with_dynamic_viewport_scissor()
-           .with_topology(vk::PrimitiveTopology::eTriangleStrip)
-           .with_cull_mode(vk::CullModeFlagBits::eNone)
-           .add_color_attachment(color_format, blend);
+    builder
+        .add_shader(vk::ShaderStageFlagBits::eVertex, std::move(vertex_shader))
+        .add_shader(vk::ShaderStageFlagBits::eFragment,
+                    std::move(fragment_shader))
+        .with_dynamic_viewport_scissor()
+        .with_topology(vk::PrimitiveTopology::eTriangleStrip)
+        .with_cull_mode(vk::CullModeFlagBits::eNone)
+        .add_color_attachment(color_format, blend);
 
     if (depth_format != vk::Format::eUndefined) {
         builder.set_depth_format(depth_format)
-               .with_depth_test(false, depth_compare_op);
+            .with_depth_test(false, depth_compare_op);
     }
 
     return builder.build();

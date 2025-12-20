@@ -1,9 +1,9 @@
-#include <gtest/gtest.h>
-#include "VulkanWrapper/Image/Sampler.h"
 #include "utils/create_gpu.hpp"
+#include "VulkanWrapper/Image/Sampler.h"
+#include <gtest/gtest.h>
 
 TEST(SamplerTest, CreateSampler) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     auto sampler = vw::SamplerBuilder(gpu.device).build();
 
@@ -12,7 +12,7 @@ TEST(SamplerTest, CreateSampler) {
 }
 
 TEST(SamplerTest, CreateMultipleSamplers) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     auto sampler1 = vw::SamplerBuilder(gpu.device).build();
     auto sampler2 = vw::SamplerBuilder(gpu.device).build();
@@ -27,7 +27,7 @@ TEST(SamplerTest, CreateMultipleSamplers) {
 }
 
 TEST(SamplerTest, SamplerHandle) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     auto sampler = vw::SamplerBuilder(gpu.device).build();
 

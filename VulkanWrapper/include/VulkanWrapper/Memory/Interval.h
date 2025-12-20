@@ -12,9 +12,12 @@ struct BufferInterval {
     vk::DeviceSize offset;
     vk::DeviceSize size;
 
-    BufferInterval() : offset(0), size(0) {}
+    BufferInterval()
+        : offset(0)
+        , size(0) {}
     BufferInterval(vk::DeviceSize offset, vk::DeviceSize size)
-        : offset(offset), size(size) {}
+        : offset(offset)
+        , size(size) {}
 
     /**
      * Returns the end offset (exclusive) of this interval.
@@ -72,7 +75,8 @@ struct BufferInterval {
 struct ImageInterval {
     vk::ImageSubresourceRange range;
 
-    ImageInterval() : range() {}
+    ImageInterval()
+        : range() {}
     explicit ImageInterval(const vk::ImageSubresourceRange &range)
         : range(range) {}
 

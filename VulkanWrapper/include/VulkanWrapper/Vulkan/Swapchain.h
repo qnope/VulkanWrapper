@@ -1,6 +1,5 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
-
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Image/Image.h"
 #include "VulkanWrapper/Image/ImageView.h"
@@ -10,8 +9,8 @@ namespace vw {
 class Swapchain : public ObjectWithUniqueHandle<vk::UniqueSwapchainKHR> {
   public:
     Swapchain(std::shared_ptr<const Device> device,
-              vk::UniqueSwapchainKHR swapchain,
-              vk::Format format, Width width, Height height);
+              vk::UniqueSwapchainKHR swapchain, vk::Format format, Width width,
+              Height height);
 
     [[nodiscard]] Width width() const noexcept;
     [[nodiscard]] Height height() const noexcept;
@@ -25,8 +24,7 @@ class Swapchain : public ObjectWithUniqueHandle<vk::UniqueSwapchainKHR> {
 
     [[nodiscard]] int number_images() const noexcept;
 
-    [[nodiscard]] uint64_t
-    acquire_next_image(const Semaphore &semaphore) const;
+    [[nodiscard]] uint64_t acquire_next_image(const Semaphore &semaphore) const;
 
     void present(uint32_t index, const Semaphore &waitSemaphore) const;
 
@@ -41,9 +39,10 @@ class Swapchain : public ObjectWithUniqueHandle<vk::UniqueSwapchainKHR> {
 
 class SwapchainBuilder {
   public:
-    SwapchainBuilder(std::shared_ptr<const Device> device, vk::SurfaceKHR surface,
-                     Width width, Height height) noexcept;
-    SwapchainBuilder& with_old_swapchain(vk::SwapchainKHR old);
+    SwapchainBuilder(std::shared_ptr<const Device> device,
+                     vk::SurfaceKHR surface, Width width,
+                     Height height) noexcept;
+    SwapchainBuilder &with_old_swapchain(vk::SwapchainKHR old);
     Swapchain build();
 
   private:

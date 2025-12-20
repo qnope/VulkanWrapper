@@ -23,10 +23,9 @@ Swapchain::Swapchain(std::shared_ptr<const Device> device,
             vkImage, m_width, m_height, Depth(1), MipLevel(1), m_format,
             vk::ImageUsageFlagBits::eColorAttachment, nullptr, nullptr));
 
-        m_image_views.emplace_back(
-            ImageViewBuilder(m_device, image)
-                .setImageType(vk::ImageViewType::e2D)
-                .build());
+        m_image_views.emplace_back(ImageViewBuilder(m_device, image)
+                                       .setImageType(vk::ImageViewType::e2D)
+                                       .build());
     }
 }
 
@@ -48,10 +47,9 @@ Swapchain::image_views() const noexcept {
 
 int Swapchain::number_images() const noexcept { return m_images.size(); }
 
-uint64_t
-Swapchain::acquire_next_image(const Semaphore &semaphore) const {
-    auto [result, index] = m_device->handle()
-        .acquireNextImageKHR(handle(), UINT64_MAX, semaphore.handle());
+uint64_t Swapchain::acquire_next_image(const Semaphore &semaphore) const {
+    auto [result, index] = m_device->handle().acquireNextImageKHR(
+        handle(), UINT64_MAX, semaphore.handle());
 
     if (result == vk::Result::eErrorOutOfDateKHR ||
         result == vk::Result::eSuboptimalKHR) {
@@ -90,7 +88,7 @@ SwapchainBuilder::SwapchainBuilder(std::shared_ptr<const Device> device,
         .setMinImageCount(3);
 }
 
-SwapchainBuilder& SwapchainBuilder::with_old_swapchain(vk::SwapchainKHR old) {
+SwapchainBuilder &SwapchainBuilder::with_old_swapchain(vk::SwapchainKHR old) {
     m_info.setOldSwapchain(old);
     return *this;
 }

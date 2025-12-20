@@ -1,10 +1,9 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
-
 #include "VulkanWrapper/Command/CommandPool.h"
+#include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Memory/BufferList.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
-#include "VulkanWrapper/fwd.h"
 
 namespace vw::rt::as {
 
@@ -34,15 +33,15 @@ class BottomLevelAccelerationStructure
 
 class BottomLevelAccelerationStructureList {
   public:
-    BottomLevelAccelerationStructureList(std::shared_ptr<const Device> device,
-                                         std::shared_ptr<const Allocator> allocator);
+    BottomLevelAccelerationStructureList(
+        std::shared_ptr<const Device> device,
+        std::shared_ptr<const Allocator> allocator);
 
-    using AccelerationStructureBufferList =
-        BufferList<std::byte, false,
-                   VkBufferUsageFlags(vk::BufferUsageFlagBits::
-                                          eAccelerationStructureStorageKHR |
-                                      vk::BufferUsageFlagBits::
-                                          eShaderDeviceAddress)>;
+    using AccelerationStructureBufferList = BufferList<
+        std::byte, false,
+        VkBufferUsageFlags(
+            vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR |
+            vk::BufferUsageFlagBits::eShaderDeviceAddress)>;
 
     using ScratchBufferList =
         BufferList<std::byte, false,
@@ -54,7 +53,8 @@ class BottomLevelAccelerationStructureList {
     allocate_acceleration_structure_buffer(vk::DeviceSize size);
     ScratchBufferList::BufferInfo allocate_scratch_buffer(vk::DeviceSize size);
 
-    BottomLevelAccelerationStructure &add(BottomLevelAccelerationStructure &&blas);
+    BottomLevelAccelerationStructure &
+    add(BottomLevelAccelerationStructure &&blas);
     [[nodiscard]] std::vector<vk::DeviceAddress> device_addresses() const;
 
     vk::CommandBuffer command_buffer();
@@ -73,7 +73,8 @@ class BottomLevelAccelerationStructureList {
 
 class BottomLevelAccelerationStructureBuilder {
   public:
-    BottomLevelAccelerationStructureBuilder(std::shared_ptr<const Device> device);
+    BottomLevelAccelerationStructureBuilder(
+        std::shared_ptr<const Device> device);
 
     BottomLevelAccelerationStructureBuilder &
     add_geometry(const vk::AccelerationStructureGeometryKHR &geometry,

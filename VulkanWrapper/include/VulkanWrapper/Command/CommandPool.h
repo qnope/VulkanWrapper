@@ -1,6 +1,5 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
-
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
 
@@ -24,7 +23,7 @@ class CommandPoolBuilder {
     CommandPoolBuilder(std::shared_ptr<const Device> device);
 
     /** @brief Allow individual command buffers to be reset */
-    CommandPoolBuilder& with_reset_command_buffer();
+    CommandPoolBuilder &with_reset_command_buffer();
 
     CommandPool build();
 

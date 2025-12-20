@@ -1,7 +1,7 @@
-#include "VulkanWrapper/Vulkan/Instance.h"
+#include "VulkanWrapper/Utils/Error.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 #include "VulkanWrapper/Vulkan/DeviceFinder.h"
-#include "VulkanWrapper/Utils/Error.h"
+#include "VulkanWrapper/Vulkan/Instance.h"
 #include <gtest/gtest.h>
 
 TEST(InstanceTest, CreateInstance) {
@@ -41,15 +41,14 @@ TEST(InstanceTest, ValidationLayerException_ThrownImmediately) {
 
     // Try to create a buffer with size 0, which should throw immediately
     vk::BufferCreateInfo invalidBufferInfo;
-    invalidBufferInfo.setSize(0)  // Invalid: size must be > 0
+    invalidBufferInfo
+        .setSize(0) // Invalid: size must be > 0
         .setUsage(vk::BufferUsageFlagBits::eVertexBuffer)
         .setSharingMode(vk::SharingMode::eExclusive);
 
     // The exception should be thrown during the Vulkan call itself
-    EXPECT_THROW(
-        (void)device->handle().createBuffer(invalidBufferInfo),
-        vw::ValidationLayerException
-    );
+    EXPECT_THROW((void)device->handle().createBuffer(invalidBufferInfo),
+                 vw::ValidationLayerException);
 }
 
 TEST(InstanceTest, ValidationLayerException_ContainsCorrectInfo) {
@@ -76,8 +75,10 @@ TEST(InstanceTest, ValidationLayerException_ContainsCorrectInfo) {
         FAIL() << "Expected ValidationLayerException";
     } catch (const vw::ValidationLayerException &e) {
         // Verify the exception contains useful information
-        EXPECT_EQ(e.severity(), vk::DebugUtilsMessageSeverityFlagBitsEXT::eError);
-        EXPECT_TRUE(e.type() & vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation);
+        EXPECT_EQ(e.severity(),
+                  vk::DebugUtilsMessageSeverityFlagBitsEXT::eError);
+        EXPECT_TRUE(e.type() &
+                    vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation);
         EXPECT_FALSE(e.validation_message().empty());
 
         // The what() message should contain the validation message
@@ -105,7 +106,8 @@ TEST(InstanceTest, NoExceptionWhenCorrectUsage) {
 
     // Create a valid buffer - should not throw
     vk::BufferCreateInfo validBufferInfo;
-    validBufferInfo.setSize(1024)  // Valid size
+    validBufferInfo
+        .setSize(1024) // Valid size
         .setUsage(vk::BufferUsageFlagBits::eVertexBuffer)
         .setSharingMode(vk::SharingMode::eExclusive);
 

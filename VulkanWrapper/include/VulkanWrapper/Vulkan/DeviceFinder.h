@@ -1,6 +1,5 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
-
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Vulkan/PhysicalDevice.h"
 
@@ -10,11 +9,11 @@ class DeviceFinder {
   public:
     DeviceFinder(std::span<PhysicalDevice> physicalDevices) noexcept;
 
-    DeviceFinder& with_queue(vk::QueueFlags queueFlags);
-    DeviceFinder& with_presentation(vk::SurfaceKHR surface) noexcept;
-    DeviceFinder& with_synchronization_2() noexcept;
-    DeviceFinder& with_ray_tracing() noexcept;
-    DeviceFinder& with_dynamic_rendering() noexcept;
+    DeviceFinder &with_queue(vk::QueueFlags queueFlags);
+    DeviceFinder &with_presentation(vk::SurfaceKHR surface) noexcept;
+    DeviceFinder &with_synchronization_2() noexcept;
+    DeviceFinder &with_ray_tracing() noexcept;
+    DeviceFinder &with_dynamic_rendering() noexcept;
 
     std::shared_ptr<Device> build();
     std::optional<PhysicalDevice> get() noexcept;

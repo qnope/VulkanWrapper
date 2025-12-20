@@ -2,7 +2,6 @@
 
 #include "VulkanWrapper/Memory/AllocateBufferUtils.h"
 #include "VulkanWrapper/Vulkan/Device.h"
-#include <vulkan/vulkan.hpp>
 
 namespace vw::rt::as {
 
@@ -86,8 +85,8 @@ TopLevelAccelerationStructureBuilder::build(vk::CommandBuffer command_buffer) {
             primitive_count);
 
     // Allocate acceleration structure buffer
-    auto as_buffer = create_buffer<AccelerationStructureBuffer>(*m_allocator,
-        build_sizes.accelerationStructureSize);
+    auto as_buffer = create_buffer<AccelerationStructureBuffer>(
+        *m_allocator, build_sizes.accelerationStructureSize);
 
     // Create acceleration structure
     vk::AccelerationStructureCreateInfoKHR create_info;
@@ -108,8 +107,8 @@ TopLevelAccelerationStructureBuilder::build(vk::CommandBuffer command_buffer) {
         m_device->handle().getAccelerationStructureAddressKHR(address_info);
 
     // Allocate scratch buffer
-    auto scratch_buffer =
-        create_buffer<ScratchBuffer>(*m_allocator, build_sizes.buildScratchSize);
+    auto scratch_buffer = create_buffer<ScratchBuffer>(
+        *m_allocator, build_sizes.buildScratchSize);
 
     // Build acceleration structure
     build_info.setDstAccelerationStructure(*acceleration_structure);

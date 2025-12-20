@@ -1,14 +1,13 @@
 #pragma once
 
-#include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/3rd_party.h"
+#include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Image/Image.h"
 #include "VulkanWrapper/Image/ImageView.h"
 #include "VulkanWrapper/Memory/Allocator.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 #include <map>
 #include <memory>
-#include <vulkan/vulkan.hpp>
 
 namespace vw {
 
@@ -24,13 +23,14 @@ struct CachedImage {
  * @tparam SlotEnum Enumeration defining the image slots for this pass
  *
  * Each pass defines its own SlotEnum to identify its output images.
- * Images are lazily allocated on first use and cached by (slot, width, height, frame_index).
- * When dimensions change, old images with different dimensions are deleted.
+ * Images are lazily allocated on first use and cached by (slot, width, height,
+ * frame_index). When dimensions change, old images with different dimensions
+ * are deleted.
  */
-template <typename SlotEnum>
-class Subpass {
+template <typename SlotEnum> class Subpass {
   public:
-    Subpass(std::shared_ptr<Device> device, std::shared_ptr<Allocator> allocator)
+    Subpass(std::shared_ptr<Device> device,
+            std::shared_ptr<Allocator> allocator)
         : m_device(std::move(device))
         , m_allocator(std::move(allocator)) {}
 
@@ -45,9 +45,9 @@ class Subpass {
     /**
      * @brief Get or create an image for the given slot and dimensions
      *
-     * If an image with matching (slot, width, height, frame_index) exists, returns it.
-     * Otherwise, creates a new image and caches it.
-     * Images with different dimensions are removed from cache to avoid memory overhead.
+     * If an image with matching (slot, width, height, frame_index) exists,
+     * returns it. Otherwise, creates a new image and caches it. Images with
+     * different dimensions are removed from cache to avoid memory overhead.
      *
      * @param slot The image slot identifier
      * @param width Image width
@@ -78,15 +78,15 @@ class Subpass {
         });
 
         // Create new image
-        auto image = m_allocator->create_image_2D(width, height, false, format,
-                                                  usage);
+        auto image =
+            m_allocator->create_image_2D(width, height, false, format, usage);
 
         auto view = ImageViewBuilder(m_device, image)
                         .setImageType(vk::ImageViewType::e2D)
                         .build();
 
-        auto [inserted_it, success] =
-            m_image_cache.emplace(key, CachedImage{std::move(image), std::move(view)});
+        auto [inserted_it, success] = m_image_cache.emplace(
+            key, CachedImage{std::move(image), std::move(view)});
 
         return inserted_it->second;
     }

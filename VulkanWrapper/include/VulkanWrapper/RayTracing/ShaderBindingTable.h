@@ -1,6 +1,5 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
-
 #include "VulkanWrapper/Memory/Buffer.h"
 #include "VulkanWrapper/RayTracing/RayTracingPipeline.h"
 
@@ -39,7 +38,7 @@ class ShaderBindingTable {
                          const auto &...object) {
         ShaderBindingTableRecord record{handle, object...};
         m_sbt_ray_generation_and_miss_buffer.write(record,
-                                                  m_number_raygen_miss++);
+                                                   m_number_raygen_miss++);
     }
 
     void add_hit_record(const ShaderBindingTableHandle &handle,

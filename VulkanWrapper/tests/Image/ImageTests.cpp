@@ -1,18 +1,15 @@
-#include <gtest/gtest.h>
+#include "utils/create_gpu.hpp"
 #include "VulkanWrapper/Image/Image.h"
 #include "VulkanWrapper/Memory/Allocator.h"
-#include "utils/create_gpu.hpp"
+#include <gtest/gtest.h>
 
 TEST(ImageTest, CreateImage2D) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator->create_image_2D(
-        vw::Width{256},
-        vw::Height{256},
-        false,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
-    );
+        vw::Width{256}, vw::Height{256}, false, vk::Format::eR8G8B8A8Unorm,
+        vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eTransferDst);
 
     ASSERT_NE(image, nullptr);
     EXPECT_EQ(image->format(), vk::Format::eR8G8B8A8Unorm);
@@ -20,15 +17,12 @@ TEST(ImageTest, CreateImage2D) {
 }
 
 TEST(ImageTest, ImageExtent2D) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator->create_image_2D(
-        vw::Width{512},
-        vw::Height{256},
-        false,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
-    );
+        vw::Width{512}, vw::Height{256}, false, vk::Format::eR8G8B8A8Unorm,
+        vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eTransferDst);
 
     ASSERT_NE(image, nullptr);
     auto extent = image->extent2D();
@@ -37,15 +31,12 @@ TEST(ImageTest, ImageExtent2D) {
 }
 
 TEST(ImageTest, ImageExtent3D) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator->create_image_2D(
-        vw::Width{512},
-        vw::Height{256},
-        false,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
-    );
+        vw::Width{512}, vw::Height{256}, false, vk::Format::eR8G8B8A8Unorm,
+        vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eTransferDst);
 
     ASSERT_NE(image, nullptr);
     auto extent = image->extent3D();
@@ -55,46 +46,38 @@ TEST(ImageTest, ImageExtent3D) {
 }
 
 TEST(ImageTest, CreateImageWithMipmaps) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator->create_image_2D(
-        vw::Width{512},
-        vw::Height{512},
-        true,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
-    );
+        vw::Width{512}, vw::Height{512}, true, vk::Format::eR8G8B8A8Unorm,
+        vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eTransferDst);
 
     ASSERT_NE(image, nullptr);
     EXPECT_GT(static_cast<uint32_t>(image->mip_levels()), 1);
 }
 
 TEST(ImageTest, MipLevelCount) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator->create_image_2D(
-        vw::Width{1024},
-        vw::Height{1024},
-        true,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
-    );
+        vw::Width{1024}, vw::Height{1024}, true, vk::Format::eR8G8B8A8Unorm,
+        vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eTransferDst);
 
     ASSERT_NE(image, nullptr);
-    // 1024x1024 should have 11 mip levels (1024 -> 512 -> 256 -> 128 -> 64 -> 32 -> 16 -> 8 -> 4 -> 2 -> 1)
+    // 1024x1024 should have 11 mip levels (1024 -> 512 -> 256 -> 128 -> 64 ->
+    // 32 -> 16 -> 8 -> 4 -> 2 -> 1)
     EXPECT_EQ(static_cast<uint32_t>(image->mip_levels()), 11);
 }
 
 TEST(ImageTest, FullRange) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator->create_image_2D(
-        vw::Width{256},
-        vw::Height{256},
-        true,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
-    );
+        vw::Width{256}, vw::Height{256}, true, vk::Format::eR8G8B8A8Unorm,
+        vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eTransferDst);
 
     ASSERT_NE(image, nullptr);
     auto range = image->full_range();
@@ -106,15 +89,12 @@ TEST(ImageTest, FullRange) {
 }
 
 TEST(ImageTest, MipLevelRange) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator->create_image_2D(
-        vw::Width{512},
-        vw::Height{512},
-        true,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
-    );
+        vw::Width{512}, vw::Height{512}, true, vk::Format::eR8G8B8A8Unorm,
+        vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eTransferDst);
 
     ASSERT_NE(image, nullptr);
     auto range = image->mip_level_range(vw::MipLevel{3});
@@ -124,15 +104,12 @@ TEST(ImageTest, MipLevelRange) {
 }
 
 TEST(ImageTest, MipLevelLayer) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator->create_image_2D(
-        vw::Width{512},
-        vw::Height{512},
-        true,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
-    );
+        vw::Width{512}, vw::Height{512}, true, vk::Format::eR8G8B8A8Unorm,
+        vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eTransferDst);
 
     ASSERT_NE(image, nullptr);
     auto layer = image->mip_level_layer(vw::MipLevel{2});
@@ -143,15 +120,12 @@ TEST(ImageTest, MipLevelLayer) {
 }
 
 TEST(ImageTest, MipLevelExtent) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator->create_image_2D(
-        vw::Width{512},
-        vw::Height{512},
-        true,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
-    );
+        vw::Width{512}, vw::Height{512}, true, vk::Format::eR8G8B8A8Unorm,
+        vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eTransferDst);
 
     ASSERT_NE(image, nullptr);
 
@@ -172,15 +146,12 @@ TEST(ImageTest, MipLevelExtent) {
 }
 
 TEST(ImageTest, MipLevelOffsets) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator->create_image_2D(
-        vw::Width{512},
-        vw::Height{512},
-        true,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
-    );
+        vw::Width{512}, vw::Height{512}, true, vk::Format::eR8G8B8A8Unorm,
+        vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eTransferDst);
 
     ASSERT_NE(image, nullptr);
     auto offsets = image->mip_level_offsets(vw::MipLevel{1});
@@ -195,25 +166,21 @@ TEST(ImageTest, MipLevelOffsets) {
 }
 
 TEST(ImageTest, DifferentFormats) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     auto imageRGBA8 = gpu.allocator->create_image_2D(
-        vw::Width{128}, vw::Height{128}, false,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
-    );
+        vw::Width{128}, vw::Height{128}, false, vk::Format::eR8G8B8A8Unorm,
+        vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eTransferDst);
 
     auto imageRGBA16 = gpu.allocator->create_image_2D(
-        vw::Width{128}, vw::Height{128}, false,
-        vk::Format::eR16G16B16A16Sfloat,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
-    );
+        vw::Width{128}, vw::Height{128}, false, vk::Format::eR16G16B16A16Sfloat,
+        vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eTransferDst);
 
     auto imageDepth = gpu.allocator->create_image_2D(
-        vw::Width{128}, vw::Height{128}, false,
-        vk::Format::eD32Sfloat,
-        vk::ImageUsageFlagBits::eDepthStencilAttachment
-    );
+        vw::Width{128}, vw::Height{128}, false, vk::Format::eD32Sfloat,
+        vk::ImageUsageFlagBits::eDepthStencilAttachment);
 
     ASSERT_NE(imageRGBA8, nullptr);
     ASSERT_NE(imageRGBA16, nullptr);
@@ -225,25 +192,22 @@ TEST(ImageTest, DifferentFormats) {
 }
 
 TEST(ImageTest, DifferentSizes) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     auto small = gpu.allocator->create_image_2D(
-        vw::Width{64}, vw::Height{64}, false,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
-    );
+        vw::Width{64}, vw::Height{64}, false, vk::Format::eR8G8B8A8Unorm,
+        vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eTransferDst);
 
     auto medium = gpu.allocator->create_image_2D(
-        vw::Width{512}, vw::Height{512}, false,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
-    );
+        vw::Width{512}, vw::Height{512}, false, vk::Format::eR8G8B8A8Unorm,
+        vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eTransferDst);
 
     auto large = gpu.allocator->create_image_2D(
-        vw::Width{2048}, vw::Height{2048}, false,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
-    );
+        vw::Width{2048}, vw::Height{2048}, false, vk::Format::eR8G8B8A8Unorm,
+        vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eTransferDst);
 
     ASSERT_NE(small, nullptr);
     ASSERT_NE(medium, nullptr);
@@ -255,13 +219,12 @@ TEST(ImageTest, DifferentSizes) {
 }
 
 TEST(ImageTest, NonSquareImage) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     auto image = gpu.allocator->create_image_2D(
-        vw::Width{1920}, vw::Height{1080}, false,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst
-    );
+        vw::Width{1920}, vw::Height{1080}, false, vk::Format::eR8G8B8A8Unorm,
+        vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eTransferDst);
 
     ASSERT_NE(image, nullptr);
     auto extent = image->extent2D();

@@ -81,12 +81,14 @@ int main() {
         auto commandPool = vw::CommandPoolBuilder(app.device)
                                .with_reset_command_buffer()
                                .build();
-        auto commandBuffers = commandPool.allocate(app.swapchain.number_images());
+        auto commandBuffers =
+            commandPool.allocate(app.swapchain.number_images());
 
         auto renderFinishedSemaphore = vw::SemaphoreBuilder(app.device).build();
         auto imageAvailableSemaphore = vw::SemaphoreBuilder(app.device).build();
 
-        // Shared Transfer across frames - ResourceTracker maintains state continuity
+        // Shared Transfer across frames - ResourceTracker maintains state
+        // continuity
         vw::Transfer transfer;
 
         int i = 0;
@@ -99,21 +101,24 @@ int main() {
                 return;
 
             app.device->wait_idle();
-            app.swapchain = vw::SwapchainBuilder(app.device,
-                                                  app.surface.handle(),
-                                                  width, height)
-                .with_old_swapchain(app.swapchain.handle())
-                .build();
+            app.swapchain = vw::SwapchainBuilder(
+                                app.device, app.surface.handle(), width, height)
+                                .with_old_swapchain(app.swapchain.handle())
+                                .build();
 
-            commandBuffers = commandPool.allocate(app.swapchain.number_images());
+            commandBuffers =
+                commandPool.allocate(app.swapchain.number_images());
             renderingManager.reset();
 
             // Update projection matrix with new aspect ratio
-            float aspect = static_cast<float>(width) / static_cast<float>(height);
+            float aspect =
+                static_cast<float>(width) / static_cast<float>(height);
             UBOData ubo_data;
-            ubo_data.proj = glm::perspective(glm::radians(60.0f), aspect, 2.f, 5'000.f);
+            ubo_data.proj =
+                glm::perspective(glm::radians(60.0f), aspect, 2.f, 5'000.f);
             ubo_data.proj[1][1] *= -1;
-            ubo_data.inverseViewProj = glm::inverse(ubo_data.proj * ubo_data.view);
+            ubo_data.inverseViewProj =
+                glm::inverse(ubo_data.proj * ubo_data.view);
             uniform_buffer.write(ubo_data, 0);
 
             i = 0;
@@ -135,7 +140,8 @@ int main() {
                 const auto &image_view = app.swapchain.image_views()[index];
 
                 // Reset and re-record command buffer for this frame
-                // This is needed for progressive AO which updates state each frame
+                // This is needed for progressive AO which updates state each
+                // frame
                 commandBuffers[index].reset();
                 {
                     vw::CommandBufferRecorder recorder(commandBuffers[index]);
@@ -176,9 +182,9 @@ int main() {
                 app.device->graphicsQueue().enqueue_command_buffer(
                     commandBuffers[index]);
 
-                app.device->graphicsQueue().submit({&waitStage, 1},
-                                                   {&image_available_handle, 1},
-                                                   {&render_finished_handle, 1});
+                app.device->graphicsQueue().submit(
+                    {&waitStage, 1}, {&image_available_handle, 1},
+                    {&render_finished_handle, 1});
 
                 app.swapchain.present(index, renderFinishedSemaphore);
                 app.device->wait_idle();

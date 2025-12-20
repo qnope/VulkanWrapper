@@ -54,9 +54,10 @@ DescriptorSet DescriptorPool::allocate_set(
     }
 
     m_device->handle().updateDescriptorSets(writers, nullptr);
-    
+
     // Extract resources from DescriptorAllocator
-    auto descriptor_set = DescriptorSet(set, descriptorAllocator.get_resources());
+    auto descriptor_set =
+        DescriptorSet(set, descriptorAllocator.get_resources());
     m_sets.emplace(descriptorAllocator, descriptor_set);
 
     return descriptor_set;

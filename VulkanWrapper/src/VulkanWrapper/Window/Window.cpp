@@ -12,15 +12,15 @@ void Window::WindowDeleter::operator()(SDL_Window *window) const noexcept {
     SDL_DestroyWindow(window);
 };
 
-Window::Window(std::shared_ptr<const SDL_Initializer> initializer, std::string_view name,
-               Width width, Height height)
+Window::Window(std::shared_ptr<const SDL_Initializer> initializer,
+               std::string_view name, Width width, Height height)
     : m_initializer{std::move(initializer)}
     , m_width{width}
     , m_height{height} {
-    auto *window = check_sdl(
-        SDL_CreateWindow(name.data(), int(width), int(height),
-                         SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE),
-        "Failed to create SDL window");
+    auto *window =
+        check_sdl(SDL_CreateWindow(name.data(), int(width), int(height),
+                                   SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE),
+                  "Failed to create SDL window");
 
     m_window.reset(window);
 }
@@ -36,7 +36,8 @@ Surface Window::create_surface(const Instance &instance) const {
 
 Swapchain Window::create_swapchain(std::shared_ptr<const Device> device,
                                    vk::SurfaceKHR surface) const {
-    return SwapchainBuilder(std::move(device), surface, m_width, m_height).build();
+    return SwapchainBuilder(std::move(device), surface, m_width, m_height)
+        .build();
 }
 
 bool Window::is_close_requested() const noexcept { return m_closeRequested; }
@@ -77,12 +78,12 @@ void Window::update() noexcept {
 WindowBuilder::WindowBuilder(std::shared_ptr<const SDL_Initializer> initializer)
     : initializer{std::move(initializer)} {}
 
-WindowBuilder& WindowBuilder::with_title(std::string_view name) {
+WindowBuilder &WindowBuilder::with_title(std::string_view name) {
     this->name = name;
     return *this;
 }
 
-WindowBuilder& WindowBuilder::sized(Width width, Height height) {
+WindowBuilder &WindowBuilder::sized(Width width, Height height) {
     this->width = width;
     this->height = height;
     return *this;

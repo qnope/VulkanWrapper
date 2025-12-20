@@ -19,41 +19,39 @@ GraphicsPipelineBuilder::GraphicsPipelineBuilder(
     : m_device{std::move(device)}
     , m_pipelineLayout{std::move(pipelineLayout)} {}
 
-GraphicsPipelineBuilder& GraphicsPipelineBuilder::add_shader(
-    vk::ShaderStageFlagBits flags,
-    std::shared_ptr<const ShaderModule> module) {
+GraphicsPipelineBuilder &GraphicsPipelineBuilder::add_shader(
+    vk::ShaderStageFlagBits flags, std::shared_ptr<const ShaderModule> module) {
     m_shaderModules.emplace(flags, std::move(module));
     return *this;
 }
 
-GraphicsPipelineBuilder&
+GraphicsPipelineBuilder &
 GraphicsPipelineBuilder::add_dynamic_state(vk::DynamicState state) {
     m_dynamicStates.push_back(state);
     return *this;
 }
 
-GraphicsPipelineBuilder&
+GraphicsPipelineBuilder &
 GraphicsPipelineBuilder::with_fixed_viewport(int width, int height) {
     m_viewport = vk::Viewport(0.0F, 0.0F, static_cast<float>(width),
                               static_cast<float>(height), 0.0F, 1.0F);
     return *this;
 }
 
-GraphicsPipelineBuilder&
+GraphicsPipelineBuilder &
 GraphicsPipelineBuilder::with_fixed_scissor(int width, int height) {
     m_scissor = vk::Rect2D(vk::Offset2D(), vk::Extent2D(width, height));
     return *this;
 }
 
-GraphicsPipelineBuilder&
+GraphicsPipelineBuilder &
 GraphicsPipelineBuilder::with_dynamic_viewport_scissor() {
     m_dynamicStates.push_back(vk::DynamicState::eViewport);
     m_dynamicStates.push_back(vk::DynamicState::eScissor);
     return *this;
 }
 
-GraphicsPipelineBuilder&
-GraphicsPipelineBuilder::add_color_attachment(
+GraphicsPipelineBuilder &GraphicsPipelineBuilder::add_color_attachment(
     vk::Format format, std::optional<ColorBlendConfig> blend) {
 
     auto colorBlendAttachment =
@@ -82,19 +80,19 @@ GraphicsPipelineBuilder::add_color_attachment(
     return *this;
 }
 
-GraphicsPipelineBuilder&
+GraphicsPipelineBuilder &
 GraphicsPipelineBuilder::set_depth_format(vk::Format format) {
     m_depthFormat = format;
     return *this;
 }
 
-GraphicsPipelineBuilder&
+GraphicsPipelineBuilder &
 GraphicsPipelineBuilder::set_stencil_format(vk::Format format) {
     m_stencilFormat = format;
     return *this;
 }
 
-GraphicsPipelineBuilder&
+GraphicsPipelineBuilder &
 GraphicsPipelineBuilder::with_depth_test(bool write,
                                          vk::CompareOp compare_operator) {
     m_depthTestEnabled = static_cast<vk::Bool32>(true);
@@ -103,13 +101,13 @@ GraphicsPipelineBuilder::with_depth_test(bool write,
     return *this;
 }
 
-GraphicsPipelineBuilder&
+GraphicsPipelineBuilder &
 GraphicsPipelineBuilder::with_topology(vk::PrimitiveTopology topology) {
     m_topology = topology;
     return *this;
 }
 
-GraphicsPipelineBuilder&
+GraphicsPipelineBuilder &
 GraphicsPipelineBuilder::with_cull_mode(vk::CullModeFlags cull_mode) {
     m_cullMode = cull_mode;
     return *this;
@@ -126,10 +124,11 @@ std::shared_ptr<const Pipeline> GraphicsPipelineBuilder::build() {
     const auto inputAssemblyStateInfo = createInputAssemblyStateInfo();
     const auto rasterizationStateInfo = createRasterizationStateInfo();
 
-    auto renderingInfo = vk::PipelineRenderingCreateInfo()
-                             .setColorAttachmentFormats(m_colorAttachmentFormats)
-                             .setDepthAttachmentFormat(m_depthFormat)
-                             .setStencilAttachmentFormat(m_stencilFormat);
+    auto renderingInfo =
+        vk::PipelineRenderingCreateInfo()
+            .setColorAttachmentFormats(m_colorAttachmentFormats)
+            .setDepthAttachmentFormat(m_depthFormat)
+            .setStencilAttachmentFormat(m_stencilFormat);
 
     const auto info = vk::GraphicsPipelineCreateInfo()
                           .setPNext(&renderingInfo)
@@ -144,9 +143,9 @@ std::shared_ptr<const Pipeline> GraphicsPipelineBuilder::build() {
                           .setPRasterizationState(&rasterizationStateInfo)
                           .setLayout(m_pipelineLayout.handle());
 
-    auto pipeline = check_vk(
-        m_device->handle().createGraphicsPipelineUnique(vk::PipelineCache(), info),
-        "Failed to create graphics pipeline");
+    auto pipeline = check_vk(m_device->handle().createGraphicsPipelineUnique(
+                                 vk::PipelineCache(), info),
+                             "Failed to create graphics pipeline");
 
     return std::make_shared<Pipeline>(std::move(pipeline),
                                       std::move(m_pipelineLayout));

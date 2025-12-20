@@ -1,6 +1,5 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
-
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
 
@@ -19,10 +18,10 @@ class PipelineLayoutBuilder {
   public:
     PipelineLayoutBuilder(std::shared_ptr<const Device> device);
 
-    PipelineLayoutBuilder& with_descriptor_set_layout(
+    PipelineLayoutBuilder &with_descriptor_set_layout(
         std::shared_ptr<const DescriptorSetLayout> layout);
 
-    PipelineLayoutBuilder&
+    PipelineLayoutBuilder &
     with_push_constant_range(vk::PushConstantRange range);
 
     PipelineLayout build();
