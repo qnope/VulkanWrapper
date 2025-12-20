@@ -275,4 +275,25 @@ void ValidationLayerException::build_what() const {
                                m_validation_message);
 }
 
+// SwapchainException
+
+SwapchainException::SwapchainException(vk::Result result,
+                                       std::string context,
+                                       std::source_location location)
+    : Exception(std::move(context), location)
+    , m_result(result) {}
+
+vk::Result SwapchainException::result() const noexcept {
+    return m_result;
+}
+
+void SwapchainException::build_what() const {
+    m_what_cache = std::format("[{}:{}] {}\n  {}\n  {}",
+                               extract_filename(m_location.file_name()),
+                               m_location.line(),
+                               m_location.function_name(),
+                               m_message,
+                               vk::to_string(m_result));
+}
+
 } // namespace vw

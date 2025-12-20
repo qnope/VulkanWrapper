@@ -15,19 +15,6 @@
 #include <VulkanWrapper/Utils/Error.h>
 #include <VulkanWrapper/Vulkan/Queue.h>
 
-std::vector<std::shared_ptr<const vw::ImageView>>
-create_image_views(std::shared_ptr<const vw::Device> device,
-                   const vw::Swapchain &swapchain) {
-    std::vector<std::shared_ptr<const vw::ImageView>> result;
-    for (auto &&image : swapchain.images()) {
-        auto imageView = vw::ImageViewBuilder(device, image)
-                             .setImageType(vk::ImageViewType::e2D)
-                             .build();
-        result.push_back(std::move(imageView));
-    }
-    return result;
-}
-
 vw::Buffer<UBOData, true, vw::UniformBufferUsage>
 createUbo(const vw::Allocator &allocator) {
     auto buffer =
@@ -94,12 +81,7 @@ int main() {
         auto commandPool = vw::CommandPoolBuilder(app.device)
                                .with_reset_command_buffer()
                                .build();
-        auto image_views = create_image_views(app.device, app.swapchain);
-        auto commandBuffers = commandPool.allocate(image_views.size());
-
-        // Get render dimensions
-        vw::Width width = static_cast<vw::Width>(app.swapchain.width());
-        vw::Height height = static_cast<vw::Height>(app.swapchain.height());
+        auto commandBuffers = commandPool.allocate(app.swapchain.number_images());
 
         auto renderFinishedSemaphore = vw::SemaphoreBuilder(app.device).build();
         auto imageAvailableSemaphore = vw::SemaphoreBuilder(app.device).build();
@@ -108,62 +90,104 @@ int main() {
         vw::Transfer transfer;
 
         int i = 0;
+
+        // Lambda to recreate swapchain on resize
+        auto recreate_swapchain = [&]() {
+            auto width = app.window.width();
+            auto height = app.window.height();
+            if (width == vw::Width(0) || height == vw::Height(0))
+                return;
+
+            app.device->wait_idle();
+            app.swapchain = vw::SwapchainBuilder(app.device,
+                                                  app.surface.handle(),
+                                                  width, height)
+                .with_old_swapchain(app.swapchain.handle())
+                .build();
+
+            commandBuffers = commandPool.allocate(app.swapchain.number_images());
+            renderingManager.reset();
+
+            // Update projection matrix with new aspect ratio
+            float aspect = static_cast<float>(width) / static_cast<float>(height);
+            UBOData ubo_data;
+            ubo_data.proj = glm::perspective(glm::radians(60.0f), aspect, 2.f, 5'000.f);
+            ubo_data.proj[1][1] *= -1;
+            ubo_data.inverseViewProj = glm::inverse(ubo_data.proj * ubo_data.view);
+            uniform_buffer.write(ubo_data, 0);
+
+            i = 0;
+        };
+
         while (!app.window.is_close_requested()) {
             app.window.update();
 
-            auto index =
-                app.swapchain.acquire_next_image(imageAvailableSemaphore);
-
-            // Reset and re-record command buffer for this frame
-            // This is needed for progressive AO which updates state each frame
-            commandBuffers[index].reset();
-            {
-                vw::CommandBufferRecorder recorder(commandBuffers[index]);
-
-                // Execute deferred rendering pipeline with progressive AO
-                auto light_view = renderingManager.execute(
-                    commandBuffers[index], transfer.resourceTracker(), width,
-                    height,
-                    index, // frame_index
-                    uniform_buffer,
-                    90.0f, // sun_angle = zenith (90 degrees)
-                    200.0f // ao_radius
-                );
-
-                // Blit light buffer to swapchain
-                transfer.blit(commandBuffers[index], light_view->image(),
-                              image_views[index]->image());
-
-                // Transition swapchain image to present layout
-                transfer.resourceTracker().request(vw::Barrier::ImageState{
-                    .image = image_views[index]->image()->handle(),
-                    .subresourceRange = image_views[index]->subresource_range(),
-                    .layout = vk::ImageLayout::ePresentSrcKHR,
-                    .stage = vk::PipelineStageFlagBits2::eNone,
-                    .access = vk::AccessFlagBits2::eNone});
-
-                transfer.resourceTracker().flush(commandBuffers[index]);
+            // Handle explicit window resize
+            if (app.window.is_resized()) {
+                recreate_swapchain();
+                continue;
             }
 
-            const vk::PipelineStageFlags waitStage =
-                vk::PipelineStageFlagBits::eTopOfPipe;
+            try {
+                auto index =
+                    app.swapchain.acquire_next_image(imageAvailableSemaphore);
 
-            const auto image_available_handle =
-                imageAvailableSemaphore.handle();
-            const auto render_finished_handle =
-                renderFinishedSemaphore.handle();
+                const auto &image_view = app.swapchain.image_views()[index];
 
-            app.device->graphicsQueue().enqueue_command_buffer(
-                commandBuffers[index]);
+                // Reset and re-record command buffer for this frame
+                // This is needed for progressive AO which updates state each frame
+                commandBuffers[index].reset();
+                {
+                    vw::CommandBufferRecorder recorder(commandBuffers[index]);
 
-            app.device->graphicsQueue().submit({&waitStage, 1},
-                                               {&image_available_handle, 1},
-                                               {&render_finished_handle, 1});
+                    // Execute deferred rendering pipeline with progressive AO
+                    auto light_view = renderingManager.execute(
+                        commandBuffers[index], transfer.resourceTracker(),
+                        app.swapchain.width(), app.swapchain.height(),
+                        index, // frame_index
+                        uniform_buffer,
+                        90.0f, // sun_angle = zenith (90 degrees)
+                        200.0f // ao_radius
+                    );
 
-            app.device->presentQueue().present(app.swapchain, index,
-                                               renderFinishedSemaphore);
-            app.device->wait_idle();
-            std::cout << "Iteration: " << i++ << std::endl;
+                    // Blit light buffer to swapchain
+                    transfer.blit(commandBuffers[index], light_view->image(),
+                                  image_view->image());
+
+                    // Transition swapchain image to present layout
+                    transfer.resourceTracker().request(vw::Barrier::ImageState{
+                        .image = image_view->image()->handle(),
+                        .subresourceRange = image_view->subresource_range(),
+                        .layout = vk::ImageLayout::ePresentSrcKHR,
+                        .stage = vk::PipelineStageFlagBits2::eNone,
+                        .access = vk::AccessFlagBits2::eNone});
+
+                    transfer.resourceTracker().flush(commandBuffers[index]);
+                }
+
+                const vk::PipelineStageFlags waitStage =
+                    vk::PipelineStageFlagBits::eTopOfPipe;
+
+                const auto image_available_handle =
+                    imageAvailableSemaphore.handle();
+                const auto render_finished_handle =
+                    renderFinishedSemaphore.handle();
+
+                app.device->graphicsQueue().enqueue_command_buffer(
+                    commandBuffers[index]);
+
+                app.device->graphicsQueue().submit({&waitStage, 1},
+                                                   {&image_available_handle, 1},
+                                                   {&render_finished_handle, 1});
+
+                app.swapchain.present(index, renderFinishedSemaphore);
+                app.device->wait_idle();
+                std::cout << "Iteration: " << i++ << std::endl;
+
+            } catch (const vw::SwapchainException &) {
+                // Swapchain out-of-date or suboptimal - recreate
+                recreate_swapchain();
+            }
         }
 
         app.device->wait_idle();

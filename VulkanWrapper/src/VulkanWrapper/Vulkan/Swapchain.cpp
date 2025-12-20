@@ -1,8 +1,10 @@
 #include "VulkanWrapper/Vulkan/Swapchain.h"
 
+#include "VulkanWrapper/Image/ImageView.h"
 #include "VulkanWrapper/Synchronization/Semaphore.h"
 #include "VulkanWrapper/Utils/Error.h"
 #include "VulkanWrapper/Vulkan/Device.h"
+#include "VulkanWrapper/Vulkan/PresentQueue.h"
 
 namespace vw {
 
@@ -20,6 +22,11 @@ Swapchain::Swapchain(std::shared_ptr<const Device> device,
         auto &image = m_images.emplace_back(std::make_shared<Image>(
             vkImage, m_width, m_height, Depth(1), MipLevel(1), m_format,
             vk::ImageUsageFlagBits::eColorAttachment, nullptr, nullptr));
+
+        m_image_views.emplace_back(
+            ImageViewBuilder(m_device, image)
+                .setImageType(vk::ImageViewType::e2D)
+                .build());
     }
 }
 
@@ -34,13 +41,32 @@ Swapchain::images() const noexcept {
     return m_images;
 }
 
+std::span<const std::shared_ptr<const ImageView>>
+Swapchain::image_views() const noexcept {
+    return m_image_views;
+}
+
 int Swapchain::number_images() const noexcept { return m_images.size(); }
 
 uint64_t
-Swapchain::acquire_next_image(const Semaphore &semaphore) const noexcept {
-    return m_device->handle()
-        .acquireNextImageKHR(handle(), UINT64_MAX, semaphore.handle())
-        .value;
+Swapchain::acquire_next_image(const Semaphore &semaphore) const {
+    auto [result, index] = m_device->handle()
+        .acquireNextImageKHR(handle(), UINT64_MAX, semaphore.handle());
+
+    if (result == vk::Result::eErrorOutOfDateKHR ||
+        result == vk::Result::eSuboptimalKHR) {
+        throw SwapchainException(result, "Swapchain needs recreation");
+    }
+
+    if (result != vk::Result::eSuccess) {
+        throw VulkanException(result, "Failed to acquire swapchain image");
+    }
+
+    return index;
+}
+
+void Swapchain::present(uint32_t index, const Semaphore &waitSemaphore) const {
+    m_device->presentQueue().present(*this, index, waitSemaphore);
 }
 
 SwapchainBuilder::SwapchainBuilder(std::shared_ptr<const Device> device,
@@ -62,6 +88,11 @@ SwapchainBuilder::SwapchainBuilder(std::shared_ptr<const Device> device,
         .setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
         .setClipped(1U)
         .setMinImageCount(3);
+}
+
+SwapchainBuilder&& SwapchainBuilder::with_old_swapchain(vk::SwapchainKHR old) && {
+    m_info.setOldSwapchain(old);
+    return std::move(*this);
 }
 
 Swapchain SwapchainBuilder::build() && {
