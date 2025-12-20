@@ -190,6 +190,34 @@ int main() {
                 app.device->wait_idle();
                 std::cout << "Iteration: " << i++ << std::endl;
 
+                // Take screenshot after 16 samples and exit
+                if (renderingManager.ao_pass().get_frame_count() == 16) {
+                    // Record a new command buffer just for the screenshot
+                    // Note: saveToFile ends the command buffer internally,
+                    // so we don't use CommandBufferRecorder here
+                    commandBuffers[index].reset();
+                    std::ignore = commandBuffers[index].begin(
+                        vk::CommandBufferBeginInfo{});
+
+                    // Transition swapchain image to transfer src
+                    transfer.resourceTracker().request(vw::Barrier::ImageState{
+                        .image = image_view->image()->handle(),
+                        .subresourceRange = image_view->subresource_range(),
+                        .layout = vk::ImageLayout::eTransferSrcOptimal,
+                        .stage = vk::PipelineStageFlagBits2::eTransfer,
+                        .access = vk::AccessFlagBits2::eTransferRead});
+                    transfer.resourceTracker().flush(commandBuffers[index]);
+
+                    transfer.saveToFile(commandBuffers[index], *app.allocator,
+                                        app.device->graphicsQueue(),
+                                        image_view->image(), "screenshot.png",
+                                        vk::ImageLayout::ePresentSrcKHR);
+
+                    std::cout << "Screenshot saved to screenshot.png"
+                              << std::endl;
+                    break;
+                }
+
             } catch (const vw::SwapchainException &) {
                 // Swapchain out-of-date or suboptimal - recreate
                 recreate_swapchain();
