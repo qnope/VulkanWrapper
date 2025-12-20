@@ -1,6 +1,5 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
-
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Memory/Buffer.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
@@ -43,8 +42,9 @@ class TopLevelAccelerationStructure
 
 class TopLevelAccelerationStructureBuilder {
   public:
-    TopLevelAccelerationStructureBuilder(std::shared_ptr<const Device> device,
-                                         std::shared_ptr<const Allocator> allocator);
+    TopLevelAccelerationStructureBuilder(
+        std::shared_ptr<const Device> device,
+        std::shared_ptr<const Allocator> allocator);
 
     TopLevelAccelerationStructureBuilder &
     add_bottom_level_acceleration_structure_address(vk::DeviceAddress address,

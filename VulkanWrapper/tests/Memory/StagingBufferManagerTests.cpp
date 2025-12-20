@@ -1,41 +1,43 @@
-#include <gtest/gtest.h>
-#include "VulkanWrapper/Memory/StagingBufferManager.h"
-#include "VulkanWrapper/Memory/Buffer.h"
-#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
+#include "utils/create_gpu.hpp"
 #include "VulkanWrapper/Command/CommandPool.h"
+#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
+#include "VulkanWrapper/Memory/Buffer.h"
+#include "VulkanWrapper/Memory/StagingBufferManager.h"
 #include "VulkanWrapper/Synchronization/Fence.h"
 #include "VulkanWrapper/Vulkan/Queue.h"
-#include "utils/create_gpu.hpp"
+#include <gtest/gtest.h>
 #include <vector>
 
 TEST(StagingBufferManagerTest, CreateStagingBufferManager) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
     vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
     SUCCEED();
 }
 
 TEST(StagingBufferManagerTest, TransferDataToDeviceBuffer) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
 
     // Create StagingBufferManager
     vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
 
-    // Create a device-only buffer with transfer destination and source capability
+    // Create a device-only buffer with transfer destination and source
+    // capability
     constexpr VkBufferUsageFlags DeviceBufferUsage =
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
         VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     using DeviceBuffer = vw::Buffer<float, false, DeviceBufferUsage>;
     auto device_buffer = vw::create_buffer<DeviceBuffer>(*gpu.allocator, 10);
 
     // Prepare test data
-    std::vector<float> test_data = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f};
+    std::vector<float> test_data = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f,
+                                    6.0f, 7.0f, 8.0f, 9.0f, 10.0f};
 
     // Stage the data to the device buffer
-    staging_manager.fill_buffer(std::span<const float>(test_data), device_buffer, 0);
+    staging_manager.fill_buffer(std::span<const float>(test_data),
+                                device_buffer, 0);
 
     // Get the command buffer with transfer commands and submit it
-    auto& queue = gpu.queue();
+    auto &queue = gpu.queue();
     auto transfer_cmd = staging_manager.fill_command_buffer();
     queue.enqueue_command_buffer(transfer_cmd);
     auto fence = queue.submit({}, {}, {});
@@ -49,15 +51,15 @@ TEST(StagingBufferManagerTest, TransferDataToDeviceBuffer) {
     auto cmd_pool = vw::CommandPoolBuilder(gpu.device).build();
     auto readback_cmd = cmd_pool.allocate(1)[0];
 
-    std::ignore = readback_cmd.begin(vk::CommandBufferBeginInfo()
-        .setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+    std::ignore = readback_cmd.begin(vk::CommandBufferBeginInfo().setFlags(
+        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     vk::BufferCopy copy_region;
-    copy_region.setSrcOffset(0)
-               .setDstOffset(0)
-               .setSize(test_data.size() * sizeof(float));
+    copy_region.setSrcOffset(0).setDstOffset(0).setSize(test_data.size() *
+                                                        sizeof(float));
 
-    readback_cmd.copyBuffer(device_buffer.handle(), host_buffer.handle(), copy_region);
+    readback_cmd.copyBuffer(device_buffer.handle(), host_buffer.handle(),
+                            copy_region);
     std::ignore = readback_cmd.end();
 
     // Submit readback command and wait
@@ -76,13 +78,12 @@ TEST(StagingBufferManagerTest, TransferDataToDeviceBuffer) {
 }
 
 TEST(StagingBufferManagerTest, TransferIntegerData) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
     vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
 
     // Create a device-only buffer for integers
     constexpr VkBufferUsageFlags DeviceBufferUsage =
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
         VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     using DeviceBuffer = vw::Buffer<int32_t, false, DeviceBufferUsage>;
     auto device_buffer = vw::create_buffer<DeviceBuffer>(*gpu.allocator, 20);
@@ -94,10 +95,11 @@ TEST(StagingBufferManagerTest, TransferIntegerData) {
     }
 
     // Stage the data
-    staging_manager.fill_buffer(std::span<const int32_t>(test_data), device_buffer, 0);
+    staging_manager.fill_buffer(std::span<const int32_t>(test_data),
+                                device_buffer, 0);
 
     // Submit transfer commands
-    auto& queue = gpu.queue();
+    auto &queue = gpu.queue();
     auto transfer_cmd = staging_manager.fill_command_buffer();
     queue.enqueue_command_buffer(transfer_cmd);
     auto fence = queue.submit({}, {}, {});
@@ -110,15 +112,15 @@ TEST(StagingBufferManagerTest, TransferIntegerData) {
     auto cmd_pool = vw::CommandPoolBuilder(gpu.device).build();
     auto readback_cmd = cmd_pool.allocate(1)[0];
 
-    std::ignore = readback_cmd.begin(vk::CommandBufferBeginInfo()
-        .setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+    std::ignore = readback_cmd.begin(vk::CommandBufferBeginInfo().setFlags(
+        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     vk::BufferCopy copy_region;
-    copy_region.setSrcOffset(0)
-               .setDstOffset(0)
-               .setSize(test_data.size() * sizeof(int32_t));
+    copy_region.setSrcOffset(0).setDstOffset(0).setSize(test_data.size() *
+                                                        sizeof(int32_t));
 
-    readback_cmd.copyBuffer(device_buffer.handle(), host_buffer.handle(), copy_region);
+    readback_cmd.copyBuffer(device_buffer.handle(), host_buffer.handle(),
+                            copy_region);
     std::ignore = readback_cmd.end();
 
     queue.enqueue_command_buffer(readback_cmd);
@@ -129,19 +131,17 @@ TEST(StagingBufferManagerTest, TransferIntegerData) {
     ASSERT_EQ(retrieved.size(), test_data.size());
 
     for (size_t i = 0; i < test_data.size(); ++i) {
-        EXPECT_EQ(retrieved[i], test_data[i])
-            << "Mismatch at index " << i;
+        EXPECT_EQ(retrieved[i], test_data[i]) << "Mismatch at index " << i;
     }
 }
 
 TEST(StagingBufferManagerTest, TransferDoubleData) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
     vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
 
     // Create a device-only buffer for doubles
     constexpr VkBufferUsageFlags DeviceBufferUsage =
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
         VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     using DeviceBuffer = vw::Buffer<double, false, DeviceBufferUsage>;
     auto device_buffer = vw::create_buffer<DeviceBuffer>(*gpu.allocator, 15);
@@ -153,10 +153,11 @@ TEST(StagingBufferManagerTest, TransferDoubleData) {
     }
 
     // Stage the data
-    staging_manager.fill_buffer(std::span<const double>(test_data), device_buffer, 0);
+    staging_manager.fill_buffer(std::span<const double>(test_data),
+                                device_buffer, 0);
 
     // Submit transfer commands
-    auto& queue = gpu.queue();
+    auto &queue = gpu.queue();
     auto transfer_cmd = staging_manager.fill_command_buffer();
     queue.enqueue_command_buffer(transfer_cmd);
     auto fence = queue.submit({}, {}, {});
@@ -169,15 +170,15 @@ TEST(StagingBufferManagerTest, TransferDoubleData) {
     auto cmd_pool = vw::CommandPoolBuilder(gpu.device).build();
     auto readback_cmd = cmd_pool.allocate(1)[0];
 
-    std::ignore = readback_cmd.begin(vk::CommandBufferBeginInfo()
-        .setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+    std::ignore = readback_cmd.begin(vk::CommandBufferBeginInfo().setFlags(
+        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     vk::BufferCopy copy_region;
-    copy_region.setSrcOffset(0)
-               .setDstOffset(0)
-               .setSize(test_data.size() * sizeof(double));
+    copy_region.setSrcOffset(0).setDstOffset(0).setSize(test_data.size() *
+                                                        sizeof(double));
 
-    readback_cmd.copyBuffer(device_buffer.handle(), host_buffer.handle(), copy_region);
+    readback_cmd.copyBuffer(device_buffer.handle(), host_buffer.handle(),
+                            copy_region);
     std::ignore = readback_cmd.end();
 
     queue.enqueue_command_buffer(readback_cmd);
@@ -197,40 +198,34 @@ TEST(StagingBufferManagerTest, TransferDoubleData) {
 struct Vec3 {
     float x, y, z;
 
-    bool operator==(const Vec3& other) const {
+    bool operator==(const Vec3 &other) const {
         return x == other.x && y == other.y && z == other.z;
     }
 };
 
 TEST(StagingBufferManagerTest, TransferSimpleStructData) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
     vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
 
     // Create a device-only buffer for Vec3 structures
     constexpr VkBufferUsageFlags DeviceBufferUsage =
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
         VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     using DeviceBuffer = vw::Buffer<Vec3, false, DeviceBufferUsage>;
     auto device_buffer = vw::create_buffer<DeviceBuffer>(*gpu.allocator, 8);
 
     // Prepare test data
     std::vector<Vec3> test_data = {
-        {1.0f, 2.0f, 3.0f},
-        {4.0f, 5.0f, 6.0f},
-        {7.0f, 8.0f, 9.0f},
-        {10.0f, 11.0f, 12.0f},
-        {13.0f, 14.0f, 15.0f},
-        {16.0f, 17.0f, 18.0f},
-        {19.0f, 20.0f, 21.0f},
-        {22.0f, 23.0f, 24.0f}
-    };
+        {1.0f, 2.0f, 3.0f},    {4.0f, 5.0f, 6.0f},    {7.0f, 8.0f, 9.0f},
+        {10.0f, 11.0f, 12.0f}, {13.0f, 14.0f, 15.0f}, {16.0f, 17.0f, 18.0f},
+        {19.0f, 20.0f, 21.0f}, {22.0f, 23.0f, 24.0f}};
 
     // Stage the data
-    staging_manager.fill_buffer(std::span<const Vec3>(test_data), device_buffer, 0);
+    staging_manager.fill_buffer(std::span<const Vec3>(test_data), device_buffer,
+                                0);
 
     // Submit transfer commands
-    auto& queue = gpu.queue();
+    auto &queue = gpu.queue();
     auto transfer_cmd = staging_manager.fill_command_buffer();
     queue.enqueue_command_buffer(transfer_cmd);
     auto fence = queue.submit({}, {}, {});
@@ -243,15 +238,15 @@ TEST(StagingBufferManagerTest, TransferSimpleStructData) {
     auto cmd_pool = vw::CommandPoolBuilder(gpu.device).build();
     auto readback_cmd = cmd_pool.allocate(1)[0];
 
-    std::ignore = readback_cmd.begin(vk::CommandBufferBeginInfo()
-        .setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+    std::ignore = readback_cmd.begin(vk::CommandBufferBeginInfo().setFlags(
+        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     vk::BufferCopy copy_region;
-    copy_region.setSrcOffset(0)
-               .setDstOffset(0)
-               .setSize(test_data.size() * sizeof(Vec3));
+    copy_region.setSrcOffset(0).setDstOffset(0).setSize(test_data.size() *
+                                                        sizeof(Vec3));
 
-    readback_cmd.copyBuffer(device_buffer.handle(), host_buffer.handle(), copy_region);
+    readback_cmd.copyBuffer(device_buffer.handle(), host_buffer.handle(),
+                            copy_region);
     std::ignore = readback_cmd.end();
 
     queue.enqueue_command_buffer(readback_cmd);
@@ -262,8 +257,7 @@ TEST(StagingBufferManagerTest, TransferSimpleStructData) {
     ASSERT_EQ(retrieved.size(), test_data.size());
 
     for (size_t i = 0; i < test_data.size(); ++i) {
-        EXPECT_EQ(retrieved[i], test_data[i])
-            << "Mismatch at index " << i;
+        EXPECT_EQ(retrieved[i], test_data[i]) << "Mismatch at index " << i;
     }
 }
 
@@ -274,26 +268,23 @@ struct alignas(16) ParticleData {
     float velocity[3];
     uint32_t id;
 
-    bool operator==(const ParticleData& other) const {
+    bool operator==(const ParticleData &other) const {
         return position[0] == other.position[0] &&
                position[1] == other.position[1] &&
-               position[2] == other.position[2] &&
-               mass == other.mass &&
+               position[2] == other.position[2] && mass == other.mass &&
                velocity[0] == other.velocity[0] &&
                velocity[1] == other.velocity[1] &&
-               velocity[2] == other.velocity[2] &&
-               id == other.id;
+               velocity[2] == other.velocity[2] && id == other.id;
     }
 };
 
 TEST(StagingBufferManagerTest, TransferComplexStructData) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
     vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
 
     // Create a device-only buffer for ParticleData structures
     constexpr VkBufferUsageFlags DeviceBufferUsage =
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
         VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     using DeviceBuffer = vw::Buffer<ParticleData, false, DeviceBufferUsage>;
     auto device_buffer = vw::create_buffer<DeviceBuffer>(*gpu.allocator, 5);
@@ -314,10 +305,11 @@ TEST(StagingBufferManagerTest, TransferComplexStructData) {
     }
 
     // Stage the data
-    staging_manager.fill_buffer(std::span<const ParticleData>(test_data), device_buffer, 0);
+    staging_manager.fill_buffer(std::span<const ParticleData>(test_data),
+                                device_buffer, 0);
 
     // Submit transfer commands
-    auto& queue = gpu.queue();
+    auto &queue = gpu.queue();
     auto transfer_cmd = staging_manager.fill_command_buffer();
     queue.enqueue_command_buffer(transfer_cmd);
     auto fence = queue.submit({}, {}, {});
@@ -330,15 +322,15 @@ TEST(StagingBufferManagerTest, TransferComplexStructData) {
     auto cmd_pool = vw::CommandPoolBuilder(gpu.device).build();
     auto readback_cmd = cmd_pool.allocate(1)[0];
 
-    std::ignore = readback_cmd.begin(vk::CommandBufferBeginInfo()
-        .setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+    std::ignore = readback_cmd.begin(vk::CommandBufferBeginInfo().setFlags(
+        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     vk::BufferCopy copy_region;
-    copy_region.setSrcOffset(0)
-               .setDstOffset(0)
-               .setSize(test_data.size() * sizeof(ParticleData));
+    copy_region.setSrcOffset(0).setDstOffset(0).setSize(test_data.size() *
+                                                        sizeof(ParticleData));
 
-    readback_cmd.copyBuffer(device_buffer.handle(), host_buffer.handle(), copy_region);
+    readback_cmd.copyBuffer(device_buffer.handle(), host_buffer.handle(),
+                            copy_region);
     std::ignore = readback_cmd.end();
 
     queue.enqueue_command_buffer(readback_cmd);
@@ -349,28 +341,27 @@ TEST(StagingBufferManagerTest, TransferComplexStructData) {
     ASSERT_EQ(retrieved.size(), test_data.size());
 
     for (size_t i = 0; i < test_data.size(); ++i) {
-        EXPECT_EQ(retrieved[i], test_data[i])
-            << "Mismatch at index " << i;
+        EXPECT_EQ(retrieved[i], test_data[i]) << "Mismatch at index " << i;
     }
 }
 
 TEST(StagingBufferManagerTest, TransferWithOffset) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
     vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
 
     // Create a device-only buffer
     constexpr VkBufferUsageFlags DeviceBufferUsage =
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
         VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     using DeviceBuffer = vw::Buffer<float, false, DeviceBufferUsage>;
     auto device_buffer = vw::create_buffer<DeviceBuffer>(*gpu.allocator, 20);
 
     // First transfer: write to beginning
     std::vector<float> first_data = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f};
-    staging_manager.fill_buffer(std::span<const float>(first_data), device_buffer, 0);
+    staging_manager.fill_buffer(std::span<const float>(first_data),
+                                device_buffer, 0);
 
-    auto& queue = gpu.queue();
+    auto &queue = gpu.queue();
     auto transfer_cmd1 = staging_manager.fill_command_buffer();
     queue.enqueue_command_buffer(transfer_cmd1);
     auto fence1 = queue.submit({}, {}, {});
@@ -378,7 +369,8 @@ TEST(StagingBufferManagerTest, TransferWithOffset) {
 
     // Second transfer: write with offset
     std::vector<float> second_data = {10.0f, 11.0f, 12.0f, 13.0f, 14.0f};
-    staging_manager.fill_buffer(std::span<const float>(second_data), device_buffer, 10);
+    staging_manager.fill_buffer(std::span<const float>(second_data),
+                                device_buffer, 10);
 
     auto transfer_cmd2 = staging_manager.fill_command_buffer();
     queue.enqueue_command_buffer(transfer_cmd2);
@@ -392,15 +384,14 @@ TEST(StagingBufferManagerTest, TransferWithOffset) {
     auto cmd_pool = vw::CommandPoolBuilder(gpu.device).build();
     auto readback_cmd = cmd_pool.allocate(1)[0];
 
-    std::ignore = readback_cmd.begin(vk::CommandBufferBeginInfo()
-        .setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+    std::ignore = readback_cmd.begin(vk::CommandBufferBeginInfo().setFlags(
+        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     vk::BufferCopy copy_region;
-    copy_region.setSrcOffset(0)
-               .setDstOffset(0)
-               .setSize(20 * sizeof(float));
+    copy_region.setSrcOffset(0).setDstOffset(0).setSize(20 * sizeof(float));
 
-    readback_cmd.copyBuffer(device_buffer.handle(), host_buffer.handle(), copy_region);
+    readback_cmd.copyBuffer(device_buffer.handle(), host_buffer.handle(),
+                            copy_region);
     std::ignore = readback_cmd.end();
 
     queue.enqueue_command_buffer(readback_cmd);
@@ -423,13 +414,12 @@ TEST(StagingBufferManagerTest, TransferWithOffset) {
 }
 
 TEST(StagingBufferManagerTest, TransferMultipleSequential) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
     vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
 
     // Create three device buffers
     constexpr VkBufferUsageFlags DeviceBufferUsage =
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
         VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     using DeviceBuffer = vw::Buffer<float, false, DeviceBufferUsage>;
     auto buffer1 = vw::create_buffer<DeviceBuffer>(*gpu.allocator, 5);
@@ -447,7 +437,7 @@ TEST(StagingBufferManagerTest, TransferMultipleSequential) {
     staging_manager.fill_buffer(std::span<const float>(data3), buffer3, 0);
 
     // Submit all transfers at once
-    auto& queue = gpu.queue();
+    auto &queue = gpu.queue();
     auto transfer_cmd = staging_manager.fill_command_buffer();
     queue.enqueue_command_buffer(transfer_cmd);
     auto fence = queue.submit({}, {}, {});
@@ -462,17 +452,18 @@ TEST(StagingBufferManagerTest, TransferMultipleSequential) {
     auto cmd_pool = vw::CommandPoolBuilder(gpu.device).build();
     auto readback_cmd = cmd_pool.allocate(1)[0];
 
-    std::ignore = readback_cmd.begin(vk::CommandBufferBeginInfo()
-        .setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+    std::ignore = readback_cmd.begin(vk::CommandBufferBeginInfo().setFlags(
+        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     vk::BufferCopy copy_region;
-    copy_region.setSrcOffset(0)
-               .setDstOffset(0)
-               .setSize(5 * sizeof(float));
+    copy_region.setSrcOffset(0).setDstOffset(0).setSize(5 * sizeof(float));
 
-    readback_cmd.copyBuffer(buffer1.handle(), host_buffer1.handle(), copy_region);
-    readback_cmd.copyBuffer(buffer2.handle(), host_buffer2.handle(), copy_region);
-    readback_cmd.copyBuffer(buffer3.handle(), host_buffer3.handle(), copy_region);
+    readback_cmd.copyBuffer(buffer1.handle(), host_buffer1.handle(),
+                            copy_region);
+    readback_cmd.copyBuffer(buffer2.handle(), host_buffer2.handle(),
+                            copy_region);
+    readback_cmd.copyBuffer(buffer3.handle(), host_buffer3.handle(),
+                            copy_region);
     std::ignore = readback_cmd.end();
 
     queue.enqueue_command_buffer(readback_cmd);
@@ -485,24 +476,27 @@ TEST(StagingBufferManagerTest, TransferMultipleSequential) {
     auto retrieved3 = host_buffer3.read_as_vector(0, 5);
 
     for (size_t i = 0; i < 5; ++i) {
-        EXPECT_FLOAT_EQ(retrieved1[i], data1[i]) << "Buffer1 mismatch at index " << i;
-        EXPECT_FLOAT_EQ(retrieved2[i], data2[i]) << "Buffer2 mismatch at index " << i;
-        EXPECT_FLOAT_EQ(retrieved3[i], data3[i]) << "Buffer3 mismatch at index " << i;
+        EXPECT_FLOAT_EQ(retrieved1[i], data1[i])
+            << "Buffer1 mismatch at index " << i;
+        EXPECT_FLOAT_EQ(retrieved2[i], data2[i])
+            << "Buffer2 mismatch at index " << i;
+        EXPECT_FLOAT_EQ(retrieved3[i], data3[i])
+            << "Buffer3 mismatch at index " << i;
     }
 }
 
 TEST(StagingBufferManagerTest, TransferLargeDataSet) {
-    auto& gpu = vw::tests::create_gpu();
+    auto &gpu = vw::tests::create_gpu();
     vw::StagingBufferManager staging_manager(gpu.device, gpu.allocator);
 
     // Create a large device buffer (1 million floats = ~4MB)
     constexpr size_t element_count = 1'000'000;
     constexpr VkBufferUsageFlags DeviceBufferUsage =
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
         VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     using DeviceBuffer = vw::Buffer<float, false, DeviceBufferUsage>;
-    auto device_buffer = vw::create_buffer<DeviceBuffer>(*gpu.allocator, element_count);
+    auto device_buffer =
+        vw::create_buffer<DeviceBuffer>(*gpu.allocator, element_count);
 
     // Prepare large test data
     std::vector<float> test_data;
@@ -512,10 +506,11 @@ TEST(StagingBufferManagerTest, TransferLargeDataSet) {
     }
 
     // Stage the data
-    staging_manager.fill_buffer(std::span<const float>(test_data), device_buffer, 0);
+    staging_manager.fill_buffer(std::span<const float>(test_data),
+                                device_buffer, 0);
 
     // Submit transfer commands
-    auto& queue = gpu.queue();
+    auto &queue = gpu.queue();
     auto transfer_cmd = staging_manager.fill_command_buffer();
     queue.enqueue_command_buffer(transfer_cmd);
     auto fence = queue.submit({}, {}, {});
@@ -523,20 +518,21 @@ TEST(StagingBufferManagerTest, TransferLargeDataSet) {
 
     // Read back and verify (sample verification to keep test fast)
     using HostBuffer = vw::Buffer<float, true, vw::StagingBufferUsage>;
-    auto host_buffer = vw::create_buffer<HostBuffer>(*gpu.allocator, element_count);
+    auto host_buffer =
+        vw::create_buffer<HostBuffer>(*gpu.allocator, element_count);
 
     auto cmd_pool = vw::CommandPoolBuilder(gpu.device).build();
     auto readback_cmd = cmd_pool.allocate(1)[0];
 
-    std::ignore = readback_cmd.begin(vk::CommandBufferBeginInfo()
-        .setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+    std::ignore = readback_cmd.begin(vk::CommandBufferBeginInfo().setFlags(
+        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     vk::BufferCopy copy_region;
-    copy_region.setSrcOffset(0)
-               .setDstOffset(0)
-               .setSize(element_count * sizeof(float));
+    copy_region.setSrcOffset(0).setDstOffset(0).setSize(element_count *
+                                                        sizeof(float));
 
-    readback_cmd.copyBuffer(device_buffer.handle(), host_buffer.handle(), copy_region);
+    readback_cmd.copyBuffer(device_buffer.handle(), host_buffer.handle(),
+                            copy_region);
     std::ignore = readback_cmd.end();
 
     queue.enqueue_command_buffer(readback_cmd);
@@ -565,4 +561,3 @@ TEST(StagingBufferManagerTest, TransferLargeDataSet) {
             << "Mismatch at end index " << i;
     }
 }
-

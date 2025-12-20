@@ -1,6 +1,5 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
-
 #include "VulkanWrapper/Memory/Buffer.h"
 
 namespace vw {
@@ -13,8 +12,6 @@ class CommandBufferRecorder {
     CommandBufferRecorder &operator=(const CommandBufferRecorder &) = delete;
     CommandBufferRecorder &operator=(CommandBufferRecorder &&) = delete;
     ~CommandBufferRecorder();
-
-
 
     void traceRaysKHR(
         const vk::StridedDeviceAddressRegionKHR &raygenShaderBindingTable,

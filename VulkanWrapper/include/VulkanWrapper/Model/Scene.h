@@ -6,7 +6,8 @@
 namespace vw::Model {
 
 /// Represents an instance of a mesh in the scene with its own transformation.
-/// The mesh is copied (cheap: shared_ptr members + small vector in DescriptorSet).
+/// The mesh is copied (cheap: shared_ptr members + small vector in
+/// DescriptorSet).
 struct MeshInstance {
     Mesh mesh;
     glm::mat4 transform = glm::mat4(1.0f);

@@ -99,14 +99,14 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
      * @param ao_radius AO sampling radius
      * @return AO image view
      */
-    std::shared_ptr<const vw::ImageView> execute(
-        vk::CommandBuffer cmd, vw::Barrier::ResourceTracker &tracker,
-        vw::Width width, vw::Height height,
-        std::shared_ptr<const vw::ImageView> depth_view,
-        std::shared_ptr<const vw::ImageView> position,
-        std::shared_ptr<const vw::ImageView> normal,
-        std::shared_ptr<const vw::ImageView> tangent,
-        std::shared_ptr<const vw::ImageView> bitangent, float ao_radius) {
+    std::shared_ptr<const vw::ImageView>
+    execute(vk::CommandBuffer cmd, vw::Barrier::ResourceTracker &tracker,
+            vw::Width width, vw::Height height,
+            std::shared_ptr<const vw::ImageView> depth_view,
+            std::shared_ptr<const vw::ImageView> position,
+            std::shared_ptr<const vw::ImageView> normal,
+            std::shared_ptr<const vw::ImageView> tangent,
+            std::shared_ptr<const vw::ImageView> bitangent, float ao_radius) {
 
         // Use fixed frame_index=0 so the image is shared across all swapchain
         // frames. This is required for progressive accumulation to work

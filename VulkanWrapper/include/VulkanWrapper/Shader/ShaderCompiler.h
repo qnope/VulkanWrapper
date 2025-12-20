@@ -1,7 +1,6 @@
 #pragma once
 
 #include "VulkanWrapper/3rd_party.h"
-
 #include <cstdint>
 #include <filesystem>
 #include <map>
@@ -44,7 +43,7 @@ using IncludeMap = std::map<std::string, std::string>;
 /// auto spirv = result.spirv;
 /// @endcode
 class ShaderCompiler {
-public:
+  public:
     ShaderCompiler();
     ~ShaderCompiler();
 
@@ -62,7 +61,8 @@ public:
     /// @param name Include name (e.g., "common/utils.glsl")
     /// @param content File content
     /// @return Reference to this for method chaining
-    ShaderCompiler &add_include(std::string_view name, std::string_view content);
+    ShaderCompiler &add_include(std::string_view name,
+                                std::string_view content);
 
     /// Set all virtual includes from a map
     /// @param includes Map of include names to contents
@@ -76,9 +76,11 @@ public:
 
     /// Add a preprocessor macro definition
     /// @param name Macro name
-    /// @param value Optional macro value (empty string for define without value)
+    /// @param value Optional macro value (empty string for define without
+    /// value)
     /// @return Reference to this for method chaining
-    ShaderCompiler &add_macro(std::string_view name, std::string_view value = "");
+    ShaderCompiler &add_macro(std::string_view name,
+                              std::string_view value = "");
 
     /// Enable or disable debug information generation
     /// @param enable True to generate debug info
@@ -96,16 +98,17 @@ public:
     /// @param sourceName Optional name for error messages
     /// @return Compilation result containing SPIR-V bytecode
     /// @throws ShaderCompilationException on compilation failure
-    ShaderCompilationResult compile(std::string_view source,
-                                    vk::ShaderStageFlagBits stage,
-                                    std::string_view sourceName = "<source>") const;
+    ShaderCompilationResult
+    compile(std::string_view source, vk::ShaderStageFlagBits stage,
+            std::string_view sourceName = "<source>") const;
 
     /// Compile a GLSL file to SPIR-V
     /// @param path Path to the GLSL source file
     /// @return Compilation result containing SPIR-V bytecode
     /// @throws ShaderCompilationException on compilation failure
     /// @throws FileException if file cannot be read
-    ShaderCompilationResult compile_from_file(const std::filesystem::path &path) const;
+    ShaderCompilationResult
+    compile_from_file(const std::filesystem::path &path) const;
 
     /// Compile a GLSL file to SPIR-V with explicit stage
     /// @param path Path to the GLSL source file
@@ -113,8 +116,9 @@ public:
     /// @return Compilation result containing SPIR-V bytecode
     /// @throws ShaderCompilationException on compilation failure
     /// @throws FileException if file cannot be read
-    ShaderCompilationResult compile_from_file(const std::filesystem::path &path,
-                                              vk::ShaderStageFlagBits stage) const;
+    ShaderCompilationResult
+    compile_from_file(const std::filesystem::path &path,
+                      vk::ShaderStageFlagBits stage) const;
 
     /// Compile and create a ShaderModule directly
     /// @param device Vulkan device
@@ -122,27 +126,27 @@ public:
     /// @param stage Shader stage
     /// @param sourceName Optional name for error messages
     /// @return Created ShaderModule
-    std::shared_ptr<const ShaderModule> compile_to_module(
-        std::shared_ptr<const Device> device,
-        std::string_view source,
-        vk::ShaderStageFlagBits stage,
-        std::string_view sourceName = "<source>") const;
+    std::shared_ptr<const ShaderModule>
+    compile_to_module(std::shared_ptr<const Device> device,
+                      std::string_view source, vk::ShaderStageFlagBits stage,
+                      std::string_view sourceName = "<source>") const;
 
     /// Compile a file and create a ShaderModule directly
     /// @param device Vulkan device
     /// @param path Path to the GLSL source file
     /// @return Created ShaderModule
-    std::shared_ptr<const ShaderModule> compile_file_to_module(
-        std::shared_ptr<const Device> device,
-        const std::filesystem::path &path) const;
+    std::shared_ptr<const ShaderModule>
+    compile_file_to_module(std::shared_ptr<const Device> device,
+                           const std::filesystem::path &path) const;
 
     /// Detect shader stage from file extension
     /// @param path File path with extension
     /// @return Detected shader stage
     /// @throws ShaderCompilationException if extension is not recognized
-    static vk::ShaderStageFlagBits detect_stage_from_extension(const std::filesystem::path &path);
+    static vk::ShaderStageFlagBits
+    detect_stage_from_extension(const std::filesystem::path &path);
 
-private:
+  private:
     struct Impl;
     std::unique_ptr<Impl> m_impl;
 };

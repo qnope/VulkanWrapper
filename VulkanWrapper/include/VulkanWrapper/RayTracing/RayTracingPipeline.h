@@ -1,6 +1,5 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
-
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Pipeline/PipelineLayout.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
@@ -43,13 +42,13 @@ class RayTracingPipelineBuilder {
                               std::shared_ptr<const Allocator> allocator,
                               PipelineLayout pipelineLayout);
 
-    RayTracingPipelineBuilder&
+    RayTracingPipelineBuilder &
     set_ray_generation_shader(std::shared_ptr<const ShaderModule> module);
 
-    RayTracingPipelineBuilder&
+    RayTracingPipelineBuilder &
     add_closest_hit_shader(std::shared_ptr<const ShaderModule> module);
 
-    RayTracingPipelineBuilder&
+    RayTracingPipelineBuilder &
     add_miss_shader(std::shared_ptr<const ShaderModule> module);
 
     RayTracingPipeline build();

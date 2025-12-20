@@ -1,23 +1,21 @@
 #include "VulkanWrapper/Memory/UniformBufferAllocator.h"
+
 #include "VulkanWrapper/Memory/AllocateBufferUtils.h"
 
 namespace vw {
 
 UniformBufferAllocator::UniformBufferAllocator(
-    std::shared_ptr<const Allocator> allocator,
-    vk::DeviceSize totalSize,
+    std::shared_ptr<const Allocator> allocator, vk::DeviceSize totalSize,
     vk::DeviceSize minAlignment)
-    : m_buffer(std::make_shared<Buffer<std::byte, true, UniformBufferUsage>>(create_buffer<std::byte, true, UniformBufferUsage>(*allocator, totalSize))),
-      m_totalSize(totalSize),
-      m_minAlignment(minAlignment),
-      m_nextIndex(0) {
-    
+    : m_buffer(std::make_shared<Buffer<std::byte, true, UniformBufferUsage>>(
+          create_buffer<std::byte, true, UniformBufferUsage>(*allocator,
+                                                             totalSize)))
+    , m_totalSize(totalSize)
+    , m_minAlignment(minAlignment)
+    , m_nextIndex(0) {
+
     // Start with one large free block
-    m_allocations.push_back({
-        .offset = 0,
-        .size = totalSize,
-        .free = true
-    });
+    m_allocations.push_back({.offset = 0, .size = totalSize, .free = true});
 }
 
 void UniformBufferAllocator::deallocate(uint32_t index) {
@@ -43,9 +41,9 @@ void UniformBufferAllocator::deallocate(uint32_t index) {
 
         // Look for adjacent free blocks
         size_t j = i + 1;
-        while (j < m_allocations.size() && 
-               m_allocations[j].free &&
-               m_allocations[i].offset + m_allocations[i].size == m_allocations[j].offset) {
+        while (j < m_allocations.size() && m_allocations[j].free &&
+               m_allocations[i].offset + m_allocations[i].size ==
+                   m_allocations[j].offset) {
             m_allocations[i].size += m_allocations[j].size;
             m_allocations.erase(m_allocations.begin() + j);
         }
@@ -75,11 +73,7 @@ size_t UniformBufferAllocator::allocationCount() const {
 
 void UniformBufferAllocator::clear() {
     m_allocations.clear();
-    m_allocations.push_back({
-        .offset = 0,
-        .size = m_totalSize,
-        .free = true
-    });
+    m_allocations.push_back({.offset = 0, .size = m_totalSize, .free = true});
     m_nextIndex = 0;
 }
 
@@ -87,7 +81,8 @@ vk::DeviceSize UniformBufferAllocator::align(vk::DeviceSize size) const {
     return (size + m_minAlignment - 1) & ~(m_minAlignment - 1);
 }
 
-std::optional<uint32_t> UniformBufferAllocator::findFreeBlock(vk::DeviceSize size) {
+std::optional<uint32_t>
+UniformBufferAllocator::findFreeBlock(vk::DeviceSize size) {
     // First-fit strategy
     for (size_t i = 0; i < m_allocations.size(); ++i) {
         if (m_allocations[i].free && m_allocations[i].size >= size) {

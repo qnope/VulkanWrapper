@@ -19,7 +19,8 @@ static std::vector<uint32_t> readSpirVFile(const std::filesystem::path &path) {
     const auto size = in.tellg();
 
     if (size == 0 || size % sizeof(std::uint32_t) != 0) {
-        throw FileException(path, "SPIR-V file has incorrect size (must be non-zero and multiple of 4 bytes)");
+        throw FileException(path, "SPIR-V file has incorrect size (must be "
+                                  "non-zero and multiple of 4 bytes)");
     }
 
     std::vector<std::uint32_t> result(size / sizeof(std::uint32_t));

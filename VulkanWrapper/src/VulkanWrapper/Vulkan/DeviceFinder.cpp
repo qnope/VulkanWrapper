@@ -24,7 +24,7 @@ DeviceFinder::DeviceFinder(std::span<PhysicalDevice> physicalDevices) noexcept {
     }
 }
 
-DeviceFinder& DeviceFinder::with_queue(vk::QueueFlags queueFlags) {
+DeviceFinder &DeviceFinder::with_queue(vk::QueueFlags queueFlags) {
     auto queueFamilyHandled = [queueFlags](const QueueFamilyInformation &info) {
         return info.numberAsked < info.numberAvailable &&
                (queueFlags & info.flags) == queueFlags;
@@ -51,8 +51,7 @@ DeviceFinder& DeviceFinder::with_queue(vk::QueueFlags queueFlags) {
     return *this;
 }
 
-DeviceFinder&
-DeviceFinder::with_presentation(vk::SurfaceKHR surface) noexcept {
+DeviceFinder &DeviceFinder::with_presentation(vk::SurfaceKHR surface) noexcept {
     using namespace std::ranges;
 
     constexpr auto swapchainExtension = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
@@ -90,7 +89,7 @@ DeviceFinder::with_presentation(vk::SurfaceKHR surface) noexcept {
     return *this;
 }
 
-DeviceFinder& DeviceFinder::with_synchronization_2() noexcept {
+DeviceFinder &DeviceFinder::with_synchronization_2() noexcept {
     remove_device_not_supporting_extension(
         VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
 
@@ -104,7 +103,7 @@ DeviceFinder& DeviceFinder::with_synchronization_2() noexcept {
     return *this;
 }
 
-DeviceFinder& DeviceFinder::with_ray_tracing() noexcept {
+DeviceFinder &DeviceFinder::with_ray_tracing() noexcept {
     constexpr std::array extensions = {
         VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
         VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
@@ -126,7 +125,7 @@ DeviceFinder& DeviceFinder::with_ray_tracing() noexcept {
     return *this;
 }
 
-DeviceFinder& DeviceFinder::with_dynamic_rendering() noexcept {
+DeviceFinder &DeviceFinder::with_dynamic_rendering() noexcept {
     remove_device_not_supporting_extension(
         VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
 
@@ -211,10 +210,14 @@ std::shared_ptr<Device> DeviceFinder::build() {
         1U);
 
     // Unlink ray tracing feature structures if ray tracing wasn't requested
-    // This prevents validation errors about features in pNext without extensions
-    auto& accelFeatures = m_features.get<vk::PhysicalDeviceAccelerationStructureFeaturesKHR>();
-    auto& rayQueryFeatures = m_features.get<vk::PhysicalDeviceRayQueryFeaturesKHR>();
-    auto& rtPipelineFeatures = m_features.get<vk::PhysicalDeviceRayTracingPipelineFeaturesKHR>();
+    // This prevents validation errors about features in pNext without
+    // extensions
+    auto &accelFeatures =
+        m_features.get<vk::PhysicalDeviceAccelerationStructureFeaturesKHR>();
+    auto &rayQueryFeatures =
+        m_features.get<vk::PhysicalDeviceRayQueryFeaturesKHR>();
+    auto &rtPipelineFeatures =
+        m_features.get<vk::PhysicalDeviceRayTracingPipelineFeaturesKHR>();
 
     if (!accelFeatures.accelerationStructure) {
         m_features.unlink<vk::PhysicalDeviceAccelerationStructureFeaturesKHR>();
@@ -248,9 +251,9 @@ std::shared_ptr<Device> DeviceFinder::build() {
             device->getQueue(*information.presentationFamilyIndex, 0));
     }
 
-    return std::shared_ptr<Device>(
-        new Device(std::move(device), information.device.device(),
-                   std::move(queues), presentQueue));
+    return std::shared_ptr<Device>(new Device(std::move(device),
+                                              information.device.device(),
+                                              std::move(queues), presentQueue));
 }
 
 } // namespace vw

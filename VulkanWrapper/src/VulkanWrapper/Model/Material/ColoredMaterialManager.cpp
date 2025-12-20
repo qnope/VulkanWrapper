@@ -36,7 +36,9 @@ Material ConcreteMaterialManager<&colored_material_tag>::allocate(
                                  vk::PipelineStageFlagBits2::eFragmentShader,
                                  vk::AccessFlagBits2::eUniformRead);
     auto set = allocate_set(allocator);
-    return {.material_type = std::shared_ptr<const MaterialTypeTag>(&colored_material_tag, [](const MaterialTypeTag*){}), .descriptor_set = set};
+    return {.material_type = std::shared_ptr<const MaterialTypeTag>(
+                &colored_material_tag, [](const MaterialTypeTag *) {}),
+            .descriptor_set = set};
 }
 
 std::optional<Material>

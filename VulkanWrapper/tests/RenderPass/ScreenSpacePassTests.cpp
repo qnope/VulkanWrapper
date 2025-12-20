@@ -1,23 +1,23 @@
-#include <gtest/gtest.h>
-#include "VulkanWrapper/RenderPass/ScreenSpacePass.h"
-#include "VulkanWrapper/Shader/ShaderCompiler.h"
-#include "VulkanWrapper/Memory/Transfer.h"
-#include "VulkanWrapper/Memory/Buffer.h"
-#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
+#include "utils/create_gpu.hpp"
+#include "VulkanWrapper/Command/CommandPool.h"
+#include "VulkanWrapper/Descriptors/DescriptorAllocator.h"
+#include "VulkanWrapper/Descriptors/DescriptorPool.h"
+#include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
+#include "VulkanWrapper/Image/CombinedImage.h"
 #include "VulkanWrapper/Image/Image.h"
 #include "VulkanWrapper/Image/ImageView.h"
 #include "VulkanWrapper/Image/Sampler.h"
-#include "VulkanWrapper/Image/CombinedImage.h"
-#include "VulkanWrapper/Command/CommandPool.h"
-#include "VulkanWrapper/Descriptors/DescriptorPool.h"
-#include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
-#include "VulkanWrapper/Descriptors/DescriptorAllocator.h"
+#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
+#include "VulkanWrapper/Memory/Buffer.h"
+#include "VulkanWrapper/Memory/Transfer.h"
 #include "VulkanWrapper/Pipeline/Pipeline.h"
-#include "VulkanWrapper/Synchronization/ResourceTracker.h"
+#include "VulkanWrapper/RenderPass/ScreenSpacePass.h"
+#include "VulkanWrapper/Shader/ShaderCompiler.h"
 #include "VulkanWrapper/Synchronization/Fence.h"
+#include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include "VulkanWrapper/Vulkan/Queue.h"
-#include "utils/create_gpu.hpp"
 #include <cstring>
+#include <gtest/gtest.h>
 
 namespace {
 
@@ -121,33 +121,34 @@ class TestScreenSpacePass : public vw::ScreenSpacePass<SlotEnum> {
     }
 
     template <typename PushConstantsType>
-    void test_render_fullscreen(vk::CommandBuffer cmd, vk::Extent2D extent,
-                                const vk::RenderingAttachmentInfo &color_attachment,
-                                const vk::RenderingAttachmentInfo *depth_attachment,
-                                const vw::Pipeline &pipeline,
-                                const vw::DescriptorSet &descriptor_set,
-                                const PushConstantsType &push_constants) {
+    void
+    test_render_fullscreen(vk::CommandBuffer cmd, vk::Extent2D extent,
+                           const vk::RenderingAttachmentInfo &color_attachment,
+                           const vk::RenderingAttachmentInfo *depth_attachment,
+                           const vw::Pipeline &pipeline,
+                           const vw::DescriptorSet &descriptor_set,
+                           const PushConstantsType &push_constants) {
         this->render_fullscreen(cmd, extent, color_attachment, depth_attachment,
                                 pipeline, descriptor_set, &push_constants,
                                 sizeof(push_constants));
     }
 
-    void test_render_fullscreen_no_push(vk::CommandBuffer cmd, vk::Extent2D extent,
-                                        const vk::RenderingAttachmentInfo &color_attachment,
-                                        const vk::RenderingAttachmentInfo *depth_attachment,
-                                        const vw::Pipeline &pipeline,
-                                        const vw::DescriptorSet &descriptor_set) {
+    void test_render_fullscreen_no_push(
+        vk::CommandBuffer cmd, vk::Extent2D extent,
+        const vk::RenderingAttachmentInfo &color_attachment,
+        const vk::RenderingAttachmentInfo *depth_attachment,
+        const vw::Pipeline &pipeline, const vw::DescriptorSet &descriptor_set) {
         this->render_fullscreen(cmd, extent, color_attachment, depth_attachment,
                                 pipeline, descriptor_set);
     }
 
     // Also expose get_or_create_image for testing image allocation
-    const vw::CachedImage &test_get_or_create_image(SlotEnum slot, vw::Width width,
-                                                     vw::Height height,
-                                                     size_t frame_index,
-                                                     vk::Format format,
-                                                     vk::ImageUsageFlags usage) {
-        return this->get_or_create_image(slot, width, height, frame_index, format, usage);
+    const vw::CachedImage &
+    test_get_or_create_image(SlotEnum slot, vw::Width width, vw::Height height,
+                             size_t frame_index, vk::Format format,
+                             vk::ImageUsageFlags usage) {
+        return this->get_or_create_image(slot, width, height, frame_index,
+                                         format, usage);
     }
 };
 
@@ -187,8 +188,7 @@ TEST_F(ScreenSpacePassTest, ClearImageDiagnostic) {
 
     // Create output image
     auto outputImage = allocator->create_image_2D(
-        vw::Width{width}, vw::Height{height}, false,
-        vk::Format::eR8G8B8A8Unorm,
+        vw::Width{width}, vw::Height{height}, false, vk::Format::eR8G8B8A8Unorm,
         vk::ImageUsageFlagBits::eColorAttachment |
             vk::ImageUsageFlagBits::eTransferSrc |
             vk::ImageUsageFlagBits::eTransferDst);
@@ -196,30 +196,33 @@ TEST_F(ScreenSpacePassTest, ClearImageDiagnostic) {
     // Create staging buffer for readback
     constexpr size_t bufferSize = width * height * 4;
     using StagingBuffer = vw::Buffer<std::byte, true, vw::StagingBufferUsage>;
-    auto stagingBuffer = vw::create_buffer<StagingBuffer>(*allocator, bufferSize);
+    auto stagingBuffer =
+        vw::create_buffer<StagingBuffer>(*allocator, bufferSize);
 
     // Record and execute
     auto cmd = cmdPool->allocate(1)[0];
-    std::ignore = cmd.begin(vk::CommandBufferBeginInfo()
-                                .setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+    std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
+        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     vw::Transfer transfer;
     auto &tracker = transfer.resourceTracker();
 
     // Transition to transfer dst for clear
-    tracker.request(vw::Barrier::ImageState{
-        .image = outputImage->handle(),
-        .subresourceRange = outputImage->full_range(),
-        .layout = vk::ImageLayout::eTransferDstOptimal,
-        .stage = vk::PipelineStageFlagBits2::eTransfer,
-        .access = vk::AccessFlagBits2::eTransferWrite});
+    tracker.request(
+        vw::Barrier::ImageState{.image = outputImage->handle(),
+                                .subresourceRange = outputImage->full_range(),
+                                .layout = vk::ImageLayout::eTransferDstOptimal,
+                                .stage = vk::PipelineStageFlagBits2::eTransfer,
+                                .access = vk::AccessFlagBits2::eTransferWrite});
     tracker.flush(cmd);
 
     // Clear the image to red
     vk::ClearColorValue clearColor(1.0f, 0.0f, 0.0f, 1.0f);
-    vk::ImageSubresourceRange range(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
-    cmd.clearColorImage(outputImage->handle(), vk::ImageLayout::eTransferDstOptimal,
-                        &clearColor, 1, &range);
+    vk::ImageSubresourceRange range(vk::ImageAspectFlagBits::eColor, 0, 1, 0,
+                                    1);
+    cmd.clearColorImage(outputImage->handle(),
+                        vk::ImageLayout::eTransferDstOptimal, &clearColor, 1,
+                        &range);
 
     // Copy to staging buffer
     transfer.copyImageToBuffer(cmd, outputImage, stagingBuffer.handle(), 0);
@@ -245,8 +248,7 @@ TEST_F(ScreenSpacePassTest, DynamicRenderingClearDiagnostic) {
 
     // Create output image
     auto outputImage = allocator->create_image_2D(
-        vw::Width{width}, vw::Height{height}, false,
-        vk::Format::eR8G8B8A8Unorm,
+        vw::Width{width}, vw::Height{height}, false, vk::Format::eR8G8B8A8Unorm,
         vk::ImageUsageFlagBits::eColorAttachment |
             vk::ImageUsageFlagBits::eTransferSrc);
 
@@ -257,12 +259,13 @@ TEST_F(ScreenSpacePassTest, DynamicRenderingClearDiagnostic) {
     // Create staging buffer for readback
     constexpr size_t bufferSize = width * height * 4;
     using StagingBuffer = vw::Buffer<std::byte, true, vw::StagingBufferUsage>;
-    auto stagingBuffer = vw::create_buffer<StagingBuffer>(*allocator, bufferSize);
+    auto stagingBuffer =
+        vw::create_buffer<StagingBuffer>(*allocator, bufferSize);
 
     // Record and execute
     auto cmd = cmdPool->allocate(1)[0];
-    std::ignore = cmd.begin(vk::CommandBufferBeginInfo()
-                                .setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+    std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
+        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     vw::Transfer transfer;
     auto &tracker = transfer.resourceTracker();
@@ -283,7 +286,8 @@ TEST_F(ScreenSpacePassTest, DynamicRenderingClearDiagnostic) {
             .setImageLayout(vk::ImageLayout::eColorAttachmentOptimal)
             .setLoadOp(vk::AttachmentLoadOp::eClear)
             .setStoreOp(vk::AttachmentStoreOp::eStore)
-            .setClearValue(vk::ClearColorValue(0.0f, 1.0f, 0.0f, 1.0f)); // Green
+            .setClearValue(
+                vk::ClearColorValue(0.0f, 1.0f, 0.0f, 1.0f)); // Green
 
     vk::RenderingInfo renderingInfo =
         vk::RenderingInfo()
@@ -322,8 +326,9 @@ TEST_F(ScreenSpacePassTest, RenderSolidColor) {
     vw::ShaderCompiler compiler;
     auto vertexShader = compiler.compile_to_module(
         device, FULLSCREEN_VERTEX_SHADER, vk::ShaderStageFlagBits::eVertex);
-    auto fragmentShader = compiler.compile_to_module(
-        device, SOLID_COLOR_FRAGMENT_SHADER, vk::ShaderStageFlagBits::eFragment);
+    auto fragmentShader =
+        compiler.compile_to_module(device, SOLID_COLOR_FRAGMENT_SHADER,
+                                   vk::ShaderStageFlagBits::eFragment);
 
     // Create empty descriptor layout (no descriptors needed)
     auto descriptorLayout = vw::DescriptorSetLayoutBuilder(device).build();
@@ -334,14 +339,14 @@ TEST_F(ScreenSpacePassTest, RenderSolidColor) {
         vk::Format::eR8G8B8A8Unorm);
 
     // Create descriptor pool and allocate empty set
-    auto descriptorPool = vw::DescriptorPoolBuilder(device, descriptorLayout).build();
+    auto descriptorPool =
+        vw::DescriptorPoolBuilder(device, descriptorLayout).build();
     vw::DescriptorAllocator descriptorAllocator;
     auto descriptorSet = descriptorPool.allocate_set(descriptorAllocator);
 
     // Create output image
     auto outputImage = allocator->create_image_2D(
-        vw::Width{width}, vw::Height{height}, false,
-        vk::Format::eR8G8B8A8Unorm,
+        vw::Width{width}, vw::Height{height}, false, vk::Format::eR8G8B8A8Unorm,
         vk::ImageUsageFlagBits::eColorAttachment |
             vk::ImageUsageFlagBits::eTransferSrc);
 
@@ -352,12 +357,13 @@ TEST_F(ScreenSpacePassTest, RenderSolidColor) {
     // Create staging buffer for readback
     constexpr size_t bufferSize = width * height * 4;
     using StagingBuffer = vw::Buffer<std::byte, true, vw::StagingBufferUsage>;
-    auto stagingBuffer = vw::create_buffer<StagingBuffer>(*allocator, bufferSize);
+    auto stagingBuffer =
+        vw::create_buffer<StagingBuffer>(*allocator, bufferSize);
 
     // Record and execute
     auto cmd = cmdPool->allocate(1)[0];
-    std::ignore = cmd.begin(vk::CommandBufferBeginInfo()
-                                .setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+    std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
+        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     // Use Transfer's resource tracker for proper barrier management
     vw::Transfer transfer;
@@ -382,8 +388,8 @@ TEST_F(ScreenSpacePassTest, RenderSolidColor) {
             .setClearValue(vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f));
 
     // Render fullscreen quad (no push constants version)
-    pass.test_render_fullscreen_no_push(cmd, {width, height}, colorAttachment, nullptr,
-                                        *pipeline, descriptorSet);
+    pass.test_render_fullscreen_no_push(cmd, {width, height}, colorAttachment,
+                                        nullptr, *pipeline, descriptorSet);
 
     // Copy to staging buffer (Transfer handles barrier internally)
     transfer.copyImageToBuffer(cmd, outputImage, stagingBuffer.handle(), 0);
@@ -404,10 +410,14 @@ TEST_F(ScreenSpacePassTest, RenderSolidColor) {
 
     // Check all pixels are the same solid red
     for (size_t i = 0; i < width * height; ++i) {
-        EXPECT_EQ(static_cast<uint8_t>(pixels[i * 4 + 0]), 255) << "Pixel " << i << " R mismatch";
-        EXPECT_EQ(static_cast<uint8_t>(pixels[i * 4 + 1]), 0) << "Pixel " << i << " G mismatch";
-        EXPECT_EQ(static_cast<uint8_t>(pixels[i * 4 + 2]), 0) << "Pixel " << i << " B mismatch";
-        EXPECT_EQ(static_cast<uint8_t>(pixels[i * 4 + 3]), 255) << "Pixel " << i << " A mismatch";
+        EXPECT_EQ(static_cast<uint8_t>(pixels[i * 4 + 0]), 255)
+            << "Pixel " << i << " R mismatch";
+        EXPECT_EQ(static_cast<uint8_t>(pixels[i * 4 + 1]), 0)
+            << "Pixel " << i << " G mismatch";
+        EXPECT_EQ(static_cast<uint8_t>(pixels[i * 4 + 2]), 0)
+            << "Pixel " << i << " B mismatch";
+        EXPECT_EQ(static_cast<uint8_t>(pixels[i * 4 + 3]), 255)
+            << "Pixel " << i << " A mismatch";
     }
 }
 
@@ -425,15 +435,16 @@ TEST_F(ScreenSpacePassTest, RenderWithPushConstants) {
     vw::ShaderCompiler compiler;
     auto vertexShader = compiler.compile_to_module(
         device, FULLSCREEN_VERTEX_SHADER, vk::ShaderStageFlagBits::eVertex);
-    auto fragmentShader = compiler.compile_to_module(
-        device, PUSH_CONSTANTS_FRAGMENT_SHADER, vk::ShaderStageFlagBits::eFragment);
+    auto fragmentShader =
+        compiler.compile_to_module(device, PUSH_CONSTANTS_FRAGMENT_SHADER,
+                                   vk::ShaderStageFlagBits::eFragment);
 
     // Create empty descriptor layout
     auto descriptorLayout = vw::DescriptorSetLayoutBuilder(device).build();
 
     // Create pipeline with push constants
-    std::vector<vk::PushConstantRange> pushConstants = {
-        vk::PushConstantRange(vk::ShaderStageFlagBits::eFragment, 0, sizeof(PushConstants))};
+    std::vector<vk::PushConstantRange> pushConstants = {vk::PushConstantRange(
+        vk::ShaderStageFlagBits::eFragment, 0, sizeof(PushConstants))};
 
     auto pipeline = vw::create_screen_space_pipeline(
         device, vertexShader, fragmentShader, descriptorLayout,
@@ -441,14 +452,14 @@ TEST_F(ScreenSpacePassTest, RenderWithPushConstants) {
         vk::CompareOp::eAlways, pushConstants);
 
     // Create descriptor pool and allocate empty set
-    auto descriptorPool = vw::DescriptorPoolBuilder(device, descriptorLayout).build();
+    auto descriptorPool =
+        vw::DescriptorPoolBuilder(device, descriptorLayout).build();
     vw::DescriptorAllocator descriptorAllocator;
     auto descriptorSet = descriptorPool.allocate_set(descriptorAllocator);
 
     // Create output image
     auto outputImage = allocator->create_image_2D(
-        vw::Width{width}, vw::Height{height}, false,
-        vk::Format::eR8G8B8A8Unorm,
+        vw::Width{width}, vw::Height{height}, false, vk::Format::eR8G8B8A8Unorm,
         vk::ImageUsageFlagBits::eColorAttachment |
             vk::ImageUsageFlagBits::eTransferSrc);
 
@@ -459,12 +470,13 @@ TEST_F(ScreenSpacePassTest, RenderWithPushConstants) {
     // Create staging buffer
     constexpr size_t bufferSize = width * height * 4;
     using StagingBuffer = vw::Buffer<std::byte, true, vw::StagingBufferUsage>;
-    auto stagingBuffer = vw::create_buffer<StagingBuffer>(*allocator, bufferSize);
+    auto stagingBuffer =
+        vw::create_buffer<StagingBuffer>(*allocator, bufferSize);
 
     // Record and execute
     auto cmd = cmdPool->allocate(1)[0];
-    std::ignore = cmd.begin(vk::CommandBufferBeginInfo()
-                                .setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+    std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
+        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     // Use Transfer's resource tracker
     vw::Transfer transfer;
@@ -521,8 +533,9 @@ TEST_F(ScreenSpacePassTest, RenderUVGradient) {
     vw::ShaderCompiler compiler;
     auto vertexShader = compiler.compile_to_module(
         device, FULLSCREEN_VERTEX_SHADER, vk::ShaderStageFlagBits::eVertex);
-    auto fragmentShader = compiler.compile_to_module(
-        device, UV_GRADIENT_FRAGMENT_SHADER, vk::ShaderStageFlagBits::eFragment);
+    auto fragmentShader =
+        compiler.compile_to_module(device, UV_GRADIENT_FRAGMENT_SHADER,
+                                   vk::ShaderStageFlagBits::eFragment);
 
     // Create empty descriptor layout
     auto descriptorLayout = vw::DescriptorSetLayoutBuilder(device).build();
@@ -533,14 +546,14 @@ TEST_F(ScreenSpacePassTest, RenderUVGradient) {
         vk::Format::eR8G8B8A8Unorm);
 
     // Create descriptor pool and allocate empty set
-    auto descriptorPool = vw::DescriptorPoolBuilder(device, descriptorLayout).build();
+    auto descriptorPool =
+        vw::DescriptorPoolBuilder(device, descriptorLayout).build();
     vw::DescriptorAllocator descriptorAllocator;
     auto descriptorSet = descriptorPool.allocate_set(descriptorAllocator);
 
     // Create output image
     auto outputImage = allocator->create_image_2D(
-        vw::Width{width}, vw::Height{height}, false,
-        vk::Format::eR8G8B8A8Unorm,
+        vw::Width{width}, vw::Height{height}, false, vk::Format::eR8G8B8A8Unorm,
         vk::ImageUsageFlagBits::eColorAttachment |
             vk::ImageUsageFlagBits::eTransferSrc);
 
@@ -550,12 +563,13 @@ TEST_F(ScreenSpacePassTest, RenderUVGradient) {
 
     constexpr size_t bufferSize = width * height * 4;
     using StagingBuffer = vw::Buffer<std::byte, true, vw::StagingBufferUsage>;
-    auto stagingBuffer = vw::create_buffer<StagingBuffer>(*allocator, bufferSize);
+    auto stagingBuffer =
+        vw::create_buffer<StagingBuffer>(*allocator, bufferSize);
 
     // Record and execute
     auto cmd = cmdPool->allocate(1)[0];
-    std::ignore = cmd.begin(vk::CommandBufferBeginInfo()
-                                .setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+    std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
+        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     vw::Transfer transfer;
     auto &tracker = transfer.resourceTracker();
@@ -576,8 +590,8 @@ TEST_F(ScreenSpacePassTest, RenderUVGradient) {
             .setStoreOp(vk::AttachmentStoreOp::eStore)
             .setClearValue(vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f));
 
-    pass.test_render_fullscreen_no_push(cmd, {width, height}, colorAttachment, nullptr,
-                                        *pipeline, descriptorSet);
+    pass.test_render_fullscreen_no_push(cmd, {width, height}, colorAttachment,
+                                        nullptr, *pipeline, descriptorSet);
 
     transfer.copyImageToBuffer(cmd, outputImage, stagingBuffer.handle(), 0);
 
@@ -589,11 +603,11 @@ TEST_F(ScreenSpacePassTest, RenderUVGradient) {
     // Verify UV gradient
     auto pixels = stagingBuffer.read_as_vector(0, bufferSize);
 
-    // Check corners - note: pixel centers are at (x+0.5)/width, so corner pixels
-    // don't have exactly 0 or 1 UV values. For 64x64:
+    // Check corners - note: pixel centers are at (x+0.5)/width, so corner
+    // pixels don't have exactly 0 or 1 UV values. For 64x64:
     // - Pixel (0,0) center: UV ≈ (0.5/64, 0.5/64) ≈ (0.0078, 0.0078) → ~2
-    // - Pixel (63,0) center: UV ≈ (63.5/64, 0.5/64) ≈ (0.992, 0.0078) → ~253, ~2
-    // Use tolerance of 5 to account for pixel center sampling
+    // - Pixel (63,0) center: UV ≈ (63.5/64, 0.5/64) ≈ (0.992, 0.0078) → ~253,
+    // ~2 Use tolerance of 5 to account for pixel center sampling
     constexpr int tolerance = 5;
 
     // Top-left (0,0): UV near (0,0) -> R~0, G~0
@@ -602,24 +616,34 @@ TEST_F(ScreenSpacePassTest, RenderUVGradient) {
 
     // Top-right (63,0): UV near (1,0) -> R~255, G~0
     size_t topRightIdx = (width - 1) * 4;
-    EXPECT_NEAR(static_cast<uint8_t>(pixels[topRightIdx + 0]), 255, tolerance) << "Top-right R";
-    EXPECT_NEAR(static_cast<uint8_t>(pixels[topRightIdx + 1]), 0, tolerance) << "Top-right G";
+    EXPECT_NEAR(static_cast<uint8_t>(pixels[topRightIdx + 0]), 255, tolerance)
+        << "Top-right R";
+    EXPECT_NEAR(static_cast<uint8_t>(pixels[topRightIdx + 1]), 0, tolerance)
+        << "Top-right G";
 
     // Bottom-left (0,63): UV near (0,1) -> R~0, G~255
     size_t bottomLeftIdx = (height - 1) * width * 4;
-    EXPECT_NEAR(static_cast<uint8_t>(pixels[bottomLeftIdx + 0]), 0, tolerance) << "Bottom-left R";
-    EXPECT_NEAR(static_cast<uint8_t>(pixels[bottomLeftIdx + 1]), 255, tolerance) << "Bottom-left G";
+    EXPECT_NEAR(static_cast<uint8_t>(pixels[bottomLeftIdx + 0]), 0, tolerance)
+        << "Bottom-left R";
+    EXPECT_NEAR(static_cast<uint8_t>(pixels[bottomLeftIdx + 1]), 255, tolerance)
+        << "Bottom-left G";
 
     // Bottom-right (63,63): UV near (1,1) -> R~255, G~255
     size_t bottomRightIdx = ((height - 1) * width + (width - 1)) * 4;
-    EXPECT_NEAR(static_cast<uint8_t>(pixels[bottomRightIdx + 0]), 255, tolerance) << "Bottom-right R";
-    EXPECT_NEAR(static_cast<uint8_t>(pixels[bottomRightIdx + 1]), 255, tolerance) << "Bottom-right G";
+    EXPECT_NEAR(static_cast<uint8_t>(pixels[bottomRightIdx + 0]), 255,
+                tolerance)
+        << "Bottom-right R";
+    EXPECT_NEAR(static_cast<uint8_t>(pixels[bottomRightIdx + 1]), 255,
+                tolerance)
+        << "Bottom-right G";
 
     // Verify gradient increases from left to right (R) and top to bottom (G)
     // Check center pixel has intermediate values
     size_t centerIdx = ((height / 2) * width + (width / 2)) * 4;
-    EXPECT_NEAR(static_cast<uint8_t>(pixels[centerIdx + 0]), 128, 10) << "Center R";
-    EXPECT_NEAR(static_cast<uint8_t>(pixels[centerIdx + 1]), 128, 10) << "Center G";
+    EXPECT_NEAR(static_cast<uint8_t>(pixels[centerIdx + 0]), 128, 10)
+        << "Center R";
+    EXPECT_NEAR(static_cast<uint8_t>(pixels[centerIdx + 1]), 128, 10)
+        << "Center G";
 }
 
 TEST_F(ScreenSpacePassTest, RenderWithTextureInput) {
@@ -632,13 +656,15 @@ TEST_F(ScreenSpacePassTest, RenderWithTextureInput) {
     vw::ShaderCompiler compiler;
     auto vertexShader = compiler.compile_to_module(
         device, FULLSCREEN_VERTEX_SHADER, vk::ShaderStageFlagBits::eVertex);
-    auto fragmentShader = compiler.compile_to_module(
-        device, TEXTURE_SAMPLE_FRAGMENT_SHADER, vk::ShaderStageFlagBits::eFragment);
+    auto fragmentShader =
+        compiler.compile_to_module(device, TEXTURE_SAMPLE_FRAGMENT_SHADER,
+                                   vk::ShaderStageFlagBits::eFragment);
 
     // Create descriptor layout with one combined image sampler
-    auto descriptorLayout = vw::DescriptorSetLayoutBuilder(device)
-                                .with_combined_image(vk::ShaderStageFlagBits::eFragment, 1)
-                                .build();
+    auto descriptorLayout =
+        vw::DescriptorSetLayoutBuilder(device)
+            .with_combined_image(vk::ShaderStageFlagBits::eFragment, 1)
+            .build();
 
     // Create pipeline
     auto pipeline = vw::create_screen_space_pipeline(
@@ -646,13 +672,14 @@ TEST_F(ScreenSpacePassTest, RenderWithTextureInput) {
         vk::Format::eR8G8B8A8Unorm);
 
     // Create descriptor pool
-    auto descriptorPool = vw::DescriptorPoolBuilder(device, descriptorLayout).build();
+    auto descriptorPool =
+        vw::DescriptorPoolBuilder(device, descriptorLayout).build();
 
     // Create input texture (blue)
     auto inputImage = allocator->create_image_2D(
-        vw::Width{width}, vw::Height{height}, false,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled);
+        vw::Width{width}, vw::Height{height}, false, vk::Format::eR8G8B8A8Unorm,
+        vk::ImageUsageFlagBits::eTransferDst |
+            vk::ImageUsageFlagBits::eSampled);
 
     auto inputView = vw::ImageViewBuilder(device, inputImage)
                          .setImageType(vk::ImageViewType::e2D)
@@ -664,24 +691,26 @@ TEST_F(ScreenSpacePassTest, RenderWithTextureInput) {
     // Fill input texture with blue color
     constexpr size_t inputBufferSize = width * height * 4;
     using StagingBuffer = vw::Buffer<std::byte, true, vw::StagingBufferUsage>;
-    auto inputStagingBuffer = vw::create_buffer<StagingBuffer>(*allocator, inputBufferSize);
+    auto inputStagingBuffer =
+        vw::create_buffer<StagingBuffer>(*allocator, inputBufferSize);
 
     std::vector<std::byte> bluePixels(inputBufferSize);
     for (size_t i = 0; i < width * height; ++i) {
-        bluePixels[i * 4 + 0] = static_cast<std::byte>(0);    // R
-        bluePixels[i * 4 + 1] = static_cast<std::byte>(0);    // G
-        bluePixels[i * 4 + 2] = static_cast<std::byte>(255);  // B
-        bluePixels[i * 4 + 3] = static_cast<std::byte>(255);  // A
+        bluePixels[i * 4 + 0] = static_cast<std::byte>(0);   // R
+        bluePixels[i * 4 + 1] = static_cast<std::byte>(0);   // G
+        bluePixels[i * 4 + 2] = static_cast<std::byte>(255); // B
+        bluePixels[i * 4 + 3] = static_cast<std::byte>(255); // A
     }
     inputStagingBuffer.write(std::span<const std::byte>(bluePixels), 0);
 
     // Upload input texture
     auto cmd1 = cmdPool->allocate(1)[0];
-    std::ignore = cmd1.begin(vk::CommandBufferBeginInfo()
-                                 .setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+    std::ignore = cmd1.begin(vk::CommandBufferBeginInfo().setFlags(
+        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     vw::Transfer uploadTransfer;
-    uploadTransfer.copyBufferToImage(cmd1, inputStagingBuffer.handle(), inputImage, 0);
+    uploadTransfer.copyBufferToImage(cmd1, inputStagingBuffer.handle(),
+                                     inputImage, 0);
 
     std::ignore = cmd1.end();
     queue->enqueue_command_buffer(cmd1);
@@ -689,8 +718,7 @@ TEST_F(ScreenSpacePassTest, RenderWithTextureInput) {
 
     // Create output image
     auto outputImage = allocator->create_image_2D(
-        vw::Width{width}, vw::Height{height}, false,
-        vk::Format::eR8G8B8A8Unorm,
+        vw::Width{width}, vw::Height{height}, false, vk::Format::eR8G8B8A8Unorm,
         vk::ImageUsageFlagBits::eColorAttachment |
             vk::ImageUsageFlagBits::eTransferSrc);
 
@@ -698,7 +726,8 @@ TEST_F(ScreenSpacePassTest, RenderWithTextureInput) {
                           .setImageType(vk::ImageViewType::e2D)
                           .build();
 
-    auto outputStagingBuffer = vw::create_buffer<StagingBuffer>(*allocator, inputBufferSize);
+    auto outputStagingBuffer =
+        vw::create_buffer<StagingBuffer>(*allocator, inputBufferSize);
 
     // Create descriptor set with input texture
     vw::DescriptorAllocator descriptorAllocator;
@@ -710,8 +739,8 @@ TEST_F(ScreenSpacePassTest, RenderWithTextureInput) {
 
     // Record rendering
     auto cmd2 = cmdPool->allocate(1)[0];
-    std::ignore = cmd2.begin(vk::CommandBufferBeginInfo()
-                                 .setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+    std::ignore = cmd2.begin(vk::CommandBufferBeginInfo().setFlags(
+        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     vw::Transfer transfer;
     auto &tracker = transfer.resourceTracker();
@@ -737,10 +766,11 @@ TEST_F(ScreenSpacePassTest, RenderWithTextureInput) {
             .setStoreOp(vk::AttachmentStoreOp::eStore)
             .setClearValue(vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f));
 
-    pass.test_render_fullscreen_no_push(cmd2, {width, height}, colorAttachment, nullptr,
-                                        *pipeline, descriptorSet);
+    pass.test_render_fullscreen_no_push(cmd2, {width, height}, colorAttachment,
+                                        nullptr, *pipeline, descriptorSet);
 
-    transfer.copyImageToBuffer(cmd2, outputImage, outputStagingBuffer.handle(), 0);
+    transfer.copyImageToBuffer(cmd2, outputImage, outputStagingBuffer.handle(),
+                               0);
 
     std::ignore = cmd2.end();
     queue->enqueue_command_buffer(cmd2);
@@ -787,8 +817,9 @@ TEST_F(ScreenSpacePassTest, CreateScreenSpacePipelineFunction) {
     vw::ShaderCompiler compiler;
     auto vertexShader = compiler.compile_to_module(
         device, FULLSCREEN_VERTEX_SHADER, vk::ShaderStageFlagBits::eVertex);
-    auto fragmentShader = compiler.compile_to_module(
-        device, SOLID_COLOR_FRAGMENT_SHADER, vk::ShaderStageFlagBits::eFragment);
+    auto fragmentShader =
+        compiler.compile_to_module(device, SOLID_COLOR_FRAGMENT_SHADER,
+                                   vk::ShaderStageFlagBits::eFragment);
 
     auto descriptorLayout = vw::DescriptorSetLayoutBuilder(device).build();
 
@@ -803,7 +834,8 @@ TEST_F(ScreenSpacePassTest, CreateScreenSpacePipelineFunction) {
     // Test with depth format
     auto pipeline2 = vw::create_screen_space_pipeline(
         device, vertexShader, fragmentShader, descriptorLayout,
-        vk::Format::eR8G8B8A8Unorm, vk::Format::eD32Sfloat, vk::CompareOp::eLess);
+        vk::Format::eR8G8B8A8Unorm, vk::Format::eD32Sfloat,
+        vk::CompareOp::eLess);
 
     ASSERT_NE(pipeline2, nullptr);
     EXPECT_TRUE(pipeline2->handle());

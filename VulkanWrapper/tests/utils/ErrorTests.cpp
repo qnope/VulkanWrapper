@@ -6,9 +6,11 @@ TEST(ExceptionTest, BasicException) {
     try {
         throw vw::Exception("Test error message");
     } catch (const vw::Exception &e) {
-        EXPECT_NE(std::string(e.what()).find("Test error message"), std::string::npos);
+        EXPECT_NE(std::string(e.what()).find("Test error message"),
+                  std::string::npos);
         EXPECT_EQ(e.message(), "Test error message");
-        EXPECT_NE(std::string(e.what()).find("ErrorTests.cpp"), std::string::npos);
+        EXPECT_NE(std::string(e.what()).find("ErrorTests.cpp"),
+                  std::string::npos);
     }
 }
 
@@ -17,7 +19,8 @@ TEST(ExceptionTest, ExceptionInheritance) {
         throw vw::Exception("Test message");
     } catch (const std::exception &e) {
         // Should be catchable as std::exception
-        EXPECT_NE(std::string(e.what()).find("Test message"), std::string::npos);
+        EXPECT_NE(std::string(e.what()).find("Test message"),
+                  std::string::npos);
     }
 }
 
@@ -29,10 +32,12 @@ TEST(VulkanExceptionTest, VulkanErrorWithResult) {
     } catch (const vw::VulkanException &e) {
         EXPECT_EQ(e.result(), vk::Result::eErrorOutOfDeviceMemory);
         EXPECT_EQ(e.message(), "Failed to allocate buffer");
-        EXPECT_NE(e.result_string().find("OutOfDeviceMemory"), std::string::npos);
+        EXPECT_NE(e.result_string().find("OutOfDeviceMemory"),
+                  std::string::npos);
 
         std::string what_str(e.what());
-        EXPECT_NE(what_str.find("Failed to allocate buffer"), std::string::npos);
+        EXPECT_NE(what_str.find("Failed to allocate buffer"),
+                  std::string::npos);
         EXPECT_NE(what_str.find("OutOfDeviceMemory"), std::string::npos);
         EXPECT_NE(what_str.find("ErrorTests.cpp"), std::string::npos);
     }
@@ -61,11 +66,13 @@ TEST(VulkanExceptionTest, CheckVkPairThrowsOnError) {
 // Test VMAException
 TEST(VMAExceptionTest, VMAErrorWithResult) {
     try {
-        throw vw::VMAException(VK_ERROR_OUT_OF_DEVICE_MEMORY, "VMA allocation failed");
+        throw vw::VMAException(VK_ERROR_OUT_OF_DEVICE_MEMORY,
+                               "VMA allocation failed");
     } catch (const vw::VMAException &e) {
         EXPECT_EQ(e.result(), VK_ERROR_OUT_OF_DEVICE_MEMORY);
         EXPECT_EQ(e.message(), "VMA allocation failed");
-        EXPECT_NE(e.result_string().find("OutOfDeviceMemory"), std::string::npos);
+        EXPECT_NE(e.result_string().find("OutOfDeviceMemory"),
+                  std::string::npos);
 
         std::string what_str(e.what());
         EXPECT_NE(what_str.find("VMA allocation failed"), std::string::npos);
@@ -93,7 +100,8 @@ TEST(FileExceptionTest, FileExceptionWithPath) {
 
         std::string what_str(e.what());
         EXPECT_NE(what_str.find("File not found"), std::string::npos);
-        EXPECT_NE(what_str.find("/path/to/missing/file.txt"), std::string::npos);
+        EXPECT_NE(what_str.find("/path/to/missing/file.txt"),
+                  std::string::npos);
     }
 }
 
@@ -131,7 +139,8 @@ TEST(LogicExceptionTest, InvalidState) {
         throw vw::LogicException::invalid_state("Instance has been removed");
     } catch (const vw::LogicException &e) {
         std::string what_str(e.what());
-        EXPECT_NE(what_str.find("Instance has been removed"), std::string::npos);
+        EXPECT_NE(what_str.find("Instance has been removed"),
+                  std::string::npos);
     }
 }
 
@@ -152,7 +161,8 @@ TEST(SDLExceptionTest, SDLExceptionCreation) {
     } catch (const vw::SDLException &e) {
         EXPECT_EQ(e.message(), "SDL initialization failed");
         std::string what_str(e.what());
-        EXPECT_NE(what_str.find("SDL initialization failed"), std::string::npos);
+        EXPECT_NE(what_str.find("SDL initialization failed"),
+                  std::string::npos);
     }
 }
 
@@ -172,7 +182,8 @@ TEST(SDLExceptionTest, CheckSdlPointerReturnsValue) {
 
 TEST(SDLExceptionTest, CheckSdlPointerThrowsOnNull) {
     int *null_ptr = nullptr;
-    EXPECT_THROW(vw::check_sdl(null_ptr, "Test null pointer"), vw::SDLException);
+    EXPECT_THROW(vw::check_sdl(null_ptr, "Test null pointer"),
+                 vw::SDLException);
 }
 
 // Test exception hierarchy catching
@@ -237,7 +248,8 @@ TEST(SourceLocationTest, LocationCaptured) {
 
 TEST(SourceLocationTest, CheckVkCapturesCallSite) {
     try {
-        vw::check_vk(vk::Result::eErrorUnknown, "Test"); // Line where check_vk is called
+        vw::check_vk(vk::Result::eErrorUnknown,
+                     "Test"); // Line where check_vk is called
     } catch (const vw::VulkanException &e) {
         // The location should point to this file, not Error.h
         std::string what_str(e.what());

@@ -5,9 +5,9 @@
 namespace vw ::Model {
 Mesh::Mesh(std::shared_ptr<const Vertex3DBuffer> vertex_buffer,
            std::shared_ptr<const FullVertex3DBuffer> full_vertex_buffer,
-           std::shared_ptr<const IndexBuffer> index_buffer, Material::Material material,
-           uint32_t indice_count, int vertex_offset, int first_index,
-           int vertices_count)
+           std::shared_ptr<const IndexBuffer> index_buffer,
+           Material::Material material, uint32_t indice_count,
+           int vertex_offset, int first_index, int vertices_count)
     : m_vertex_buffer{std::move(vertex_buffer)}
     , m_full_vertex_buffer{std::move(full_vertex_buffer)}
     , m_index_buffer{std::move(index_buffer)}
@@ -102,10 +102,12 @@ size_t Mesh::geometry_hash() const noexcept {
 }
 
 bool Mesh::operator==(const Mesh &other) const noexcept {
-    return m_vertex_buffer->device_address() == other.m_vertex_buffer->device_address() &&
+    return m_vertex_buffer->device_address() ==
+               other.m_vertex_buffer->device_address() &&
            m_vertex_offset == other.m_vertex_offset &&
            m_vertices_count == other.m_vertices_count &&
-           m_index_buffer->device_address() == other.m_index_buffer->device_address() &&
+           m_index_buffer->device_address() ==
+               other.m_index_buffer->device_address() &&
            m_first_index == other.m_first_index &&
            m_indice_count == other.m_indice_count;
 }

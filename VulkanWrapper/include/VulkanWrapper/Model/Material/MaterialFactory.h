@@ -1,6 +1,5 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
-
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Model/Material/MaterialManager.h"
 #include "VulkanWrapper/Model/Material/MaterialManagerMap.h"
@@ -14,7 +13,8 @@ class MaterialFactory {
         const Internal::MaterialInfo &info)>;
 
   public:
-    MaterialFactory(std::shared_ptr<MaterialManagerMap> material_manager_map) noexcept;
+    MaterialFactory(
+        std::shared_ptr<MaterialManagerMap> material_manager_map) noexcept;
     [[nodiscard]] Material
     allocate_material(const Internal::MaterialInfo &) const noexcept;
 

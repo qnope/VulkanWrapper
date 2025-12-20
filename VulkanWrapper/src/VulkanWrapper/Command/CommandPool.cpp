@@ -15,8 +15,9 @@ std::vector<vk::CommandBuffer> CommandPool::allocate(std::size_t number) {
                           .setCommandBufferCount(number)
                           .setLevel(vk::CommandBufferLevel::ePrimary);
 
-    auto commandBuffers = check_vk(m_device->handle().allocateCommandBuffers(info),
-                                    "Failed to allocate command buffers");
+    auto commandBuffers =
+        check_vk(m_device->handle().allocateCommandBuffers(info),
+                 "Failed to allocate command buffers");
 
     return commandBuffers;
 }
@@ -24,15 +25,14 @@ std::vector<vk::CommandBuffer> CommandPool::allocate(std::size_t number) {
 CommandPoolBuilder::CommandPoolBuilder(std::shared_ptr<const Device> device)
     : m_device{std::move(device)} {}
 
-CommandPoolBuilder& CommandPoolBuilder::with_reset_command_buffer() {
+CommandPoolBuilder &CommandPoolBuilder::with_reset_command_buffer() {
     m_flags |= vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
     return *this;
 }
 
 CommandPool CommandPoolBuilder::build() {
-    auto info = vk::CommandPoolCreateInfo()
-                    .setQueueFamilyIndex(0)
-                    .setFlags(m_flags);
+    auto info =
+        vk::CommandPoolCreateInfo().setQueueFamilyIndex(0).setFlags(m_flags);
 
     auto pool = check_vk(m_device->handle().createCommandPoolUnique(info),
                          "Failed to create command pool");

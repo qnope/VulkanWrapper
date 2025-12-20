@@ -7,7 +7,7 @@ namespace {
 
 // Helper to create temporary shader files
 class TempShaderFile {
-public:
+  public:
     TempShaderFile(const std::string &filename, const std::string &content)
         : m_path(std::filesystem::temp_directory_path() / filename) {
         std::ofstream file(m_path);
@@ -18,13 +18,13 @@ public:
 
     const std::filesystem::path &path() const { return m_path; }
 
-private:
+  private:
     std::filesystem::path m_path;
 };
 
 // Helper to create temporary directories with shader files
 class TempShaderDir {
-public:
+  public:
     TempShaderDir(const std::string &dirname)
         : m_path(std::filesystem::temp_directory_path() / dirname) {
         std::filesystem::create_directories(m_path);
@@ -39,7 +39,7 @@ public:
 
     const std::filesystem::path &path() const { return m_path; }
 
-private:
+  private:
     std::filesystem::path m_path;
 };
 
@@ -135,7 +135,8 @@ void main() {
 // Basic compilation tests
 TEST(ShaderCompilerTest, CompileSimpleVertexShader) {
     vw::ShaderCompiler compiler;
-    auto result = compiler.compile(SIMPLE_VERTEX_SHADER, vk::ShaderStageFlagBits::eVertex);
+    auto result = compiler.compile(SIMPLE_VERTEX_SHADER,
+                                   vk::ShaderStageFlagBits::eVertex);
 
     EXPECT_FALSE(result.spirv.empty());
     // SPIR-V magic number is 0x07230203
@@ -144,7 +145,8 @@ TEST(ShaderCompilerTest, CompileSimpleVertexShader) {
 
 TEST(ShaderCompilerTest, CompileSimpleFragmentShader) {
     vw::ShaderCompiler compiler;
-    auto result = compiler.compile(SIMPLE_FRAGMENT_SHADER, vk::ShaderStageFlagBits::eFragment);
+    auto result = compiler.compile(SIMPLE_FRAGMENT_SHADER,
+                                   vk::ShaderStageFlagBits::eFragment);
 
     EXPECT_FALSE(result.spirv.empty());
     EXPECT_EQ(result.spirv[0], 0x07230203u);
@@ -152,7 +154,8 @@ TEST(ShaderCompilerTest, CompileSimpleFragmentShader) {
 
 TEST(ShaderCompilerTest, CompileComputeShader) {
     vw::ShaderCompiler compiler;
-    auto result = compiler.compile(COMPUTE_SHADER, vk::ShaderStageFlagBits::eCompute);
+    auto result =
+        compiler.compile(COMPUTE_SHADER, vk::ShaderStageFlagBits::eCompute);
 
     EXPECT_FALSE(result.spirv.empty());
     EXPECT_EQ(result.spirv[0], 0x07230203u);
@@ -173,7 +176,8 @@ TEST(ShaderCompilerTest, CompileFromFileWithExplicitStage) {
     TempShaderFile file("test_shader.glsl", SIMPLE_VERTEX_SHADER);
 
     vw::ShaderCompiler compiler;
-    auto result = compiler.compile_from_file(file.path(), vk::ShaderStageFlagBits::eVertex);
+    auto result = compiler.compile_from_file(file.path(),
+                                             vk::ShaderStageFlagBits::eVertex);
 
     EXPECT_FALSE(result.spirv.empty());
 }
@@ -230,10 +234,12 @@ TEST(ShaderCompilerTest, DetectAnyHitStage) {
 }
 
 TEST(ShaderCompilerTest, DetectDoubleExtension) {
-    EXPECT_EQ(vw::ShaderCompiler::detect_stage_from_extension("shader.vert.glsl"),
-              vk::ShaderStageFlagBits::eVertex);
-    EXPECT_EQ(vw::ShaderCompiler::detect_stage_from_extension("shader.frag.glsl"),
-              vk::ShaderStageFlagBits::eFragment);
+    EXPECT_EQ(
+        vw::ShaderCompiler::detect_stage_from_extension("shader.vert.glsl"),
+        vk::ShaderStageFlagBits::eVertex);
+    EXPECT_EQ(
+        vw::ShaderCompiler::detect_stage_from_extension("shader.frag.glsl"),
+        vk::ShaderStageFlagBits::eFragment);
 }
 
 TEST(ShaderCompilerTest, DetectUnknownExtensionThrows) {
@@ -268,7 +274,8 @@ TEST(ShaderCompilerTest, CompileWithNestedIncludes) {
     auto result = compiler.compile_from_file(dir.path() / "main.frag");
 
     EXPECT_FALSE(result.spirv.empty());
-    EXPECT_EQ(result.includedFiles.size(), 3u); // main.frag + level1.glsl + level2.glsl
+    EXPECT_EQ(result.includedFiles.size(),
+              3u); // main.frag + level1.glsl + level2.glsl
 }
 
 TEST(ShaderCompilerTest, MissingIncludeThrows) {
@@ -279,7 +286,8 @@ void main() {}
 )";
 
     vw::ShaderCompiler compiler;
-    EXPECT_THROW(compiler.compile(shader_with_missing_include, vk::ShaderStageFlagBits::eVertex),
+    EXPECT_THROW(compiler.compile(shader_with_missing_include,
+                                  vk::ShaderStageFlagBits::eVertex),
                  vw::ShaderCompilationException);
 }
 
@@ -297,7 +305,8 @@ void main() {
     vw::ShaderCompiler compiler;
     compiler.add_include("virtual_header.glsl", "#define CUSTOM_VALUE 0.75\n");
 
-    auto result = compiler.compile(shader_with_virtual_include, vk::ShaderStageFlagBits::eFragment);
+    auto result = compiler.compile(shader_with_virtual_include,
+                                   vk::ShaderStageFlagBits::eFragment);
 
     EXPECT_FALSE(result.spirv.empty());
 }
@@ -320,7 +329,8 @@ void main() {
     vw::ShaderCompiler compiler;
     compiler.set_includes(std::move(includes));
 
-    auto result = compiler.compile(shader_with_virtual_include, vk::ShaderStageFlagBits::eFragment);
+    auto result = compiler.compile(shader_with_virtual_include,
+                                   vk::ShaderStageFlagBits::eFragment);
 
     EXPECT_FALSE(result.spirv.empty());
 }
@@ -342,7 +352,8 @@ void main() {
     vw::ShaderCompiler compiler;
     compiler.add_macro("MY_DEFINE");
 
-    auto result = compiler.compile(shader_with_macro, vk::ShaderStageFlagBits::eFragment);
+    auto result =
+        compiler.compile(shader_with_macro, vk::ShaderStageFlagBits::eFragment);
     EXPECT_FALSE(result.spirv.empty());
 }
 
@@ -358,15 +369,17 @@ void main() {
     vw::ShaderCompiler compiler;
     compiler.add_macro("MY_VALUE", "50");
 
-    auto result = compiler.compile(shader_with_macro_value, vk::ShaderStageFlagBits::eFragment);
+    auto result = compiler.compile(shader_with_macro_value,
+                                   vk::ShaderStageFlagBits::eFragment);
     EXPECT_FALSE(result.spirv.empty());
 }
 
 // Error handling tests
 TEST(ShaderCompilerTest, InvalidShaderThrows) {
     vw::ShaderCompiler compiler;
-    EXPECT_THROW(compiler.compile(INVALID_SHADER, vk::ShaderStageFlagBits::eVertex),
-                 vw::ShaderCompilationException);
+    EXPECT_THROW(
+        compiler.compile(INVALID_SHADER, vk::ShaderStageFlagBits::eVertex),
+        vw::ShaderCompilationException);
 }
 
 TEST(ShaderCompilerTest, CompilationExceptionContainsLog) {
@@ -382,7 +395,8 @@ TEST(ShaderCompilerTest, CompilationExceptionContainsLog) {
 
 TEST(ShaderCompilerTest, NonExistentFileThrows) {
     vw::ShaderCompiler compiler;
-    EXPECT_THROW(compiler.compile_from_file("/nonexistent/path/shader.vert"), vw::FileException);
+    EXPECT_THROW(compiler.compile_from_file("/nonexistent/path/shader.vert"),
+                 vw::FileException);
 }
 
 // Builder pattern tests
@@ -394,7 +408,8 @@ TEST(ShaderCompilerTest, FluentAPILValue) {
         .set_generate_debug_info(true)
         .set_optimize(false);
 
-    auto result = compiler.compile(SIMPLE_FRAGMENT_SHADER, vk::ShaderStageFlagBits::eFragment);
+    auto result = compiler.compile(SIMPLE_FRAGMENT_SHADER,
+                                   vk::ShaderStageFlagBits::eFragment);
     EXPECT_FALSE(result.spirv.empty());
 }
 
@@ -403,7 +418,8 @@ TEST(ShaderCompilerTest, FluentAPIRValue) {
                       .add_include_path("/some/path")
                       .set_target_vulkan_version(VK_API_VERSION_1_3)
                       .add_macro("TEST", "1")
-                      .compile(SIMPLE_FRAGMENT_SHADER, vk::ShaderStageFlagBits::eFragment);
+                      .compile(SIMPLE_FRAGMENT_SHADER,
+                               vk::ShaderStageFlagBits::eFragment);
 
     EXPECT_FALSE(result.spirv.empty());
 }
@@ -413,7 +429,8 @@ TEST(ShaderCompilerTest, CompileForVulkan10) {
     vw::ShaderCompiler compiler;
     compiler.set_target_vulkan_version(VK_API_VERSION_1_0);
 
-    auto result = compiler.compile(SIMPLE_VERTEX_SHADER, vk::ShaderStageFlagBits::eVertex);
+    auto result = compiler.compile(SIMPLE_VERTEX_SHADER,
+                                   vk::ShaderStageFlagBits::eVertex);
     EXPECT_FALSE(result.spirv.empty());
 }
 
@@ -421,7 +438,8 @@ TEST(ShaderCompilerTest, CompileForVulkan11) {
     vw::ShaderCompiler compiler;
     compiler.set_target_vulkan_version(VK_API_VERSION_1_1);
 
-    auto result = compiler.compile(SIMPLE_VERTEX_SHADER, vk::ShaderStageFlagBits::eVertex);
+    auto result = compiler.compile(SIMPLE_VERTEX_SHADER,
+                                   vk::ShaderStageFlagBits::eVertex);
     EXPECT_FALSE(result.spirv.empty());
 }
 
@@ -429,7 +447,8 @@ TEST(ShaderCompilerTest, CompileForVulkan12) {
     vw::ShaderCompiler compiler;
     compiler.set_target_vulkan_version(VK_API_VERSION_1_2);
 
-    auto result = compiler.compile(SIMPLE_VERTEX_SHADER, vk::ShaderStageFlagBits::eVertex);
+    auto result = compiler.compile(SIMPLE_VERTEX_SHADER,
+                                   vk::ShaderStageFlagBits::eVertex);
     EXPECT_FALSE(result.spirv.empty());
 }
 
@@ -437,7 +456,8 @@ TEST(ShaderCompilerTest, CompileForVulkan13) {
     vw::ShaderCompiler compiler;
     compiler.set_target_vulkan_version(VK_API_VERSION_1_3);
 
-    auto result = compiler.compile(SIMPLE_VERTEX_SHADER, vk::ShaderStageFlagBits::eVertex);
+    auto result = compiler.compile(SIMPLE_VERTEX_SHADER,
+                                   vk::ShaderStageFlagBits::eVertex);
     EXPECT_FALSE(result.spirv.empty());
 }
 
@@ -446,7 +466,8 @@ TEST(ShaderCompilerTest, CompileWithDebugInfo) {
     vw::ShaderCompiler compiler;
     compiler.set_generate_debug_info(true);
 
-    auto result = compiler.compile(SIMPLE_VERTEX_SHADER, vk::ShaderStageFlagBits::eVertex);
+    auto result = compiler.compile(SIMPLE_VERTEX_SHADER,
+                                   vk::ShaderStageFlagBits::eVertex);
     EXPECT_FALSE(result.spirv.empty());
 }
 
@@ -454,7 +475,8 @@ TEST(ShaderCompilerTest, CompileWithOptimization) {
     vw::ShaderCompiler compiler;
     compiler.set_optimize(true);
 
-    auto result = compiler.compile(SIMPLE_VERTEX_SHADER, vk::ShaderStageFlagBits::eVertex);
+    auto result = compiler.compile(SIMPLE_VERTEX_SHADER,
+                                   vk::ShaderStageFlagBits::eVertex);
     EXPECT_FALSE(result.spirv.empty());
 }
 
@@ -465,7 +487,8 @@ TEST(ShaderCompilerTest, MoveConstruction) {
 
     vw::ShaderCompiler compiler2(std::move(compiler1));
 
-    auto result = compiler2.compile(SIMPLE_VERTEX_SHADER, vk::ShaderStageFlagBits::eVertex);
+    auto result = compiler2.compile(SIMPLE_VERTEX_SHADER,
+                                    vk::ShaderStageFlagBits::eVertex);
     EXPECT_FALSE(result.spirv.empty());
 }
 
@@ -476,6 +499,7 @@ TEST(ShaderCompilerTest, MoveAssignment) {
     vw::ShaderCompiler compiler2;
     compiler2 = std::move(compiler1);
 
-    auto result = compiler2.compile(SIMPLE_VERTEX_SHADER, vk::ShaderStageFlagBits::eVertex);
+    auto result = compiler2.compile(SIMPLE_VERTEX_SHADER,
+                                    vk::ShaderStageFlagBits::eVertex);
     EXPECT_FALSE(result.spirv.empty());
 }

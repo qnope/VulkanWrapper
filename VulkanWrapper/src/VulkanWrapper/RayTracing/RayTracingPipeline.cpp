@@ -7,10 +7,11 @@
 
 namespace vw::rt {
 
-RayTracingPipeline::RayTracingPipeline(
-    std::shared_ptr<const Device> device, vk::UniquePipeline pipeline,
-    PipelineLayout pipeline_layout, uint32_t number_miss_shader,
-    uint32_t number_close_hit_shader)
+RayTracingPipeline::RayTracingPipeline(std::shared_ptr<const Device> device,
+                                       vk::UniquePipeline pipeline,
+                                       PipelineLayout pipeline_layout,
+                                       uint32_t number_miss_shader,
+                                       uint32_t number_close_hit_shader)
     : ObjectWithUniqueHandle<vk::UniquePipeline>(std::move(pipeline))
     , m_layout(std::move(pipeline_layout))
     , m_number_miss_shader{number_miss_shader}
@@ -68,26 +69,24 @@ vk::PipelineLayout RayTracingPipeline::handle_layout() const {
 
 RayTracingPipelineBuilder::RayTracingPipelineBuilder(
     std::shared_ptr<const Device> device,
-    std::shared_ptr<const Allocator> allocator,
-    PipelineLayout pipelineLayout)
+    std::shared_ptr<const Allocator> allocator, PipelineLayout pipelineLayout)
     : m_device(std::move(device))
     , m_allocator{std::move(allocator)}
     , m_pipelineLayout(std::move(pipelineLayout)) {}
 
-RayTracingPipelineBuilder&
-RayTracingPipelineBuilder::set_ray_generation_shader(
+RayTracingPipelineBuilder &RayTracingPipelineBuilder::set_ray_generation_shader(
     std::shared_ptr<const ShaderModule> module) {
     m_ray_generation_shader = std::move(module);
     return *this;
 }
 
-RayTracingPipelineBuilder& RayTracingPipelineBuilder::add_closest_hit_shader(
+RayTracingPipelineBuilder &RayTracingPipelineBuilder::add_closest_hit_shader(
     std::shared_ptr<const ShaderModule> module) {
     m_closest_hit_shaders.push_back(std::move(module));
     return *this;
 }
 
-RayTracingPipelineBuilder& RayTracingPipelineBuilder::add_miss_shader(
+RayTracingPipelineBuilder &RayTracingPipelineBuilder::add_miss_shader(
     std::shared_ptr<const ShaderModule> module) {
     m_miss_shaders.push_back(std::move(module));
     return *this;
@@ -103,10 +102,10 @@ RayTracingPipeline RayTracingPipelineBuilder::build() {
                           .setMaxPipelineRayRecursionDepth(1)
                           .setLayout(m_pipelineLayout.handle());
 
-    auto pipeline = check_vk(
-        m_device->handle().createRayTracingPipelineKHRUnique(
-            vk::DeferredOperationKHR(), vk::PipelineCache(), info),
-        "Failed to create ray tracing pipeline");
+    auto pipeline =
+        check_vk(m_device->handle().createRayTracingPipelineKHRUnique(
+                     vk::DeferredOperationKHR(), vk::PipelineCache(), info),
+                 "Failed to create ray tracing pipeline");
 
     RayTracingPipeline rayTracingPipeline(
         m_device, std::move(pipeline), std::move(m_pipelineLayout),

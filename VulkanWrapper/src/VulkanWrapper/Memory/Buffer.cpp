@@ -43,7 +43,8 @@ void BufferBase::write_bytes(const void *data, VkDeviceSize size,
               "Failed to copy memory to allocation");
 }
 
-std::vector<std::byte> BufferBase::read_bytes(VkDeviceSize offset, VkDeviceSize size) const {
+std::vector<std::byte> BufferBase::read_bytes(VkDeviceSize offset,
+                                              VkDeviceSize size) const {
     std::vector<std::byte> result(size);
     check_vma(vmaCopyAllocationToMemory(m_data->m_allocator->handle(),
                                         m_data->m_allocation, offset,

@@ -1,6 +1,5 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
-
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Image/Image.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
@@ -27,7 +26,7 @@ class ImageViewBuilder {
     ImageViewBuilder(std::shared_ptr<const Device> device,
                      std::shared_ptr<const Image> image);
 
-    ImageViewBuilder& setImageType(vk::ImageViewType imageViewType);
+    ImageViewBuilder &setImageType(vk::ImageViewType imageViewType);
 
     std::shared_ptr<const ImageView> build();
 

@@ -1,6 +1,5 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
-
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
 
 namespace vw {

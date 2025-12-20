@@ -6,7 +6,6 @@
 #include "VulkanWrapper/Utils/Error.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 #include "VulkanWrapper/Vulkan/Queue.h"
-
 #include <algorithm>
 
 namespace vw::rt {
@@ -29,17 +28,16 @@ uint32_t RayTracedScene::get_or_create_blas_index(const Model::Mesh &mesh) {
     return index;
 }
 
-InstanceId RayTracedScene::add_instance(const Model::Mesh &mesh, const glm::mat4 &transform) {
+InstanceId RayTracedScene::add_instance(const Model::Mesh &mesh,
+                                        const glm::mat4 &transform) {
     uint32_t blas_index = get_or_create_blas_index(mesh);
 
-    Instance instance{
-        .blas_index = blas_index,
-        .transform = transform,
-        .visible = true,
-        .active = true,
-        .sbt_offset = 0,
-        .custom_index = 0
-    };
+    Instance instance{.blas_index = blas_index,
+                      .transform = transform,
+                      .visible = true,
+                      .active = true,
+                      .sbt_offset = 0,
+                      .custom_index = 0};
 
     InstanceId id{static_cast<uint32_t>(m_instances.size())};
     m_instances.push_back(instance);
@@ -50,7 +48,8 @@ InstanceId RayTracedScene::add_instance(const Model::Mesh &mesh, const glm::mat4
     return id;
 }
 
-void RayTracedScene::set_transform(InstanceId instance_id, const glm::mat4 &transform) {
+void RayTracedScene::set_transform(InstanceId instance_id,
+                                   const glm::mat4 &transform) {
     if (instance_id.value >= m_instances.size()) {
         throw LogicException::out_of_range("instance id", instance_id.value,
                                            m_instances.size());
@@ -139,7 +138,8 @@ uint32_t RayTracedScene::get_sbt_offset(InstanceId instance_id) const {
     return instance.sbt_offset;
 }
 
-void RayTracedScene::set_custom_index(InstanceId instance_id, uint32_t custom_index) {
+void RayTracedScene::set_custom_index(InstanceId instance_id,
+                                      uint32_t custom_index) {
     if (instance_id.value >= m_instances.size()) {
         throw LogicException::out_of_range("instance id", instance_id.value,
                                            m_instances.size());
@@ -205,7 +205,8 @@ void RayTracedScene::build() {
 
 void RayTracedScene::update() {
     if (!m_blas_list.has_value()) {
-        throw LogicException::invalid_state("Must call build() before update()");
+        throw LogicException::invalid_state(
+            "Must call build() before update()");
     }
 
     if (m_blas_dirty) {
@@ -219,9 +220,7 @@ void RayTracedScene::update() {
     }
 }
 
-bool RayTracedScene::needs_build() const noexcept {
-    return m_blas_dirty;
-}
+bool RayTracedScene::needs_build() const noexcept { return m_blas_dirty; }
 
 bool RayTracedScene::needs_update() const noexcept {
     return m_tlas_dirty && !m_blas_dirty;
@@ -246,9 +245,8 @@ size_t RayTracedScene::mesh_count() const noexcept {
 }
 
 size_t RayTracedScene::instance_count() const noexcept {
-    return std::ranges::count_if(m_instances, [](const auto &inst) {
-        return inst.active;
-    });
+    return std::ranges::count_if(m_instances,
+                                 [](const auto &inst) { return inst.active; });
 }
 
 size_t RayTracedScene::visible_instance_count() const noexcept {
@@ -260,8 +258,10 @@ size_t RayTracedScene::visible_instance_count() const noexcept {
 void RayTracedScene::build_blas() {
     m_blas_list.emplace(m_device, m_allocator);
 
-    // Collect meshes with their indices, then sort by index to ensure correct ordering
-    using MeshEntry = std::pair<std::reference_wrapper<const Model::Mesh>, uint32_t>;
+    // Collect meshes with their indices, then sort by index to ensure correct
+    // ordering
+    using MeshEntry =
+        std::pair<std::reference_wrapper<const Model::Mesh>, uint32_t>;
     std::vector<MeshEntry> sorted_meshes;
     sorted_meshes.reserve(m_mesh_to_blas_index.size());
     for (const auto &[mesh, index] : m_mesh_to_blas_index) {

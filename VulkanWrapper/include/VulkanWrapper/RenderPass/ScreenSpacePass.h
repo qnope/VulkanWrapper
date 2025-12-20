@@ -1,10 +1,9 @@
 #pragma once
 
-#include "VulkanWrapper/RenderPass/Subpass.h"
 #include "VulkanWrapper/Descriptors/DescriptorSet.h"
 #include "VulkanWrapper/Image/Sampler.h"
 #include "VulkanWrapper/Pipeline/Pipeline.h"
-
+#include "VulkanWrapper/RenderPass/Subpass.h"
 #include <optional>
 
 namespace vw {
@@ -14,18 +13,19 @@ namespace vw {
  *
  * @tparam SlotEnum Enumeration defining the image slots for this pass
  *
- * This class provides common functionality for fullscreen post-processing passes:
+ * This class provides common functionality for fullscreen post-processing
+ * passes:
  * - Inherits lazy image allocation from Subpass
  * - Provides helper to create default sampler
  * - Provides helper to render fullscreen quad with proper setup
  *
  * Derived passes should:
- * 1. Define their own SlotEnum for image allocation (or use empty enum if no allocation needed)
+ * 1. Define their own SlotEnum for image allocation (or use empty enum if no
+ * allocation needed)
  * 2. Create their own pipeline and descriptor pool in constructor
  * 3. Use render_fullscreen() in execute() to eliminate boilerplate
  */
-template <typename SlotEnum>
-class ScreenSpacePass : public Subpass<SlotEnum> {
+template <typename SlotEnum> class ScreenSpacePass : public Subpass<SlotEnum> {
   public:
     ScreenSpacePass(std::shared_ptr<Device> device,
                     std::shared_ptr<Allocator> allocator)
@@ -58,20 +58,21 @@ class ScreenSpacePass : public Subpass<SlotEnum> {
      *
      * @param cmd Command buffer to record into
      * @param extent Render extent (width, height)
-     * @param color_attachment Color attachment info (setup by caller with load/clear ops)
+     * @param color_attachment Color attachment info (setup by caller with
+     * load/clear ops)
      * @param depth_attachment Optional depth attachment info (nullptr if none)
      * @param pipeline Pipeline to bind
      * @param descriptor_set Optional descriptor set to bind
      * @param push_constants Optional push constants data (nullptr if none)
      * @param push_constants_size Size of push constants in bytes (0 if none)
      */
-    void render_fullscreen(vk::CommandBuffer cmd, vk::Extent2D extent,
-                           const vk::RenderingAttachmentInfo &color_attachment,
-                           const vk::RenderingAttachmentInfo *depth_attachment,
-                           const Pipeline &pipeline,
-                           std::optional<DescriptorSet> descriptor_set = std::nullopt,
-                           const void *push_constants = nullptr,
-                           size_t push_constants_size = 0) {
+    void render_fullscreen(
+        vk::CommandBuffer cmd, vk::Extent2D extent,
+        const vk::RenderingAttachmentInfo &color_attachment,
+        const vk::RenderingAttachmentInfo *depth_attachment,
+        const Pipeline &pipeline,
+        std::optional<DescriptorSet> descriptor_set = std::nullopt,
+        const void *push_constants = nullptr, size_t push_constants_size = 0) {
 
         vk::RenderingInfo rendering_info =
             vk::RenderingInfo()

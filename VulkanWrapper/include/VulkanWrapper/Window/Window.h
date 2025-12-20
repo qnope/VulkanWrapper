@@ -1,6 +1,5 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
-
 #include "VulkanWrapper/fwd.h"
 
 struct SDL_Window;
@@ -26,12 +25,13 @@ class Window {
     get_required_instance_extensions() noexcept;
     [[nodiscard]] Surface create_surface(const Instance &instance) const;
 
-    [[nodiscard]] Swapchain create_swapchain(std::shared_ptr<const Device> device,
-                                             vk::SurfaceKHR surface) const;
+    [[nodiscard]] Swapchain
+    create_swapchain(std::shared_ptr<const Device> device,
+                     vk::SurfaceKHR surface) const;
 
   private:
-    Window(std::shared_ptr<const SDL_Initializer> initializer, std::string_view name,
-           Width width, Height height);
+    Window(std::shared_ptr<const SDL_Initializer> initializer,
+           std::string_view name, Width width, Height height);
 
     std::shared_ptr<const SDL_Initializer> m_initializer;
     std::unique_ptr<SDL_Window, WindowDeleter> m_window;
@@ -45,8 +45,8 @@ class WindowBuilder {
   public:
     WindowBuilder(std::shared_ptr<const SDL_Initializer> initializer);
 
-    WindowBuilder& with_title(std::string_view name);
-    WindowBuilder& sized(Width width, Height height);
+    WindowBuilder &with_title(std::string_view name);
+    WindowBuilder &sized(Width width, Height height);
 
     Window build();
 

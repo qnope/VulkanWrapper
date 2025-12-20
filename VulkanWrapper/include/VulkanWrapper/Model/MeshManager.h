@@ -1,6 +1,5 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
-
 #include "VulkanWrapper/Descriptors/Vertex.h"
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Memory/BufferList.h"
@@ -27,8 +26,9 @@ class MeshManager {
     material_manager_map() const noexcept;
 
   private:
-    void create_default_material_managers(std::shared_ptr<const Device> device,
-                                          std::shared_ptr<const Allocator> allocator);
+    void create_default_material_managers(
+        std::shared_ptr<const Device> device,
+        std::shared_ptr<const Allocator> allocator);
     void create_default_material_factories();
 
   private:

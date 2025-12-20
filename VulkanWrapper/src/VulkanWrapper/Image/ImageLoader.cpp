@@ -41,9 +41,10 @@ void save_image(const std::filesystem::path &path, Width width, Height height,
     int pitch = w * 4; // 4 bytes per pixel for RGBA8
 
     std::unique_ptr<SDL_Surface, static_function<SDL_DestroySurface>> surface{
-        SDL_CreateSurfaceFrom(w, h, format,
-                              const_cast<void *>(static_cast<const void *>(pixels.data())),
-                              pitch)};
+        SDL_CreateSurfaceFrom(
+            w, h, format,
+            const_cast<void *>(static_cast<const void *>(pixels.data())),
+            pitch)};
 
     if (!surface) {
         throw SDLException("Failed to create SDL surface for image saving");
@@ -51,7 +52,8 @@ void save_image(const std::filesystem::path &path, Width width, Height height,
 
     // Determine the format from the file extension and save
     std::string ext = path.extension().string();
-    std::ranges::transform(ext, ext.begin(), [](unsigned char c) { return std::tolower(c); });
+    std::ranges::transform(ext, ext.begin(),
+                           [](unsigned char c) { return std::tolower(c); });
 
     bool success = false;
     if (ext == ".png") {

@@ -1,6 +1,6 @@
-#include <gtest/gtest.h>
-#include "VulkanWrapper/RenderPass/Subpass.h"
 #include "utils/create_gpu.hpp"
+#include "VulkanWrapper/RenderPass/Subpass.h"
+#include <gtest/gtest.h>
 
 // Test enum with single slot
 enum class SingleSlot { Output };
@@ -9,19 +9,17 @@ enum class SingleSlot { Output };
 enum class MultiSlot { Color, Normal, Depth, Position };
 
 // Concrete test subpass that exposes get_or_create_image for testing
-template <typename SlotEnum>
-class TestSubpass : public vw::Subpass<SlotEnum> {
+template <typename SlotEnum> class TestSubpass : public vw::Subpass<SlotEnum> {
   public:
     using vw::Subpass<SlotEnum>::Subpass;
 
     // Expose protected method for testing
-    const vw::CachedImage &test_get_or_create_image(SlotEnum slot, vw::Width width,
-                                                     vw::Height height,
-                                                     size_t frame_index,
-                                                     vk::Format format,
-                                                     vk::ImageUsageFlags usage) {
-        return this->get_or_create_image(slot, width, height, frame_index, format,
-                                         usage);
+    const vw::CachedImage &
+    test_get_or_create_image(SlotEnum slot, vw::Width width, vw::Height height,
+                             size_t frame_index, vk::Format format,
+                             vk::ImageUsageFlags usage) {
+        return this->get_or_create_image(slot, width, height, frame_index,
+                                         format, usage);
     }
 };
 
@@ -58,13 +56,11 @@ TEST_F(SubpassTest, CachingReturnsSameImage) {
 
     const auto &first = subpass.test_get_or_create_image(
         SingleSlot::Output, vw::Width{256}, vw::Height{256}, 0,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eColorAttachment);
+        vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eColorAttachment);
 
     const auto &second = subpass.test_get_or_create_image(
         SingleSlot::Output, vw::Width{256}, vw::Height{256}, 0,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eColorAttachment);
+        vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eColorAttachment);
 
     // Same pointer means same cached image
     EXPECT_EQ(first.image.get(), second.image.get());
@@ -76,13 +72,11 @@ TEST_F(SubpassTest, DifferentFrameIndexCreatesDifferentImage) {
 
     const auto &frame0 = subpass.test_get_or_create_image(
         SingleSlot::Output, vw::Width{256}, vw::Height{256}, 0,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eColorAttachment);
+        vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eColorAttachment);
 
     const auto &frame1 = subpass.test_get_or_create_image(
         SingleSlot::Output, vw::Width{256}, vw::Height{256}, 1,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eColorAttachment);
+        vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eColorAttachment);
 
     // Different frame index should create different image
     EXPECT_NE(frame0.image.get(), frame1.image.get());
@@ -95,8 +89,7 @@ TEST_F(SubpassTest, DimensionChangeCreatesNewImage) {
     // First request at 256x256
     const auto &small = subpass.test_get_or_create_image(
         SingleSlot::Output, vw::Width{256}, vw::Height{256}, 0,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eColorAttachment);
+        vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eColorAttachment);
 
     EXPECT_EQ(small.image->extent2D().width, 256);
     EXPECT_EQ(small.image->extent2D().height, 256);
@@ -104,17 +97,16 @@ TEST_F(SubpassTest, DimensionChangeCreatesNewImage) {
     // Request at 512x512 - should create new image with new dimensions
     const auto &large = subpass.test_get_or_create_image(
         SingleSlot::Output, vw::Width{512}, vw::Height{512}, 0,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eColorAttachment);
+        vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eColorAttachment);
 
     EXPECT_EQ(large.image->extent2D().width, 512);
     EXPECT_EQ(large.image->extent2D().height, 512);
 
-    // Request at 256x256 again - should create fresh image (old one was cleaned up)
+    // Request at 256x256 again - should create fresh image (old one was cleaned
+    // up)
     const auto &small_again = subpass.test_get_or_create_image(
         SingleSlot::Output, vw::Width{256}, vw::Height{256}, 0,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eColorAttachment);
+        vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eColorAttachment);
 
     EXPECT_EQ(small_again.image->extent2D().width, 256);
     EXPECT_EQ(small_again.image->extent2D().height, 256);
@@ -126,19 +118,18 @@ TEST_F(SubpassTest, DimensionChangeRemovesOldImage) {
     // Create image at 256x256 and keep a weak_ptr to track its lifetime
     const auto &small = subpass.test_get_or_create_image(
         SingleSlot::Output, vw::Width{256}, vw::Height{256}, 0,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eColorAttachment);
+        vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eColorAttachment);
 
     std::weak_ptr<const vw::Image> weak_small = small.image;
 
     // Image should be alive
     EXPECT_FALSE(weak_small.expired());
 
-    // Request different dimensions - this should remove the old image from cache
+    // Request different dimensions - this should remove the old image from
+    // cache
     const auto &large = subpass.test_get_or_create_image(
         SingleSlot::Output, vw::Width{512}, vw::Height{512}, 0,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eColorAttachment);
+        vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eColorAttachment);
 
     // Old image should be deleted (weak_ptr expired)
     EXPECT_TRUE(weak_small.expired());
@@ -153,8 +144,7 @@ TEST_F(SubpassTest, MultipleSlots) {
 
     const auto &color = subpass.test_get_or_create_image(
         MultiSlot::Color, vw::Width{256}, vw::Height{256}, 0,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eColorAttachment);
+        vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eColorAttachment);
 
     const auto &normal = subpass.test_get_or_create_image(
         MultiSlot::Normal, vw::Width{256}, vw::Height{256}, 0,
@@ -183,8 +173,7 @@ TEST_F(SubpassTest, SlotCachingIsIndependent) {
     // Create color at 256x256
     const auto &color1 = subpass.test_get_or_create_image(
         MultiSlot::Color, vw::Width{256}, vw::Height{256}, 0,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eColorAttachment);
+        vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eColorAttachment);
 
     // Create normal at 256x256
     const auto &normal1 = subpass.test_get_or_create_image(
@@ -198,8 +187,7 @@ TEST_F(SubpassTest, SlotCachingIsIndependent) {
     // Change color to 512x512 - should not affect normal
     const auto &color2 = subpass.test_get_or_create_image(
         MultiSlot::Color, vw::Width{512}, vw::Height{512}, 0,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eColorAttachment);
+        vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eColorAttachment);
 
     // Color should have new dimensions
     EXPECT_EQ(color2.image->extent2D().width, 512);
@@ -246,8 +234,7 @@ TEST_F(SubpassTest, MultiBufferingWithMultipleSlots) {
     // Requesting same frame again should return cached
     const auto &color0_again = subpass.test_get_or_create_image(
         MultiSlot::Color, vw::Width{256}, vw::Height{256}, 0,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eColorAttachment);
+        vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eColorAttachment);
 
     EXPECT_EQ(color_images[0]->image.get(), color0_again.image.get());
 }
@@ -270,8 +257,7 @@ TEST_F(SubpassTest, NonSquareDimensions) {
 
     const auto &wide = subpass.test_get_or_create_image(
         SingleSlot::Output, vw::Width{1920}, vw::Height{1080}, 0,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eColorAttachment);
+        vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eColorAttachment);
 
     EXPECT_EQ(wide.image->extent2D().width, 1920);
     EXPECT_EQ(wide.image->extent2D().height, 1080);
@@ -282,8 +268,7 @@ TEST_F(SubpassTest, VariousFormats) {
 
     const auto &rgba8 = subpass.test_get_or_create_image(
         MultiSlot::Color, vw::Width{256}, vw::Height{256}, 0,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eColorAttachment);
+        vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eColorAttachment);
 
     const auto &rgba32f = subpass.test_get_or_create_image(
         MultiSlot::Normal, vw::Width{256}, vw::Height{256}, 0,
@@ -305,8 +290,7 @@ TEST_F(SubpassTest, ImageViewIsValid) {
 
     const auto &cached = subpass.test_get_or_create_image(
         SingleSlot::Output, vw::Width{256}, vw::Height{256}, 0,
-        vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eColorAttachment);
+        vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eColorAttachment);
 
     ASSERT_NE(cached.view, nullptr);
     EXPECT_TRUE(cached.view->handle());

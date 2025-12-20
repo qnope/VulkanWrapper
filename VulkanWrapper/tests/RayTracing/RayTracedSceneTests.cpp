@@ -1,16 +1,16 @@
 #include "utils/create_gpu.hpp"
-#include "VulkanWrapper/RayTracing/RayTracedScene.h"
 #include "VulkanWrapper/Model/Mesh.h"
 #include "VulkanWrapper/Model/MeshManager.h"
+#include "VulkanWrapper/RayTracing/RayTracedScene.h"
 #include "VulkanWrapper/Synchronization/Fence.h"
 #include "VulkanWrapper/Utils/Error.h"
 #include "VulkanWrapper/Vulkan/DeviceFinder.h"
 #include "VulkanWrapper/Vulkan/Queue.h"
-#include <gtest/gtest.h>
+#include <cmath>
 #include <glm/gtc/matrix_transform.hpp>
+#include <gtest/gtest.h>
 #include <optional>
 #include <set>
-#include <cmath>
 
 namespace {
 
@@ -117,7 +117,8 @@ TEST_F(RayTracedSceneTest, AddInstanceWithTransform) {
     vw::rt::RayTracedScene scene(gpu->device, gpu->allocator);
     const auto &mesh = gpu->get_mesh();
 
-    glm::mat4 transform = glm::translate(glm::mat4(1.0f), glm::vec3(1.0f, 2.0f, 3.0f));
+    glm::mat4 transform =
+        glm::translate(glm::mat4(1.0f), glm::vec3(1.0f, 2.0f, 3.0f));
     auto instance_id = scene.add_instance(mesh, transform);
 
     auto retrieved_transform = scene.get_transform(instance_id);
@@ -129,10 +130,12 @@ TEST_F(RayTracedSceneTest, AddMultipleInstancesOfSameMesh) {
     const auto &mesh = gpu->get_mesh();
 
     [[maybe_unused]] auto inst1 = scene.add_instance(mesh);
-    [[maybe_unused]] auto inst2 = scene.add_instance(mesh, glm::translate(glm::mat4(1.0f), glm::vec3(2, 0, 0)));
-    [[maybe_unused]] auto inst3 = scene.add_instance(mesh, glm::translate(glm::mat4(1.0f), glm::vec3(4, 0, 0)));
+    [[maybe_unused]] auto inst2 = scene.add_instance(
+        mesh, glm::translate(glm::mat4(1.0f), glm::vec3(2, 0, 0)));
+    [[maybe_unused]] auto inst3 = scene.add_instance(
+        mesh, glm::translate(glm::mat4(1.0f), glm::vec3(4, 0, 0)));
 
-    EXPECT_EQ(scene.mesh_count(), 1);  // Same mesh geometry deduplicated
+    EXPECT_EQ(scene.mesh_count(), 1); // Same mesh geometry deduplicated
     EXPECT_EQ(scene.instance_count(), 3);
     EXPECT_EQ(scene.visible_instance_count(), 3);
 }
@@ -142,7 +145,8 @@ TEST_F(RayTracedSceneTest, AddInstanceDeduplicates) {
     const auto &mesh = gpu->get_mesh();
 
     auto inst1 = scene.add_instance(mesh, glm::mat4(1.0f));
-    auto inst2 = scene.add_instance(mesh, glm::translate(glm::mat4(1.0f), glm::vec3(2, 0, 0)));
+    auto inst2 = scene.add_instance(
+        mesh, glm::translate(glm::mat4(1.0f), glm::vec3(2, 0, 0)));
 
     // Same mesh should be deduplicated
     EXPECT_EQ(scene.mesh_count(), 1);
@@ -164,7 +168,8 @@ TEST_F(RayTracedSceneTest, SetTransform) {
 TEST_F(RayTracedSceneTest, SetTransformWithInvalidId) {
     vw::rt::RayTracedScene scene(gpu->device, gpu->allocator);
 
-    EXPECT_THROW(scene.set_transform(vw::rt::InstanceId{999}, glm::mat4(1.0f)), vw::LogicException);
+    EXPECT_THROW(scene.set_transform(vw::rt::InstanceId{999}, glm::mat4(1.0f)),
+                 vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, SetVisible) {
@@ -219,7 +224,8 @@ TEST_F(RayTracedSceneTest, OperationsOnRemovedInstance) {
 
     scene.remove_instance(instance_id);
 
-    EXPECT_THROW(scene.set_transform(instance_id, glm::mat4(1.0f)), vw::LogicException);
+    EXPECT_THROW(scene.set_transform(instance_id, glm::mat4(1.0f)),
+                 vw::LogicException);
     EXPECT_THROW((void)scene.get_transform(instance_id), vw::LogicException);
     EXPECT_THROW(scene.set_visible(instance_id, true), vw::LogicException);
     EXPECT_THROW((void)scene.is_visible(instance_id), vw::LogicException);
@@ -302,8 +308,10 @@ TEST_F(RayTracedSceneTest, BuildMultipleInstances) {
     const auto &mesh = gpu->get_mesh();
 
     [[maybe_unused]] auto inst1 = scene.add_instance(mesh);
-    [[maybe_unused]] auto inst2 = scene.add_instance(mesh, glm::translate(glm::mat4(1.0f), glm::vec3(2, 0, 0)));
-    [[maybe_unused]] auto inst3 = scene.add_instance(mesh, glm::translate(glm::mat4(1.0f), glm::vec3(4, 0, 0)));
+    [[maybe_unused]] auto inst2 = scene.add_instance(
+        mesh, glm::translate(glm::mat4(1.0f), glm::vec3(2, 0, 0)));
+    [[maybe_unused]] auto inst3 = scene.add_instance(
+        mesh, glm::translate(glm::mat4(1.0f), glm::vec3(4, 0, 0)));
 
     scene.build();
 
@@ -320,7 +328,8 @@ TEST_F(RayTracedSceneTest, UpdateAfterTransformChange) {
 
     [[maybe_unused]] auto old_address = scene.tlas_device_address();
 
-    scene.set_transform(instance_id, glm::translate(glm::mat4(1.0f), glm::vec3(10, 0, 0)));
+    scene.set_transform(instance_id,
+                        glm::translate(glm::mat4(1.0f), glm::vec3(10, 0, 0)));
 
     EXPECT_TRUE(scene.needs_update());
 
@@ -403,7 +412,7 @@ TEST_F(RayTracedSceneTest, MeshGeometryHash) {
     size_t hash2 = mesh.geometry_hash();
 
     EXPECT_EQ(hash1, hash2);
-    EXPECT_NE(hash1, 0);  // Should not be zero
+    EXPECT_NE(hash1, 0); // Should not be zero
 }
 
 TEST_F(RayTracedSceneTest, MeshEquality) {
@@ -436,14 +445,15 @@ TEST_F(RayTracedSceneTest, AddInstanceAfterRemoval) {
 
     // New instance should have a different ID (IDs are not reused)
     EXPECT_NE(inst1, inst2);
-    EXPECT_EQ(scene.instance_count(), 1);  // Only one active instance
+    EXPECT_EQ(scene.instance_count(), 1); // Only one active instance
 }
 
 TEST_F(RayTracedSceneTest, BatchedOperationsBeforeUpdate) {
     vw::rt::RayTracedScene scene(gpu->device, gpu->allocator);
     const auto &mesh = gpu->get_mesh();
     auto inst1 = scene.add_instance(mesh);
-    auto inst2 = scene.add_instance(mesh, glm::translate(glm::mat4(1.0f), glm::vec3(2, 0, 0)));
+    auto inst2 = scene.add_instance(
+        mesh, glm::translate(glm::mat4(1.0f), glm::vec3(2, 0, 0)));
 
     scene.build();
 
@@ -504,8 +514,10 @@ TEST_F(RayTracedSceneTest, ScenePopulatedWithMultipleDeduplicatedInstances) {
 
     // Add multiple instances of the same mesh using simplified API
     std::ignore = scene.add_instance(mesh, glm::mat4(1.0f));
-    std::ignore = scene.add_instance(mesh, glm::translate(glm::mat4(1.0f), glm::vec3(2, 0, 0)));
-    std::ignore = scene.add_instance(mesh, glm::translate(glm::mat4(1.0f), glm::vec3(4, 0, 0)));
+    std::ignore = scene.add_instance(
+        mesh, glm::translate(glm::mat4(1.0f), glm::vec3(2, 0, 0)));
+    std::ignore = scene.add_instance(
+        mesh, glm::translate(glm::mat4(1.0f), glm::vec3(4, 0, 0)));
 
     // Embedded scene should have all 3 instances
     const auto &embedded_scene = scene.scene();
@@ -543,7 +555,8 @@ TEST_F(RayTracedSceneTest, VisibleInstanceCountAfterMixedOperations) {
 
     scene.remove_instance(inst2);
     EXPECT_EQ(scene.visible_instance_count(), 1);
-    EXPECT_EQ(scene.instance_count(), 2);  // inst1 still active (just hidden), inst3 active
+    EXPECT_EQ(scene.instance_count(),
+              2); // inst1 still active (just hidden), inst3 active
 
     scene.set_visible(inst1, true);
     EXPECT_EQ(scene.visible_instance_count(), 2);
@@ -574,10 +587,13 @@ TEST_F(RayTracedSceneTest, MultipleDifferentMeshesWithDeduplication) {
 
     // Add multiple instances of each mesh type
     [[maybe_unused]] auto c1 = scene.add_instance(cube, glm::mat4(1.0f));
-    [[maybe_unused]] auto c2 = scene.add_instance(cube, glm::translate(glm::mat4(1.0f), glm::vec3(2, 0, 0)));
+    [[maybe_unused]] auto c2 = scene.add_instance(
+        cube, glm::translate(glm::mat4(1.0f), glm::vec3(2, 0, 0)));
     [[maybe_unused]] auto p1 = scene.add_instance(plane, glm::mat4(1.0f));
-    [[maybe_unused]] auto p2 = scene.add_instance(plane, glm::translate(glm::mat4(1.0f), glm::vec3(0, -1, 0)));
-    [[maybe_unused]] auto c3 = scene.add_instance(cube, glm::translate(glm::mat4(1.0f), glm::vec3(4, 0, 0)));
+    [[maybe_unused]] auto p2 = scene.add_instance(
+        plane, glm::translate(glm::mat4(1.0f), glm::vec3(0, -1, 0)));
+    [[maybe_unused]] auto c3 = scene.add_instance(
+        cube, glm::translate(glm::mat4(1.0f), glm::vec3(4, 0, 0)));
 
     // Only 2 unique mesh geometries (cube and plane)
     EXPECT_EQ(scene.mesh_count(), 2);
@@ -652,12 +668,14 @@ TEST_F(RayTracedSceneTest, StressTestManyInstancesWithMixedMeshes) {
     constexpr size_t instances_per_mesh = 50;
 
     for (size_t i = 0; i < instances_per_mesh; ++i) {
-        auto transform = glm::translate(glm::mat4(1.0f), glm::vec3(float(i) * 2, 0, 0));
+        auto transform =
+            glm::translate(glm::mat4(1.0f), glm::vec3(float(i) * 2, 0, 0));
         std::ignore = scene.add_instance(cube, transform);
     }
 
     for (size_t i = 0; i < instances_per_mesh; ++i) {
-        auto transform = glm::translate(glm::mat4(1.0f), glm::vec3(float(i) * 2, 5, 0));
+        auto transform =
+            glm::translate(glm::mat4(1.0f), glm::vec3(float(i) * 2, 5, 0));
         std::ignore = scene.add_instance(plane, transform);
     }
 
@@ -701,7 +719,8 @@ TEST_F(RayTracedSceneTest, TransformWithRotation) {
     vw::rt::RayTracedScene scene(gpu->device, gpu->allocator);
     const auto &mesh = gpu->get_mesh();
 
-    glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), glm::radians(45.0f), glm::vec3(0, 1, 0));
+    glm::mat4 rotation =
+        glm::rotate(glm::mat4(1.0f), glm::radians(45.0f), glm::vec3(0, 1, 0));
     auto id = scene.add_instance(mesh, rotation);
 
     EXPECT_EQ(scene.get_transform(id), rotation);
@@ -725,7 +744,8 @@ TEST_F(RayTracedSceneTest, TransformWithNegativeScale) {
     const auto &mesh = gpu->get_mesh();
 
     // Negative scale (mirrors the geometry)
-    glm::mat4 mirror = glm::scale(glm::mat4(1.0f), glm::vec3(-1.0f, 1.0f, 1.0f));
+    glm::mat4 mirror =
+        glm::scale(glm::mat4(1.0f), glm::vec3(-1.0f, 1.0f, 1.0f));
     auto id = scene.add_instance(mesh, mirror);
 
     EXPECT_EQ(scene.get_transform(id), mirror);
@@ -756,7 +776,8 @@ TEST_F(RayTracedSceneTest, TransformWithVeryLargeValues) {
     vw::rt::RayTracedScene scene(gpu->device, gpu->allocator);
     const auto &mesh = gpu->get_mesh();
 
-    glm::mat4 large_transform = glm::translate(glm::mat4(1.0f), glm::vec3(10000.0f, 10000.0f, 10000.0f));
+    glm::mat4 large_transform = glm::translate(
+        glm::mat4(1.0f), glm::vec3(10000.0f, 10000.0f, 10000.0f));
     auto id = scene.add_instance(mesh, large_transform);
 
     EXPECT_EQ(scene.get_transform(id), large_transform);
@@ -791,7 +812,8 @@ TEST_F(RayTracedSceneTest, UpdateManyTransformsBeforeSingleUpdate) {
 
     // Modify all transforms before calling update
     for (size_t i = 0; i < ids.size(); ++i) {
-        auto new_transform = glm::translate(glm::mat4(1.0f),
+        auto new_transform = glm::translate(
+            glm::mat4(1.0f),
             glm::vec3(float(i) * 3.0f, sin(float(i)), cos(float(i))));
         scene.set_transform(ids[i], new_transform);
     }
@@ -817,10 +839,11 @@ TEST_F(RayTracedSceneTest, AddInstanceAfterBuild) {
 
     [[maybe_unused]] auto address_before = scene.tlas_device_address();
 
-    // Adding instance of existing mesh only requires TLAS update (not full rebuild)
+    // Adding instance of existing mesh only requires TLAS update (not full
+    // rebuild)
     [[maybe_unused]] auto inst2 = scene.add_instance(mesh);
-    EXPECT_FALSE(scene.needs_build());  // No new BLAS needed
-    EXPECT_TRUE(scene.needs_update());  // TLAS needs update
+    EXPECT_FALSE(scene.needs_build()); // No new BLAS needed
+    EXPECT_TRUE(scene.needs_update()); // TLAS needs update
 
     scene.update();
     EXPECT_NE(scene.tlas_device_address(), 0);
@@ -853,7 +876,8 @@ TEST_F(RayTracedSceneTest, ComplexLifecycleSequence) {
 
     // Phase 1: Add instances and build
     auto c1 = scene.add_instance(cube);
-    auto c2 = scene.add_instance(cube, glm::translate(glm::mat4(1.0f), glm::vec3(2, 0, 0)));
+    auto c2 = scene.add_instance(
+        cube, glm::translate(glm::mat4(1.0f), glm::vec3(2, 0, 0)));
     auto p1 = scene.add_instance(plane);
 
     EXPECT_EQ(scene.mesh_count(), 2);
@@ -865,7 +889,8 @@ TEST_F(RayTracedSceneTest, ComplexLifecycleSequence) {
 
     // Phase 2: Update transforms
     scene.set_transform(c1, glm::scale(glm::mat4(1.0f), glm::vec3(2.0f)));
-    scene.set_transform(p1, glm::translate(glm::mat4(1.0f), glm::vec3(0, -2, 0)));
+    scene.set_transform(p1,
+                        glm::translate(glm::mat4(1.0f), glm::vec3(0, -2, 0)));
 
     EXPECT_TRUE(scene.needs_update());
     scene.update();
@@ -878,8 +903,10 @@ TEST_F(RayTracedSceneTest, ComplexLifecycleSequence) {
 
     // Phase 4: Remove an instance and add new ones (using existing meshes)
     scene.remove_instance(c2);
-    auto c3 = scene.add_instance(cube, glm::translate(glm::mat4(1.0f), glm::vec3(5, 0, 0)));
-    auto c4 = scene.add_instance(cube, glm::translate(glm::mat4(1.0f), glm::vec3(7, 0, 0)));
+    auto c3 = scene.add_instance(
+        cube, glm::translate(glm::mat4(1.0f), glm::vec3(5, 0, 0)));
+    auto c4 = scene.add_instance(
+        cube, glm::translate(glm::mat4(1.0f), glm::vec3(7, 0, 0)));
 
     // Using existing meshes: only TLAS update needed (not full rebuild)
     EXPECT_FALSE(scene.needs_build());
@@ -887,7 +914,7 @@ TEST_F(RayTracedSceneTest, ComplexLifecycleSequence) {
     scene.update();
 
     EXPECT_EQ(scene.mesh_count(), 2);
-    EXPECT_EQ(scene.instance_count(), 4);  // c1, p1, c3, c4
+    EXPECT_EQ(scene.instance_count(), 4); // c1, p1, c3, c4
     EXPECT_TRUE(scene.is_valid(c1));
     EXPECT_TRUE(scene.is_valid(p1));
     EXPECT_TRUE(scene.is_valid(c3));
@@ -897,7 +924,7 @@ TEST_F(RayTracedSceneTest, ComplexLifecycleSequence) {
     // Phase 5: Final visibility changes
     scene.set_visible(c1, false);
     scene.set_visible(c3, false);
-    EXPECT_EQ(scene.visible_instance_count(), 2);  // p1 and c4
+    EXPECT_EQ(scene.visible_instance_count(), 2); // p1 and c4
 
     scene.update();
     EXPECT_NE(scene.tlas_device_address(), 0);
@@ -962,8 +989,9 @@ TEST_F(RayTracedSceneTest, EmbeddedSceneSyncAfterRemoval) {
 
     EXPECT_EQ(scene.scene().size(), 2);
 
-    // Note: After removal, embedded scene may still have entries but ray tracing
-    // structure won't include them. This tests that the counts are consistent.
+    // Note: After removal, embedded scene may still have entries but ray
+    // tracing structure won't include them. This tests that the counts are
+    // consistent.
     scene.remove_instance(inst1);
 
     // instance_count reflects active ray tracing instances
@@ -974,7 +1002,8 @@ TEST_F(RayTracedSceneTest, EmbeddedSceneTransformSync) {
     vw::rt::RayTracedScene scene(gpu->device, gpu->allocator);
     const auto &mesh = gpu->get_mesh();
 
-    glm::mat4 initial_transform = glm::translate(glm::mat4(1.0f), glm::vec3(5, 0, 0));
+    glm::mat4 initial_transform =
+        glm::translate(glm::mat4(1.0f), glm::vec3(5, 0, 0));
     [[maybe_unused]] auto id = scene.add_instance(mesh, initial_transform);
 
     const auto &embedded = scene.scene();
@@ -986,8 +1015,10 @@ TEST_F(RayTracedSceneTest, EmbeddedSceneWithMultipleMeshTypes) {
     const auto &cube = gpu->get_cube_mesh();
     const auto &plane = gpu->get_plane_mesh();
 
-    glm::mat4 cube_transform = glm::translate(glm::mat4(1.0f), glm::vec3(1, 0, 0));
-    glm::mat4 plane_transform = glm::translate(glm::mat4(1.0f), glm::vec3(0, -1, 0));
+    glm::mat4 cube_transform =
+        glm::translate(glm::mat4(1.0f), glm::vec3(1, 0, 0));
+    glm::mat4 plane_transform =
+        glm::translate(glm::mat4(1.0f), glm::vec3(0, -1, 0));
 
     std::ignore = scene.add_instance(cube, cube_transform);
     std::ignore = scene.add_instance(plane, plane_transform);
@@ -1005,7 +1036,8 @@ TEST_F(RayTracedSceneTest, EmbeddedSceneWithMultipleMeshTypes) {
 TEST_F(RayTracedSceneTest, GetTransformWithInvalidId) {
     vw::rt::RayTracedScene scene(gpu->device, gpu->allocator);
 
-    EXPECT_THROW((void)scene.get_transform(vw::rt::InstanceId{999}), vw::LogicException);
+    EXPECT_THROW((void)scene.get_transform(vw::rt::InstanceId{999}),
+                 vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, IsValidWithInvalidId) {
@@ -1018,43 +1050,50 @@ TEST_F(RayTracedSceneTest, IsValidWithInvalidId) {
 TEST_F(RayTracedSceneTest, SetVisibleOnInvalidId) {
     vw::rt::RayTracedScene scene(gpu->device, gpu->allocator);
 
-    EXPECT_THROW(scene.set_visible(vw::rt::InstanceId{999}, true), vw::LogicException);
+    EXPECT_THROW(scene.set_visible(vw::rt::InstanceId{999}, true),
+                 vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, IsVisibleOnInvalidId) {
     vw::rt::RayTracedScene scene(gpu->device, gpu->allocator);
 
-    EXPECT_THROW((void)scene.is_visible(vw::rt::InstanceId{999}), vw::LogicException);
+    EXPECT_THROW((void)scene.is_visible(vw::rt::InstanceId{999}),
+                 vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, SetSbtOffsetOnInvalidId) {
     vw::rt::RayTracedScene scene(gpu->device, gpu->allocator);
 
-    EXPECT_THROW(scene.set_sbt_offset(vw::rt::InstanceId{999}, 0), vw::LogicException);
+    EXPECT_THROW(scene.set_sbt_offset(vw::rt::InstanceId{999}, 0),
+                 vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, GetSbtOffsetOnInvalidId) {
     vw::rt::RayTracedScene scene(gpu->device, gpu->allocator);
 
-    EXPECT_THROW((void)scene.get_sbt_offset(vw::rt::InstanceId{999}), vw::LogicException);
+    EXPECT_THROW((void)scene.get_sbt_offset(vw::rt::InstanceId{999}),
+                 vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, SetCustomIndexOnInvalidId) {
     vw::rt::RayTracedScene scene(gpu->device, gpu->allocator);
 
-    EXPECT_THROW(scene.set_custom_index(vw::rt::InstanceId{999}, 0), vw::LogicException);
+    EXPECT_THROW(scene.set_custom_index(vw::rt::InstanceId{999}, 0),
+                 vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, GetCustomIndexOnInvalidId) {
     vw::rt::RayTracedScene scene(gpu->device, gpu->allocator);
 
-    EXPECT_THROW((void)scene.get_custom_index(vw::rt::InstanceId{999}), vw::LogicException);
+    EXPECT_THROW((void)scene.get_custom_index(vw::rt::InstanceId{999}),
+                 vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, RemoveInvalidId) {
     vw::rt::RayTracedScene scene(gpu->device, gpu->allocator);
 
-    EXPECT_THROW(scene.remove_instance(vw::rt::InstanceId{999}), vw::LogicException);
+    EXPECT_THROW(scene.remove_instance(vw::rt::InstanceId{999}),
+                 vw::LogicException);
 }
 
 TEST_F(RayTracedSceneTest, DoubleSetSameTransform) {
@@ -1118,10 +1157,12 @@ TEST_F(RayTracedSceneTest, TransformChangeAfterBuildSetsNeedsUpdate) {
 
     EXPECT_FALSE(scene.needs_update());
 
-    scene.set_transform(id, glm::translate(glm::mat4(1.0f), glm::vec3(5, 0, 0)));
+    scene.set_transform(id,
+                        glm::translate(glm::mat4(1.0f), glm::vec3(5, 0, 0)));
 
     EXPECT_TRUE(scene.needs_update());
-    EXPECT_FALSE(scene.needs_build());  // Transform change only needs update, not rebuild
+    EXPECT_FALSE(
+        scene.needs_build()); // Transform change only needs update, not rebuild
 }
 
 TEST_F(RayTracedSceneTest, VisibilityChangeAfterBuildSetsNeedsUpdate) {
@@ -1179,8 +1220,8 @@ TEST_F(RayTracedSceneTest, AddInstanceOfExistingMeshSetsNeedsUpdate) {
     // Adding instance of EXISTING mesh only needs TLAS update
     [[maybe_unused]] auto inst2 = scene.add_instance(mesh);
 
-    EXPECT_FALSE(scene.needs_build());  // No new BLAS needed
-    EXPECT_TRUE(scene.needs_update());  // TLAS needs update
+    EXPECT_FALSE(scene.needs_build()); // No new BLAS needed
+    EXPECT_TRUE(scene.needs_update()); // TLAS needs update
 }
 
 TEST_F(RayTracedSceneTest, RemoveInstanceSetsNeedsUpdate) {
@@ -1218,7 +1259,8 @@ TEST_F(RayTracedSceneTest, AddInstanceOfNewMeshRequiresBuild) {
     [[maybe_unused]] auto inst2 = scene.add_instance(plane);
 
     EXPECT_TRUE(scene.needs_build());   // New BLAS needed for plane
-    EXPECT_FALSE(scene.needs_update()); // needs_update returns false when needs_build is true
+    EXPECT_FALSE(scene.needs_update()); // needs_update returns false when
+                                        // needs_build is true
     EXPECT_EQ(scene.mesh_count(), 2);
 
     // Must call build(), not update()
@@ -1318,7 +1360,8 @@ TEST_F(RayTracedSceneTest, MeshCountCorrectAfterMixedOperations) {
     scene.remove_instance(c1);
     EXPECT_EQ(scene.mesh_count(), 2);
 
-    // Mesh count should still be 2 (BLAS entries are preserved for potential reuse)
+    // Mesh count should still be 2 (BLAS entries are preserved for potential
+    // reuse)
 }
 
 TEST_F(RayTracedSceneTest, AllHiddenThenOneRevealed) {

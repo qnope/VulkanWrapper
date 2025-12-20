@@ -1,7 +1,7 @@
 #pragma once
 
-#include "VulkanWrapper/Descriptors/Vertex.h"
 #include "VulkanWrapper/3rd_party.h"
+#include "VulkanWrapper/Descriptors/Vertex.h"
 #include "VulkanWrapper/Memory/Buffer.h"
 #include "VulkanWrapper/Model/Material/Material.h"
 #include <functional>
@@ -64,8 +64,7 @@ class Mesh {
 };
 } // namespace vw::Model
 
-template <>
-struct std::hash<vw::Model::Mesh> {
+template <> struct std::hash<vw::Model::Mesh> {
     size_t operator()(const vw::Model::Mesh &mesh) const noexcept {
         return mesh.geometry_hash();
     }

@@ -1,6 +1,5 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
-
 #include "VulkanWrapper/Command/CommandPool.h"
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Memory/Allocator.h"

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "VulkanWrapper/Memory/Interval.h"
-#include <vector>
 #include <algorithm>
+#include <vector>
 
 namespace vw {
 
@@ -15,13 +15,15 @@ class BufferIntervalSet {
     BufferIntervalSet() = default;
 
     /**
-     * Adds an interval to the set, merging with existing intervals if necessary.
+     * Adds an interval to the set, merging with existing intervals if
+     * necessary.
      */
     void add(const BufferInterval &interval);
 
     /**
      * Removes an interval from the set.
-     * This may split existing intervals if the removed interval is in the middle.
+     * This may split existing intervals if the removed interval is in the
+     * middle.
      */
     void remove(const BufferInterval &interval);
 
@@ -32,7 +34,8 @@ class BufferIntervalSet {
     findOverlapping(const BufferInterval &interval) const;
 
     /**
-     * Checks if the set contains any interval that overlaps with the given interval.
+     * Checks if the set contains any interval that overlaps with the given
+     * interval.
      */
     [[nodiscard]] bool hasOverlap(const BufferInterval &interval) const;
 
@@ -75,13 +78,15 @@ class ImageIntervalSet {
     ImageIntervalSet() = default;
 
     /**
-     * Adds an interval to the set, merging with existing intervals if necessary.
+     * Adds an interval to the set, merging with existing intervals if
+     * necessary.
      */
     void add(const ImageInterval &interval);
 
     /**
      * Removes an interval from the set.
-     * This may split existing intervals if the removed interval is in the middle.
+     * This may split existing intervals if the removed interval is in the
+     * middle.
      */
     void remove(const ImageInterval &interval);
 
@@ -92,7 +97,8 @@ class ImageIntervalSet {
     findOverlapping(const ImageInterval &interval) const;
 
     /**
-     * Checks if the set contains any interval that overlaps with the given interval.
+     * Checks if the set contains any interval that overlaps with the given
+     * interval.
      */
     [[nodiscard]] bool hasOverlap(const ImageInterval &interval) const;
 

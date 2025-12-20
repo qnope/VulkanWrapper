@@ -1,6 +1,5 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
-
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Image/CombinedImage.h"
 #include "VulkanWrapper/Model/Material/MaterialManager.h"
@@ -13,8 +12,9 @@ inline const MaterialTypeTag textured_material_tag =
 template <>
 class ConcreteMaterialManager<&textured_material_tag> : public MaterialManager {
   public:
-    ConcreteMaterialManager(std::shared_ptr<const Device> device,
-                            std::shared_ptr<StagingBufferManager> staging_buffer) noexcept;
+    ConcreteMaterialManager(
+        std::shared_ptr<const Device> device,
+        std::shared_ptr<StagingBufferManager> staging_buffer) noexcept;
 
     Material allocate(const std::filesystem::path &path);
 

@@ -1,12 +1,11 @@
 #include "VulkanWrapper/RayTracing/BottomLevelAccelerationStructure.h"
-#include "VulkanWrapper/Model/Mesh.h"
 
 #include "VulkanWrapper/Command/CommandPool.h"
 #include "VulkanWrapper/Memory/Allocator.h"
+#include "VulkanWrapper/Model/Mesh.h"
 #include "VulkanWrapper/Synchronization/Fence.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 #include "VulkanWrapper/Vulkan/Queue.h"
-#include <vulkan/vulkan.hpp>
 
 namespace vw::rt::as {
 
@@ -34,9 +33,10 @@ BottomLevelAccelerationStructureList::BottomLevelAccelerationStructureList(
         vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 }
 
-BottomLevelAccelerationStructureList::AccelerationStructureBufferList::BufferInfo
-BottomLevelAccelerationStructureList::allocate_acceleration_structure_buffer(
-    vk::DeviceSize size) {
+BottomLevelAccelerationStructureList::AccelerationStructureBufferList::
+    BufferInfo
+    BottomLevelAccelerationStructureList::
+        allocate_acceleration_structure_buffer(vk::DeviceSize size) {
     // Acceleration structure offset must be 256-byte aligned
     return m_acceleration_structure_buffer_list.create_buffer(size, 256);
 }
@@ -76,7 +76,8 @@ void BottomLevelAccelerationStructureList::submit_and_wait() {
 }
 
 BottomLevelAccelerationStructureBuilder::
-    BottomLevelAccelerationStructureBuilder(std::shared_ptr<const Device> device)
+    BottomLevelAccelerationStructureBuilder(
+        std::shared_ptr<const Device> device)
     : m_device(std::move(device)) {}
 
 BottomLevelAccelerationStructureBuilder &

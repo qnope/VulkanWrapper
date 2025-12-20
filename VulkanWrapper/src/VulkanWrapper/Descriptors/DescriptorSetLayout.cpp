@@ -33,7 +33,7 @@ DescriptorSetLayoutBuilder::DescriptorSetLayoutBuilder(
     std::shared_ptr<const Device> device)
     : m_device{std::move(device)} {}
 
-DescriptorSetLayoutBuilder&
+DescriptorSetLayoutBuilder &
 DescriptorSetLayoutBuilder::with_uniform_buffer(vk::ShaderStageFlags stages,
                                                 int number) {
     auto binding = vk::DescriptorSetLayoutBinding()
@@ -46,7 +46,7 @@ DescriptorSetLayoutBuilder::with_uniform_buffer(vk::ShaderStageFlags stages,
     return *this;
 }
 
-DescriptorSetLayoutBuilder&
+DescriptorSetLayoutBuilder &
 DescriptorSetLayoutBuilder::with_sampled_image(vk::ShaderStageFlags stages,
                                                int number) {
     const auto binding =
@@ -60,7 +60,7 @@ DescriptorSetLayoutBuilder::with_sampled_image(vk::ShaderStageFlags stages,
     return *this;
 }
 
-DescriptorSetLayoutBuilder&
+DescriptorSetLayoutBuilder &
 DescriptorSetLayoutBuilder::with_combined_image(vk::ShaderStageFlags stages,
                                                 int number) {
     const auto binding =
@@ -74,8 +74,8 @@ DescriptorSetLayoutBuilder::with_combined_image(vk::ShaderStageFlags stages,
     return *this;
 }
 
-DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::with_input_attachment(
-    vk::ShaderStageFlags stages) {
+DescriptorSetLayoutBuilder &
+DescriptorSetLayoutBuilder::with_input_attachment(vk::ShaderStageFlags stages) {
     const auto binding =
         vk::DescriptorSetLayoutBinding()
             .setBinding(m_current_binding)
@@ -87,7 +87,7 @@ DescriptorSetLayoutBuilder& DescriptorSetLayoutBuilder::with_input_attachment(
     return *this;
 }
 
-DescriptorSetLayoutBuilder&
+DescriptorSetLayoutBuilder &
 DescriptorSetLayoutBuilder::with_acceleration_structure(
     vk::ShaderStageFlags stages) {
     const auto binding =
@@ -101,7 +101,7 @@ DescriptorSetLayoutBuilder::with_acceleration_structure(
     return *this;
 }
 
-DescriptorSetLayoutBuilder&
+DescriptorSetLayoutBuilder &
 DescriptorSetLayoutBuilder::with_storage_image(vk::ShaderStageFlags stages,
                                                int number) {
     const auto binding =
@@ -118,8 +118,9 @@ DescriptorSetLayoutBuilder::with_storage_image(vk::ShaderStageFlags stages,
 std::shared_ptr<DescriptorSetLayout> DescriptorSetLayoutBuilder::build() {
     const auto info =
         vk::DescriptorSetLayoutCreateInfo().setBindings(m_bindings);
-    auto value = check_vk(m_device->handle().createDescriptorSetLayoutUnique(info),
-                          "Failed to create descriptor set layout");
+    auto value =
+        check_vk(m_device->handle().createDescriptorSetLayoutUnique(info),
+                 "Failed to create descriptor set layout");
     return std::make_shared<DescriptorSetLayout>(std::move(m_bindings),
                                                  std::move(value));
 }

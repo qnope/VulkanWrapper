@@ -109,8 +109,7 @@ bool ImageInterval::overlaps(const ImageInterval &other) const {
     }
 
     // Check if aspect masks intersect
-    if ((range.aspectMask & other.range.aspectMask) ==
-        vk::ImageAspectFlags{}) {
+    if ((range.aspectMask & other.range.aspectMask) == vk::ImageAspectFlags{}) {
         return false;
     }
 
@@ -147,9 +146,8 @@ ImageInterval::merge(const ImageInterval &other) const {
     // Check if intervals overlap or are adjacent in both dimensions
     uint32_t this_mip_end = range.baseMipLevel + range.levelCount;
     uint32_t other_mip_end = other.range.baseMipLevel + other.range.levelCount;
-    bool mips_overlap_or_adjacent =
-        range.baseMipLevel <= other_mip_end &&
-        other.range.baseMipLevel <= this_mip_end;
+    bool mips_overlap_or_adjacent = range.baseMipLevel <= other_mip_end &&
+                                    other.range.baseMipLevel <= this_mip_end;
 
     uint32_t this_layer_end = range.baseArrayLayer + range.layerCount;
     uint32_t other_layer_end =
@@ -164,8 +162,10 @@ ImageInterval::merge(const ImageInterval &other) const {
 
     vk::ImageSubresourceRange merged;
     merged.aspectMask = range.aspectMask;
-    merged.baseMipLevel = std::min(range.baseMipLevel, other.range.baseMipLevel);
-    merged.levelCount = std::max(this_mip_end, other_mip_end) - merged.baseMipLevel;
+    merged.baseMipLevel =
+        std::min(range.baseMipLevel, other.range.baseMipLevel);
+    merged.levelCount =
+        std::max(this_mip_end, other_mip_end) - merged.baseMipLevel;
     merged.baseArrayLayer =
         std::min(range.baseArrayLayer, other.range.baseArrayLayer);
     merged.layerCount =

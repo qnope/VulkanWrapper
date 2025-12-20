@@ -1,6 +1,5 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
-
 #include "VulkanWrapper/Memory/AllocateBufferUtils.h"
 #include "VulkanWrapper/Memory/Buffer.h"
 
@@ -24,8 +23,10 @@ class BufferList {
             return (value + align - 1) & ~(align - 1);
         };
 
-        auto has_enough_place = [size, alignment, align_up](auto &buffer_and_offset) {
-            std::size_t aligned_offset = align_up(buffer_and_offset.offset, alignment);
+        auto has_enough_place = [size, alignment,
+                                 align_up](auto &buffer_and_offset) {
+            std::size_t aligned_offset =
+                align_up(buffer_and_offset.offset, alignment);
             return buffer_and_offset.buffer->size() >= size + aligned_offset;
         };
         auto it = std::ranges::find_if(m_buffer_list, has_enough_place);
@@ -36,8 +37,10 @@ class BufferList {
             return result;
         }
         auto buffer = std::make_shared<Buffer<T, HostVisible, flags>>(
-            vw::create_buffer<T, HostVisible, flags>(*m_allocator, std::max(buffer_size, size)));
-        auto &buffer_and_offset = m_buffer_list.emplace_back(BufferAndOffset{buffer, size});
+            vw::create_buffer<T, HostVisible, flags>(
+                *m_allocator, std::max(buffer_size, size)));
+        auto &buffer_and_offset =
+            m_buffer_list.emplace_back(BufferAndOffset{buffer, size});
         return {buffer_and_offset.buffer, 0};
     }
 

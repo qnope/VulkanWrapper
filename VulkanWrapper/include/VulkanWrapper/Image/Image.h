@@ -1,6 +1,5 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
-
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
 #include <memory>
@@ -39,8 +38,7 @@ class Image : public ObjectWithHandle<vk::Image> {
     [[nodiscard]] vk::Extent2D extent2D() const noexcept;
     [[nodiscard]] vk::Extent3D extent3D() const noexcept;
 
-    [[nodiscard]] vk::Extent3D
-    mip_level_extent3D(MipLevel mip_level) const;
+    [[nodiscard]] vk::Extent3D mip_level_extent3D(MipLevel mip_level) const;
 
     [[nodiscard]] std::array<vk::Offset3D, 2>
     mip_level_offsets(MipLevel mip_level) const noexcept;

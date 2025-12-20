@@ -74,18 +74,18 @@ DeviceFinder Instance::findGpu() const noexcept {
     return DeviceFinder{physicalDevices};
 }
 
-InstanceBuilder& InstanceBuilder::addPortability() {
+InstanceBuilder &InstanceBuilder::addPortability() {
     m_extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
     m_flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
     return *this;
 }
 
-InstanceBuilder& InstanceBuilder::addExtension(const char *extension) {
+InstanceBuilder &InstanceBuilder::addExtension(const char *extension) {
     m_extensions.push_back(extension);
     return *this;
 }
 
-InstanceBuilder&
+InstanceBuilder &
 InstanceBuilder::addExtensions(std::span<char const *const> extensions) {
     for (const auto *extension : extensions) {
         m_extensions.push_back(extension);
@@ -93,13 +93,13 @@ InstanceBuilder::addExtensions(std::span<char const *const> extensions) {
     return *this;
 }
 
-InstanceBuilder& InstanceBuilder::setDebug() {
+InstanceBuilder &InstanceBuilder::setDebug() {
     m_debug = true;
     m_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     return *this;
 }
 
-InstanceBuilder& InstanceBuilder::setApiVersion(ApiVersion version) {
+InstanceBuilder &InstanceBuilder::setApiVersion(ApiVersion version) {
     m_version = version;
     return *this;
 }

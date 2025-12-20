@@ -10,12 +10,11 @@ ShaderBindingTable::ShaderBindingTable(
     : m_allocator{allocator}
     , m_sbt_ray_generation_and_miss_buffer(
           create_buffer<ShaderBindingTableRecord, true,
-                                  ShaderBindingTableUsage>(
+                        ShaderBindingTableUsage>(
               *allocator, MaximumRecordInShaderBindingTable))
-    , m_sbt_closest_hit_buffer(
-          create_buffer<ShaderBindingTableRecord, true,
-                                  ShaderBindingTableUsage>(
-              *allocator, MaximumRecordInShaderBindingTable)) {
+    , m_sbt_closest_hit_buffer(create_buffer<ShaderBindingTableRecord, true,
+                                             ShaderBindingTableUsage>(
+          *allocator, MaximumRecordInShaderBindingTable)) {
     add_miss_record(raygen_handle);
 }
 
