@@ -43,8 +43,8 @@ class SwapchainBuilder {
   public:
     SwapchainBuilder(std::shared_ptr<const Device> device, vk::SurfaceKHR surface,
                      Width width, Height height) noexcept;
-    SwapchainBuilder&& with_old_swapchain(vk::SwapchainKHR old) &&;
-    Swapchain build() &&;
+    SwapchainBuilder& with_old_swapchain(vk::SwapchainKHR old);
+    Swapchain build();
 
   private:
     std::shared_ptr<const Device> m_device;

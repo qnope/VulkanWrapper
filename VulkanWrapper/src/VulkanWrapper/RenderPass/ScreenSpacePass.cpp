@@ -16,36 +16,32 @@ std::shared_ptr<const Pipeline> create_screen_space_pipeline(
     std::vector<vk::PushConstantRange> push_constants,
     std::optional<ColorBlendConfig> blend) {
 
-    auto pipeline_layout_builder = PipelineLayoutBuilder(device);
+    PipelineLayoutBuilder pipeline_layout_builder(device);
 
     if (descriptor_set_layout) {
-        std::move(pipeline_layout_builder)
-            .with_descriptor_set_layout(descriptor_set_layout);
+        pipeline_layout_builder.with_descriptor_set_layout(descriptor_set_layout);
     }
 
     for (const auto &pc : push_constants) {
-        std::move(pipeline_layout_builder).with_push_constant_range(pc);
+        pipeline_layout_builder.with_push_constant_range(pc);
     }
 
-    auto pipeline_layout = std::move(pipeline_layout_builder).build();
+    auto pipeline_layout = pipeline_layout_builder.build();
 
-    auto builder = GraphicsPipelineBuilder(device, std::move(pipeline_layout))
-                       .add_shader(vk::ShaderStageFlagBits::eVertex,
-                                   std::move(vertex_shader))
-                       .add_shader(vk::ShaderStageFlagBits::eFragment,
-                                   std::move(fragment_shader))
-                       .with_dynamic_viewport_scissor()
-                       .with_topology(vk::PrimitiveTopology::eTriangleStrip)
-                       .with_cull_mode(vk::CullModeFlagBits::eNone)
-                       .add_color_attachment(color_format, blend);
+    GraphicsPipelineBuilder builder(device, std::move(pipeline_layout));
+    builder.add_shader(vk::ShaderStageFlagBits::eVertex, std::move(vertex_shader))
+           .add_shader(vk::ShaderStageFlagBits::eFragment, std::move(fragment_shader))
+           .with_dynamic_viewport_scissor()
+           .with_topology(vk::PrimitiveTopology::eTriangleStrip)
+           .with_cull_mode(vk::CullModeFlagBits::eNone)
+           .add_color_attachment(color_format, blend);
 
     if (depth_format != vk::Format::eUndefined) {
-        std::move(builder)
-            .set_depth_format(depth_format)
-            .with_depth_test(false, depth_compare_op);
+        builder.set_depth_format(depth_format)
+               .with_depth_test(false, depth_compare_op);
     }
 
-    return std::move(builder).build();
+    return builder.build();
 }
 
 } // namespace vw

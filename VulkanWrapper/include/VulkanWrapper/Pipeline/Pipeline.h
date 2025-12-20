@@ -86,15 +86,15 @@ class GraphicsPipelineBuilder {
     GraphicsPipelineBuilder(std::shared_ptr<const Device> device,
                             PipelineLayout pipelineLayout);
 
-    GraphicsPipelineBuilder &&
+    GraphicsPipelineBuilder&
     add_shader(vk::ShaderStageFlagBits flags,
-               std::shared_ptr<const ShaderModule> module) &&;
+               std::shared_ptr<const ShaderModule> module);
 
-    GraphicsPipelineBuilder &&add_dynamic_state(vk::DynamicState state) &&;
+    GraphicsPipelineBuilder& add_dynamic_state(vk::DynamicState state);
 
-    GraphicsPipelineBuilder &&with_fixed_viewport(int width, int height) &&;
-    GraphicsPipelineBuilder &&with_fixed_scissor(int width, int height) &&;
-    GraphicsPipelineBuilder &&with_dynamic_viewport_scissor() &&;
+    GraphicsPipelineBuilder& with_fixed_viewport(int width, int height);
+    GraphicsPipelineBuilder& with_fixed_scissor(int width, int height);
+    GraphicsPipelineBuilder& with_dynamic_viewport_scissor();
 
     /**
      * @brief Add a color attachment with optional blending configuration
@@ -103,14 +103,14 @@ class GraphicsPipelineBuilder {
      * @param blend Optional blending configuration. Use ColorBlendConfig static
      *              methods for common presets (constant_blend, alpha, additive)
      */
-    GraphicsPipelineBuilder &&add_color_attachment(
+    GraphicsPipelineBuilder& add_color_attachment(
         vk::Format format,
-        std::optional<ColorBlendConfig> blend = std::nullopt) &&;
+        std::optional<ColorBlendConfig> blend = std::nullopt);
 
-    GraphicsPipelineBuilder &&set_depth_format(vk::Format format) &&;
-    GraphicsPipelineBuilder &&set_stencil_format(vk::Format format) &&;
+    GraphicsPipelineBuilder& set_depth_format(vk::Format format);
+    GraphicsPipelineBuilder& set_stencil_format(vk::Format format);
 
-    template <Vertex V> GraphicsPipelineBuilder &&add_vertex_binding() && {
+    template <Vertex V> GraphicsPipelineBuilder& add_vertex_binding() {
         const auto binding = m_input_binding_descriptions.size();
         const auto location = [this] {
             if (m_input_attribute_descriptions.empty()) {
@@ -125,17 +125,17 @@ class GraphicsPipelineBuilder {
         for (auto attribute : V::attribute_descriptions(binding, location)) {
             m_input_attribute_descriptions.push_back(attribute);
         }
-        return std::move(*this);
+        return *this;
     }
 
-    GraphicsPipelineBuilder &&
-    with_depth_test(bool write, vk::CompareOp compare_operator) &&;
+    GraphicsPipelineBuilder&
+    with_depth_test(bool write, vk::CompareOp compare_operator);
 
-    GraphicsPipelineBuilder &&with_topology(vk::PrimitiveTopology topology) &&;
-    
-    GraphicsPipelineBuilder &&with_cull_mode(vk::CullModeFlags cull_mode) &&;
+    GraphicsPipelineBuilder& with_topology(vk::PrimitiveTopology topology);
 
-    std::shared_ptr<const Pipeline> build() &&;
+    GraphicsPipelineBuilder& with_cull_mode(vk::CullModeFlags cull_mode);
+
+    std::shared_ptr<const Pipeline> build();
 
   private:
     [[nodiscard]] std::vector<vk::PipelineShaderStageCreateInfo>

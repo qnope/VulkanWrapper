@@ -24,9 +24,9 @@ class CommandPoolBuilder {
     CommandPoolBuilder(std::shared_ptr<const Device> device);
 
     /** @brief Allow individual command buffers to be reset */
-    CommandPoolBuilder &&with_reset_command_buffer() &&;
+    CommandPoolBuilder& with_reset_command_buffer();
 
-    CommandPool build() &&;
+    CommandPool build();
 
   private:
     std::shared_ptr<const Device> m_device;

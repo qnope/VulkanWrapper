@@ -74,37 +74,37 @@ DeviceFinder Instance::findGpu() const noexcept {
     return DeviceFinder{physicalDevices};
 }
 
-InstanceBuilder &&InstanceBuilder::addPortability() && {
+InstanceBuilder& InstanceBuilder::addPortability() {
     m_extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
     m_flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
-    return std::move(*this);
+    return *this;
 }
 
-InstanceBuilder &&InstanceBuilder::addExtension(const char *extension) && {
+InstanceBuilder& InstanceBuilder::addExtension(const char *extension) {
     m_extensions.push_back(extension);
-    return std::move(*this);
+    return *this;
 }
 
-InstanceBuilder &&
-InstanceBuilder::addExtensions(std::span<char const *const> extensions) && {
+InstanceBuilder&
+InstanceBuilder::addExtensions(std::span<char const *const> extensions) {
     for (const auto *extension : extensions) {
         m_extensions.push_back(extension);
     }
-    return std::move(*this);
+    return *this;
 }
 
-InstanceBuilder &&InstanceBuilder::setDebug() && {
+InstanceBuilder& InstanceBuilder::setDebug() {
     m_debug = true;
     m_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-    return std::move(*this);
+    return *this;
 }
 
-InstanceBuilder &&InstanceBuilder::setApiVersion(ApiVersion version) && {
+InstanceBuilder& InstanceBuilder::setApiVersion(ApiVersion version) {
     m_version = version;
-    return std::move(*this);
+    return *this;
 }
 
-std::shared_ptr<Instance> InstanceBuilder::build() && {
+std::shared_ptr<Instance> InstanceBuilder::build() {
     const std::vector<const char *> layers = {"VK_LAYER_KHRONOS_validation"};
 
     auto appInfo = vk::ApplicationInfo()

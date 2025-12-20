@@ -50,7 +50,7 @@ class DescriptorPoolBuilder {
         std::shared_ptr<const Device> device,
         const std::shared_ptr<const DescriptorSetLayout> &layout);
 
-    DescriptorPool build() &&;
+    DescriptorPool build();
 
   private:
     std::shared_ptr<const Device> m_device;

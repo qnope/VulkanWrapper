@@ -24,7 +24,7 @@ DeviceFinder::DeviceFinder(std::span<PhysicalDevice> physicalDevices) noexcept {
     }
 }
 
-DeviceFinder &&DeviceFinder::with_queue(vk::QueueFlags queueFlags) && {
+DeviceFinder& DeviceFinder::with_queue(vk::QueueFlags queueFlags) {
     auto queueFamilyHandled = [queueFlags](const QueueFamilyInformation &info) {
         return info.numberAsked < info.numberAvailable &&
                (queueFlags & info.flags) == queueFlags;
@@ -48,11 +48,11 @@ DeviceFinder &&DeviceFinder::with_queue(vk::QueueFlags queueFlags) && {
         ++information.numberOfQueuesToCreate[*index];
     }
 
-    return std::move(*this);
+    return *this;
 }
 
-DeviceFinder &&
-DeviceFinder::with_presentation(vk::SurfaceKHR surface) && noexcept {
+DeviceFinder&
+DeviceFinder::with_presentation(vk::SurfaceKHR surface) noexcept {
     using namespace std::ranges;
 
     constexpr auto swapchainExtension = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
@@ -87,10 +87,10 @@ DeviceFinder::with_presentation(vk::SurfaceKHR surface) && noexcept {
         information.extensions.push_back(swapchainExtension);
     }
 
-    return std::move(*this);
+    return *this;
 }
 
-DeviceFinder &&DeviceFinder::with_synchronization_2() && noexcept {
+DeviceFinder& DeviceFinder::with_synchronization_2() noexcept {
     remove_device_not_supporting_extension(
         VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
 
@@ -101,10 +101,10 @@ DeviceFinder &&DeviceFinder::with_synchronization_2() && noexcept {
 
     m_features.get<vk::PhysicalDeviceSynchronization2Features>()
         .setSynchronization2(1U);
-    return std::move(*this);
+    return *this;
 }
 
-DeviceFinder &&DeviceFinder::with_ray_tracing() && noexcept {
+DeviceFinder& DeviceFinder::with_ray_tracing() noexcept {
     constexpr std::array extensions = {
         VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
         VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
@@ -123,10 +123,10 @@ DeviceFinder &&DeviceFinder::with_ray_tracing() && noexcept {
     m_features.get<vk::PhysicalDeviceRayTracingPipelineFeaturesKHR>()
         .setRayTracingPipeline(1U);
 
-    return std::move(*this);
+    return *this;
 }
 
-DeviceFinder &&DeviceFinder::with_dynamic_rendering() && noexcept {
+DeviceFinder& DeviceFinder::with_dynamic_rendering() noexcept {
     remove_device_not_supporting_extension(
         VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
 
@@ -137,10 +137,10 @@ DeviceFinder &&DeviceFinder::with_dynamic_rendering() && noexcept {
 
     m_features.get<vk::PhysicalDeviceDynamicRenderingFeatures>()
         .setDynamicRendering(1U);
-    return std::move(*this);
+    return *this;
 }
 
-std::optional<PhysicalDevice> DeviceFinder::get() && noexcept {
+std::optional<PhysicalDevice> DeviceFinder::get() noexcept {
     if (m_physicalDevicesInformation.empty()) {
         return {};
     }
@@ -158,7 +158,7 @@ void DeviceFinder::remove_device_not_supporting_extension(
     std::erase_if(m_physicalDevicesInformation, need_to_remove);
 }
 
-std::shared_ptr<Device> DeviceFinder::build() && {
+std::shared_ptr<Device> DeviceFinder::build() {
     if (m_physicalDevicesInformation.empty()) {
         throw LogicException::invalid_state(
             "No suitable GPU found matching requested features");

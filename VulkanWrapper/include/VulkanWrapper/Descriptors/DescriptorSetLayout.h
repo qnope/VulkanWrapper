@@ -22,25 +22,25 @@ class DescriptorSetLayoutBuilder {
   public:
     DescriptorSetLayoutBuilder(std::shared_ptr<const Device> device);
 
-    DescriptorSetLayoutBuilder &&
-    with_uniform_buffer(vk::ShaderStageFlags stages, int number) &&;
+    DescriptorSetLayoutBuilder&
+    with_uniform_buffer(vk::ShaderStageFlags stages, int number);
 
-    DescriptorSetLayoutBuilder &&with_sampled_image(vk::ShaderStageFlags stages,
-                                                    int number) &&;
+    DescriptorSetLayoutBuilder& with_sampled_image(vk::ShaderStageFlags stages,
+                                                    int number);
 
-    DescriptorSetLayoutBuilder &&
-    with_combined_image(vk::ShaderStageFlags stages, int number) &&;
+    DescriptorSetLayoutBuilder&
+    with_combined_image(vk::ShaderStageFlags stages, int number);
 
-    DescriptorSetLayoutBuilder &&
-    with_input_attachment(vk::ShaderStageFlags stages) &&;
+    DescriptorSetLayoutBuilder&
+    with_input_attachment(vk::ShaderStageFlags stages);
 
-    DescriptorSetLayoutBuilder &&
-    with_acceleration_structure(vk::ShaderStageFlags stages) &&;
+    DescriptorSetLayoutBuilder&
+    with_acceleration_structure(vk::ShaderStageFlags stages);
 
-    DescriptorSetLayoutBuilder &&with_storage_image(vk::ShaderStageFlags stages,
-                                                    int number) &&;
+    DescriptorSetLayoutBuilder& with_storage_image(vk::ShaderStageFlags stages,
+                                                    int number);
 
-    std::shared_ptr<DescriptorSetLayout> build() &&;
+    std::shared_ptr<DescriptorSetLayout> build();
 
   private:
     std::shared_ptr<const Device> m_device;

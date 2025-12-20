@@ -19,13 +19,13 @@ class PipelineLayoutBuilder {
   public:
     PipelineLayoutBuilder(std::shared_ptr<const Device> device);
 
-    PipelineLayoutBuilder &&with_descriptor_set_layout(
-        std::shared_ptr<const DescriptorSetLayout> layout) &&;
+    PipelineLayoutBuilder& with_descriptor_set_layout(
+        std::shared_ptr<const DescriptorSetLayout> layout);
 
-    PipelineLayoutBuilder &&
-    with_push_constant_range(vk::PushConstantRange range) &&;
+    PipelineLayoutBuilder&
+    with_push_constant_range(vk::PushConstantRange range);
 
-    PipelineLayout build() &&;
+    PipelineLayout build();
 
   private:
     [[nodiscard]] vk::UniqueDescriptorSetLayout build_set_layout(

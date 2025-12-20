@@ -46,13 +46,13 @@ class Instance {
 
 class InstanceBuilder {
   public:
-    InstanceBuilder &&addPortability() &&;
-    InstanceBuilder &&addExtension(const char *extension) &&;
-    InstanceBuilder &&addExtensions(std::span<const char *const> extensions) &&;
-    InstanceBuilder &&setDebug() &&;
-    InstanceBuilder &&setApiVersion(ApiVersion version) &&;
+    InstanceBuilder& addPortability();
+    InstanceBuilder& addExtension(const char *extension);
+    InstanceBuilder& addExtensions(std::span<const char *const> extensions);
+    InstanceBuilder& setDebug();
+    InstanceBuilder& setApiVersion(ApiVersion version);
 
-    std::shared_ptr<Instance> build() &&;
+    std::shared_ptr<Instance> build();
 
   private:
     vk::InstanceCreateFlags m_flags;

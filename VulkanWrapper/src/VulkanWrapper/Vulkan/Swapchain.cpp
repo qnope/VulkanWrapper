@@ -90,12 +90,12 @@ SwapchainBuilder::SwapchainBuilder(std::shared_ptr<const Device> device,
         .setMinImageCount(3);
 }
 
-SwapchainBuilder&& SwapchainBuilder::with_old_swapchain(vk::SwapchainKHR old) && {
+SwapchainBuilder& SwapchainBuilder::with_old_swapchain(vk::SwapchainKHR old) {
     m_info.setOldSwapchain(old);
-    return std::move(*this);
+    return *this;
 }
 
-Swapchain SwapchainBuilder::build() && {
+Swapchain SwapchainBuilder::build() {
     auto swapchain =
         check_vk(m_device->handle().createSwapchainKHRUnique(m_info),
                  "Failed to create swapchain");

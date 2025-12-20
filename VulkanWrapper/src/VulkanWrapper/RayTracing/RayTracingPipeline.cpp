@@ -74,26 +74,26 @@ RayTracingPipelineBuilder::RayTracingPipelineBuilder(
     , m_allocator{std::move(allocator)}
     , m_pipelineLayout(std::move(pipelineLayout)) {}
 
-RayTracingPipelineBuilder &&
+RayTracingPipelineBuilder&
 RayTracingPipelineBuilder::set_ray_generation_shader(
-    std::shared_ptr<const ShaderModule> module) && {
+    std::shared_ptr<const ShaderModule> module) {
     m_ray_generation_shader = std::move(module);
-    return std::move(*this);
+    return *this;
 }
 
-RayTracingPipelineBuilder &&RayTracingPipelineBuilder::add_closest_hit_shader(
-    std::shared_ptr<const ShaderModule> module) && {
+RayTracingPipelineBuilder& RayTracingPipelineBuilder::add_closest_hit_shader(
+    std::shared_ptr<const ShaderModule> module) {
     m_closest_hit_shaders.push_back(std::move(module));
-    return std::move(*this);
+    return *this;
 }
 
-RayTracingPipelineBuilder &&RayTracingPipelineBuilder::add_miss_shader(
-    std::shared_ptr<const ShaderModule> module) && {
+RayTracingPipelineBuilder& RayTracingPipelineBuilder::add_miss_shader(
+    std::shared_ptr<const ShaderModule> module) {
     m_miss_shaders.push_back(std::move(module));
-    return std::move(*this);
+    return *this;
 }
 
-RayTracingPipeline RayTracingPipelineBuilder::build() && {
+RayTracingPipeline RayTracingPipelineBuilder::build() {
     const auto stages = create_stages();
     const auto groups = create_groups();
 

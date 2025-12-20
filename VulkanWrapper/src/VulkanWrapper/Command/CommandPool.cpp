@@ -24,12 +24,12 @@ std::vector<vk::CommandBuffer> CommandPool::allocate(std::size_t number) {
 CommandPoolBuilder::CommandPoolBuilder(std::shared_ptr<const Device> device)
     : m_device{std::move(device)} {}
 
-CommandPoolBuilder &&CommandPoolBuilder::with_reset_command_buffer() && {
+CommandPoolBuilder& CommandPoolBuilder::with_reset_command_buffer() {
     m_flags |= vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-    return std::move(*this);
+    return *this;
 }
 
-CommandPool CommandPoolBuilder::build() && {
+CommandPool CommandPoolBuilder::build() {
     auto info = vk::CommandPoolCreateInfo()
                     .setQueueFamilyIndex(0)
                     .setFlags(m_flags);

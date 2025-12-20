@@ -27,12 +27,12 @@ ImageViewBuilder::ImageViewBuilder(std::shared_ptr<const Device> device,
     , m_image{std::move(image)}
     , m_subResourceRange{m_image->full_range()} {}
 
-ImageViewBuilder &&ImageViewBuilder::setImageType(vk::ImageViewType type) && {
+ImageViewBuilder& ImageViewBuilder::setImageType(vk::ImageViewType type) {
     m_type = type;
-    return std::move(*this);
+    return *this;
 }
 
-std::shared_ptr<const ImageView> ImageViewBuilder::build() && {
+std::shared_ptr<const ImageView> ImageViewBuilder::build() {
     const auto info = vk::ImageViewCreateInfo()
                           .setImage(m_image->handle())
                           .setFormat(m_image->format())

@@ -77,18 +77,18 @@ void Window::update() noexcept {
 WindowBuilder::WindowBuilder(std::shared_ptr<const SDL_Initializer> initializer)
     : initializer{std::move(initializer)} {}
 
-WindowBuilder &&WindowBuilder::with_title(std::string_view name) && {
+WindowBuilder& WindowBuilder::with_title(std::string_view name) {
     this->name = name;
-    return std::move(*this);
+    return *this;
 }
 
-WindowBuilder &&WindowBuilder::sized(Width width, Height height) && {
+WindowBuilder& WindowBuilder::sized(Width width, Height height) {
     this->width = width;
     this->height = height;
-    return std::move(*this);
+    return *this;
 }
 
-Window WindowBuilder::build() && {
+Window WindowBuilder::build() {
     return Window{std::move(initializer), name, width, height};
 }
 

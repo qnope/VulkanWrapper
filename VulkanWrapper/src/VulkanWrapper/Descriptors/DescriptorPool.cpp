@@ -95,7 +95,7 @@ DescriptorPoolBuilder::DescriptorPoolBuilder(
     : m_device{std::move(device)}
     , m_layout{layout} {}
 
-DescriptorPool DescriptorPoolBuilder::build() && {
+DescriptorPool DescriptorPoolBuilder::build() {
 
     return DescriptorPool{m_device, std::move(m_layout)};
 }

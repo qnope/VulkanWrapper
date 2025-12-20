@@ -28,7 +28,7 @@ class Fence : public ObjectWithUniqueHandle<vk::UniqueFence> {
 class FenceBuilder {
     friend class Queue;
     FenceBuilder(vk::Device device);
-    Fence build() &&;
+    Fence build();
 
   private:
     vk::Device m_device;
