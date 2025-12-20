@@ -42,6 +42,7 @@ class App {
             .with_synchronization_2()
             .with_ray_tracing()
             .with_dynamic_rendering()
+            .with_descriptor_indexing()
             .build();
 
     std::shared_ptr<vw::Allocator> allocator =
