@@ -45,10 +45,10 @@ class WindowBuilder {
   public:
     WindowBuilder(std::shared_ptr<const SDL_Initializer> initializer);
 
-    WindowBuilder &&with_title(std::string_view name) &&;
-    WindowBuilder &&sized(Width width, Height height) &&;
+    WindowBuilder& with_title(std::string_view name);
+    WindowBuilder& sized(Width width, Height height);
 
-    Window build() &&;
+    Window build();
 
   private:
     std::shared_ptr<const SDL_Initializer> initializer;

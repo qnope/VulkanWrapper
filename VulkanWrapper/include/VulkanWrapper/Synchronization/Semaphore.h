@@ -17,7 +17,7 @@ class Semaphore : public ObjectWithUniqueHandle<vk::UniqueSemaphore> {
 class SemaphoreBuilder {
   public:
     SemaphoreBuilder(std::shared_ptr<const Device> device);
-    Semaphore build() &&;
+    Semaphore build();
 
   private:
     std::shared_ptr<const Device> m_device;

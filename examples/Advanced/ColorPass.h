@@ -251,20 +251,19 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
                             .setSize(sizeof(glm::mat4)))
                     .build();
 
-            auto builder =
-                vw::GraphicsPipelineBuilder(m_device, std::move(pipelineLayout))
-                    .add_vertex_binding<vw::FullVertex3D>()
-                    .add_shader(vk::ShaderStageFlagBits::eVertex, vertexShader)
-                    .add_shader(vk::ShaderStageFlagBits::eFragment, fragment)
-                    .with_dynamic_viewport_scissor()
-                    .with_depth_test(false, vk::CompareOp::eEqual)
-                    .set_depth_format(depth_format);
+            vw::GraphicsPipelineBuilder builder(m_device, std::move(pipelineLayout));
+            builder.add_vertex_binding<vw::FullVertex3D>()
+                   .add_shader(vk::ShaderStageFlagBits::eVertex, vertexShader)
+                   .add_shader(vk::ShaderStageFlagBits::eFragment, fragment)
+                   .with_dynamic_viewport_scissor()
+                   .with_depth_test(false, vk::CompareOp::eEqual)
+                   .set_depth_format(depth_format);
 
             for (auto format : m_color_formats) {
-                std::move(builder).add_color_attachment(format);
+                builder.add_color_attachment(format);
             }
 
-            return std::move(builder).build();
+            return builder.build();
         };
 
         auto textured_pipeline = create_pipeline(

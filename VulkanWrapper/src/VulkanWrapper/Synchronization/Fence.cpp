@@ -24,7 +24,7 @@ Fence::~Fence() {
 FenceBuilder::FenceBuilder(vk::Device device)
     : m_device{std::move(device)} {}
 
-Fence FenceBuilder::build() && {
+Fence FenceBuilder::build() {
     const auto info = vk::FenceCreateInfo();
 
     auto [result, fence] = m_device.createFenceUnique(info);

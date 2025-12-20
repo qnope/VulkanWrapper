@@ -56,7 +56,7 @@ class AllocatorBuilder {
     AllocatorBuilder(std::shared_ptr<const Instance> instance,
                      std::shared_ptr<const Device> device);
 
-    std::shared_ptr<Allocator> build() &&;
+    std::shared_ptr<Allocator> build();
 
   private:
     std::shared_ptr<const Instance> m_instance;

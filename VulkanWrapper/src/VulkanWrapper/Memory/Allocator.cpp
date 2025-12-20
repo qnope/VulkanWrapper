@@ -97,7 +97,7 @@ AllocatorBuilder::AllocatorBuilder(std::shared_ptr<const Instance> instance,
     : m_instance{std::move(instance)}
     , m_device{std::move(device)} {}
 
-std::shared_ptr<Allocator> AllocatorBuilder::build() && {
+std::shared_ptr<Allocator> AllocatorBuilder::build() {
     VmaAllocatorCreateInfo info{};
     info.flags = VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT |
                  VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;

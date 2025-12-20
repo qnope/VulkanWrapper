@@ -19,42 +19,42 @@ GraphicsPipelineBuilder::GraphicsPipelineBuilder(
     : m_device{std::move(device)}
     , m_pipelineLayout{std::move(pipelineLayout)} {}
 
-GraphicsPipelineBuilder &&GraphicsPipelineBuilder::add_shader(
+GraphicsPipelineBuilder& GraphicsPipelineBuilder::add_shader(
     vk::ShaderStageFlagBits flags,
-    std::shared_ptr<const ShaderModule> module) && {
+    std::shared_ptr<const ShaderModule> module) {
     m_shaderModules.emplace(flags, std::move(module));
-    return std::move(*this);
+    return *this;
 }
 
-GraphicsPipelineBuilder &&
-GraphicsPipelineBuilder::add_dynamic_state(vk::DynamicState state) && {
+GraphicsPipelineBuilder&
+GraphicsPipelineBuilder::add_dynamic_state(vk::DynamicState state) {
     m_dynamicStates.push_back(state);
-    return std::move(*this);
+    return *this;
 }
 
-GraphicsPipelineBuilder &&
-GraphicsPipelineBuilder::with_fixed_viewport(int width, int height) && {
+GraphicsPipelineBuilder&
+GraphicsPipelineBuilder::with_fixed_viewport(int width, int height) {
     m_viewport = vk::Viewport(0.0F, 0.0F, static_cast<float>(width),
                               static_cast<float>(height), 0.0F, 1.0F);
-    return std::move(*this);
+    return *this;
 }
 
-GraphicsPipelineBuilder &&
-GraphicsPipelineBuilder::with_fixed_scissor(int width, int height) && {
+GraphicsPipelineBuilder&
+GraphicsPipelineBuilder::with_fixed_scissor(int width, int height) {
     m_scissor = vk::Rect2D(vk::Offset2D(), vk::Extent2D(width, height));
-    return std::move(*this);
+    return *this;
 }
 
-GraphicsPipelineBuilder &&
-GraphicsPipelineBuilder::with_dynamic_viewport_scissor() && {
+GraphicsPipelineBuilder&
+GraphicsPipelineBuilder::with_dynamic_viewport_scissor() {
     m_dynamicStates.push_back(vk::DynamicState::eViewport);
     m_dynamicStates.push_back(vk::DynamicState::eScissor);
-    return std::move(*this);
+    return *this;
 }
 
-GraphicsPipelineBuilder &&
+GraphicsPipelineBuilder&
 GraphicsPipelineBuilder::add_color_attachment(
-    vk::Format format, std::optional<ColorBlendConfig> blend) && {
+    vk::Format format, std::optional<ColorBlendConfig> blend) {
 
     auto colorBlendAttachment =
         vk::PipelineColorBlendAttachmentState().setColorWriteMask(
@@ -79,43 +79,43 @@ GraphicsPipelineBuilder::add_color_attachment(
 
     m_colorAttachmentStates.push_back(colorBlendAttachment);
     m_colorAttachmentFormats.push_back(format);
-    return std::move(*this);
+    return *this;
 }
 
-GraphicsPipelineBuilder &&
-GraphicsPipelineBuilder::set_depth_format(vk::Format format) && {
+GraphicsPipelineBuilder&
+GraphicsPipelineBuilder::set_depth_format(vk::Format format) {
     m_depthFormat = format;
-    return std::move(*this);
+    return *this;
 }
 
-GraphicsPipelineBuilder &&
-GraphicsPipelineBuilder::set_stencil_format(vk::Format format) && {
+GraphicsPipelineBuilder&
+GraphicsPipelineBuilder::set_stencil_format(vk::Format format) {
     m_stencilFormat = format;
-    return std::move(*this);
+    return *this;
 }
 
-GraphicsPipelineBuilder &&
+GraphicsPipelineBuilder&
 GraphicsPipelineBuilder::with_depth_test(bool write,
-                                         vk::CompareOp compare_operator) && {
+                                         vk::CompareOp compare_operator) {
     m_depthTestEnabled = static_cast<vk::Bool32>(true);
     m_depthWriteEnabled = static_cast<vk::Bool32>(write);
     m_depthCompareOp = compare_operator;
-    return std::move(*this);
+    return *this;
 }
 
-GraphicsPipelineBuilder &&
-GraphicsPipelineBuilder::with_topology(vk::PrimitiveTopology topology) && {
+GraphicsPipelineBuilder&
+GraphicsPipelineBuilder::with_topology(vk::PrimitiveTopology topology) {
     m_topology = topology;
-    return std::move(*this);
+    return *this;
 }
 
-GraphicsPipelineBuilder &&
-GraphicsPipelineBuilder::with_cull_mode(vk::CullModeFlags cull_mode) && {
+GraphicsPipelineBuilder&
+GraphicsPipelineBuilder::with_cull_mode(vk::CullModeFlags cull_mode) {
     m_cullMode = cull_mode;
-    return std::move(*this);
+    return *this;
 }
 
-std::shared_ptr<const Pipeline> GraphicsPipelineBuilder::build() && {
+std::shared_ptr<const Pipeline> GraphicsPipelineBuilder::build() {
     const auto shaderStageInfos = createShaderStageInfos();
     const auto dynamicStateInfo = createDynamicStateInfo();
     const auto viewportStateInfo = createViewportStateInfo();

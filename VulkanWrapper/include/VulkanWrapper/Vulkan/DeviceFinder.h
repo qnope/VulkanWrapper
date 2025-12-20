@@ -10,14 +10,14 @@ class DeviceFinder {
   public:
     DeviceFinder(std::span<PhysicalDevice> physicalDevices) noexcept;
 
-    DeviceFinder &&with_queue(vk::QueueFlags queueFlags) &&;
-    DeviceFinder &&with_presentation(vk::SurfaceKHR surface) && noexcept;
-    DeviceFinder &&with_synchronization_2() && noexcept;
-    DeviceFinder &&with_ray_tracing() && noexcept;
-    DeviceFinder &&with_dynamic_rendering() && noexcept;
+    DeviceFinder& with_queue(vk::QueueFlags queueFlags);
+    DeviceFinder& with_presentation(vk::SurfaceKHR surface) noexcept;
+    DeviceFinder& with_synchronization_2() noexcept;
+    DeviceFinder& with_ray_tracing() noexcept;
+    DeviceFinder& with_dynamic_rendering() noexcept;
 
-    std::shared_ptr<Device> build() &&;
-    std::optional<PhysicalDevice> get() && noexcept;
+    std::shared_ptr<Device> build();
+    std::optional<PhysicalDevice> get() noexcept;
 
   private:
     void remove_device_not_supporting_extension(const char *extension);

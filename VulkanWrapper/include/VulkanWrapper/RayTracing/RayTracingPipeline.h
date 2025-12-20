@@ -43,16 +43,16 @@ class RayTracingPipelineBuilder {
                               std::shared_ptr<const Allocator> allocator,
                               PipelineLayout pipelineLayout);
 
-    RayTracingPipelineBuilder &&
-    set_ray_generation_shader(std::shared_ptr<const ShaderModule> module) &&;
+    RayTracingPipelineBuilder&
+    set_ray_generation_shader(std::shared_ptr<const ShaderModule> module);
 
-    RayTracingPipelineBuilder &&
-    add_closest_hit_shader(std::shared_ptr<const ShaderModule> module) &&;
+    RayTracingPipelineBuilder&
+    add_closest_hit_shader(std::shared_ptr<const ShaderModule> module);
 
-    RayTracingPipelineBuilder &&
-    add_miss_shader(std::shared_ptr<const ShaderModule> module) &&;
+    RayTracingPipelineBuilder&
+    add_miss_shader(std::shared_ptr<const ShaderModule> module);
 
-    RayTracingPipeline build() &&;
+    RayTracingPipeline build();
 
   private:
     [[nodiscard]] std::vector<vk::PipelineShaderStageCreateInfo>
