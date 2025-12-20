@@ -118,7 +118,7 @@ class ScreenSpacePass : public Subpass<SlotEnum> {
  * Creates a pipeline with:
  * - Triangle strip topology (for fullscreen quad)
  * - Dynamic viewport and scissor
- * - Single color attachment
+ * - Single color attachment with optional blending
  * - Optional depth testing
  *
  * @param device Device to create pipeline on
@@ -129,6 +129,7 @@ class ScreenSpacePass : public Subpass<SlotEnum> {
  * @param depth_format Format of depth attachment (eUndefined if no depth)
  * @param depth_compare_op Depth comparison operator
  * @param push_constants Push constant ranges
+ * @param blend Optional blending configuration (use ColorBlendConfig presets)
  * @return Shared pointer to created pipeline
  */
 std::shared_ptr<const Pipeline> create_screen_space_pipeline(
@@ -138,6 +139,7 @@ std::shared_ptr<const Pipeline> create_screen_space_pipeline(
     std::shared_ptr<const DescriptorSetLayout> descriptor_set_layout,
     vk::Format color_format, vk::Format depth_format = vk::Format::eUndefined,
     vk::CompareOp depth_compare_op = vk::CompareOp::eAlways,
-    std::vector<vk::PushConstantRange> push_constants = {});
+    std::vector<vk::PushConstantRange> push_constants = {},
+    std::optional<ColorBlendConfig> blend = std::nullopt);
 
 } // namespace vw

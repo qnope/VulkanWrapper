@@ -14,7 +14,8 @@
 #include <VulkanWrapper/Vulkan/Device.h>
 
 /**
- * @brief Manages deferred rendering passes with functional API and lazy allocation
+ * @brief Manages deferred rendering passes with functional API and lazy
+ * allocation
  *
  * This class orchestrates the deferred rendering pipeline using functional
  * passes. Each pass lazily allocates its output images on first use.
@@ -37,7 +38,7 @@ class DeferredRenderingManager {
         const vw::Model::MeshManager &mesh_manager,
         const vw::rt::RayTracedScene &ray_traced_scene,
         vk::Format depth_format = vk::Format::eD32Sfloat,
-        vk::Format ao_format = vk::Format::eR8G8B8A8Unorm,
+        vk::Format ao_format = vk::Format::eR32G32B32A32Sfloat,
         vk::Format light_format = vk::Format::eR16G16B16A16Sfloat)
         : m_device(std::move(device))
         , m_allocator(std::move(allocator))
@@ -46,17 +47,18 @@ class DeferredRenderingManager {
         // Create functional passes - each owns its output images lazily
         m_zpass = std::make_unique<ZPass>(m_device, m_allocator, depth_format);
 
-        m_color_pass = std::make_unique<ColorPass>(
-            m_device, m_allocator, mesh_manager, depth_format);
+        m_color_pass = std::make_unique<ColorPass>(m_device, m_allocator,
+                                                   mesh_manager, depth_format);
 
         m_ao_pass = std::make_unique<AmbientOcclusionPass>(
             m_device, m_allocator, ray_traced_scene.tlas_handle(), ao_format);
 
-        m_sky_pass = std::make_unique<SkyPass>(
-            m_device, m_allocator, light_format, depth_format);
+        m_sky_pass = std::make_unique<SkyPass>(m_device, m_allocator,
+                                               light_format, depth_format);
 
         m_sun_light_pass = std::make_unique<SunLightPass>(
-            m_device, m_allocator, ray_traced_scene.tlas_handle(), light_format);
+            m_device, m_allocator, ray_traced_scene.tlas_handle(),
+            light_format);
     }
 
     /**
@@ -74,18 +76,15 @@ class DeferredRenderingManager {
      * @param frame_index Frame index for multi-buffering
      * @param uniform_buffer Uniform buffer with view/projection matrices
      * @param sun_angle Sun angle in degrees above horizon (90 = zenith)
-     * @param num_ao_samples Number of AO samples (default: 32)
      * @param ao_radius AO sampling radius (default: 100.0)
      * @return The final light image view (can be blitted to swapchain)
      */
     template <typename UBOType>
-    std::shared_ptr<const vw::ImageView>
-    execute(vk::CommandBuffer cmd, vw::Barrier::ResourceTracker &tracker,
-            vw::Width width, vw::Height height, size_t frame_index,
-            const vw::Buffer<UBOType, true, vw::UniformBufferUsage>
-                &uniform_buffer,
-            float sun_angle = 90.0f,
-            int32_t num_ao_samples = 32, float ao_radius = 100.0f) {
+    std::shared_ptr<const vw::ImageView> execute(
+        vk::CommandBuffer cmd, vw::Barrier::ResourceTracker &tracker,
+        vw::Width width, vw::Height height, size_t frame_index,
+        const vw::Buffer<UBOType, true, vw::UniformBufferUsage> &uniform_buffer,
+        float sun_angle = 90.0f, float ao_radius = 100.0f) {
 
         const auto &scene = m_ray_traced_scene.scene();
 
@@ -97,33 +96,31 @@ class DeferredRenderingManager {
                                            frame_index, scene, uniform_buffer);
 
         // 2. Color Pass: G-Buffer fill
-        auto gbuffer = m_color_pass->execute(cmd, tracker, width, height,
-                                             frame_index, scene, depth_view,
-                                             uniform_buffer);
+        auto gbuffer =
+            m_color_pass->execute(cmd, tracker, width, height, frame_index,
+                                  scene, depth_view, uniform_buffer);
 
-        // 3. AO Pass: screen-space ambient occlusion
-        auto ao_view = m_ao_pass->execute(cmd, tracker, width, height,
-                                          frame_index, depth_view,
-                                          gbuffer.position, gbuffer.normal,
-                                          gbuffer.tangent, gbuffer.bitangent,
-                                          num_ao_samples, ao_radius);
+        // 3. AO Pass: progressive ambient occlusion (1 sample per frame)
+        auto ao_view = m_ao_pass->execute(
+            cmd, tracker, width, height, depth_view, gbuffer.position,
+            gbuffer.normal, gbuffer.tangent, gbuffer.bitangent, ao_radius);
 
         // 4. Sky Pass: render sky where depth == 1.0 (far plane)
-        auto light_view = m_sky_pass->execute(cmd, tracker, width, height,
-                                              frame_index, depth_view, sun_angle,
-                                              ubo_data.inverseViewProj);
+        auto light_view = m_sky_pass->execute(
+            cmd, tracker, width, height, frame_index, depth_view, sun_angle,
+            ubo_data.inverseViewProj);
 
         // 5. Sun Light Pass: add sun lighting with ray-traced shadows and AO
         m_sun_light_pass->execute(cmd, tracker,
-                                  light_view,        // from SkyPass
-                                  depth_view,        // from ZPass
-                                  gbuffer.color,     // albedo from ColorPass
-                                  gbuffer.position,  // from ColorPass
-                                  gbuffer.normal,    // from ColorPass
-                                  ao_view,           // from AO Pass
+                                  light_view,       // from SkyPass
+                                  depth_view,       // from ZPass
+                                  gbuffer.color,    // albedo from ColorPass
+                                  gbuffer.position, // from ColorPass
+                                  gbuffer.normal,   // from ColorPass
+                                  ao_view,          // from AO Pass
                                   sun_angle);
 
-        // Return light buffer (sky + sun + AO) as final output
+        // Return AO buffer directly to visualize progressive accumulation
         return light_view;
     }
 

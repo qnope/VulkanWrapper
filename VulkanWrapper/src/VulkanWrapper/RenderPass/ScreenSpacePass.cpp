@@ -13,7 +13,8 @@ std::shared_ptr<const Pipeline> create_screen_space_pipeline(
     std::shared_ptr<const DescriptorSetLayout> descriptor_set_layout,
     vk::Format color_format, vk::Format depth_format,
     vk::CompareOp depth_compare_op,
-    std::vector<vk::PushConstantRange> push_constants) {
+    std::vector<vk::PushConstantRange> push_constants,
+    std::optional<ColorBlendConfig> blend) {
 
     auto pipeline_layout_builder = PipelineLayoutBuilder(device);
 
@@ -36,7 +37,7 @@ std::shared_ptr<const Pipeline> create_screen_space_pipeline(
                        .with_dynamic_viewport_scissor()
                        .with_topology(vk::PrimitiveTopology::eTriangleStrip)
                        .with_cull_mode(vk::CullModeFlagBits::eNone)
-                       .add_color_attachment(color_format);
+                       .add_color_attachment(color_format, blend);
 
     if (depth_format != vk::Format::eUndefined) {
         std::move(builder)

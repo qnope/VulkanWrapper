@@ -22,10 +22,15 @@ class CommandPool : public ObjectWithUniqueHandle<vk::UniqueCommandPool> {
 class CommandPoolBuilder {
   public:
     CommandPoolBuilder(std::shared_ptr<const Device> device);
+
+    /** @brief Allow individual command buffers to be reset */
+    CommandPoolBuilder &&with_reset_command_buffer() &&;
+
     CommandPool build() &&;
 
   private:
     std::shared_ptr<const Device> m_device;
+    vk::CommandPoolCreateFlags m_flags{};
 };
 
 } // namespace vw

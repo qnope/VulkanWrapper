@@ -19,7 +19,7 @@
 #include <random>
 
 // Maximum number of AO samples supported (must match shader)
-constexpr int AO_MAX_SAMPLES = 256;
+constexpr int AO_MAX_SAMPLES = 1024;
 
 // UBO structure for AO samples (matches shader layout)
 // Each sample contains (xi1, xi2) for cosine-weighted hemisphere sampling
@@ -43,7 +43,9 @@ inline AOSamplesUBO generate_ao_samples() {
     return ubo;
 }
 
-enum class AOPassSlot { Output };
+enum class AOPassSlot {
+    Output // Single accumulation buffer (no ping-pong needed with blending)
+};
 
 /**
  * @brief Functional Ambient Occlusion pass with lazy image allocation
@@ -56,13 +58,14 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
   public:
     struct PushConstants {
         float aoRadius;
-        int32_t numSamples;
+        int32_t sampleIndex; // Which sample to use (0 to AO_MAX_SAMPLES-1)
     };
 
-    AmbientOcclusionPass(std::shared_ptr<vw::Device> device,
-                         std::shared_ptr<vw::Allocator> allocator,
-                         vk::AccelerationStructureKHR tlas,
-                         vk::Format output_format = vk::Format::eR8G8B8A8Unorm)
+    AmbientOcclusionPass(
+        std::shared_ptr<vw::Device> device,
+        std::shared_ptr<vw::Allocator> allocator,
+        vk::AccelerationStructureKHR tlas,
+        vk::Format output_format = vk::Format::eR32G32B32A32Sfloat)
         : ScreenSpacePass(device, allocator)
         , m_tlas(tlas)
         , m_output_format(output_format)
@@ -77,35 +80,43 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
     }
 
     /**
-     * @brief Execute the ambient occlusion pass
+     * @brief Execute the ambient occlusion pass with progressive accumulation
+     *
+     * Uses hardware blending for temporal accumulation: each frame computes
+     * 1 sample and the GPU blends it with the accumulated history.
+     * The longer the view stays static, the more accurate the AO becomes.
      *
      * @param cmd Command buffer to record into
-     * @param tracker Resource tracker for barrier management
+     * @param tracker Resource tracker for barrier management (must persist
+     *        across frames to maintain state continuity)
      * @param width Render width
      * @param height Render height
-     * @param frame_index Frame index for multi-buffering
      * @param depth_view Depth buffer view (for depth testing)
      * @param position Position G-Buffer view
      * @param normal Normal G-Buffer view
      * @param tangent Tangent G-Buffer view
      * @param bitangent Bitangent G-Buffer view
-     * @param num_samples Number of AO samples (clamped to 1-256)
      * @param ao_radius AO sampling radius
-     * @return The output AO image view
+     * @return AO image view
      */
-    std::shared_ptr<const vw::ImageView>
-    execute(vk::CommandBuffer cmd, vw::Barrier::ResourceTracker &tracker,
-            vw::Width width, vw::Height height, size_t frame_index,
-            std::shared_ptr<const vw::ImageView> depth_view,
-            std::shared_ptr<const vw::ImageView> position,
-            std::shared_ptr<const vw::ImageView> normal,
-            std::shared_ptr<const vw::ImageView> tangent,
-            std::shared_ptr<const vw::ImageView> bitangent, int32_t num_samples,
-            float ao_radius) {
+    std::shared_ptr<const vw::ImageView> execute(
+        vk::CommandBuffer cmd, vw::Barrier::ResourceTracker &tracker,
+        vw::Width width, vw::Height height,
+        std::shared_ptr<const vw::ImageView> depth_view,
+        std::shared_ptr<const vw::ImageView> position,
+        std::shared_ptr<const vw::ImageView> normal,
+        std::shared_ptr<const vw::ImageView> tangent,
+        std::shared_ptr<const vw::ImageView> bitangent, float ao_radius) {
 
-        // Lazy allocation of output image
+        // Use fixed frame_index=0 so the image is shared across all swapchain
+        // frames. This is required for progressive accumulation to work
+        // correctly.
+        constexpr size_t ao_frame_index = 0;
+
+        // Single accumulation buffer (no ping-pong needed with hardware
+        // blending)
         const auto &output = get_or_create_image(
-            AOPassSlot::Output, width, height, frame_index, m_output_format,
+            AOPassSlot::Output, width, height, ao_frame_index, m_output_format,
             vk::ImageUsageFlagBits::eColorAttachment |
                 vk::ImageUsageFlagBits::eSampled |
                 vk::ImageUsageFlagBits::eTransferSrc);
@@ -153,7 +164,8 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
             .subresourceRange = output.view->subresource_range(),
             .layout = vk::ImageLayout::eColorAttachmentOptimal,
             .stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-            .access = vk::AccessFlagBits2::eColorAttachmentWrite});
+            .access = vk::AccessFlagBits2::eColorAttachmentWrite |
+                      vk::AccessFlagBits2::eColorAttachmentRead});
 
         // Depth image for reading
         tracker.request(vw::Barrier::ImageState{
@@ -167,14 +179,17 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
         // Flush barriers
         tracker.flush(cmd);
 
-        // Setup color attachment (clear)
+        // First frame: clear to white (AO = 1.0 = no occlusion)
+        // Subsequent frames: load existing content for blending
+        bool is_first_frame = (m_total_frame_count == 0);
         vk::RenderingAttachmentInfo color_attachment =
             vk::RenderingAttachmentInfo()
                 .setImageView(output.view->handle())
                 .setImageLayout(vk::ImageLayout::eColorAttachmentOptimal)
-                .setLoadOp(vk::AttachmentLoadOp::eClear)
+                .setLoadOp(is_first_frame ? vk::AttachmentLoadOp::eClear
+                                          : vk::AttachmentLoadOp::eLoad)
                 .setStoreOp(vk::AttachmentStoreOp::eStore)
-                .setClearValue(vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f));
+                .setClearValue(vk::ClearColorValue(1.0f, 1.0f, 1.0f, 1.0f));
 
         // Setup depth attachment (read-only for depth testing)
         vk::RenderingAttachmentInfo depth_attachment =
@@ -186,20 +201,34 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
 
         // Push constants
         PushConstants constants{.aoRadius = ao_radius,
-                                .numSamples =
-                                    std::clamp(num_samples, 1, AO_MAX_SAMPLES)};
+                                .sampleIndex = static_cast<int32_t>(
+                                    m_total_frame_count % AO_MAX_SAMPLES)};
+
+        // Set blend constants for progressive accumulation
+        // blend_factor = 1/(frameCount+1) gives equal weight to all samples
+        // Frame 0: factor=1.0 (100% new sample)
+        // Frame 1: factor=0.5 (average of 2 samples)
+        // Frame N: factor=1/(N+1)
+        float blend_factor = 1.0f / static_cast<float>(m_total_frame_count + 1);
+        std::array<float, 4> blend_constants = {blend_factor, blend_factor,
+                                                blend_factor, 1.0f};
+        cmd.setBlendConstants(blend_constants.data());
 
         // Render fullscreen quad with depth testing
         render_fullscreen(cmd, extent, color_attachment, &depth_attachment,
                           *m_pipeline, descriptor_set, &constants,
                           sizeof(constants));
 
+        // Increment frame count AFTER rendering (so first frame is 0)
+        m_total_frame_count++;
+
         return output.view;
     }
 
   private:
     vw::DescriptorPool create_descriptor_pool() {
-        // Create descriptor layout
+        // Create descriptor layout (no history texture needed with hardware
+        // blending)
         m_descriptor_layout =
             vw::DescriptorSetLayoutBuilder(m_device)
                 .with_combined_image(vk::ShaderStageFlagBits::eFragment,
@@ -216,7 +245,7 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
                                      1) // AO samples UBO
                 .build();
 
-        // Create pipeline
+        // Create pipeline with blending for temporal accumulation
         auto vertex_shader = vw::ShaderModule::create_from_spirv_file(
             m_device, "Shaders/fullscreen.spv");
         auto fragment_shader = vw::ShaderModule::create_from_spirv_file(
@@ -229,13 +258,16 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
         m_pipeline = vw::create_screen_space_pipeline(
             m_device, vertex_shader, fragment_shader, m_descriptor_layout,
             m_output_format, vk::Format::eD32Sfloat, vk::CompareOp::eGreater,
-            push_constants);
+            push_constants, vw::ColorBlendConfig::constant_blend());
 
         return vw::DescriptorPoolBuilder(m_device, m_descriptor_layout).build();
     }
 
     vk::AccelerationStructureKHR m_tlas;
     vk::Format m_output_format;
+
+    // Progressive accumulation state
+    uint32_t m_total_frame_count = 0;
 
     // Resources (order matters! m_pipeline must be before m_descriptor_pool)
     std::shared_ptr<const vw::Sampler> m_sampler;

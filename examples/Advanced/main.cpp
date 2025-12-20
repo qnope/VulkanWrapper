@@ -90,7 +90,10 @@ int main() {
         DeferredRenderingManager renderingManager(app.device, app.allocator,
                                                   mesh_manager, rayTracedScene);
 
-        auto commandPool = vw::CommandPoolBuilder(app.device).build();
+        // Command pool with reset support for per-frame recording
+        auto commandPool = vw::CommandPoolBuilder(app.device)
+                               .with_reset_command_buffer()
+                               .build();
         auto image_views = create_image_views(app.device, app.swapchain);
         auto commandBuffers = commandPool.allocate(image_views.size());
 
@@ -98,49 +101,49 @@ int main() {
         vw::Width width = static_cast<vw::Width>(app.swapchain.width());
         vw::Height height = static_cast<vw::Height>(app.swapchain.height());
 
-        // Record command buffers - one per swapchain image
-        for (size_t i = 0; i < image_views.size(); ++i) {
-            vw::CommandBufferRecorder recorder(commandBuffers[i]);
-
-            // Use Transfer's resource tracker for the entire command buffer
-            vw::Transfer transfer;
-
-            // Execute deferred rendering pipeline functionally
-            // Returns the light image view (sky + sun) which we'll blit to swapchain
-            auto light_view = renderingManager.execute(
-                commandBuffers[i], transfer.resourceTracker(), width, height,
-                i, // frame_index
-                uniform_buffer,
-                90.0f,  // sun_angle = zenith (90 degrees)
-                32,     // num_ao_samples
-                200.0f  // ao_radius
-            );
-
-            // Blit light buffer to swapchain
-            transfer.blit(commandBuffers[i], light_view->image(),
-                          image_views[i]->image());
-
-            // Transition swapchain image to present layout
-            transfer.resourceTracker().request(vw::Barrier::ImageState{
-                .image = image_views[i]->image()->handle(),
-                .subresourceRange = image_views[i]->subresource_range(),
-                .layout = vk::ImageLayout::ePresentSrcKHR,
-                .stage = vk::PipelineStageFlagBits2::eNone,
-                .access = vk::AccessFlagBits2::eNone});
-
-            transfer.resourceTracker().flush(commandBuffers[i]);
-        }
-
         auto renderFinishedSemaphore = vw::SemaphoreBuilder(app.device).build();
         auto imageAvailableSemaphore = vw::SemaphoreBuilder(app.device).build();
 
-        bool imageSaved = false;
+        // Shared Transfer across frames - ResourceTracker maintains state continuity
+        vw::Transfer transfer;
 
+        int i = 0;
         while (!app.window.is_close_requested()) {
             app.window.update();
 
             auto index =
                 app.swapchain.acquire_next_image(imageAvailableSemaphore);
+
+            // Reset and re-record command buffer for this frame
+            // This is needed for progressive AO which updates state each frame
+            commandBuffers[index].reset();
+            {
+                vw::CommandBufferRecorder recorder(commandBuffers[index]);
+
+                // Execute deferred rendering pipeline with progressive AO
+                auto light_view = renderingManager.execute(
+                    commandBuffers[index], transfer.resourceTracker(), width,
+                    height,
+                    index, // frame_index
+                    uniform_buffer,
+                    90.0f, // sun_angle = zenith (90 degrees)
+                    200.0f // ao_radius
+                );
+
+                // Blit light buffer to swapchain
+                transfer.blit(commandBuffers[index], light_view->image(),
+                              image_views[index]->image());
+
+                // Transition swapchain image to present layout
+                transfer.resourceTracker().request(vw::Barrier::ImageState{
+                    .image = image_views[index]->image()->handle(),
+                    .subresourceRange = image_views[index]->subresource_range(),
+                    .layout = vk::ImageLayout::ePresentSrcKHR,
+                    .stage = vk::PipelineStageFlagBits2::eNone,
+                    .access = vk::AccessFlagBits2::eNone});
+
+                transfer.resourceTracker().flush(commandBuffers[index]);
+            }
 
             const vk::PipelineStageFlags waitStage =
                 vk::PipelineStageFlagBits::eTopOfPipe;
@@ -157,42 +160,10 @@ int main() {
                                                {&image_available_handle, 1},
                                                {&render_finished_handle, 1});
 
-            // Save the first frame to disk
-            if (!imageSaved) {
-                app.device->wait_idle();
-
-                auto saveCommandPool =
-                    vw::CommandPoolBuilder(app.device).build();
-                auto saveCmd = saveCommandPool.allocate(1)[0];
-
-                std::ignore =
-                    saveCmd.begin(vk::CommandBufferBeginInfo().setFlags(
-                        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
-
-                vw::Transfer saveTransfer;
-
-                // Track the swapchain image's current state (ePresentSrcKHR
-                // after rendering)
-                saveTransfer.resourceTracker().track(vw::Barrier::ImageState{
-                    .image = app.swapchain.images()[index]->handle(),
-                    .subresourceRange =
-                        app.swapchain.images()[index]->full_range(),
-                    .layout = vk::ImageLayout::ePresentSrcKHR,
-                    .stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-                    .access = vk::AccessFlagBits2::eColorAttachmentWrite});
-
-                saveTransfer.saveToFile(
-                    saveCmd, *app.allocator, app.device->graphicsQueue(),
-                    app.swapchain.images()[index], "screenshot.png");
-
-                std::cout << "Screenshot saved to screenshot.png\n";
-                imageSaved = true;
-            }
-
             app.device->presentQueue().present(app.swapchain, index,
                                                renderFinishedSemaphore);
             app.device->wait_idle();
-            break;
+            std::cout << "Iteration: " << i++ << std::endl;
         }
 
         app.device->wait_idle();

@@ -6,7 +6,67 @@
 #include "VulkanWrapper/Pipeline/PipelineLayout.h"
 #include "VulkanWrapper/Utils/ObjectWithHandle.h"
 
+#include <optional>
+
 namespace vw {
+
+/**
+ * @brief Configuration for color attachment blending
+ *
+ * Use the static factory methods for common presets, or construct directly
+ * for custom blending configurations.
+ */
+struct ColorBlendConfig {
+    vk::BlendFactor srcColorBlendFactor = vk::BlendFactor::eOne;
+    vk::BlendFactor dstColorBlendFactor = vk::BlendFactor::eZero;
+    vk::BlendOp colorBlendOp = vk::BlendOp::eAdd;
+    vk::BlendFactor srcAlphaBlendFactor = vk::BlendFactor::eOne;
+    vk::BlendFactor dstAlphaBlendFactor = vk::BlendFactor::eZero;
+    vk::BlendOp alphaBlendOp = vk::BlendOp::eAdd;
+    bool useDynamicConstants = false;
+
+    /**
+     * @brief Blending with dynamic constants: result = src * C + dst * (1-C)
+     *
+     * Use cmd.setBlendConstants() to set C at draw time.
+     * Useful for progressive accumulation, fade effects, etc.
+     */
+    static ColorBlendConfig constant_blend() {
+        return {.srcColorBlendFactor = vk::BlendFactor::eConstantColor,
+                .dstColorBlendFactor = vk::BlendFactor::eOneMinusConstantColor,
+                .colorBlendOp = vk::BlendOp::eAdd,
+                .srcAlphaBlendFactor = vk::BlendFactor::eOne,
+                .dstAlphaBlendFactor = vk::BlendFactor::eZero,
+                .alphaBlendOp = vk::BlendOp::eAdd,
+                .useDynamicConstants = true};
+    }
+
+    /**
+     * @brief Standard alpha blending: result = src * srcAlpha + dst * (1-srcAlpha)
+     */
+    static ColorBlendConfig alpha() {
+        return {.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha,
+                .dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha,
+                .colorBlendOp = vk::BlendOp::eAdd,
+                .srcAlphaBlendFactor = vk::BlendFactor::eOne,
+                .dstAlphaBlendFactor = vk::BlendFactor::eZero,
+                .alphaBlendOp = vk::BlendOp::eAdd,
+                .useDynamicConstants = false};
+    }
+
+    /**
+     * @brief Additive blending: result = src + dst
+     */
+    static ColorBlendConfig additive() {
+        return {.srcColorBlendFactor = vk::BlendFactor::eOne,
+                .dstColorBlendFactor = vk::BlendFactor::eOne,
+                .colorBlendOp = vk::BlendOp::eAdd,
+                .srcAlphaBlendFactor = vk::BlendFactor::eOne,
+                .dstAlphaBlendFactor = vk::BlendFactor::eOne,
+                .alphaBlendOp = vk::BlendOp::eAdd,
+                .useDynamicConstants = false};
+    }
+};
 
 class Pipeline : public ObjectWithUniqueHandle<vk::UniquePipeline> {
     friend class GraphicsPipelineBuilder;
@@ -36,7 +96,17 @@ class GraphicsPipelineBuilder {
     GraphicsPipelineBuilder &&with_fixed_scissor(int width, int height) &&;
     GraphicsPipelineBuilder &&with_dynamic_viewport_scissor() &&;
 
-    GraphicsPipelineBuilder &&add_color_attachment(vk::Format format) &&;
+    /**
+     * @brief Add a color attachment with optional blending configuration
+     *
+     * @param format The format of the color attachment
+     * @param blend Optional blending configuration. Use ColorBlendConfig static
+     *              methods for common presets (constant_blend, alpha, additive)
+     */
+    GraphicsPipelineBuilder &&add_color_attachment(
+        vk::Format format,
+        std::optional<ColorBlendConfig> blend = std::nullopt) &&;
+
     GraphicsPipelineBuilder &&set_depth_format(vk::Format format) &&;
     GraphicsPipelineBuilder &&set_stencil_format(vk::Format format) &&;
 
