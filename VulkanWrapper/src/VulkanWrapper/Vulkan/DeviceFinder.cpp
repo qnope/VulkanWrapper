@@ -139,6 +139,27 @@ DeviceFinder &DeviceFinder::with_dynamic_rendering() noexcept {
     return *this;
 }
 
+DeviceFinder &DeviceFinder::with_descriptor_indexing() noexcept {
+    auto &vulkan12Features = m_features.get<vk::PhysicalDeviceVulkan12Features>();
+
+    // Enable non-uniform indexing for sampled image arrays (textures)
+    vulkan12Features.setShaderSampledImageArrayNonUniformIndexing(1U);
+
+    // Enable runtime descriptor arrays (variable size arrays)
+    vulkan12Features.setRuntimeDescriptorArray(1U);
+
+    // Enable partially bound descriptors (not all slots need to be filled)
+    vulkan12Features.setDescriptorBindingPartiallyBound(1U);
+
+    // Enable variable descriptor count (unbounded arrays)
+    vulkan12Features.setDescriptorBindingVariableDescriptorCount(1U);
+
+    // Enable update after bind for sampled images
+    vulkan12Features.setDescriptorBindingSampledImageUpdateAfterBind(1U);
+
+    return *this;
+}
+
 std::optional<PhysicalDevice> DeviceFinder::get() noexcept {
     if (m_physicalDevicesInformation.empty()) {
         return {};

@@ -14,6 +14,7 @@ class DeviceFinder {
     DeviceFinder &with_synchronization_2() noexcept;
     DeviceFinder &with_ray_tracing() noexcept;
     DeviceFinder &with_dynamic_rendering() noexcept;
+    DeviceFinder &with_descriptor_indexing() noexcept;
 
     std::shared_ptr<Device> build();
     std::optional<PhysicalDevice> get() noexcept;
