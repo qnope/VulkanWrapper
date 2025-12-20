@@ -144,6 +144,9 @@ class DeferredRenderingManager {
     SunLightPass &sun_light_pass() { return *m_sun_light_pass; }
     const SunLightPass &sun_light_pass() const { return *m_sun_light_pass; }
 
+    /** @brief Reset progressive state (call on resize) */
+    void reset() { m_ao_pass->reset_accumulation(); }
+
   private:
     std::shared_ptr<vw::Device> m_device;
     std::shared_ptr<vw::Allocator> m_allocator;

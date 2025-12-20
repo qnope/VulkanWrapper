@@ -1,6 +1,7 @@
 #include "VulkanWrapper/Vulkan/PresentQueue.h"
 
 #include "VulkanWrapper/Synchronization/Semaphore.h"
+#include "VulkanWrapper/Utils/Error.h"
 #include "VulkanWrapper/Vulkan/Swapchain.h"
 
 namespace vw {
@@ -15,7 +16,17 @@ void PresentQueue::present(const Swapchain &swapchain, uint32_t index,
                                  .setSwapchains(swapchainHandle)
                                  .setImageIndices(index)
                                  .setWaitSemaphores(semaphoreHandle);
-    std::ignore = m_queue.presentKHR(presentInfo);
+
+    auto result = m_queue.presentKHR(presentInfo);
+
+    if (result == vk::Result::eErrorOutOfDateKHR ||
+        result == vk::Result::eSuboptimalKHR) {
+        throw SwapchainException(result, "Swapchain needs recreation");
+    }
+
+    if (result != vk::Result::eSuccess) {
+        throw VulkanException(result, "Failed to present swapchain image");
+    }
 }
 
 } // namespace vw

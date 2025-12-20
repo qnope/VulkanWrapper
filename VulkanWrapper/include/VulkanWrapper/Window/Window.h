@@ -18,6 +18,9 @@ class Window {
     void update() noexcept;
 
     [[nodiscard]] bool is_close_requested() const noexcept;
+    [[nodiscard]] bool is_resized() const noexcept;
+    [[nodiscard]] Width width() const noexcept;
+    [[nodiscard]] Height height() const noexcept;
 
     [[nodiscard]] static std::span<const char *const>
     get_required_instance_extensions() noexcept;
@@ -33,6 +36,7 @@ class Window {
     std::shared_ptr<const SDL_Initializer> m_initializer;
     std::unique_ptr<SDL_Window, WindowDeleter> m_window;
     bool m_closeRequested = false;
+    bool m_resized = false;
     Width m_width;
     Height m_height;
 };

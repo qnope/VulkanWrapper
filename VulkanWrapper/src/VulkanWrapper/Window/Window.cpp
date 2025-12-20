@@ -18,7 +18,8 @@ Window::Window(std::shared_ptr<const SDL_Initializer> initializer, std::string_v
     , m_width{width}
     , m_height{height} {
     auto *window = check_sdl(
-        SDL_CreateWindow(name.data(), int(width), int(height), SDL_WINDOW_VULKAN),
+        SDL_CreateWindow(name.data(), int(width), int(height),
+                         SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE),
         "Failed to create SDL window");
 
     m_window.reset(window);
@@ -40,6 +41,12 @@ Swapchain Window::create_swapchain(std::shared_ptr<const Device> device,
 
 bool Window::is_close_requested() const noexcept { return m_closeRequested; }
 
+bool Window::is_resized() const noexcept { return m_resized; }
+
+Width Window::width() const noexcept { return m_width; }
+
+Height Window::height() const noexcept { return m_height; }
+
 std::span<char const *const>
 Window::get_required_instance_extensions() noexcept {
     unsigned count{};
@@ -48,12 +55,19 @@ Window::get_required_instance_extensions() noexcept {
 }
 
 void Window::update() noexcept {
+    m_resized = false;
     SDL_Event event;
 
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
         case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
             m_closeRequested = true;
+            break;
+        case SDL_EVENT_WINDOW_RESIZED:
+            m_width = Width(event.window.data1);
+            m_height = Height(event.window.data2);
+            m_resized = true;
+            break;
         default:
             break;
         }

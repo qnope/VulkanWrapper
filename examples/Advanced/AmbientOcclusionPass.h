@@ -225,6 +225,9 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
         return output.view;
     }
 
+    /** @brief Reset progressive accumulation (call on resize) */
+    void reset_accumulation() { m_total_frame_count = 0; }
+
   private:
     vw::DescriptorPool create_descriptor_pool() {
         // Create descriptor layout (no history texture needed with hardware

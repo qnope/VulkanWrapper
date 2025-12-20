@@ -157,6 +157,36 @@ private:
     std::string m_validation_message;
 };
 
+// Swapchain-specific errors (out-of-date, suboptimal)
+// These are recoverable by recreating the swapchain
+class SwapchainException : public Exception {
+public:
+    SwapchainException(vk::Result result,
+                       std::string context,
+                       std::source_location location = std::source_location::current());
+
+    vk::Result result() const noexcept;
+
+    [[nodiscard]] bool needs_recreation() const noexcept {
+        return m_result == vk::Result::eErrorOutOfDateKHR ||
+               m_result == vk::Result::eSuboptimalKHR;
+    }
+
+    [[nodiscard]] bool is_out_of_date() const noexcept {
+        return m_result == vk::Result::eErrorOutOfDateKHR;
+    }
+
+    [[nodiscard]] bool is_suboptimal() const noexcept {
+        return m_result == vk::Result::eSuboptimalKHR;
+    }
+
+protected:
+    void build_what() const override;
+
+private:
+    vk::Result m_result;
+};
+
 // Logic/state errors (invalid arguments, precondition violations, bounds errors)
 // Replaces std::out_of_range and std::runtime_error for consistency
 class LogicException : public Exception {
