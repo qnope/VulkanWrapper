@@ -20,7 +20,7 @@ class App {
         std::make_shared<vw::SDL_Initializer>();
     vw::Window window = vw::WindowBuilder(initializer)
                             .with_title("Vulkan Wrapper")
-                            .sized(vw::Width(1980), vw::Height(1080))
+                            .sized(vw::Width(1024), vw::Height(768))
                             .build();
 
     std::shared_ptr<vw::Instance> instance =

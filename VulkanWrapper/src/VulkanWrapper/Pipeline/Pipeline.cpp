@@ -53,14 +53,30 @@ GraphicsPipelineBuilder::with_dynamic_viewport_scissor() && {
 }
 
 GraphicsPipelineBuilder &&
-GraphicsPipelineBuilder::add_color_attachment(vk::Format format) && {
-    const auto colorBlendAttachment =
-        vk::PipelineColorBlendAttachmentState()
-            .setBlendEnable(0U)
-            .setColorWriteMask(vk::ColorComponentFlagBits::eA |
-                               vk::ColorComponentFlagBits::eB |
-                               vk::ColorComponentFlagBits::eG |
-                               vk::ColorComponentFlagBits::eR);
+GraphicsPipelineBuilder::add_color_attachment(
+    vk::Format format, std::optional<ColorBlendConfig> blend) && {
+
+    auto colorBlendAttachment =
+        vk::PipelineColorBlendAttachmentState().setColorWriteMask(
+            vk::ColorComponentFlagBits::eA | vk::ColorComponentFlagBits::eB |
+            vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eR);
+
+    if (blend) {
+        colorBlendAttachment.setBlendEnable(vk::True)
+            .setSrcColorBlendFactor(blend->srcColorBlendFactor)
+            .setDstColorBlendFactor(blend->dstColorBlendFactor)
+            .setColorBlendOp(blend->colorBlendOp)
+            .setSrcAlphaBlendFactor(blend->srcAlphaBlendFactor)
+            .setDstAlphaBlendFactor(blend->dstAlphaBlendFactor)
+            .setAlphaBlendOp(blend->alphaBlendOp);
+
+        if (blend->useDynamicConstants) {
+            m_dynamicStates.push_back(vk::DynamicState::eBlendConstants);
+        }
+    } else {
+        colorBlendAttachment.setBlendEnable(vk::False);
+    }
+
     m_colorAttachmentStates.push_back(colorBlendAttachment);
     m_colorAttachmentFormats.push_back(format);
     return std::move(*this);
