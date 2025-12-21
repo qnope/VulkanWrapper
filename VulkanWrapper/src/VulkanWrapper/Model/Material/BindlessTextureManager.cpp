@@ -15,52 +15,20 @@ BindlessTextureManager::BindlessTextureManager(
     : m_device{std::move(device)}
     , m_allocator{std::move(allocator)}
     , m_staging{std::move(staging)}
-    , m_sampler{SamplerBuilder(m_device).build()} {
-
-    m_layout = DescriptorSetLayoutBuilder(m_device)
+    , m_layout{DescriptorSetLayoutBuilder(m_device)
                    .with_sampler(vk::ShaderStageFlagBits::eFragment)
                    .with_sampled_images_bindless(
                        vk::ShaderStageFlagBits::eFragment, MAX_TEXTURES)
-                   .build();
+                   .build()}
+    , m_pool{DescriptorPoolBuilder(m_device, m_layout)
+                 .with_update_after_bind()
+                 .build()}
+    , m_descriptor_set{m_pool.allocate_set()}
+    , m_sampler{SamplerBuilder(m_device).build()} {
 
-    create_descriptor_pool();
-    allocate_descriptor_set();
-}
-
-void BindlessTextureManager::create_descriptor_pool() {
-    std::vector pool_sizes = {
-        vk::DescriptorPoolSize(vk::DescriptorType::eSampler, 1),
-        vk::DescriptorPoolSize(vk::DescriptorType::eSampledImage,
-                               MAX_TEXTURES)};
-
-    auto pool_info =
-        vk::DescriptorPoolCreateInfo()
-            .setMaxSets(1)
-            .setPoolSizes(pool_sizes)
-            .setFlags(vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind);
-
-    m_pool = check_vk(m_device->handle().createDescriptorPoolUnique(pool_info),
-                      "Failed to create bindless descriptor pool");
-}
-
-void BindlessTextureManager::allocate_descriptor_set() {
-    vk::DescriptorSetLayout layout_handle = m_layout->handle();
-    auto alloc_info = vk::DescriptorSetAllocateInfo()
-                          .setDescriptorPool(m_pool.get())
-                          .setSetLayouts(layout_handle);
-
-    auto sets = check_vk(m_device->handle().allocateDescriptorSets(alloc_info),
-                         "Failed to allocate bindless descriptor set");
-    m_descriptor_set = sets[0];
-
-    vw::DescriptorAllocator allocator;
-    allocator.add_sampler(0, m_sampler->handle());
-
-    auto writers = allocator.get_write_descriptors();
-    for (auto &writer : writers) {
-        writer.setDstSet(m_descriptor_set);
-    }
-    m_device->handle().updateDescriptorSets(writers, nullptr);
+    DescriptorAllocator alloc;
+    alloc.add_sampler(0, m_sampler->handle());
+    m_pool.update_set(m_descriptor_set.handle(), alloc);
 }
 
 uint32_t
@@ -74,16 +42,12 @@ BindlessTextureManager::register_texture(const std::filesystem::path &path) {
 
     uint32_t index = static_cast<uint32_t>(m_combined_images.size());
 
-    vw::DescriptorAllocator allocator;
-    allocator.add_sampled_image(1, combined.image_view_ptr(),
-                                vk::PipelineStageFlagBits2::eFragmentShader,
-                                vk::AccessFlagBits2::eShaderSampledRead, index);
+    DescriptorAllocator alloc;
+    alloc.add_sampled_image(1, combined.image_view_ptr(),
+                            vk::PipelineStageFlagBits2::eFragmentShader,
+                            vk::AccessFlagBits2::eShaderSampledRead, index);
 
-    auto writers = allocator.get_write_descriptors();
-    for (auto &writer : writers) {
-        writer.setDstSet(m_descriptor_set);
-    }
-    m_device->handle().updateDescriptorSets(writers, nullptr);
+    m_pool.update_set(m_descriptor_set.handle(), alloc);
 
     m_combined_images.push_back(std::move(combined));
     m_path_to_index[path] = index;
@@ -91,7 +55,7 @@ BindlessTextureManager::register_texture(const std::filesystem::path &path) {
 }
 
 vk::DescriptorSet BindlessTextureManager::descriptor_set() const noexcept {
-    return m_descriptor_set;
+    return m_descriptor_set.handle();
 }
 
 std::shared_ptr<const DescriptorSetLayout>

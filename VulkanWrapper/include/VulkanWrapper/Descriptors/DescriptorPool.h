@@ -26,13 +26,19 @@ class DescriptorPoolImpl
 class DescriptorPool {
   public:
     DescriptorPool(std::shared_ptr<const Device> device,
-                   std::shared_ptr<const DescriptorSetLayout> layout);
+                   std::shared_ptr<const DescriptorSetLayout> layout,
+                   bool update_after_bind = false);
 
     [[nodiscard]] std::shared_ptr<const DescriptorSetLayout>
     layout() const noexcept;
 
     [[nodiscard]] DescriptorSet
     allocate_set(const DescriptorAllocator &descriptorAllocator) noexcept;
+
+    [[nodiscard]] DescriptorSet allocate_set();
+
+    void update_set(vk::DescriptorSet set,
+                    const DescriptorAllocator &allocator);
 
   private:
     vk::DescriptorSet allocate_descriptor_set_from_last_pool();
@@ -42,6 +48,7 @@ class DescriptorPool {
     std::shared_ptr<const DescriptorSetLayout> m_layout;
     std::vector<Internal::DescriptorPoolImpl> m_descriptor_pools;
     std::unordered_map<DescriptorAllocator, DescriptorSet> m_sets;
+    bool m_update_after_bind = false;
 };
 
 class DescriptorPoolBuilder {
@@ -50,10 +57,13 @@ class DescriptorPoolBuilder {
         std::shared_ptr<const Device> device,
         const std::shared_ptr<const DescriptorSetLayout> &layout);
 
+    DescriptorPoolBuilder &with_update_after_bind();
+
     DescriptorPool build();
 
   private:
     std::shared_ptr<const Device> m_device;
     std::shared_ptr<const DescriptorSetLayout> m_layout;
+    bool m_update_after_bind = false;
 };
 } // namespace vw

@@ -1,5 +1,7 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
+#include "VulkanWrapper/Descriptors/DescriptorPool.h"
+#include "VulkanWrapper/Descriptors/DescriptorSet.h"
 #include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Image/CombinedImage.h"
@@ -38,16 +40,13 @@ class BindlessTextureManager {
                                  uint32_t dest_binding) const;
 
   private:
-    void create_descriptor_pool();
-    void allocate_descriptor_set();
-
     std::shared_ptr<const Device> m_device;
     std::shared_ptr<Allocator> m_allocator;
     std::shared_ptr<StagingBufferManager> m_staging;
 
     std::shared_ptr<DescriptorSetLayout> m_layout;
-    vk::UniqueDescriptorPool m_pool;
-    vk::DescriptorSet m_descriptor_set;
+    DescriptorPool m_pool;
+    DescriptorSet m_descriptor_set;
     std::shared_ptr<const Sampler> m_sampler;
 
     std::vector<CombinedImage> m_combined_images;
