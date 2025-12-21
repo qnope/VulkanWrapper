@@ -18,7 +18,7 @@ class MeshRenderer {
     void draw_mesh(vk::CommandBuffer cmd_buffer, const Model::Mesh &mesh,
                    const glm::mat4 &transform) const;
 
-    [[nodiscard]] const Pipeline *
+    [[nodiscard]] std::shared_ptr<const Pipeline>
     pipeline_for(Model::Material::MaterialTypeTag tag) const;
 
   private:

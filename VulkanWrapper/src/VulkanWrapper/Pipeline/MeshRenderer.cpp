@@ -23,10 +23,10 @@ void MeshRenderer::draw_mesh(vk::CommandBuffer cmd_buffer,
     mesh.draw(cmd_buffer, it->second->layout(), transform);
 }
 
-const Pipeline *
+std::shared_ptr<const Pipeline>
 MeshRenderer::pipeline_for(Model::Material::MaterialTypeTag tag) const {
     auto it = m_pipelines.find(tag);
-    return it != m_pipelines.end() ? it->second.get() : nullptr;
+    return it != m_pipelines.end() ? it->second : nullptr;
 }
 
 } // namespace vw

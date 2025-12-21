@@ -69,6 +69,16 @@ int main() {
         app.device->graphicsQueue().enqueue_command_buffer(meshUploadCmd);
         app.device->graphicsQueue().submit({}, {}, {}).wait();
 
+        // Track initial texture states after staging
+        // This is needed because ResourceTracker doesn't know about textures
+        // staged before it was created. Without this, the first request()
+        // would generate Undefined -> ShaderReadOnlyOptimal barriers,
+        // discarding the texture data.
+        vw::Transfer transfer;
+        for (const auto &resource : mesh_manager.material_manager().get_resources()) {
+            transfer.resourceTracker().track(resource);
+        }
+
         // Build acceleration structures for ray-traced shadows
         rayTracedScene.build();
 
@@ -87,10 +97,6 @@ int main() {
 
         auto renderFinishedSemaphore = vw::SemaphoreBuilder(app.device).build();
         auto imageAvailableSemaphore = vw::SemaphoreBuilder(app.device).build();
-
-        // Shared Transfer across frames - ResourceTracker maintains state
-        // continuity
-        vw::Transfer transfer;
 
         int i = 0;
 
