@@ -9,6 +9,9 @@
 #include "VulkanWrapper/Memory/Allocator.h"
 #include "VulkanWrapper/Memory/Buffer.h"
 #include "VulkanWrapper/Model/Material/BindlessMaterialManager.h"
+#include "VulkanWrapper/Model/Material/ColoredMaterialHandler.h"
+#include "VulkanWrapper/Model/Material/IMaterialTypeHandler.h"
+#include "VulkanWrapper/Model/Material/TexturedMaterialHandler.h"
 #include "VulkanWrapper/Model/Mesh.h"
 #include "VulkanWrapper/Model/Scene.h"
 #include "VulkanWrapper/Pipeline/MeshRenderer.h"
@@ -202,8 +205,7 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
             // changes
             if (material_type != current_tag) {
                 current_tag = material_type;
-                const auto *pipeline =
-                    m_mesh_renderer->pipeline_for(material_type);
+                auto pipeline = m_mesh_renderer->pipeline_for(material_type);
                 if (!pipeline) {
                     continue;
                 }
@@ -214,23 +216,15 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
                                        uniform_descriptor_handle, nullptr);
 
                 // Bind appropriate material descriptor set (set 1)
-                vk::DescriptorSet material_set;
-                if (material_type ==
-                    vw::Model::Material::bindless_textured_material_tag) {
-                    material_set = m_material_manager.textured_descriptor_set();
-                } else if (material_type ==
-                           vw::Model::Material::bindless_colored_material_tag) {
-                    material_set = m_material_manager.colored_descriptor_set();
-                }
-                if (material_set) {
+                auto *handler = m_material_manager.handler(material_type);
+                if (handler) {
                     cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
                                            pipeline->layout().handle(), 1,
-                                           material_set, nullptr);
+                                           handler->descriptor_set(), nullptr);
                 }
             }
 
-            const auto *pipeline =
-                m_mesh_renderer->pipeline_for(material_type);
+            auto pipeline = m_mesh_renderer->pipeline_for(material_type);
             if (pipeline) {
                 instance.mesh.draw(cmd, pipeline->layout(), instance.transform);
             }
@@ -302,19 +296,22 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
                 return builder.build();
             };
 
-        auto textured_pipeline = create_pipeline(
-            fragment_textured, m_material_manager.textured_layout());
+        auto *textured_handler =
+            m_material_manager.handler(vw::Model::Material::textured_material_tag);
+        auto *colored_handler =
+            m_material_manager.handler(vw::Model::Material::colored_material_tag);
 
-        auto colored_pipeline = create_pipeline(
-            fragment_colored, m_material_manager.colored_layout());
+        auto textured_pipeline =
+            create_pipeline(fragment_textured, textured_handler->layout());
+
+        auto colored_pipeline =
+            create_pipeline(fragment_colored, colored_handler->layout());
 
         auto renderer = std::make_shared<vw::MeshRenderer>();
-        renderer->add_pipeline(
-            vw::Model::Material::bindless_textured_material_tag,
-            std::move(textured_pipeline));
-        renderer->add_pipeline(
-            vw::Model::Material::bindless_colored_material_tag,
-            std::move(colored_pipeline));
+        renderer->add_pipeline(vw::Model::Material::textured_material_tag,
+                               std::move(textured_pipeline));
+        renderer->add_pipeline(vw::Model::Material::colored_material_tag,
+                               std::move(colored_pipeline));
         return renderer;
     }
 

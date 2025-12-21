@@ -26,8 +26,11 @@ class MaterialTypeTag {
 } // namespace vw::Model::Material
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage)
-#define VW_REGISTER_MATERIAL_TYPE(Name)                                        \
-    inline const ::vw::Model::Material::MaterialTypeTag Name{                  \
+#define VW_DECLARE_MATERIAL_TYPE(Name)                                         \
+    extern const ::vw::Model::Material::MaterialTypeTag Name
+
+#define VW_DEFINE_MATERIAL_TYPE(Name)                                          \
+    const ::vw::Model::Material::MaterialTypeTag Name{                         \
         ::vw::Model::Material::detail::g_next_material_type_id++}
 // NOLINTEND(cppcoreguidelines-macro-usage)
 

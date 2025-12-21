@@ -78,7 +78,10 @@ BindlessTextureManager::get_resources() const {
         Barrier::ImageState state;
         state.image = combined.image();
         state.subresourceRange = combined.subresource_range();
-        state.layout = vk::ImageLayout::eShaderReadOnlyOptimal;
+        // Use eReadOnlyOptimal to match the layout after staging
+        // (execute_image_barrier_transfer_dst_to_sampled and
+        // execute_image_barrier_transfer_src_to_dst both use eReadOnlyOptimal)
+        state.layout = vk::ImageLayout::eReadOnlyOptimal;
         state.stage = vk::PipelineStageFlagBits2::eFragmentShader;
         state.access = vk::AccessFlagBits2::eShaderSampledRead;
         resources.push_back(state);
@@ -102,7 +105,7 @@ void BindlessTextureManager::write_image_descriptors(
     for (const auto &combined : m_combined_images) {
         vk::DescriptorImageInfo info;
         info.setImageView(combined.image_view())
-            .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+            .setImageLayout(vk::ImageLayout::eReadOnlyOptimal);
         image_infos.push_back(info);
     }
 
