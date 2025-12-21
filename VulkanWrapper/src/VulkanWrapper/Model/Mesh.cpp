@@ -18,23 +18,25 @@ Mesh::Mesh(std::shared_ptr<const Vertex3DBuffer> vertex_buffer,
     , m_vertices_count{vertices_count} {}
 
 Material::MaterialTypeTag Mesh::material_type_tag() const noexcept {
-    return *m_material.material_type;
+    return m_material.material_type;
 }
 
 void Mesh::draw(vk::CommandBuffer cmd_buffer, const PipelineLayout &layout,
-                uint32_t material_descriptor_set_index,
                 const glm::mat4 &transform) const {
     vk::Buffer vb = m_full_vertex_buffer->handle();
     vk::Buffer ib = m_index_buffer->handle();
     vk::DeviceSize vbo = 0;
     cmd_buffer.bindVertexBuffers(0, vb, vbo);
     cmd_buffer.bindIndexBuffer(ib, 0, vk::IndexType::eUint32);
-    auto descriptor_set_handle = m_material.descriptor_set.handle();
-    cmd_buffer.bindDescriptorSets(
-        vk::PipelineBindPoint::eGraphics, layout.handle(),
-        material_descriptor_set_index, descriptor_set_handle, nullptr);
-    cmd_buffer.pushConstants(layout.handle(), vk::ShaderStageFlagBits::eVertex,
-                             0, sizeof(glm::mat4), &transform);
+
+    MeshPushConstants push{};
+    push.transform = transform;
+    push.material_index = m_material.material_index;
+
+    cmd_buffer.pushConstants(
+        layout.handle(),
+        vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
+        0, sizeof(MeshPushConstants), &push);
     cmd_buffer.drawIndexed(m_indice_count, 1, m_first_index, m_vertex_offset,
                            0);
 }

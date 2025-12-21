@@ -10,19 +10,25 @@ namespace vw::Model {
 using Vertex3DBuffer = Buffer<Vertex3D, false, VertexBufferUsage>;
 using FullVertex3DBuffer = Buffer<FullVertex3D, false, VertexBufferUsage>;
 
+/// Push constants for mesh rendering with bindless materials.
+struct MeshPushConstants {
+    glm::mat4 transform;
+    uint32_t material_index;
+};
+
 class Mesh {
   public:
     Mesh(std::shared_ptr<const Vertex3DBuffer> vertex_buffer,
          std::shared_ptr<const FullVertex3DBuffer> full_vertex_buffer,
          std::shared_ptr<const IndexBuffer> index_buffer,
-         Material::Material descriptor_material, uint32_t indice_count,
+         Material::Material material, uint32_t indice_count,
          int vertex_offset, int first_index, int vertices_count);
 
     [[nodiscard]] Material::MaterialTypeTag material_type_tag() const noexcept;
 
+    /// Draw the mesh using push constants for material index (bindless).
     void draw(vk::CommandBuffer cmd_buffer,
               const PipelineLayout &pipeline_layout,
-              uint32_t material_descriptor_set_index,
               const glm::mat4 &transform) const;
 
     void draw_zpass(vk::CommandBuffer cmd_buffer,

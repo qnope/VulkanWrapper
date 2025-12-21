@@ -7,7 +7,7 @@
 #include "ZPass.h"
 #include <memory>
 #include <VulkanWrapper/Memory/Buffer.h>
-#include <VulkanWrapper/Model/MeshManager.h>
+#include <VulkanWrapper/Model/Material/BindlessMaterialManager.h>
 #include <VulkanWrapper/Model/Scene.h>
 #include <VulkanWrapper/RayTracing/RayTracedScene.h>
 #include <VulkanWrapper/Synchronization/ResourceTracker.h>
@@ -21,7 +21,7 @@
  * passes. Each pass lazily allocates its output images on first use.
  *
  * @code
- * DeferredRenderingManager renderer(device, allocator, mesh_manager,
+ * DeferredRenderingManager renderer(device, allocator, material_manager,
  *                                   ray_traced_scene);
  *
  * // In render loop:
@@ -35,7 +35,7 @@ class DeferredRenderingManager {
     DeferredRenderingManager(
         std::shared_ptr<vw::Device> device,
         std::shared_ptr<vw::Allocator> allocator,
-        const vw::Model::MeshManager &mesh_manager,
+        vw::Model::Material::BindlessMaterialManager &material_manager,
         const vw::rt::RayTracedScene &ray_traced_scene,
         vk::Format depth_format = vk::Format::eD32Sfloat,
         vk::Format ao_format = vk::Format::eR32G32B32A32Sfloat,
@@ -47,8 +47,8 @@ class DeferredRenderingManager {
         // Create functional passes - each owns its output images lazily
         m_zpass = std::make_unique<ZPass>(m_device, m_allocator, depth_format);
 
-        m_color_pass = std::make_unique<ColorPass>(m_device, m_allocator,
-                                                   mesh_manager, depth_format);
+        m_color_pass = std::make_unique<ColorPass>(
+            m_device, m_allocator, material_manager, depth_format);
 
         m_ao_pass = std::make_unique<AmbientOcclusionPass>(
             m_device, m_allocator, ray_traced_scene.tlas_handle(), ao_format);

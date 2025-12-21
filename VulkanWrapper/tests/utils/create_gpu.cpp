@@ -15,6 +15,7 @@ GPU &create_gpu() {
                           .with_queue(vk::QueueFlagBits::eGraphics)
                           .with_synchronization_2()
                           .with_dynamic_rendering()
+                          .with_descriptor_indexing()
                           .build();
 
         auto allocator = AllocatorBuilder(instance, device).build();

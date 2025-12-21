@@ -23,6 +23,9 @@ Dependencies are managed via vcpkg (see `vcpkg.json`):
 - Vulkan Memory Allocator
 - GTest
 
+### Vulkan Driver
+The project uses **llvmpipe** as the Vulkan driver. This software driver fully supports ray tracing, so all tests and applications (including ray tracing features) work correctly with llvmpipe.
+
 ### Building the Project
 ```bash
 # Configure with CMake (Debug)
