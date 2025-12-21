@@ -39,12 +39,26 @@ class DescriptorSetLayoutBuilder {
     DescriptorSetLayoutBuilder &with_storage_image(vk::ShaderStageFlags stages,
                                                    int number);
 
+    DescriptorSetLayoutBuilder &with_storage_buffer(vk::ShaderStageFlags stages,
+                                                    int number = 1);
+
+    DescriptorSetLayoutBuilder &with_sampler(vk::ShaderStageFlags stages);
+
+    DescriptorSetLayoutBuilder &
+    with_sampled_images_bindless(vk::ShaderStageFlags stages,
+                                 uint32_t max_count);
+
+    DescriptorSetLayoutBuilder &
+    with_storage_buffer_bindless(vk::ShaderStageFlags stages);
+
     std::shared_ptr<DescriptorSetLayout> build();
 
   private:
     std::shared_ptr<const Device> m_device;
-    int m_current_binding = 0;
+    uint32_t m_current_binding = 0;
     std::vector<vk::DescriptorSetLayoutBinding> m_bindings;
+    std::vector<vk::DescriptorBindingFlags> m_binding_flags;
+    bool m_has_bindless = false;
 };
 
 } // namespace vw

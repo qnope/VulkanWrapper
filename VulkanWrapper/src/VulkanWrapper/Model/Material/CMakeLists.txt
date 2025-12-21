@@ -5,4 +5,5 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     TexturedMaterialManager.cpp
     ColoredMaterialManager.cpp
     MaterialFactory.cpp
+    BindlessTextureManager.cpp
 )

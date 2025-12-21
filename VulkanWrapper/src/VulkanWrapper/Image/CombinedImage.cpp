@@ -18,6 +18,10 @@ vk::ImageView CombinedImage::image_view() const noexcept {
     return m_image_view->handle();
 }
 
+std::shared_ptr<const ImageView> CombinedImage::image_view_ptr() const noexcept {
+    return m_image_view;
+}
+
 vk::Sampler CombinedImage::sampler() const noexcept {
     return m_sampler->handle();
 }

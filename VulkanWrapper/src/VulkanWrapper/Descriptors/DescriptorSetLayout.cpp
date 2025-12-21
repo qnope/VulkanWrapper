@@ -43,6 +43,7 @@ DescriptorSetLayoutBuilder::with_uniform_buffer(vk::ShaderStageFlags stages,
                        .setDescriptorCount(number);
     m_current_binding += number;
     m_bindings.push_back(binding);
+    m_binding_flags.push_back({});
     return *this;
 }
 
@@ -57,6 +58,7 @@ DescriptorSetLayoutBuilder::with_sampled_image(vk::ShaderStageFlags stages,
             .setDescriptorCount(number);
     m_current_binding += number;
     m_bindings.push_back(binding);
+    m_binding_flags.push_back({});
     return *this;
 }
 
@@ -71,6 +73,7 @@ DescriptorSetLayoutBuilder::with_combined_image(vk::ShaderStageFlags stages,
             .setDescriptorCount(number);
     m_current_binding += number;
     m_bindings.push_back(binding);
+    m_binding_flags.push_back({});
     return *this;
 }
 
@@ -84,6 +87,7 @@ DescriptorSetLayoutBuilder::with_input_attachment(vk::ShaderStageFlags stages) {
             .setDescriptorCount(1);
     m_current_binding += 1;
     m_bindings.push_back(binding);
+    m_binding_flags.push_back({});
     return *this;
 }
 
@@ -98,6 +102,7 @@ DescriptorSetLayoutBuilder::with_acceleration_structure(
             .setDescriptorCount(1);
     m_current_binding += 1;
     m_bindings.push_back(binding);
+    m_binding_flags.push_back({});
     return *this;
 }
 
@@ -112,12 +117,82 @@ DescriptorSetLayoutBuilder::with_storage_image(vk::ShaderStageFlags stages,
             .setDescriptorCount(number);
     m_current_binding += number;
     m_bindings.push_back(binding);
+    m_binding_flags.push_back({});
+    return *this;
+}
+
+DescriptorSetLayoutBuilder &
+DescriptorSetLayoutBuilder::with_storage_buffer(vk::ShaderStageFlags stages,
+                                                int number) {
+    const auto binding =
+        vk::DescriptorSetLayoutBinding()
+            .setBinding(m_current_binding)
+            .setDescriptorType(vk::DescriptorType::eStorageBuffer)
+            .setStageFlags(stages)
+            .setDescriptorCount(number);
+    m_current_binding += number;
+    m_bindings.push_back(binding);
+    m_binding_flags.push_back({});
+    return *this;
+}
+
+DescriptorSetLayoutBuilder &
+DescriptorSetLayoutBuilder::with_sampler(vk::ShaderStageFlags stages) {
+    const auto binding = vk::DescriptorSetLayoutBinding()
+                             .setBinding(m_current_binding)
+                             .setDescriptorType(vk::DescriptorType::eSampler)
+                             .setStageFlags(stages)
+                             .setDescriptorCount(1);
+    m_bindings.push_back(binding);
+    m_binding_flags.push_back({});
+    ++m_current_binding;
+    return *this;
+}
+
+DescriptorSetLayoutBuilder &
+DescriptorSetLayoutBuilder::with_sampled_images_bindless(
+    vk::ShaderStageFlags stages, uint32_t max_count) {
+    const auto binding =
+        vk::DescriptorSetLayoutBinding()
+            .setBinding(m_current_binding)
+            .setDescriptorType(vk::DescriptorType::eSampledImage)
+            .setStageFlags(stages)
+            .setDescriptorCount(max_count);
+    m_bindings.push_back(binding);
+    m_binding_flags.push_back(vk::DescriptorBindingFlagBits::ePartiallyBound |
+                              vk::DescriptorBindingFlagBits::eUpdateAfterBind);
+    m_has_bindless = true;
+    ++m_current_binding;
+    return *this;
+}
+
+DescriptorSetLayoutBuilder &
+DescriptorSetLayoutBuilder::with_storage_buffer_bindless(
+    vk::ShaderStageFlags stages) {
+    const auto binding =
+        vk::DescriptorSetLayoutBinding()
+            .setBinding(m_current_binding)
+            .setDescriptorType(vk::DescriptorType::eStorageBuffer)
+            .setStageFlags(stages)
+            .setDescriptorCount(1);
+    m_bindings.push_back(binding);
+    m_binding_flags.push_back({});
+    ++m_current_binding;
     return *this;
 }
 
 std::shared_ptr<DescriptorSetLayout> DescriptorSetLayoutBuilder::build() {
-    const auto info =
-        vk::DescriptorSetLayoutCreateInfo().setBindings(m_bindings);
+    vk::DescriptorSetLayoutCreateInfo info;
+    info.setBindings(m_bindings);
+
+    vk::DescriptorSetLayoutBindingFlagsCreateInfo binding_flags_info;
+    if (m_has_bindless) {
+        binding_flags_info.setBindingFlags(m_binding_flags);
+        info.setFlags(
+                vk::DescriptorSetLayoutCreateFlagBits::eUpdateAfterBindPool)
+            .setPNext(&binding_flags_info);
+    }
+
     auto value =
         check_vk(m_device->handle().createDescriptorSetLayoutUnique(info),
                  "Failed to create descriptor set layout");
