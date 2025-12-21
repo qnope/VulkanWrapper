@@ -74,8 +74,9 @@ int main() {
 
         // Create the deferred rendering manager with functional passes
         // No swapchain needed - dimensions are passed at execute time
-        DeferredRenderingManager renderingManager(app.device, app.allocator,
-                                                  mesh_manager, rayTracedScene);
+        DeferredRenderingManager renderingManager(
+            app.device, app.allocator, mesh_manager.material_manager(),
+            rayTracedScene);
 
         // Command pool with reset support for per-frame recording
         auto commandPool = vw::CommandPoolBuilder(app.device)

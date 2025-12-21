@@ -1,11 +1,8 @@
 target_sources(VulkanWrapperCoreLibrary PUBLIC
     Material.h
+    MaterialData.h
     MaterialTypeTag.h
-    MaterialManager.h
-    MaterialManagerMap.h
-    TexturedMaterialManager.h
-    ColoredMaterialManager.h
-    MaterialFactory.h
-    MaterialPriority.h
     BindlessTextureManager.h
+    BindlessMaterialManager.h
+    MaterialPriority.h
 )

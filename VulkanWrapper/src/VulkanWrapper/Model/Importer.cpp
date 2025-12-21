@@ -2,9 +2,8 @@
 
 #include "VulkanWrapper/Model/Internal/MaterialInfo.h"
 #include "VulkanWrapper/Model/Internal/MeshInfo.h"
-#include "VulkanWrapper/Model/Material/ColoredMaterialManager.h"
+#include "VulkanWrapper/Model/Material/BindlessMaterialManager.h"
 #include "VulkanWrapper/Model/Material/Material.h"
-#include "VulkanWrapper/Model/Material/TexturedMaterialManager.h"
 #include "VulkanWrapper/Model/MeshManager.h"
 #include "VulkanWrapper/Utils/Algos.h"
 #include "VulkanWrapper/Utils/Error.h"
@@ -13,6 +12,21 @@
 #include <assimp/scene.h>
 
 namespace vw::Model {
+
+static Material::Material
+create_material_from_info(const Internal::MaterialInfo &info,
+                          Material::BindlessMaterialManager &manager) {
+    // Prefer textured materials over colored
+    if (info.diffuse_texture_path) {
+        return manager.create_textured_material(*info.diffuse_texture_path);
+    }
+
+    // Fall back to colored material
+    glm::vec4 color =
+        info.diffuse_color.value_or(glm::vec4(0.5f, 0.5f, 0.5f, 1.0f));
+    return manager.create_colored_material(color);
+}
+
 void import_model(const std::filesystem::path &path,
                   MeshManager &mesh_manager) {
     Assimp::Importer importer;
@@ -49,8 +63,8 @@ void import_model(const std::filesystem::path &path,
     std::vector<Material::Material> real_material;
 
     for (const auto &materialInfo : materials) {
-        auto material =
-            mesh_manager.m_material_factory.allocate_material(materialInfo);
+        auto material = create_material_from_info(materialInfo,
+                                                  mesh_manager.m_material_manager);
         real_material.push_back(material);
     }
 

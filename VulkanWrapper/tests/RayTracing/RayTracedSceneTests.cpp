@@ -59,6 +59,7 @@ std::optional<RayTracingGPU> create_ray_tracing_gpu() {
                           .with_synchronization_2()
                           .with_dynamic_rendering()
                           .with_ray_tracing()
+                          .with_descriptor_indexing()
                           .build();
 
         auto allocator = vw::AllocatorBuilder(instance, device).build();

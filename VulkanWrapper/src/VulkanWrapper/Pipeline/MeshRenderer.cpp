@@ -10,10 +10,9 @@ void MeshRenderer::add_pipeline(Model::Material::MaterialTypeTag tag,
     m_pipelines.emplace(tag, std::move(pipeline));
 }
 
-void MeshRenderer::draw_mesh(
-    vk::CommandBuffer cmd_buffer, const Model::Mesh &mesh,
-    std::span<const vk::DescriptorSet> first_descriptor_sets,
-    const glm::mat4 &transform) const {
+void MeshRenderer::draw_mesh(vk::CommandBuffer cmd_buffer,
+                             const Model::Mesh &mesh,
+                             const glm::mat4 &transform) const {
     auto it = m_pipelines.find(mesh.material_type_tag());
     if (it == m_pipelines.end()) {
         throw LogicException::invalid_state(
@@ -21,10 +20,13 @@ void MeshRenderer::draw_mesh(
     }
     cmd_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
                             it->second->handle());
-    cmd_buffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-                                  it->second->layout().handle(), 0,
-                                  first_descriptor_sets, nullptr);
-    mesh.draw(cmd_buffer, it->second->layout(), first_descriptor_sets.size(),
-              transform);
+    mesh.draw(cmd_buffer, it->second->layout(), transform);
 }
+
+const Pipeline *
+MeshRenderer::pipeline_for(Model::Material::MaterialTypeTag tag) const {
+    auto it = m_pipelines.find(tag);
+    return it != m_pipelines.end() ? it->second.get() : nullptr;
+}
+
 } // namespace vw

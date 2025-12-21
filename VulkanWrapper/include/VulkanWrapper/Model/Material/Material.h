@@ -1,11 +1,12 @@
 #pragma once
-#include "VulkanWrapper/3rd_party.h"
-#include "VulkanWrapper/Descriptors/DescriptorSet.h"
 #include "VulkanWrapper/Model/Material/MaterialTypeTag.h"
+#include <cstdint>
 
 namespace vw::Model::Material {
+
 struct Material {
-    std::shared_ptr<const MaterialTypeTag> material_type;
-    DescriptorSet descriptor_set;
+    MaterialTypeTag material_type;
+    uint32_t material_index;
 };
+
 } // namespace vw::Model::Material
