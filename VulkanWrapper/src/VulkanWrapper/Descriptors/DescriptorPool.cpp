@@ -30,9 +30,10 @@ std::optional<vk::DescriptorSet> DescriptorPoolImpl::allocate_set() {
 } // namespace Internal
 DescriptorPool::DescriptorPool(
     std::shared_ptr<const Device> device,
-    std::shared_ptr<const DescriptorSetLayout> layout)
+    std::shared_ptr<const DescriptorSetLayout> layout, bool update_after_bind)
     : m_device{std::move(device)}
-    , m_layout{std::move(layout)} {}
+    , m_layout{std::move(layout)}
+    , m_update_after_bind{update_after_bind} {}
 
 std::shared_ptr<const DescriptorSetLayout>
 DescriptorPool::layout() const noexcept {
@@ -73,9 +74,13 @@ vk::DescriptorSet DescriptorPool::allocate_descriptor_set_from_last_pool() {
     for (auto &pool_size : pool_sizes)
         pool_size.descriptorCount *= MAX_DESCRIPTOR_SET_BY_POOL;
 
-    const auto info = vk::DescriptorPoolCreateInfo()
-                          .setMaxSets(MAX_DESCRIPTOR_SET_BY_POOL)
-                          .setPoolSizes(pool_sizes);
+    auto info = vk::DescriptorPoolCreateInfo()
+                    .setMaxSets(MAX_DESCRIPTOR_SET_BY_POOL)
+                    .setPoolSizes(pool_sizes);
+
+    if (m_update_after_bind) {
+        info.setFlags(vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind);
+    }
 
     auto pool = check_vk(m_device->handle().createDescriptorPoolUnique(info),
                          "Failed to create descriptor pool");
@@ -90,15 +95,33 @@ vk::DescriptorSet DescriptorPool::allocate_descriptor_set_from_last_pool() {
     return *set;
 }
 
+DescriptorSet DescriptorPool::allocate_set() {
+    auto set = allocate_descriptor_set_from_last_pool();
+    return DescriptorSet(set, {});
+}
+
+void DescriptorPool::update_set(vk::DescriptorSet set,
+                                const DescriptorAllocator &allocator) {
+    auto writers = allocator.get_write_descriptors();
+    for (auto &writer : writers) {
+        writer.setDstSet(set);
+    }
+    m_device->handle().updateDescriptorSets(writers, nullptr);
+}
+
 DescriptorPoolBuilder::DescriptorPoolBuilder(
     std::shared_ptr<const Device> device,
     const std::shared_ptr<const DescriptorSetLayout> &layout)
     : m_device{std::move(device)}
     , m_layout{layout} {}
 
-DescriptorPool DescriptorPoolBuilder::build() {
+DescriptorPoolBuilder &DescriptorPoolBuilder::with_update_after_bind() {
+    m_update_after_bind = true;
+    return *this;
+}
 
-    return DescriptorPool{m_device, std::move(m_layout)};
+DescriptorPool DescriptorPoolBuilder::build() {
+    return DescriptorPool{m_device, std::move(m_layout), m_update_after_bind};
 }
 
 } // namespace vw
