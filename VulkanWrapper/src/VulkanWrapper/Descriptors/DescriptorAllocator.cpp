@@ -10,13 +10,15 @@ namespace vw {
 DescriptorAllocator::DescriptorAllocator() {
     m_bufferUpdate.reserve(DESCRIPTOR_ALLOCATOR_RESERVE_SIZE);
     m_imageUpdate.reserve(DESCRIPTOR_ALLOCATOR_RESERVE_SIZE);
+    m_samplerUpdate.reserve(DESCRIPTOR_ALLOCATOR_RESERVE_SIZE);
 }
 
 void DescriptorAllocator::add_uniform_buffer(int binding, vk::Buffer buffer,
                                              vk::DeviceSize offset,
                                              vk::DeviceSize size,
                                              vk::PipelineStageFlags2 stage,
-                                             vk::AccessFlags2 access) {
+                                             vk::AccessFlags2 access,
+                                             uint32_t array_element) {
     auto &[info, write, stageFlags, accessFlags] =
         m_bufferUpdate.emplace_back();
     info =
@@ -26,14 +28,35 @@ void DescriptorAllocator::add_uniform_buffer(int binding, vk::Buffer buffer,
                 .setDescriptorCount(1)
                 .setDescriptorType(vk::DescriptorType::eUniformBuffer)
                 .setDstBinding(binding)
-                .setDstArrayElement(0);
+                .setDstArrayElement(array_element);
+    stageFlags = stage;
+    accessFlags = access;
+}
+
+void DescriptorAllocator::add_storage_buffer(int binding, vk::Buffer buffer,
+                                             vk::DeviceSize offset,
+                                             vk::DeviceSize size,
+                                             vk::PipelineStageFlags2 stage,
+                                             vk::AccessFlags2 access,
+                                             uint32_t array_element) {
+    auto &[info, write, stageFlags, accessFlags] =
+        m_bufferUpdate.emplace_back();
+    info =
+        vk::DescriptorBufferInfo().setBuffer(buffer).setOffset(offset).setRange(
+            size);
+    write = vk::WriteDescriptorSet()
+                .setDescriptorCount(1)
+                .setDescriptorType(vk::DescriptorType::eStorageBuffer)
+                .setDstBinding(binding)
+                .setDstArrayElement(array_element);
     stageFlags = stage;
     accessFlags = access;
 }
 
 void DescriptorAllocator::add_combined_image(
     int binding, const CombinedImage &combined_image,
-    vk::PipelineStageFlags2 stage, vk::AccessFlags2 access) {
+    vk::PipelineStageFlags2 stage, vk::AccessFlags2 access,
+    uint32_t array_element) {
     auto &[info, write, image, range, stageFlags, accessFlags] =
         m_imageUpdate.emplace_back();
     info = vk::DescriptorImageInfo()
@@ -44,7 +67,7 @@ void DescriptorAllocator::add_combined_image(
                 .setDescriptorCount(1)
                 .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
                 .setDstBinding(binding)
-                .setDstArrayElement(0);
+                .setDstArrayElement(array_element);
     image = combined_image.image();
     range = combined_image.subresource_range();
     stageFlags = stage;
@@ -54,7 +77,8 @@ void DescriptorAllocator::add_combined_image(
 void DescriptorAllocator::add_storage_image(int binding,
                                             const ImageView &image_view,
                                             vk::PipelineStageFlags2 stage,
-                                            vk::AccessFlags2 access) {
+                                            vk::AccessFlags2 access,
+                                            uint32_t array_element) {
     auto &[info, write, image, range, stageFlags, accessFlags] =
         m_imageUpdate.emplace_back();
     info = vk::DescriptorImageInfo()
@@ -64,7 +88,7 @@ void DescriptorAllocator::add_storage_image(int binding,
                 .setDescriptorCount(1)
                 .setDescriptorType(vk::DescriptorType::eStorageImage)
                 .setDstBinding(binding)
-                .setDstArrayElement(0);
+                .setDstArrayElement(array_element);
     image = image_view.image()->handle();
     range = image_view.subresource_range();
     stageFlags = stage;
@@ -73,7 +97,8 @@ void DescriptorAllocator::add_storage_image(int binding,
 
 void DescriptorAllocator::add_acceleration_structure(
     int binding, vk::AccelerationStructureKHR tlas,
-    vk::PipelineStageFlags2 stage, vk::AccessFlags2 access) {
+    vk::PipelineStageFlags2 stage, vk::AccessFlags2 access,
+    uint32_t array_element) {
     auto &[accelerationStructure, info, write, stageFlags, accessFlags] =
         m_accelerationStructureUpdate.emplace();
 
@@ -86,7 +111,7 @@ void DescriptorAllocator::add_acceleration_structure(
             .setDescriptorCount(1)
             .setDescriptorType(vk::DescriptorType::eAccelerationStructureKHR)
             .setDstBinding(binding)
-            .setDstArrayElement(0)
+            .setDstArrayElement(array_element)
             .setPNext(&write); // Use pNext to pass the acceleration structure
     stageFlags = stage;
     accessFlags = access;
@@ -94,7 +119,8 @@ void DescriptorAllocator::add_acceleration_structure(
 
 void DescriptorAllocator::add_input_attachment(
     int binding, std::shared_ptr<const ImageView> image_view,
-    vk::PipelineStageFlags2 stage, vk::AccessFlags2 access) {
+    vk::PipelineStageFlags2 stage, vk::AccessFlags2 access,
+    uint32_t array_element) {
     auto &[info, write, image, range, stageFlags, accessFlags] =
         m_imageUpdate.emplace_back();
     info = vk::DescriptorImageInfo()
@@ -104,11 +130,50 @@ void DescriptorAllocator::add_input_attachment(
                 .setDescriptorCount(1)
                 .setDescriptorType(vk::DescriptorType::eInputAttachment)
                 .setDstBinding(binding)
-                .setDstArrayElement(0);
+                .setDstArrayElement(array_element);
     image = image_view->image()->handle();
     range = image_view->subresource_range();
     stageFlags = stage;
     accessFlags = access;
+}
+
+void DescriptorAllocator::add_sampler(int binding, vk::Sampler sampler,
+                                      uint32_t array_element) {
+    auto &[info, write] = m_samplerUpdate.emplace_back();
+    info = vk::DescriptorImageInfo().setSampler(sampler);
+    write = vk::WriteDescriptorSet()
+                .setDescriptorCount(1)
+                .setDescriptorType(vk::DescriptorType::eSampler)
+                .setDstBinding(binding)
+                .setDstArrayElement(array_element);
+}
+
+void DescriptorAllocator::add_sampled_image(int binding,
+                                            const ImageView &image_view,
+                                            vk::PipelineStageFlags2 stage,
+                                            vk::AccessFlags2 access,
+                                            uint32_t array_element) {
+    auto &[info, write, image, range, stageFlags, accessFlags] =
+        m_imageUpdate.emplace_back();
+    info = vk::DescriptorImageInfo()
+               .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+               .setImageView(image_view.handle());
+    write = vk::WriteDescriptorSet()
+                .setDescriptorCount(1)
+                .setDescriptorType(vk::DescriptorType::eSampledImage)
+                .setDstBinding(binding)
+                .setDstArrayElement(array_element);
+    image = image_view.image()->handle();
+    range = image_view.subresource_range();
+    stageFlags = stage;
+    accessFlags = access;
+}
+
+void DescriptorAllocator::add_sampled_image(
+    int binding, std::shared_ptr<const ImageView> image_view,
+    vk::PipelineStageFlags2 stage, vk::AccessFlags2 access,
+    uint32_t array_element) {
+    add_sampled_image(binding, *image_view, stage, access, array_element);
 }
 
 std::vector<vk::WriteDescriptorSet>
@@ -124,6 +189,12 @@ DescriptorAllocator::get_write_descriptors() const {
     for (const auto &imageUpdate : m_imageUpdate) {
         auto writer = imageUpdate.write;
         writer.setImageInfo(imageUpdate.info);
+        writers.push_back(writer);
+    }
+
+    for (const auto &samplerUpdate : m_samplerUpdate) {
+        auto writer = samplerUpdate.write;
+        writer.setImageInfo(samplerUpdate.info);
         writers.push_back(writer);
     }
 

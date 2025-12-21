@@ -25,4 +25,9 @@ constexpr VkBufferUsageFlags2 StagingBufferUsage =
                         vk::BufferUsageFlagBits2::eTransferDst |
                         vk::BufferUsageFlagBits2::eShaderDeviceAddress};
 
+constexpr VkBufferUsageFlags2 StorageBufferUsage =
+    VkBufferUsageFlags2{vk::BufferUsageFlagBits2::eStorageBuffer |
+                        vk::BufferUsageFlagBits2::eTransferDst |
+                        vk::BufferUsageFlagBits2::eShaderDeviceAddress};
+
 } // namespace vw

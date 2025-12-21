@@ -11,25 +11,50 @@ class DescriptorAllocator {
     void add_uniform_buffer(int binding, vk::Buffer buffer,
                             vk::DeviceSize offset, vk::DeviceSize size,
                             vk::PipelineStageFlags2 stage,
-                            vk::AccessFlags2 access);
+                            vk::AccessFlags2 access,
+                            uint32_t array_element = 0);
+
+    void add_storage_buffer(int binding, vk::Buffer buffer,
+                            vk::DeviceSize offset, vk::DeviceSize size,
+                            vk::PipelineStageFlags2 stage,
+                            vk::AccessFlags2 access,
+                            uint32_t array_element = 0);
 
     void add_combined_image(int binding, const CombinedImage &image,
                             vk::PipelineStageFlags2 stage,
-                            vk::AccessFlags2 access);
+                            vk::AccessFlags2 access,
+                            uint32_t array_element = 0);
 
     void add_storage_image(int binding, const ImageView &image_view,
                            vk::PipelineStageFlags2 stage,
-                           vk::AccessFlags2 access);
+                           vk::AccessFlags2 access,
+                           uint32_t array_element = 0);
 
     void add_input_attachment(int binding,
                               std::shared_ptr<const ImageView> image_view,
                               vk::PipelineStageFlags2 stage,
-                              vk::AccessFlags2 access);
+                              vk::AccessFlags2 access,
+                              uint32_t array_element = 0);
 
     void add_acceleration_structure(int binding,
                                     vk::AccelerationStructureKHR tlas,
                                     vk::PipelineStageFlags2 stage,
-                                    vk::AccessFlags2 access);
+                                    vk::AccessFlags2 access,
+                                    uint32_t array_element = 0);
+
+    void add_sampler(int binding, vk::Sampler sampler,
+                     uint32_t array_element = 0);
+
+    void add_sampled_image(int binding, const ImageView &image_view,
+                           vk::PipelineStageFlags2 stage,
+                           vk::AccessFlags2 access,
+                           uint32_t array_element = 0);
+
+    void add_sampled_image(int binding,
+                           std::shared_ptr<const ImageView> image_view,
+                           vk::PipelineStageFlags2 stage,
+                           vk::AccessFlags2 access,
+                           uint32_t array_element = 0);
 
     [[nodiscard]] std::vector<vk::WriteDescriptorSet>
     get_write_descriptors() const;
@@ -66,8 +91,15 @@ class DescriptorAllocator {
         bool operator==(const AccelerationStructureUpdate &) const = default;
     };
 
+    struct SamplerUpdate {
+        vk::DescriptorImageInfo info;
+        vk::WriteDescriptorSet write;
+        bool operator==(const SamplerUpdate &) const = default;
+    };
+
     std::vector<BufferUpdate> m_bufferUpdate;
     std::vector<ImageUpdate> m_imageUpdate;
+    std::vector<SamplerUpdate> m_samplerUpdate;
     std::optional<AccelerationStructureUpdate> m_accelerationStructureUpdate;
 };
 

@@ -7,4 +7,5 @@ target_sources(VulkanWrapperCoreLibrary PUBLIC
     ColoredMaterialManager.h
     MaterialFactory.h
     MaterialPriority.h
+    BindlessTextureManager.h
 )
