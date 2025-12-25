@@ -60,3 +60,4 @@ __pycache__
 *.lock
 */bindings_vw_py.py*
 vcpkg_installed
+.claude
