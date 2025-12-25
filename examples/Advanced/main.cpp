@@ -9,6 +9,7 @@
 #include <VulkanWrapper/Memory/Transfer.h>
 #include <VulkanWrapper/Model/MeshManager.h>
 #include <VulkanWrapper/RayTracing/RayTracedScene.h>
+#include <VulkanWrapper/RenderPass/ToneMappingPass.h>
 #include <VulkanWrapper/Synchronization/Fence.h>
 #include <VulkanWrapper/Synchronization/ResourceTracker.h>
 #include <VulkanWrapper/Synchronization/Semaphore.h>
@@ -75,7 +76,8 @@ int main() {
         // would generate Undefined -> ShaderReadOnlyOptimal barriers,
         // discarding the texture data.
         vw::Transfer transfer;
-        for (const auto &resource : mesh_manager.material_manager().get_resources()) {
+        for (const auto &resource :
+             mesh_manager.material_manager().get_resources()) {
             transfer.resourceTracker().track(resource);
         }
 
@@ -87,6 +89,11 @@ int main() {
         DeferredRenderingManager renderingManager(
             app.device, app.allocator, mesh_manager.material_manager(),
             rayTracedScene);
+
+        // Create tone mapping pass for HDR to LDR conversion
+        vw::ToneMappingPass tonemapping_pass(app.device, app.allocator,
+                                             "../../../VulkanWrapper/Shaders",
+                                             app.swapchain.format());
 
         // Command pool with reset support for per-frame recording
         auto commandPool = vw::CommandPoolBuilder(app.device)
@@ -163,9 +170,12 @@ int main() {
                         200.0f // ao_radius
                     );
 
-                    // Blit light buffer to swapchain
-                    transfer.blit(commandBuffers[index], light_view->image(),
-                                  image_view->image());
+                    // Apply tone mapping to convert HDR light buffer to LDR
+                    tonemapping_pass.execute(
+                        commandBuffers[index], transfer.resourceTracker(),
+                        image_view, // output: swapchain image
+                        light_view, // input: HDR light buffer
+                        vw::ToneMappingOperator::ACES, 1.0f);
 
                     // Transition swapchain image to present layout
                     transfer.resourceTracker().request(vw::Barrier::ImageState{
@@ -198,7 +208,7 @@ int main() {
                 std::cout << "Iteration: " << i++ << std::endl;
 
                 // Take screenshot after 16 samples and exit
-                if (renderingManager.ao_pass().get_frame_count() == 16) {
+                if (renderingManager.ao_pass().get_frame_count() == 128) {
                     // Record a new command buffer just for the screenshot
                     // Note: saveToFile ends the command buffer internally,
                     // so we don't use CommandBufferRecorder here
