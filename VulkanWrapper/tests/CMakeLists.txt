@@ -128,3 +128,22 @@ target_link_libraries(RenderPassTests
 )
 
 gtest_discover_tests(RenderPassTests)
+
+# Material tests
+add_executable(MaterialTests
+    Material/MaterialTypeTagTests.cpp
+    Material/ColoredMaterialHandlerTests.cpp
+    Material/TexturedMaterialHandlerTests.cpp
+    Material/BindlessTextureManagerTests.cpp
+    Material/BindlessMaterialManagerTests.cpp
+)
+
+target_link_libraries(MaterialTests
+    PRIVATE
+    TestUtils
+    VulkanWrapperCoreLibrary
+    GTest::gtest
+    GTest::gtest_main
+)
+
+gtest_discover_tests(MaterialTests)
