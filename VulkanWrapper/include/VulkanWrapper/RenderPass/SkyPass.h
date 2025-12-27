@@ -137,6 +137,7 @@ class SkyPass : public ScreenSpacePass<SkyPassSlot> {
     std::shared_ptr<const Pipeline>
     create_pipeline(const std::filesystem::path &shader_dir) {
         ShaderCompiler compiler;
+        compiler.add_include_path(shader_dir / "include");
 
         auto vertex_shader = compiler.compile_file_to_module(
             m_device, shader_dir / "fullscreen.vert");

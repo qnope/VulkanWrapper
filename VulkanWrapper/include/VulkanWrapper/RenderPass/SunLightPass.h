@@ -185,6 +185,7 @@ class SunLightPass : public ScreenSpacePass<SunLightPassSlot> {
         // Compile shaders with Vulkan 1.2 for ray query support
         ShaderCompiler compiler;
         compiler.set_target_vulkan_version(VK_API_VERSION_1_2);
+        compiler.add_include_path(shader_dir / "include");
 
         auto vertex_shader = compiler.compile_file_to_module(
             m_device, shader_dir / "fullscreen.vert");
