@@ -54,10 +54,17 @@ class ToneMappingPass : public ScreenSpacePass<ToneMappingPassSlot> {
      * @brief Push constants for tone mapping configuration
      */
     struct PushConstants {
-        float exposure;      ///< EV multiplier (default: 1.0)
-        int32_t operator_id; ///< ToneMappingOperator enum value
-        float white_point;   ///< For Reinhard Extended (default: 4.0)
+        float exposure;        ///< EV multiplier (default: 1.0)
+        int32_t operator_id;   ///< ToneMappingOperator enum value
+        float white_point;     ///< For Reinhard Extended (default: 4.0)
+        float luminance_scale; ///< Factor to de-normalize HDR values
     };
+
+    /// Default luminance scale: 1.0 means no de-normalization
+    /// Use this when shaders already output normalized values (divided by
+    /// LUMINANCE_SCALE). Only set to 10000.0 if shaders output raw physical
+    /// luminance values.
+    static constexpr float DEFAULT_LUMINANCE_SCALE = 1.0f;
 
     /**
      * @brief Construct a ToneMappingPass with shaders loaded from files
@@ -92,12 +99,14 @@ class ToneMappingPass : public ScreenSpacePass<ToneMappingPassSlot> {
      * @param tone_operator Tone mapping operator to use
      * @param exposure Exposure multiplier (EV)
      * @param white_point White point for Reinhard Extended operator
+     * @param luminance_scale Factor to de-normalize HDR values
      */
     void execute(vk::CommandBuffer cmd, Barrier::ResourceTracker &tracker,
                  std::shared_ptr<const ImageView> output_view,
                  std::shared_ptr<const ImageView> hdr_view,
                  ToneMappingOperator tone_operator = ToneMappingOperator::ACES,
-                 float exposure = 1.0f, float white_point = 4.0f) {
+                 float exposure = 1.0f, float white_point = 4.0f,
+                 float luminance_scale = DEFAULT_LUMINANCE_SCALE) {
 
         vk::Extent2D extent = output_view->image()->extent2D();
 
@@ -139,7 +148,8 @@ class ToneMappingPass : public ScreenSpacePass<ToneMappingPassSlot> {
         PushConstants constants{.exposure = exposure,
                                 .operator_id =
                                     static_cast<int32_t>(tone_operator),
-                                .white_point = white_point};
+                                .white_point = white_point,
+                                .luminance_scale = luminance_scale};
 
         // Render fullscreen quad (no depth testing needed)
         render_fullscreen(cmd, extent, color_attachment, nullptr, *m_pipeline,
@@ -158,6 +168,7 @@ class ToneMappingPass : public ScreenSpacePass<ToneMappingPassSlot> {
      * @param tone_operator Tone mapping operator
      * @param exposure Exposure multiplier
      * @param white_point White point for Reinhard Extended
+     * @param luminance_scale Factor to de-normalize HDR values
      * @return The tone-mapped output image view
      */
     std::shared_ptr<const ImageView>
@@ -165,7 +176,8 @@ class ToneMappingPass : public ScreenSpacePass<ToneMappingPassSlot> {
             Width width, Height height, size_t frame_index,
             std::shared_ptr<const ImageView> hdr_view,
             ToneMappingOperator tone_operator = ToneMappingOperator::ACES,
-            float exposure = 1.0f, float white_point = 4.0f) {
+            float exposure = 1.0f, float white_point = 4.0f,
+            float luminance_scale = DEFAULT_LUMINANCE_SCALE) {
 
         // Get or create cached output image
         auto &cached = get_or_create_image(
@@ -174,7 +186,7 @@ class ToneMappingPass : public ScreenSpacePass<ToneMappingPassSlot> {
                 vk::ImageUsageFlagBits::eSampled);
 
         execute(cmd, tracker, cached.view, hdr_view, tone_operator, exposure,
-                white_point);
+                white_point, luminance_scale);
 
         return cached.view;
     }
