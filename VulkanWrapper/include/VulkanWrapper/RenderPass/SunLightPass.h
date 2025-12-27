@@ -1,6 +1,5 @@
 #pragma once
 
-#include "SkyParameters.h"
 #include "VulkanWrapper/Descriptors/DescriptorAllocator.h"
 #include "VulkanWrapper/Descriptors/DescriptorPool.h"
 #include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
@@ -11,9 +10,15 @@
 #include "VulkanWrapper/Pipeline/Pipeline.h"
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
 #include "VulkanWrapper/RenderPass/ScreenSpacePass.h"
+#include "VulkanWrapper/RenderPass/SkyParameters.h"
+#include "VulkanWrapper/Shader/ShaderCompiler.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include "VulkanWrapper/Vulkan/Device.h"
+
+#include <filesystem>
 #include <glm/glm.hpp>
+
+namespace vw {
 
 // Empty slot enum - SunLightPass doesn't allocate images
 enum class SunLightPassSlot {};
@@ -24,21 +29,37 @@ enum class SunLightPassSlot {};
  * This pass renders sun light contribution additively onto the light buffer.
  * It does not allocate any images - it uses the light buffer from SkyPass as
  * input/output.
+ *
+ * Uses ray queries for shadow tracing, requires Vulkan 1.2+ and ray query
+ * extension.
+ *
+ * Shaders are compiled at runtime from GLSL source files using ShaderCompiler.
  */
-class SunLightPass : public vw::ScreenSpacePass<SunLightPassSlot> {
+class SunLightPass : public ScreenSpacePass<SunLightPassSlot> {
   public:
     // Use SkyParametersGPU directly as push constants
     using PushConstants = SkyParametersGPU;
 
-    SunLightPass(std::shared_ptr<vw::Device> device,
-                 std::shared_ptr<vw::Allocator> allocator,
+    /**
+     * @brief Construct a SunLightPass with shaders loaded from files
+     *
+     * @param device Vulkan device
+     * @param allocator Memory allocator
+     * @param shader_dir Path to the shader directory containing fullscreen.vert
+     *                   and sun_light.frag
+     * @param tlas Top-level acceleration structure for shadow rays
+     * @param light_format Output light buffer format
+     */
+    SunLightPass(std::shared_ptr<Device> device,
+                 std::shared_ptr<Allocator> allocator,
+                 const std::filesystem::path &shader_dir,
                  vk::AccelerationStructureKHR tlas,
                  vk::Format light_format = vk::Format::eR16G16B16A16Sfloat)
         : ScreenSpacePass(device, allocator)
         , m_tlas(tlas)
         , m_light_format(light_format)
         , m_sampler(create_default_sampler())
-        , m_descriptor_pool(create_descriptor_pool()) {}
+        , m_descriptor_pool(create_descriptor_pool(shader_dir)) {}
 
     /**
      * @brief Execute the sun light rendering pass
@@ -56,36 +77,36 @@ class SunLightPass : public vw::ScreenSpacePass<SunLightPassSlot> {
      * @param ao_view Ambient occlusion buffer view
      * @param sky_params Sky and sun parameters
      */
-    void execute(vk::CommandBuffer cmd, vw::Barrier::ResourceTracker &tracker,
-                 std::shared_ptr<const vw::ImageView> light_view,
-                 std::shared_ptr<const vw::ImageView> depth_view,
-                 std::shared_ptr<const vw::ImageView> color_view,
-                 std::shared_ptr<const vw::ImageView> position_view,
-                 std::shared_ptr<const vw::ImageView> normal_view,
-                 std::shared_ptr<const vw::ImageView> ao_view,
+    void execute(vk::CommandBuffer cmd, Barrier::ResourceTracker &tracker,
+                 std::shared_ptr<const ImageView> light_view,
+                 std::shared_ptr<const ImageView> depth_view,
+                 std::shared_ptr<const ImageView> color_view,
+                 std::shared_ptr<const ImageView> position_view,
+                 std::shared_ptr<const ImageView> normal_view,
+                 std::shared_ptr<const ImageView> ao_view,
                  const SkyParameters &sky_params) {
 
         vk::Extent2D extent = light_view->image()->extent2D();
 
         // Create descriptor set with current input images
-        vw::DescriptorAllocator descriptor_allocator;
+        DescriptorAllocator descriptor_allocator;
         descriptor_allocator.add_combined_image(
-            0, vw::CombinedImage(color_view, m_sampler),
+            0, CombinedImage(color_view, m_sampler),
             vk::PipelineStageFlagBits2::eFragmentShader,
             vk::AccessFlagBits2::eShaderRead);
         descriptor_allocator.add_combined_image(
-            1, vw::CombinedImage(position_view, m_sampler),
+            1, CombinedImage(position_view, m_sampler),
             vk::PipelineStageFlagBits2::eFragmentShader,
             vk::AccessFlagBits2::eShaderRead);
         descriptor_allocator.add_combined_image(
-            2, vw::CombinedImage(normal_view, m_sampler),
+            2, CombinedImage(normal_view, m_sampler),
             vk::PipelineStageFlagBits2::eFragmentShader,
             vk::AccessFlagBits2::eShaderRead);
         descriptor_allocator.add_acceleration_structure(
             3, m_tlas, vk::PipelineStageFlagBits2::eFragmentShader,
             vk::AccessFlagBits2::eAccelerationStructureReadKHR);
         descriptor_allocator.add_combined_image(
-            4, vw::CombinedImage(ao_view, m_sampler),
+            4, CombinedImage(ao_view, m_sampler),
             vk::PipelineStageFlagBits2::eFragmentShader,
             vk::AccessFlagBits2::eShaderRead);
 
@@ -99,7 +120,7 @@ class SunLightPass : public vw::ScreenSpacePass<SunLightPassSlot> {
 
         // Light image needs to be in color attachment layout for additive
         // rendering
-        tracker.request(vw::Barrier::ImageState{
+        tracker.request(Barrier::ImageState{
             .image = light_view->image()->handle(),
             .subresourceRange = light_view->subresource_range(),
             .layout = vk::ImageLayout::eColorAttachmentOptimal,
@@ -108,7 +129,7 @@ class SunLightPass : public vw::ScreenSpacePass<SunLightPassSlot> {
                       vk::AccessFlagBits2::eColorAttachmentWrite});
 
         // Depth image for reading
-        tracker.request(vw::Barrier::ImageState{
+        tracker.request(Barrier::ImageState{
             .image = depth_view->image()->handle(),
             .subresourceRange = depth_view->subresource_range(),
             .layout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
@@ -145,10 +166,10 @@ class SunLightPass : public vw::ScreenSpacePass<SunLightPassSlot> {
     }
 
   private:
-    vw::DescriptorPool create_descriptor_pool() {
+    DescriptorPool create_descriptor_pool(const std::filesystem::path &shader_dir) {
         // Create descriptor layout
         m_descriptor_layout =
-            vw::DescriptorSetLayoutBuilder(m_device)
+            DescriptorSetLayoutBuilder(m_device)
                 .with_combined_image(vk::ShaderStageFlagBits::eFragment,
                                      1) // Color
                 .with_combined_image(vk::ShaderStageFlagBits::eFragment,
@@ -161,30 +182,35 @@ class SunLightPass : public vw::ScreenSpacePass<SunLightPassSlot> {
                                      1) // AO
                 .build();
 
-        // Create pipeline
-        auto vertex_shader = vw::ShaderModule::create_from_spirv_file(
-            m_device, "Shaders/fullscreen.spv");
-        auto fragment_shader = vw::ShaderModule::create_from_spirv_file(
-            m_device, "Shaders/post-process/sun_light.spv");
+        // Compile shaders with Vulkan 1.2 for ray query support
+        ShaderCompiler compiler;
+        compiler.set_target_vulkan_version(VK_API_VERSION_1_2);
+
+        auto vertex_shader = compiler.compile_file_to_module(
+            m_device, shader_dir / "fullscreen.vert");
+        auto fragment_shader = compiler.compile_file_to_module(
+            m_device, shader_dir / "sun_light.frag");
 
         std::vector<vk::PushConstantRange> push_constants = {
             vk::PushConstantRange(vk::ShaderStageFlagBits::eFragment, 0,
                                   sizeof(PushConstants))};
 
-        m_pipeline = vw::create_screen_space_pipeline(
+        m_pipeline = create_screen_space_pipeline(
             m_device, vertex_shader, fragment_shader, m_descriptor_layout,
             m_light_format, vk::Format::eD32Sfloat, vk::CompareOp::eGreater,
             push_constants);
 
-        return vw::DescriptorPoolBuilder(m_device, m_descriptor_layout).build();
+        return DescriptorPoolBuilder(m_device, m_descriptor_layout).build();
     }
 
     vk::AccelerationStructureKHR m_tlas;
     vk::Format m_light_format;
 
     // Resources (order matters!)
-    std::shared_ptr<const vw::Sampler> m_sampler;
-    std::shared_ptr<vw::DescriptorSetLayout> m_descriptor_layout;
-    std::shared_ptr<const vw::Pipeline> m_pipeline;
-    vw::DescriptorPool m_descriptor_pool;
+    std::shared_ptr<const Sampler> m_sampler;
+    std::shared_ptr<DescriptorSetLayout> m_descriptor_layout;
+    std::shared_ptr<const Pipeline> m_pipeline;
+    DescriptorPool m_descriptor_pool;
 };
+
+} // namespace vw

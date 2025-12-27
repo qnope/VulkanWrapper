@@ -4,6 +4,34 @@
 #include <glm/glm.hpp>
 #include <glm/trigonometric.hpp>
 
+namespace vw {
+
+/**
+ * @brief GPU-compatible version of SkyParameters with proper alignment
+ *
+ * Uses vec4 to ensure consistent alignment between C++ (GLM) and GLSL.
+ * This avoids vec3 alignment issues between different compilers.
+ */
+struct SkyParametersGPU {
+    // xyz = direction FROM star TO planet, w = star_constant
+    glm::vec4 star_direction_and_constant;
+    // xyz = star color, w = star solid angle
+    glm::vec4 star_color_and_solid_angle;
+    // xyz = rayleigh coefficient, w = height_rayleigh
+    glm::vec4 rayleigh_and_height_r;
+    // xyz = mie coefficient, w = height_mie
+    glm::vec4 mie_and_height_m;
+    // xyz = ozone coefficient, w = height_ozone
+    glm::vec4 ozone_and_height_o;
+    // x = radius_planet, y = radius_atmosphere, z = luminous_efficiency, w =
+    // unused
+    glm::vec4 radii_and_efficiency;
+};
+
+// Verify GPU struct size (6 * 16 = 96 bytes)
+static_assert(sizeof(SkyParametersGPU) == 96,
+              "SkyParametersGPU must be 96 bytes");
+
 /**
  * @brief Physical sky and star parameters for atmospheric rendering
  *
@@ -118,8 +146,8 @@ struct SkyParameters {
     /**
      * @brief Compute radiance from solar constant and solid angle
      *
-     * Radiance L = E / Ω where E is the solar constant (irradiance)
-     * and Ω is the solid angle of the star disk.
+     * Radiance L = E / Omega where E is the solar constant (irradiance)
+     * and Omega is the solid angle of the star disk.
      *
      * @param solar_constant Solar constant (W/m² or similar irradiance unit)
      * @param solid_angle Solid angle of star disk (steradians)
@@ -190,48 +218,22 @@ struct SkyParameters {
     /**
      * @brief Convert to GPU-compatible structure
      */
-    struct SkyParametersGPU to_gpu() const;
+    SkyParametersGPU to_gpu() const {
+        return SkyParametersGPU{
+            .star_direction_and_constant =
+                glm::vec4(star_direction, star_constant),
+            .star_color_and_solid_angle =
+                glm::vec4(star_color, star_solid_angle),
+            .rayleigh_and_height_r = glm::vec4(rayleigh_coef, height_rayleigh),
+            .mie_and_height_m = glm::vec4(mie_coef, height_mie),
+            .ozone_and_height_o = glm::vec4(ozone_coef, height_ozone),
+            .radii_and_efficiency = glm::vec4(radius_planet, radius_atmosphere,
+                                              luminous_efficiency, 0.0f)};
+    }
 };
 
 // Verify the structure fits in push constants (< 128 bytes)
 static_assert(sizeof(SkyParameters) <= 128,
               "SkyParameters must fit in push constants");
 
-/**
- * @brief GPU-compatible version of SkyParameters with proper alignment
- *
- * Uses vec4 to ensure consistent alignment between C++ (GLM) and GLSL.
- * This avoids vec3 alignment issues between different compilers.
- */
-struct SkyParametersGPU {
-    // xyz = direction FROM star TO planet, w = star_constant
-    glm::vec4 star_direction_and_constant;
-    // xyz = star color, w = star solid angle
-    glm::vec4 star_color_and_solid_angle;
-    // xyz = rayleigh coefficient, w = height_rayleigh
-    glm::vec4 rayleigh_and_height_r;
-    // xyz = mie coefficient, w = height_mie
-    glm::vec4 mie_and_height_m;
-    // xyz = ozone coefficient, w = height_ozone
-    glm::vec4 ozone_and_height_o;
-    // x = radius_planet, y = radius_atmosphere, z = luminous_efficiency, w = unused
-    glm::vec4 radii_and_efficiency;
-};
-
-inline SkyParametersGPU SkyParameters::to_gpu() const {
-    return SkyParametersGPU{
-        .star_direction_and_constant =
-            glm::vec4(star_direction, star_constant),
-        .star_color_and_solid_angle =
-            glm::vec4(star_color, star_solid_angle),
-        .rayleigh_and_height_r =
-            glm::vec4(rayleigh_coef, height_rayleigh),
-        .mie_and_height_m = glm::vec4(mie_coef, height_mie),
-        .ozone_and_height_o = glm::vec4(ozone_coef, height_ozone),
-        .radii_and_efficiency = glm::vec4(radius_planet, radius_atmosphere,
-                                          luminous_efficiency, 0.0f)};
-}
-
-// Verify GPU struct size (6 * 16 = 96 bytes)
-static_assert(sizeof(SkyParametersGPU) == 96,
-              "SkyParametersGPU must be 96 bytes");
+} // namespace vw

@@ -2,16 +2,18 @@
 
 #include "AmbientOcclusionPass.h"
 #include "ColorPass.h"
-#include "SkyPass.h"
-#include "SunLightPass.h"
 #include "ZPass.h"
-#include <memory>
 #include <VulkanWrapper/Memory/Buffer.h>
 #include <VulkanWrapper/Model/Material/BindlessMaterialManager.h>
 #include <VulkanWrapper/Model/Scene.h>
 #include <VulkanWrapper/RayTracing/RayTracedScene.h>
+#include <VulkanWrapper/RenderPass/SkyParameters.h>
+#include <VulkanWrapper/RenderPass/SkyPass.h>
+#include <VulkanWrapper/RenderPass/SunLightPass.h>
 #include <VulkanWrapper/Synchronization/ResourceTracker.h>
 #include <VulkanWrapper/Vulkan/Device.h>
+#include <filesystem>
+#include <memory>
 
 /**
  * @brief Manages deferred rendering passes with functional API and lazy
@@ -37,6 +39,7 @@ class DeferredRenderingManager {
         std::shared_ptr<vw::Allocator> allocator,
         vw::Model::Material::BindlessMaterialManager &material_manager,
         const vw::rt::RayTracedScene &ray_traced_scene,
+        const std::filesystem::path &shader_dir,
         vk::Format depth_format = vk::Format::eD32Sfloat,
         vk::Format ao_format = vk::Format::eR32G32B32A32Sfloat,
         vk::Format light_format = vk::Format::eR32G32B32A32Sfloat)
@@ -53,11 +56,11 @@ class DeferredRenderingManager {
         m_ao_pass = std::make_unique<AmbientOcclusionPass>(
             m_device, m_allocator, ray_traced_scene.tlas_handle(), ao_format);
 
-        m_sky_pass = std::make_unique<SkyPass>(m_device, m_allocator,
-                                               light_format, depth_format);
+        m_sky_pass = std::make_unique<vw::SkyPass>(
+            m_device, m_allocator, shader_dir, light_format, depth_format);
 
-        m_sun_light_pass = std::make_unique<SunLightPass>(
-            m_device, m_allocator, ray_traced_scene.tlas_handle(),
+        m_sun_light_pass = std::make_unique<vw::SunLightPass>(
+            m_device, m_allocator, shader_dir, ray_traced_scene.tlas_handle(),
             light_format);
     }
 
@@ -84,7 +87,7 @@ class DeferredRenderingManager {
         vk::CommandBuffer cmd, vw::Barrier::ResourceTracker &tracker,
         vw::Width width, vw::Height height, size_t frame_index,
         const vw::Buffer<UBOType, true, vw::UniformBufferUsage> &uniform_buffer,
-        const SkyParameters &sky_params, float ao_radius = 100.0f) {
+        const vw::SkyParameters &sky_params, float ao_radius = 100.0f) {
 
         const auto &scene = m_ray_traced_scene.scene();
 
@@ -137,12 +140,12 @@ class DeferredRenderingManager {
     const AmbientOcclusionPass &ao_pass() const { return *m_ao_pass; }
 
     /** @brief Access the Sky Pass for custom usage */
-    SkyPass &sky_pass() { return *m_sky_pass; }
-    const SkyPass &sky_pass() const { return *m_sky_pass; }
+    vw::SkyPass &sky_pass() { return *m_sky_pass; }
+    const vw::SkyPass &sky_pass() const { return *m_sky_pass; }
 
     /** @brief Access the Sun Light Pass for custom usage */
-    SunLightPass &sun_light_pass() { return *m_sun_light_pass; }
-    const SunLightPass &sun_light_pass() const { return *m_sun_light_pass; }
+    vw::SunLightPass &sun_light_pass() { return *m_sun_light_pass; }
+    const vw::SunLightPass &sun_light_pass() const { return *m_sun_light_pass; }
 
     /** @brief Reset progressive state (call on resize) */
     void reset() { m_ao_pass->reset_accumulation(); }
@@ -156,6 +159,6 @@ class DeferredRenderingManager {
     std::unique_ptr<ZPass> m_zpass;
     std::unique_ptr<ColorPass> m_color_pass;
     std::unique_ptr<AmbientOcclusionPass> m_ao_pass;
-    std::unique_ptr<SkyPass> m_sky_pass;
-    std::unique_ptr<SunLightPass> m_sun_light_pass;
+    std::unique_ptr<vw::SkyPass> m_sky_pass;
+    std::unique_ptr<vw::SunLightPass> m_sun_light_pass;
 };

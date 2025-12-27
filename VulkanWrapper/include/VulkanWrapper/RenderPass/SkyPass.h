@@ -1,14 +1,19 @@
 #pragma once
 
-#include "SkyParameters.h"
 #include "VulkanWrapper/Image/ImageView.h"
 #include "VulkanWrapper/Memory/Allocator.h"
 #include "VulkanWrapper/Pipeline/Pipeline.h"
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
 #include "VulkanWrapper/RenderPass/ScreenSpacePass.h"
+#include "VulkanWrapper/RenderPass/SkyParameters.h"
+#include "VulkanWrapper/Shader/ShaderCompiler.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include "VulkanWrapper/Vulkan/Device.h"
+
+#include <filesystem>
 #include <glm/glm.hpp>
+
+namespace vw {
 
 enum class SkyPassSlot { Light };
 
@@ -18,8 +23,10 @@ enum class SkyPassSlot { Light };
  * This pass lazily allocates its light output image on first execute() call.
  * Images are cached by (width, height, frame_index) and reused on subsequent
  * calls. The sky is rendered where depth == 1.0 (far plane).
+ *
+ * Shaders are compiled at runtime from GLSL source files using ShaderCompiler.
  */
-class SkyPass : public vw::ScreenSpacePass<SkyPassSlot> {
+class SkyPass : public ScreenSpacePass<SkyPassSlot> {
   public:
     // Combined push constants: SkyParametersGPU + inverseViewProj
     struct PushConstants {
@@ -27,14 +34,24 @@ class SkyPass : public vw::ScreenSpacePass<SkyPassSlot> {
         glm::mat4 inverseViewProj; // inverse(projection * view)
     };
 
-    SkyPass(std::shared_ptr<vw::Device> device,
-            std::shared_ptr<vw::Allocator> allocator,
+    /**
+     * @brief Construct a SkyPass with shaders loaded from files
+     *
+     * @param device Vulkan device
+     * @param allocator Memory allocator
+     * @param shader_dir Path to the shader directory containing fullscreen.vert
+     *                   and sky.frag
+     * @param light_format Output light buffer format
+     * @param depth_format Depth buffer format
+     */
+    SkyPass(std::shared_ptr<Device> device, std::shared_ptr<Allocator> allocator,
+            const std::filesystem::path &shader_dir,
             vk::Format light_format = vk::Format::eR32G32B32A32Sfloat,
             vk::Format depth_format = vk::Format::eD32Sfloat)
         : ScreenSpacePass(device, allocator)
         , m_light_format(light_format)
         , m_depth_format(depth_format)
-        , m_pipeline(create_pipeline()) {}
+        , m_pipeline(create_pipeline(shader_dir)) {}
 
     /**
      * @brief Execute the sky rendering pass
@@ -49,10 +66,10 @@ class SkyPass : public vw::ScreenSpacePass<SkyPassSlot> {
      * @param inverse_view_proj Inverse view-projection matrix
      * @return The output light image view
      */
-    std::shared_ptr<const vw::ImageView>
-    execute(vk::CommandBuffer cmd, vw::Barrier::ResourceTracker &tracker,
-            vw::Width width, vw::Height height, size_t frame_index,
-            std::shared_ptr<const vw::ImageView> depth_view,
+    std::shared_ptr<const ImageView>
+    execute(vk::CommandBuffer cmd, Barrier::ResourceTracker &tracker,
+            Width width, Height height, size_t frame_index,
+            std::shared_ptr<const ImageView> depth_view,
             const SkyParameters &sky_params,
             const glm::mat4 &inverse_view_proj) {
 
@@ -67,7 +84,7 @@ class SkyPass : public vw::ScreenSpacePass<SkyPassSlot> {
                             static_cast<uint32_t>(height)};
 
         // Light image needs to be in color attachment layout
-        tracker.request(vw::Barrier::ImageState{
+        tracker.request(Barrier::ImageState{
             .image = light.image->handle(),
             .subresourceRange = light.view->subresource_range(),
             .layout = vk::ImageLayout::eColorAttachmentOptimal,
@@ -75,7 +92,7 @@ class SkyPass : public vw::ScreenSpacePass<SkyPassSlot> {
             .access = vk::AccessFlagBits2::eColorAttachmentWrite});
 
         // Depth image for reading
-        tracker.request(vw::Barrier::ImageState{
+        tracker.request(Barrier::ImageState{
             .image = depth_view->image()->handle(),
             .subresourceRange = depth_view->subresource_range(),
             .layout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
@@ -117,22 +134,27 @@ class SkyPass : public vw::ScreenSpacePass<SkyPassSlot> {
     }
 
   private:
-    std::shared_ptr<const vw::Pipeline> create_pipeline() {
-        auto vertex_shader = vw::ShaderModule::create_from_spirv_file(
-            m_device, "Shaders/fullscreen.spv");
-        auto fragment_shader = vw::ShaderModule::create_from_spirv_file(
-            m_device, "Shaders/post-process/sky.spv");
+    std::shared_ptr<const Pipeline>
+    create_pipeline(const std::filesystem::path &shader_dir) {
+        ShaderCompiler compiler;
+
+        auto vertex_shader = compiler.compile_file_to_module(
+            m_device, shader_dir / "fullscreen.vert");
+        auto fragment_shader =
+            compiler.compile_file_to_module(m_device, shader_dir / "sky.frag");
 
         std::vector<vk::PushConstantRange> push_constants = {
             vk::PushConstantRange(vk::ShaderStageFlagBits::eFragment, 0,
                                   sizeof(PushConstants))};
 
-        return vw::create_screen_space_pipeline(
+        return create_screen_space_pipeline(
             m_device, vertex_shader, fragment_shader, nullptr, m_light_format,
             m_depth_format, vk::CompareOp::eEqual, push_constants);
     }
 
     vk::Format m_light_format;
     vk::Format m_depth_format;
-    std::shared_ptr<const vw::Pipeline> m_pipeline;
+    std::shared_ptr<const Pipeline> m_pipeline;
 };
+
+} // namespace vw
