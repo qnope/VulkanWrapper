@@ -118,6 +118,8 @@ add_executable(RenderPassTests
     RenderPass/SubpassTests.cpp
     RenderPass/ScreenSpacePassTests.cpp
     RenderPass/ToneMappingPassTests.cpp
+    RenderPass/SkyPassTests.cpp
+    RenderPass/SunLightPassTests.cpp
 )
 
 target_link_libraries(RenderPassTests
