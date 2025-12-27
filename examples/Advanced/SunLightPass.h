@@ -1,5 +1,6 @@
 #pragma once
 
+#include "SkyParameters.h"
 #include "VulkanWrapper/Descriptors/DescriptorAllocator.h"
 #include "VulkanWrapper/Descriptors/DescriptorPool.h"
 #include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
@@ -12,9 +13,7 @@
 #include "VulkanWrapper/RenderPass/ScreenSpacePass.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include "VulkanWrapper/Vulkan/Device.h"
-#include <cmath>
 #include <glm/glm.hpp>
-#include <glm/trigonometric.hpp>
 
 // Empty slot enum - SunLightPass doesn't allocate images
 enum class SunLightPassSlot {};
@@ -28,10 +27,8 @@ enum class SunLightPassSlot {};
  */
 class SunLightPass : public vw::ScreenSpacePass<SunLightPassSlot> {
   public:
-    struct PushConstants {
-        glm::vec4 sunDirection;
-        glm::vec4 sunColor;
-    };
+    // Use SkyParametersGPU directly as push constants
+    using PushConstants = SkyParametersGPU;
 
     SunLightPass(std::shared_ptr<vw::Device> device,
                  std::shared_ptr<vw::Allocator> allocator,
@@ -57,7 +54,7 @@ class SunLightPass : public vw::ScreenSpacePass<SunLightPassSlot> {
      * @param position_view Position G-Buffer view
      * @param normal_view Normal G-Buffer view
      * @param ao_view Ambient occlusion buffer view
-     * @param sun_angle Sun angle in degrees above horizon (90 = zenith)
+     * @param sky_params Sky and sun parameters
      */
     void execute(vk::CommandBuffer cmd, vw::Barrier::ResourceTracker &tracker,
                  std::shared_ptr<const vw::ImageView> light_view,
@@ -66,7 +63,7 @@ class SunLightPass : public vw::ScreenSpacePass<SunLightPassSlot> {
                  std::shared_ptr<const vw::ImageView> position_view,
                  std::shared_ptr<const vw::ImageView> normal_view,
                  std::shared_ptr<const vw::ImageView> ao_view,
-                 float sun_angle) {
+                 const SkyParameters &sky_params) {
 
         vk::Extent2D extent = light_view->image()->extent2D();
 
@@ -138,13 +135,8 @@ class SunLightPass : public vw::ScreenSpacePass<SunLightPassSlot> {
                 .setLoadOp(vk::AttachmentLoadOp::eLoad)
                 .setStoreOp(vk::AttachmentStoreOp::eNone);
 
-        // Push constants
-        // Sun direction is FROM sun TO surface (negative of direction to sun)
-        float angle_rad = glm::radians(sun_angle);
-        PushConstants constants{.sunDirection =
-                                    glm::vec4(-std::cos(angle_rad),
-                                              -std::sin(angle_rad), 0.0f, 0.0f),
-                                .sunColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)};
+        // Use full SkyParametersGPU as push constants
+        PushConstants constants = sky_params.to_gpu();
 
         // Render fullscreen quad with depth testing
         render_fullscreen(cmd, extent, color_attachment, &depth_attachment,

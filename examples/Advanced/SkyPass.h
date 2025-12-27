@@ -1,5 +1,6 @@
 #pragma once
 
+#include "SkyParameters.h"
 #include "VulkanWrapper/Image/ImageView.h"
 #include "VulkanWrapper/Memory/Allocator.h"
 #include "VulkanWrapper/Pipeline/Pipeline.h"
@@ -7,9 +8,7 @@
 #include "VulkanWrapper/RenderPass/ScreenSpacePass.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include "VulkanWrapper/Vulkan/Device.h"
-#include <cmath>
 #include <glm/glm.hpp>
-#include <glm/trigonometric.hpp>
 
 enum class SkyPassSlot { Light };
 
@@ -22,14 +21,15 @@ enum class SkyPassSlot { Light };
  */
 class SkyPass : public vw::ScreenSpacePass<SkyPassSlot> {
   public:
+    // Combined push constants: SkyParametersGPU + inverseViewProj
     struct PushConstants {
-        glm::vec4 sunDirection;    // xyz = direction to sun, w = unused
+        SkyParametersGPU sky;      // Full sky parameters
         glm::mat4 inverseViewProj; // inverse(projection * view)
     };
 
     SkyPass(std::shared_ptr<vw::Device> device,
             std::shared_ptr<vw::Allocator> allocator,
-            vk::Format light_format = vk::Format::eR16G16B16A16Sfloat,
+            vk::Format light_format = vk::Format::eR32G32B32A32Sfloat,
             vk::Format depth_format = vk::Format::eD32Sfloat)
         : ScreenSpacePass(device, allocator)
         , m_light_format(light_format)
@@ -45,14 +45,15 @@ class SkyPass : public vw::ScreenSpacePass<SkyPassSlot> {
      * @param height Render height
      * @param frame_index Frame index for multi-buffering
      * @param depth_view Depth buffer view (for depth testing at far plane)
-     * @param sun_angle Sun angle in degrees above horizon (90 = zenith)
+     * @param sky_params Sky and sun parameters
      * @param inverse_view_proj Inverse view-projection matrix
      * @return The output light image view
      */
     std::shared_ptr<const vw::ImageView>
     execute(vk::CommandBuffer cmd, vw::Barrier::ResourceTracker &tracker,
             vw::Width width, vw::Height height, size_t frame_index,
-            std::shared_ptr<const vw::ImageView> depth_view, float sun_angle,
+            std::shared_ptr<const vw::ImageView> depth_view,
+            const SkyParameters &sky_params,
             const glm::mat4 &inverse_view_proj) {
 
         // Lazy allocation of light image
@@ -102,12 +103,9 @@ class SkyPass : public vw::ScreenSpacePass<SkyPassSlot> {
                 .setLoadOp(vk::AttachmentLoadOp::eLoad)
                 .setStoreOp(vk::AttachmentStoreOp::eNone);
 
-        // Push constants
-        float angle_rad = glm::radians(sun_angle);
-        PushConstants constants{
-            .sunDirection =
-                glm::vec4(std::cos(angle_rad), std::sin(angle_rad), 0.0f, 0.0f),
-            .inverseViewProj = inverse_view_proj};
+        // Use full SkyParametersGPU as push constants
+        PushConstants constants{.sky = sky_params.to_gpu(),
+                                .inverseViewProj = inverse_view_proj};
 
         // Render fullscreen quad with depth testing (sky only where depth
         // == 1.0)

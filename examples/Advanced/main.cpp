@@ -1,6 +1,7 @@
 #include "Application.h"
 #include "DeferredRenderingManager.h"
 #include "RenderPassInformation.h"
+#include "SkyParameters.h"
 #include <VulkanWrapper/3rd_party.h>
 #include <VulkanWrapper/Command/CommandBuffer.h>
 #include <VulkanWrapper/Command/CommandPool.h>
@@ -160,13 +161,15 @@ int main() {
                 {
                     vw::CommandBufferRecorder recorder(commandBuffers[index]);
 
+                    // Create sky parameters for sun at zenith
+                    auto sky_params = SkyParameters::create_earth_sun(90.0f);
+
                     // Execute deferred rendering pipeline with progressive AO
                     auto light_view = renderingManager.execute(
                         commandBuffers[index], transfer.resourceTracker(),
                         app.swapchain.width(), app.swapchain.height(),
                         index, // frame_index
-                        uniform_buffer,
-                        90.0f, // sun_angle = zenith (90 degrees)
+                        uniform_buffer, sky_params,
                         200.0f // ao_radius
                     );
 
@@ -175,7 +178,11 @@ int main() {
                         commandBuffers[index], transfer.resourceTracker(),
                         image_view, // output: swapchain image
                         light_view, // input: HDR light buffer
-                        vw::ToneMappingOperator::ACES, 1.0f);
+                        vw::ToneMappingOperator::ACES,
+                        1.0f,    // exposure
+                        1.0f,    // white_point
+                        10000.0f // luminance_scale
+                    );
 
                     // Transition swapchain image to present layout
                     transfer.resourceTracker().request(vw::Barrier::ImageState{
@@ -208,7 +215,7 @@ int main() {
                 std::cout << "Iteration: " << i++ << std::endl;
 
                 // Take screenshot after 16 samples and exit
-                if (renderingManager.ao_pass().get_frame_count() == 128) {
+                if (renderingManager.ao_pass().get_frame_count() == 26) {
                     // Record a new command buffer just for the screenshot
                     // Note: saveToFile ends the command buffer internally,
                     // so we don't use CommandBufferRecorder here
