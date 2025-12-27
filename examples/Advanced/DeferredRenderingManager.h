@@ -39,7 +39,7 @@ class DeferredRenderingManager {
         const vw::rt::RayTracedScene &ray_traced_scene,
         vk::Format depth_format = vk::Format::eD32Sfloat,
         vk::Format ao_format = vk::Format::eR32G32B32A32Sfloat,
-        vk::Format light_format = vk::Format::eR16G16B16A16Sfloat)
+        vk::Format light_format = vk::Format::eR32G32B32A32Sfloat)
         : m_device(std::move(device))
         , m_allocator(std::move(allocator))
         , m_ray_traced_scene(ray_traced_scene) {
@@ -75,7 +75,7 @@ class DeferredRenderingManager {
      * @param height Render height
      * @param frame_index Frame index for multi-buffering
      * @param uniform_buffer Uniform buffer with view/projection matrices
-     * @param sun_angle Sun angle in degrees above horizon (90 = zenith)
+     * @param sky_params Sky and sun parameters
      * @param ao_radius AO sampling radius (default: 100.0)
      * @return The final light image view (can be blitted to swapchain)
      */
@@ -84,7 +84,7 @@ class DeferredRenderingManager {
         vk::CommandBuffer cmd, vw::Barrier::ResourceTracker &tracker,
         vw::Width width, vw::Height height, size_t frame_index,
         const vw::Buffer<UBOType, true, vw::UniformBufferUsage> &uniform_buffer,
-        float sun_angle = 90.0f, float ao_radius = 100.0f) {
+        const SkyParameters &sky_params, float ao_radius = 100.0f) {
 
         const auto &scene = m_ray_traced_scene.scene();
 
@@ -107,7 +107,7 @@ class DeferredRenderingManager {
 
         // 4. Sky Pass: render sky where depth == 1.0 (far plane)
         auto light_view = m_sky_pass->execute(
-            cmd, tracker, width, height, frame_index, depth_view, sun_angle,
+            cmd, tracker, width, height, frame_index, depth_view, sky_params,
             ubo_data.inverseViewProj);
 
         // 5. Sun Light Pass: add sun lighting with ray-traced shadows and AO
@@ -118,7 +118,7 @@ class DeferredRenderingManager {
                                   gbuffer.position, // from ColorPass
                                   gbuffer.normal,   // from ColorPass
                                   ao_view,          // from AO Pass
-                                  sun_angle);
+                                  sky_params);
 
         // Return AO buffer directly to visualize progressive accumulation
         return light_view;
