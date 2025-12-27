@@ -21,8 +21,8 @@ class Mesh {
     Mesh(std::shared_ptr<const Vertex3DBuffer> vertex_buffer,
          std::shared_ptr<const FullVertex3DBuffer> full_vertex_buffer,
          std::shared_ptr<const IndexBuffer> index_buffer,
-         Material::Material material, uint32_t indice_count,
-         int vertex_offset, int first_index, int vertices_count);
+         Material::Material material, uint32_t indice_count, int vertex_offset,
+         int first_index, int vertices_count);
 
     [[nodiscard]] Material::MaterialTypeTag material_type_tag() const noexcept;
 

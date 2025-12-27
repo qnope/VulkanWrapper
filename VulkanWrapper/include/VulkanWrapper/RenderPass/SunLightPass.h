@@ -14,7 +14,6 @@
 #include "VulkanWrapper/Shader/ShaderCompiler.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include "VulkanWrapper/Vulkan/Device.h"
-
 #include <filesystem>
 #include <glm/glm.hpp>
 
@@ -166,7 +165,8 @@ class SunLightPass : public ScreenSpacePass<SunLightPassSlot> {
     }
 
   private:
-    DescriptorPool create_descriptor_pool(const std::filesystem::path &shader_dir) {
+    DescriptorPool
+    create_descriptor_pool(const std::filesystem::path &shader_dir) {
         // Create descriptor layout
         m_descriptor_layout =
             DescriptorSetLayoutBuilder(m_device)

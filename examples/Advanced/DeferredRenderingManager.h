@@ -3,6 +3,8 @@
 #include "AmbientOcclusionPass.h"
 #include "ColorPass.h"
 #include "ZPass.h"
+#include <filesystem>
+#include <memory>
 #include <VulkanWrapper/Memory/Buffer.h>
 #include <VulkanWrapper/Model/Material/BindlessMaterialManager.h>
 #include <VulkanWrapper/Model/Scene.h>
@@ -12,8 +14,6 @@
 #include <VulkanWrapper/RenderPass/SunLightPass.h>
 #include <VulkanWrapper/Synchronization/ResourceTracker.h>
 #include <VulkanWrapper/Vulkan/Device.h>
-#include <filesystem>
-#include <memory>
 
 /**
  * @brief Manages deferred rendering passes with functional API and lazy

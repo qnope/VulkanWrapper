@@ -52,12 +52,11 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
         vk::Format::eR32G32B32A32Sfloat  // position
     };
 
-    ColorPass(
-        std::shared_ptr<vw::Device> device,
-        std::shared_ptr<vw::Allocator> allocator,
-        vw::Model::Material::BindlessMaterialManager &material_manager,
-        vk::Format depth_format = vk::Format::eD32Sfloat,
-        std::span<const vk::Format> color_formats = default_color_formats)
+    ColorPass(std::shared_ptr<vw::Device> device,
+              std::shared_ptr<vw::Allocator> allocator,
+              vw::Model::Material::BindlessMaterialManager &material_manager,
+              vk::Format depth_format = vk::Format::eD32Sfloat,
+              std::span<const vk::Format> color_formats = default_color_formats)
         : Subpass(std::move(device), std::move(allocator))
         , m_color_formats(color_formats.begin(), color_formats.end())
         , m_material_manager(material_manager)
@@ -296,10 +295,10 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
                 return builder.build();
             };
 
-        auto *textured_handler =
-            m_material_manager.handler(vw::Model::Material::textured_material_tag);
-        auto *colored_handler =
-            m_material_manager.handler(vw::Model::Material::colored_material_tag);
+        auto *textured_handler = m_material_manager.handler(
+            vw::Model::Material::textured_material_tag);
+        auto *colored_handler = m_material_manager.handler(
+            vw::Model::Material::colored_material_tag);
 
         auto textured_pipeline =
             create_pipeline(fragment_textured, textured_handler->layout());

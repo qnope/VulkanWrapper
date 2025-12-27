@@ -8,8 +8,8 @@ namespace vw::Model {
 
 MeshManager::MeshManager(std::shared_ptr<const Device> device,
                          std::shared_ptr<Allocator> allocator)
-    : m_staging_buffer_manager{
-          std::make_shared<StagingBufferManager>(device, allocator)}
+    : m_staging_buffer_manager{std::make_shared<StagingBufferManager>(
+          device, allocator)}
     , m_vertex_buffer{allocator}
     , m_full_vertex_buffer{allocator}
     , m_index_buffer{allocator}

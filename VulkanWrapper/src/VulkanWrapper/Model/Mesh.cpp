@@ -33,10 +33,10 @@ void Mesh::draw(vk::CommandBuffer cmd_buffer, const PipelineLayout &layout,
     push.transform = transform;
     push.material_index = m_material.material_index;
 
-    cmd_buffer.pushConstants(
-        layout.handle(),
-        vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
-        0, sizeof(MeshPushConstants), &push);
+    cmd_buffer.pushConstants(layout.handle(),
+                             vk::ShaderStageFlagBits::eVertex |
+                                 vk::ShaderStageFlagBits::eFragment,
+                             0, sizeof(MeshPushConstants), &push);
     cmd_buffer.drawIndexed(m_indice_count, 1, m_first_index, m_vertex_offset,
                            0);
 }

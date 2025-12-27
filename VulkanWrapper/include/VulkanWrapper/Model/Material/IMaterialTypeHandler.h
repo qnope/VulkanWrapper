@@ -1,10 +1,10 @@
 #pragma once
 #include "VulkanWrapper/3rd_party.h"
+#include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Model/Material/Material.h"
 #include "VulkanWrapper/Model/Material/MaterialPriority.h"
 #include "VulkanWrapper/Model/Material/MaterialTypeTag.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
-#include "VulkanWrapper/fwd.h"
 #include <filesystem>
 #include <optional>
 

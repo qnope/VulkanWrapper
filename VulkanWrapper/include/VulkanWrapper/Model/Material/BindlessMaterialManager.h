@@ -1,8 +1,8 @@
 #pragma once
+#include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Model/Material/BindlessTextureManager.h"
 #include "VulkanWrapper/Model/Material/IMaterialTypeHandler.h"
 #include "VulkanWrapper/Model/Material/Material.h"
-#include "VulkanWrapper/fwd.h"
 #include <memory>
 #include <unordered_map>
 
@@ -16,10 +16,9 @@ class BindlessMaterialManager {
                             std::shared_ptr<Allocator> allocator,
                             std::shared_ptr<StagingBufferManager> staging);
 
-    template <typename Handler>
-    void register_handler() {
-        auto handler = Handler::template create<Handler>(
-            m_device, m_allocator, m_texture_manager);
+    template <typename Handler> void register_handler() {
+        auto handler = Handler::template create<Handler>(m_device, m_allocator,
+                                                         m_texture_manager);
         auto tag = handler->tag();
         m_handlers[tag] = std::move(handler);
         m_sorted_handlers.clear();
@@ -30,10 +29,12 @@ class BindlessMaterialManager {
                     const std::filesystem::path &base_path);
 
     [[nodiscard]] BindlessTextureManager &texture_manager() noexcept;
-    [[nodiscard]] const BindlessTextureManager &texture_manager() const noexcept;
+    [[nodiscard]] const BindlessTextureManager &
+    texture_manager() const noexcept;
 
     [[nodiscard]] IMaterialTypeHandler *handler(MaterialTypeTag tag);
-    [[nodiscard]] const IMaterialTypeHandler *handler(MaterialTypeTag tag) const;
+    [[nodiscard]] const IMaterialTypeHandler *
+    handler(MaterialTypeTag tag) const;
 
     void upload_all();
 
