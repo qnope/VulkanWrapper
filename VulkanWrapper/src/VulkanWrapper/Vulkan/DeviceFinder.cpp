@@ -140,7 +140,8 @@ DeviceFinder &DeviceFinder::with_dynamic_rendering() noexcept {
 }
 
 DeviceFinder &DeviceFinder::with_descriptor_indexing() noexcept {
-    auto &vulkan12Features = m_features.get<vk::PhysicalDeviceVulkan12Features>();
+    auto &vulkan12Features =
+        m_features.get<vk::PhysicalDeviceVulkan12Features>();
 
     // Enable non-uniform indexing for sampled image arrays (textures)
     vulkan12Features.setShaderSampledImageArrayNonUniformIndexing(1U);

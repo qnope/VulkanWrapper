@@ -13,7 +13,6 @@
 #include "VulkanWrapper/Shader/ShaderCompiler.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include "VulkanWrapper/Vulkan/Device.h"
-
 #include <filesystem>
 
 namespace vw {
@@ -229,11 +228,10 @@ class ToneMappingPass : public ScreenSpacePass<ToneMappingPassSlot> {
 
     CompiledShaders compile_shaders(const std::filesystem::path &shader_dir) {
         ShaderCompiler compiler;
-        return CompiledShaders{
-            .vertex = compiler.compile_file_to_module(
-                m_device, shader_dir / "fullscreen.vert"),
-            .fragment = compiler.compile_file_to_module(
-                m_device, shader_dir / "tonemap.frag")};
+        return CompiledShaders{.vertex = compiler.compile_file_to_module(
+                                   m_device, shader_dir / "fullscreen.vert"),
+                               .fragment = compiler.compile_file_to_module(
+                                   m_device, shader_dir / "tonemap.frag")};
     }
 
     DescriptorPool create_descriptor_pool(CompiledShaders shaders) {

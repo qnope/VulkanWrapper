@@ -1,7 +1,6 @@
 #include "Application.h"
 #include "DeferredRenderingManager.h"
 #include "RenderPassInformation.h"
-#include <VulkanWrapper/RenderPass/SkyParameters.h>
 #include <VulkanWrapper/3rd_party.h>
 #include <VulkanWrapper/Command/CommandBuffer.h>
 #include <VulkanWrapper/Command/CommandPool.h>
@@ -10,6 +9,7 @@
 #include <VulkanWrapper/Memory/Transfer.h>
 #include <VulkanWrapper/Model/MeshManager.h>
 #include <VulkanWrapper/RayTracing/RayTracedScene.h>
+#include <VulkanWrapper/RenderPass/SkyParameters.h>
 #include <VulkanWrapper/RenderPass/ToneMappingPass.h>
 #include <VulkanWrapper/Synchronization/Fence.h>
 #include <VulkanWrapper/Synchronization/ResourceTracker.h>
@@ -162,7 +162,8 @@ int main() {
                     vw::CommandBufferRecorder recorder(commandBuffers[index]);
 
                     // Create sky parameters for sun at zenith
-                    auto sky_params = vw::SkyParameters::create_earth_sun(90.0f);
+                    auto sky_params =
+                        vw::SkyParameters::create_earth_sun(90.0f);
 
                     // Execute deferred rendering pipeline with progressive AO
                     auto light_view = renderingManager.execute(

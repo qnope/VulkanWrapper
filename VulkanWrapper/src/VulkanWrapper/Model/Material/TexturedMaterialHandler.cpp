@@ -30,7 +30,8 @@ TexturedMaterialHandler::TexturedMaterialHandler(
     BindlessTextureManager &texture_manager)
     : Base{std::move(device), std::move(allocator), texture_manager} {}
 
-std::optional<TexturedMaterialData> TexturedMaterialHandler::try_create_gpu_data(
+std::optional<TexturedMaterialData>
+TexturedMaterialHandler::try_create_gpu_data(
     const aiMaterial *mat, const std::filesystem::path &base_path) {
     aiString texture_path;
     if (mat->GetTexture(aiTextureType_DIFFUSE, 0, &texture_path) !=
@@ -49,7 +50,8 @@ std::optional<TexturedMaterialData> TexturedMaterialHandler::try_create_gpu_data
                                 ._pad = {0, 0, 0}};
 }
 
-void TexturedMaterialHandler::setup_layout(DescriptorSetLayoutBuilder &builder) {
+void TexturedMaterialHandler::setup_layout(
+    DescriptorSetLayoutBuilder &builder) {
     // Layout matches shader: binding 0 = sampler, binding 1 = SSBO, binding 2 =
     // textures
     builder.with_sampler(vk::ShaderStageFlagBits::eFragment)

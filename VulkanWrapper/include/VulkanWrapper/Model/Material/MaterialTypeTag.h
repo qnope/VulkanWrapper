@@ -30,8 +30,9 @@ class MaterialTypeTag {
     extern const ::vw::Model::Material::MaterialTypeTag Name
 
 #define VW_DEFINE_MATERIAL_TYPE(Name)                                          \
-    const ::vw::Model::Material::MaterialTypeTag Name{                         \
-        ::vw::Model::Material::detail::g_next_material_type_id++}
+    const ::vw::Model::Material::MaterialTypeTag Name {                        \
+        ::vw::Model::Material::detail::g_next_material_type_id++               \
+    }
 // NOLINTEND(cppcoreguidelines-macro-usage)
 
 template <> struct std::hash<vw::Model::Material::MaterialTypeTag> {

@@ -9,7 +9,6 @@
 #include "VulkanWrapper/Shader/ShaderCompiler.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include "VulkanWrapper/Vulkan/Device.h"
-
 #include <filesystem>
 #include <glm/glm.hpp>
 
@@ -44,7 +43,8 @@ class SkyPass : public ScreenSpacePass<SkyPassSlot> {
      * @param light_format Output light buffer format
      * @param depth_format Depth buffer format
      */
-    SkyPass(std::shared_ptr<Device> device, std::shared_ptr<Allocator> allocator,
+    SkyPass(std::shared_ptr<Device> device,
+            std::shared_ptr<Allocator> allocator,
             const std::filesystem::path &shader_dir,
             vk::Format light_format = vk::Format::eR32G32B32A32Sfloat,
             vk::Format depth_format = vk::Format::eD32Sfloat)

@@ -92,9 +92,9 @@ class ToneMappingPassTest : public ::testing::Test {
                                                  get_shader_dir(), format);
     }
 
-    std::shared_ptr<const Image>
-    create_test_image(Width width, Height height, vk::Format format,
-                      vk::ImageUsageFlags usage) {
+    std::shared_ptr<const Image> create_test_image(Width width, Height height,
+                                                   vk::Format format,
+                                                   vk::ImageUsageFlags usage) {
         return allocator->create_image_2D(width, height, false, format, usage);
     }
 
@@ -107,21 +107,20 @@ class ToneMappingPassTest : public ::testing::Test {
 
     std::shared_ptr<const ImageView> create_hdr_view(Width width,
                                                      Height height) {
-        auto image = create_test_image(
-            width, height, vk::Format::eR16G16B16A16Sfloat,
-            vk::ImageUsageFlagBits::eColorAttachment |
-                vk::ImageUsageFlagBits::eSampled |
-                vk::ImageUsageFlagBits::eTransferDst);
+        auto image =
+            create_test_image(width, height, vk::Format::eR16G16B16A16Sfloat,
+                              vk::ImageUsageFlagBits::eColorAttachment |
+                                  vk::ImageUsageFlagBits::eSampled |
+                                  vk::ImageUsageFlagBits::eTransferDst);
         return create_image_view(image);
     }
 
-    std::shared_ptr<const ImageView> create_output_view(Width width,
-                                                        Height height,
-                                                        vk::Format format) {
-        auto image = create_test_image(
-            width, height, format,
-            vk::ImageUsageFlagBits::eColorAttachment |
-                vk::ImageUsageFlagBits::eTransferSrc);
+    std::shared_ptr<const ImageView>
+    create_output_view(Width width, Height height, vk::Format format) {
+        auto image =
+            create_test_image(width, height, format,
+                              vk::ImageUsageFlagBits::eColorAttachment |
+                                  vk::ImageUsageFlagBits::eTransferSrc);
         return create_image_view(image);
     }
 
@@ -271,7 +270,8 @@ TEST_F(ToneMappingPassTest, LazyAllocation_ReturnsValidImageView) {
     queue->submit({}, {}, {}).wait();
 }
 
-TEST_F(ToneMappingPassTest, LazyAllocation_DifferentFrameIndicesCreateDifferentImages) {
+TEST_F(ToneMappingPassTest,
+       LazyAllocation_DifferentFrameIndicesCreateDifferentImages) {
     constexpr Width width{64};
     constexpr Height height{64};
 
@@ -314,8 +314,8 @@ TEST_F(ToneMappingPassTest, LazyAllocation_SameFrameIndexReusesCachedImage) {
         vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     Barrier::ResourceTracker tracker1;
-    auto result1 =
-        pass->execute(cmd1, tracker1, Width{width}, Height{height}, 0, hdr_view);
+    auto result1 = pass->execute(cmd1, tracker1, Width{width}, Height{height},
+                                 0, hdr_view);
 
     std::ignore = cmd1.end();
     queue->enqueue_command_buffer(cmd1);
@@ -327,8 +327,8 @@ TEST_F(ToneMappingPassTest, LazyAllocation_SameFrameIndexReusesCachedImage) {
         vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     Barrier::ResourceTracker tracker2;
-    auto result2 =
-        pass->execute(cmd2, tracker2, Width{width}, Height{height}, 0, hdr_view);
+    auto result2 = pass->execute(cmd2, tracker2, Width{width}, Height{height},
+                                 0, hdr_view);
 
     std::ignore = cmd2.end();
     queue->enqueue_command_buffer(cmd2);
@@ -347,15 +347,16 @@ TEST_F(ToneMappingPassTest, Verify_NeutralOperatorPassesThrough) {
 
     auto pass = create_pass(vk::Format::eR8G8B8A8Unorm);
 
-    auto output_image = create_test_image(
-        width, height, vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eColorAttachment |
-            vk::ImageUsageFlagBits::eTransferSrc);
+    auto output_image =
+        create_test_image(width, height, vk::Format::eR8G8B8A8Unorm,
+                          vk::ImageUsageFlagBits::eColorAttachment |
+                              vk::ImageUsageFlagBits::eTransferSrc);
     auto output_view = create_image_view(output_image);
 
-    auto hdr_image = create_test_image(
-        width, height, vk::Format::eR16G16B16A16Sfloat,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst);
+    auto hdr_image =
+        create_test_image(width, height, vk::Format::eR16G16B16A16Sfloat,
+                          vk::ImageUsageFlagBits::eSampled |
+                              vk::ImageUsageFlagBits::eTransferDst);
     auto hdr_view = create_image_view(hdr_image);
 
     glm::vec4 input_hdr(0.5f, 0.5f, 0.5f, 1.0f);
@@ -388,15 +389,16 @@ TEST_F(ToneMappingPassTest, Verify_ZeroExposureProducesBlack) {
 
     auto pass = create_pass(vk::Format::eR8G8B8A8Unorm);
 
-    auto output_image = create_test_image(
-        width, height, vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eColorAttachment |
-            vk::ImageUsageFlagBits::eTransferSrc);
+    auto output_image =
+        create_test_image(width, height, vk::Format::eR8G8B8A8Unorm,
+                          vk::ImageUsageFlagBits::eColorAttachment |
+                              vk::ImageUsageFlagBits::eTransferSrc);
     auto output_view = create_image_view(output_image);
 
-    auto hdr_image = create_test_image(
-        width, height, vk::Format::eR16G16B16A16Sfloat,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst);
+    auto hdr_image =
+        create_test_image(width, height, vk::Format::eR16G16B16A16Sfloat,
+                          vk::ImageUsageFlagBits::eSampled |
+                              vk::ImageUsageFlagBits::eTransferDst);
     auto hdr_view = create_image_view(hdr_image);
 
     fill_hdr_image(hdr_image, glm::vec4(10.0f, 10.0f, 10.0f, 1.0f));
@@ -428,15 +430,16 @@ TEST_F(ToneMappingPassTest, Verify_ACESMatchesCPU) {
 
     auto pass = create_pass(vk::Format::eR8G8B8A8Unorm);
 
-    auto output_image = create_test_image(
-        width, height, vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eColorAttachment |
-            vk::ImageUsageFlagBits::eTransferSrc);
+    auto output_image =
+        create_test_image(width, height, vk::Format::eR8G8B8A8Unorm,
+                          vk::ImageUsageFlagBits::eColorAttachment |
+                              vk::ImageUsageFlagBits::eTransferSrc);
     auto output_view = create_image_view(output_image);
 
-    auto hdr_image = create_test_image(
-        width, height, vk::Format::eR16G16B16A16Sfloat,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst);
+    auto hdr_image =
+        create_test_image(width, height, vk::Format::eR16G16B16A16Sfloat,
+                          vk::ImageUsageFlagBits::eSampled |
+                              vk::ImageUsageFlagBits::eTransferDst);
     auto hdr_view = create_image_view(hdr_image);
 
     glm::vec3 hdr_input(2.0f, 2.0f, 2.0f);
@@ -470,15 +473,16 @@ TEST_F(ToneMappingPassTest, Verify_ReinhardMatchesCPU) {
 
     auto pass = create_pass(vk::Format::eR8G8B8A8Unorm);
 
-    auto output_image = create_test_image(
-        width, height, vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eColorAttachment |
-            vk::ImageUsageFlagBits::eTransferSrc);
+    auto output_image =
+        create_test_image(width, height, vk::Format::eR8G8B8A8Unorm,
+                          vk::ImageUsageFlagBits::eColorAttachment |
+                              vk::ImageUsageFlagBits::eTransferSrc);
     auto output_view = create_image_view(output_image);
 
-    auto hdr_image = create_test_image(
-        width, height, vk::Format::eR16G16B16A16Sfloat,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst);
+    auto hdr_image =
+        create_test_image(width, height, vk::Format::eR16G16B16A16Sfloat,
+                          vk::ImageUsageFlagBits::eSampled |
+                              vk::ImageUsageFlagBits::eTransferDst);
     auto hdr_view = create_image_view(hdr_image);
 
     // Reinhard(1.0) = 1.0 / (1.0 + 1.0) = 0.5
@@ -513,15 +517,16 @@ TEST_F(ToneMappingPassTest, Verify_Uncharted2MatchesCPU) {
 
     auto pass = create_pass(vk::Format::eR8G8B8A8Unorm);
 
-    auto output_image = create_test_image(
-        width, height, vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eColorAttachment |
-            vk::ImageUsageFlagBits::eTransferSrc);
+    auto output_image =
+        create_test_image(width, height, vk::Format::eR8G8B8A8Unorm,
+                          vk::ImageUsageFlagBits::eColorAttachment |
+                              vk::ImageUsageFlagBits::eTransferSrc);
     auto output_view = create_image_view(output_image);
 
-    auto hdr_image = create_test_image(
-        width, height, vk::Format::eR16G16B16A16Sfloat,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst);
+    auto hdr_image =
+        create_test_image(width, height, vk::Format::eR16G16B16A16Sfloat,
+                          vk::ImageUsageFlagBits::eSampled |
+                              vk::ImageUsageFlagBits::eTransferDst);
     auto hdr_view = create_image_view(hdr_image);
 
     glm::vec3 hdr_input(1.5f, 1.5f, 1.5f);
@@ -555,15 +560,16 @@ TEST_F(ToneMappingPassTest, Verify_ExposureScalesInput) {
 
     auto pass = create_pass(vk::Format::eR8G8B8A8Unorm);
 
-    auto output_image = create_test_image(
-        width, height, vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eColorAttachment |
-            vk::ImageUsageFlagBits::eTransferSrc);
+    auto output_image =
+        create_test_image(width, height, vk::Format::eR8G8B8A8Unorm,
+                          vk::ImageUsageFlagBits::eColorAttachment |
+                              vk::ImageUsageFlagBits::eTransferSrc);
     auto output_view = create_image_view(output_image);
 
-    auto hdr_image = create_test_image(
-        width, height, vk::Format::eR16G16B16A16Sfloat,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst);
+    auto hdr_image =
+        create_test_image(width, height, vk::Format::eR16G16B16A16Sfloat,
+                          vk::ImageUsageFlagBits::eSampled |
+                              vk::ImageUsageFlagBits::eTransferDst);
     auto hdr_view = create_image_view(hdr_image);
 
     // Input 0.5, exposure 2.0 -> effective input 1.0 -> Reinhard = 0.5
@@ -599,15 +605,16 @@ TEST_F(ToneMappingPassTest, Verify_ReinhardExtendedWhitePointAffectsResult) {
 
     auto pass = create_pass(vk::Format::eR8G8B8A8Unorm);
 
-    auto output_image = create_test_image(
-        width, height, vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eColorAttachment |
-            vk::ImageUsageFlagBits::eTransferSrc);
+    auto output_image =
+        create_test_image(width, height, vk::Format::eR8G8B8A8Unorm,
+                          vk::ImageUsageFlagBits::eColorAttachment |
+                              vk::ImageUsageFlagBits::eTransferSrc);
     auto output_view = create_image_view(output_image);
 
-    auto hdr_image = create_test_image(
-        width, height, vk::Format::eR16G16B16A16Sfloat,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst);
+    auto hdr_image =
+        create_test_image(width, height, vk::Format::eR16G16B16A16Sfloat,
+                          vk::ImageUsageFlagBits::eSampled |
+                              vk::ImageUsageFlagBits::eTransferDst);
     auto hdr_view = create_image_view(hdr_image);
 
     glm::vec3 hdr_input(3.0f, 3.0f, 3.0f);
@@ -668,15 +675,16 @@ TEST_F(ToneMappingPassTest, Verify_BrightHDRClipsToWhite) {
 
     auto pass = create_pass(vk::Format::eR8G8B8A8Unorm);
 
-    auto output_image = create_test_image(
-        width, height, vk::Format::eR8G8B8A8Unorm,
-        vk::ImageUsageFlagBits::eColorAttachment |
-            vk::ImageUsageFlagBits::eTransferSrc);
+    auto output_image =
+        create_test_image(width, height, vk::Format::eR8G8B8A8Unorm,
+                          vk::ImageUsageFlagBits::eColorAttachment |
+                              vk::ImageUsageFlagBits::eTransferSrc);
     auto output_view = create_image_view(output_image);
 
-    auto hdr_image = create_test_image(
-        width, height, vk::Format::eR16G16B16A16Sfloat,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst);
+    auto hdr_image =
+        create_test_image(width, height, vk::Format::eR16G16B16A16Sfloat,
+                          vk::ImageUsageFlagBits::eSampled |
+                              vk::ImageUsageFlagBits::eTransferDst);
     auto hdr_view = create_image_view(hdr_image);
 
     glm::vec3 hdr_input(100.0f, 100.0f, 100.0f);

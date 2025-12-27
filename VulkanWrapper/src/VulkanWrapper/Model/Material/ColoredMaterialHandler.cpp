@@ -24,9 +24,9 @@ std::optional<ColoredMaterialData> ColoredMaterialHandler::try_create_gpu_data(
     aiColor4D diffuse_color(0.5f, 0.5f, 0.5f, 1.0f);
     mat->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse_color);
 
-    return ColoredMaterialData{
-        .color = glm::vec4(diffuse_color.r, diffuse_color.g, diffuse_color.b,
-                           diffuse_color.a)};
+    return ColoredMaterialData{.color =
+                                   glm::vec4(diffuse_color.r, diffuse_color.g,
+                                             diffuse_color.b, diffuse_color.a)};
 }
 
 void ColoredMaterialHandler::setup_layout(DescriptorSetLayoutBuilder &builder) {

@@ -27,8 +27,7 @@ class DescriptorAllocator {
 
     void add_storage_image(int binding, const ImageView &image_view,
                            vk::PipelineStageFlags2 stage,
-                           vk::AccessFlags2 access,
-                           uint32_t array_element = 0);
+                           vk::AccessFlags2 access, uint32_t array_element = 0);
 
     void add_input_attachment(int binding,
                               std::shared_ptr<const ImageView> image_view,
@@ -47,14 +46,12 @@ class DescriptorAllocator {
 
     void add_sampled_image(int binding, const ImageView &image_view,
                            vk::PipelineStageFlags2 stage,
-                           vk::AccessFlags2 access,
-                           uint32_t array_element = 0);
+                           vk::AccessFlags2 access, uint32_t array_element = 0);
 
     void add_sampled_image(int binding,
                            std::shared_ptr<const ImageView> image_view,
                            vk::PipelineStageFlags2 stage,
-                           vk::AccessFlags2 access,
-                           uint32_t array_element = 0);
+                           vk::AccessFlags2 access, uint32_t array_element = 0);
 
     [[nodiscard]] std::vector<vk::WriteDescriptorSet>
     get_write_descriptors() const;
