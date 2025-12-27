@@ -1,7 +1,7 @@
 #include "Application.h"
 #include "DeferredRenderingManager.h"
 #include "RenderPassInformation.h"
-#include "SkyParameters.h"
+#include <VulkanWrapper/RenderPass/SkyParameters.h>
 #include <VulkanWrapper/3rd_party.h>
 #include <VulkanWrapper/Command/CommandBuffer.h>
 #include <VulkanWrapper/Command/CommandPool.h>
@@ -89,7 +89,7 @@ int main() {
         // No swapchain needed - dimensions are passed at execute time
         DeferredRenderingManager renderingManager(
             app.device, app.allocator, mesh_manager.material_manager(),
-            rayTracedScene);
+            rayTracedScene, "../../../VulkanWrapper/Shaders");
 
         // Create tone mapping pass for HDR to LDR conversion
         vw::ToneMappingPass tonemapping_pass(app.device, app.allocator,
@@ -162,7 +162,7 @@ int main() {
                     vw::CommandBufferRecorder recorder(commandBuffers[index]);
 
                     // Create sky parameters for sun at zenith
-                    auto sky_params = SkyParameters::create_earth_sun(90.0f);
+                    auto sky_params = vw::SkyParameters::create_earth_sun(90.0f);
 
                     // Execute deferred rendering pipeline with progressive AO
                     auto light_view = renderingManager.execute(
