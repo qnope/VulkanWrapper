@@ -227,8 +227,9 @@ TEST_F(ToneMappingPassTest, ShaderFilesExistAndCompile) {
 }
 
 TEST_F(ToneMappingPassTest, PushConstantsHasCorrectSize) {
-    // 3 members: exposure (float), operator_id (int32_t), white_point (float)
-    EXPECT_EQ(sizeof(ToneMappingPass::PushConstants), 12);
+    // 4 members: exposure (float), operator_id (int32_t), white_point (float),
+    //            luminance_scale (float)
+    EXPECT_EQ(sizeof(ToneMappingPass::PushConstants), 16);
 }
 
 TEST_F(ToneMappingPassTest, ToneMappingOperatorValues) {
@@ -365,8 +366,9 @@ TEST_F(ToneMappingPassTest, Verify_NeutralOperatorPassesThrough) {
         vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     Barrier::ResourceTracker tracker;
+    // Use luminance_scale=1.0 for backward-compatible behavior
     pass->execute(cmd, tracker, output_view, hdr_view,
-                  ToneMappingOperator::Neutral, 1.0f, 4.0f);
+                  ToneMappingOperator::Neutral, 1.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -404,8 +406,9 @@ TEST_F(ToneMappingPassTest, Verify_ZeroExposureProducesBlack) {
         vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     Barrier::ResourceTracker tracker;
+    // Use luminance_scale=1.0 for backward-compatible behavior
     pass->execute(cmd, tracker, output_view, hdr_view,
-                  ToneMappingOperator::ACES, 0.0f, 4.0f);
+                  ToneMappingOperator::ACES, 0.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -444,8 +447,9 @@ TEST_F(ToneMappingPassTest, Verify_ACESMatchesCPU) {
         vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     Barrier::ResourceTracker tracker;
+    // Use luminance_scale=1.0 for backward-compatible behavior
     pass->execute(cmd, tracker, output_view, hdr_view,
-                  ToneMappingOperator::ACES, 1.0f, 4.0f);
+                  ToneMappingOperator::ACES, 1.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -486,8 +490,9 @@ TEST_F(ToneMappingPassTest, Verify_ReinhardMatchesCPU) {
         vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     Barrier::ResourceTracker tracker;
+    // Use luminance_scale=1.0 for backward-compatible behavior
     pass->execute(cmd, tracker, output_view, hdr_view,
-                  ToneMappingOperator::Reinhard, 1.0f, 4.0f);
+                  ToneMappingOperator::Reinhard, 1.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -527,8 +532,9 @@ TEST_F(ToneMappingPassTest, Verify_Uncharted2MatchesCPU) {
         vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     Barrier::ResourceTracker tracker;
+    // Use luminance_scale=1.0 for backward-compatible behavior
     pass->execute(cmd, tracker, output_view, hdr_view,
-                  ToneMappingOperator::Uncharted2, 1.0f, 4.0f);
+                  ToneMappingOperator::Uncharted2, 1.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -570,8 +576,9 @@ TEST_F(ToneMappingPassTest, Verify_ExposureScalesInput) {
         vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     Barrier::ResourceTracker tracker;
+    // Use luminance_scale=1.0 for backward-compatible behavior
     pass->execute(cmd, tracker, output_view, hdr_view,
-                  ToneMappingOperator::Reinhard, exposure, 4.0f);
+                  ToneMappingOperator::Reinhard, exposure, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -615,8 +622,9 @@ TEST_F(ToneMappingPassTest, Verify_ReinhardExtendedWhitePointAffectsResult) {
             vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
         Barrier::ResourceTracker tracker;
+        // Use luminance_scale=1.0 for backward-compatible behavior
         pass->execute(cmd, tracker, output_view, hdr_view,
-                      ToneMappingOperator::ReinhardExtended, 1.0f, 4.0f);
+                      ToneMappingOperator::ReinhardExtended, 1.0f, 4.0f, 1.0f);
 
         std::ignore = cmd.end();
         queue->enqueue_command_buffer(cmd);
@@ -637,8 +645,9 @@ TEST_F(ToneMappingPassTest, Verify_ReinhardExtendedWhitePointAffectsResult) {
             vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
         Barrier::ResourceTracker tracker;
+        // Use luminance_scale=1.0 for backward-compatible behavior
         pass->execute(cmd, tracker, output_view, hdr_view,
-                      ToneMappingOperator::ReinhardExtended, 1.0f, 8.0f);
+                      ToneMappingOperator::ReinhardExtended, 1.0f, 8.0f, 1.0f);
 
         std::ignore = cmd.end();
         queue->enqueue_command_buffer(cmd);
@@ -678,8 +687,9 @@ TEST_F(ToneMappingPassTest, Verify_BrightHDRClipsToWhite) {
         vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     Barrier::ResourceTracker tracker;
+    // Use luminance_scale=1.0 for backward-compatible behavior
     pass->execute(cmd, tracker, output_view, hdr_view,
-                  ToneMappingOperator::ACES, 1.0f, 4.0f);
+                  ToneMappingOperator::ACES, 1.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);

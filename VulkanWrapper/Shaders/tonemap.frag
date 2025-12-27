@@ -13,9 +13,10 @@ const int OPERATOR_UNCHARTED2 = 3;
 const int OPERATOR_NEUTRAL = 4;
 
 layout(push_constant) uniform PushConstants {
-    float exposure;      // EV multiplier (default: 1.0)
-    int operator_id;     // ToneMappingOperator enum value
-    float white_point;   // For Reinhard Extended (default: 4.0)
+    float exposure;        // EV multiplier (default: 1.0)
+    int operator_id;       // ToneMappingOperator enum value
+    float white_point;     // For Reinhard Extended (default: 4.0)
+    float luminance_scale; // Normalization factor to de-normalize HDR values
 } push;
 
 // ACES (Academy Color Encoding System) approximation
@@ -92,10 +93,12 @@ void main() {
     // UVs are already in [0, 1] from fullscreen vertex shader
     vec2 uv = in_uv;
 
-    // Sample HDR buffer (already contains lit color)
+    // Sample HDR buffer
     vec3 hdr_color = texture(hdr_buffer, uv).rgb;
 
-    // Apply exposure
+    hdr_color /= push.luminance_scale;
+
+    // Apply exposure (exposure is in terms of physical luminance now)
     hdr_color *= push.exposure;
 
     // Apply tone mapping (output is linear, gamma handled by sRGB format)
