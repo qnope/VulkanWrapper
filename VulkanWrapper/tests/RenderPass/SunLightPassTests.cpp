@@ -67,7 +67,7 @@ struct RayTracingGPU {
     }
 };
 
-std::optional<RayTracingGPU> create_ray_tracing_gpu() {
+RayTracingGPU *create_ray_tracing_gpu() {
     try {
         auto instance =
             InstanceBuilder().setDebug().setApiVersion(ApiVersion::e13).build();
@@ -82,15 +82,16 @@ std::optional<RayTracingGPU> create_ray_tracing_gpu() {
 
         auto allocator = AllocatorBuilder(instance, device).build();
 
-        return RayTracingGPU{std::move(instance), std::move(device),
-                             std::move(allocator), std::nullopt};
+        // Intentionally leak to avoid static destruction order issues
+        return new RayTracingGPU{std::move(instance), std::move(device),
+                                 std::move(allocator), std::nullopt};
     } catch (...) {
-        return std::nullopt;
+        return nullptr;
     }
 }
 
-std::optional<RayTracingGPU> &get_ray_tracing_gpu() {
-    static std::optional<RayTracingGPU> gpu = create_ray_tracing_gpu();
+RayTracingGPU *get_ray_tracing_gpu() {
+    static RayTracingGPU *gpu = create_ray_tracing_gpu();
     return gpu;
 }
 
@@ -103,11 +104,10 @@ std::optional<RayTracingGPU> &get_ray_tracing_gpu() {
 class SunLightPassTest : public ::testing::Test {
   protected:
     void SetUp() override {
-        auto &gpu_opt = get_ray_tracing_gpu();
-        if (!gpu_opt) {
+        gpu = get_ray_tracing_gpu();
+        if (!gpu) {
             GTEST_SKIP() << "Ray tracing not available on this system";
         }
-        gpu = &(*gpu_opt);
 
         cmdPool = std::make_unique<CommandPool>(
             CommandPoolBuilder(gpu->device).build());
@@ -436,7 +436,7 @@ TEST_F(SunLightPassTest, BasicDiffuseLighting_SurfaceFacingSunReceivesLight) {
 
     Barrier::ResourceTracker tracker;
     pass->execute(cmd, tracker, gb.light_view, gb.depth_view, gb.color_view,
-                  gb.position_view, gb.normal_view, gb.ao_view, sky_params);
+                  gb.position_view, gb.normal_view, sky_params);
 
     std::ignore = cmd.end();
     gpu->queue().enqueue_command_buffer(cmd);
@@ -486,7 +486,7 @@ TEST_F(SunLightPassTest, BasicDiffuseLighting_SurfaceFacingAwayIsDark) {
 
     Barrier::ResourceTracker tracker;
     pass->execute(cmd, tracker, gb.light_view, gb.depth_view, gb.color_view,
-                  gb.position_view, gb.normal_view, gb.ao_view, sky_params);
+                  gb.position_view, gb.normal_view, sky_params);
 
     std::ignore = cmd.end();
     gpu->queue().enqueue_command_buffer(cmd);
@@ -494,14 +494,13 @@ TEST_F(SunLightPassTest, BasicDiffuseLighting_SurfaceFacingAwayIsDark) {
 
     auto color = read_center_pixel_light(gb.light);
 
-    // Surface facing away should receive only ambient (much less than diffuse)
+    // Surface facing away should receive no direct light
+    // (ambient/indirect is now handled by SkyLightPass, not SunLightPass)
     float luminance = color.r + color.g + color.b;
 
-    // Should have some ambient light (not zero) but it should be reduced
-    // compared to a lit surface (verified in
-    // DiffuseLighting_FacingSunVsFacingAway)
-    EXPECT_GT(luminance, 0.0f)
-        << "Surface should receive at least ambient light";
+    // Should have zero direct light since normal faces away from sun
+    EXPECT_EQ(luminance, 0.0f)
+        << "Surface facing away from sun should receive no direct light";
 }
 
 TEST_F(SunLightPassTest, DiffuseLighting_FacingSunVsFacingAway) {
@@ -535,7 +534,7 @@ TEST_F(SunLightPassTest, DiffuseLighting_FacingSunVsFacingAway) {
 
         Barrier::ResourceTracker tracker;
         pass->execute(cmd, tracker, gb.light_view, gb.depth_view, gb.color_view,
-                      gb.position_view, gb.normal_view, gb.ao_view, sky_params);
+                      gb.position_view, gb.normal_view, sky_params);
 
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
@@ -557,7 +556,7 @@ TEST_F(SunLightPassTest, DiffuseLighting_FacingSunVsFacingAway) {
 
         Barrier::ResourceTracker tracker;
         pass->execute(cmd, tracker, gb.light_view, gb.depth_view, gb.color_view,
-                      gb.position_view, gb.normal_view, gb.ao_view, sky_params);
+                      gb.position_view, gb.normal_view, sky_params);
 
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
@@ -624,7 +623,7 @@ TEST_F(SunLightPassTest, ShadowOcclusion_BlockedSurfaceReceivesOnlyAmbient) {
 
     Barrier::ResourceTracker tracker;
     pass->execute(cmd, tracker, gb.light_view, gb.depth_view, gb.color_view,
-                  gb.position_view, gb.normal_view, gb.ao_view, sky_params);
+                  gb.position_view, gb.normal_view, sky_params);
 
     std::ignore = cmd.end();
     gpu->queue().enqueue_command_buffer(cmd);
@@ -634,11 +633,10 @@ TEST_F(SunLightPassTest, ShadowOcclusion_BlockedSurfaceReceivesOnlyAmbient) {
     float luminance_shadowed =
         color_shadowed.r + color_shadowed.g + color_shadowed.b;
 
-    // Shadowed surface should receive only ambient light
-    // This should be significantly less than a fully lit surface
-    // (verified in ShadowOcclusion_LitVsShadowed test)
-    EXPECT_GT(luminance_shadowed, 0.0f)
-        << "Shadowed surface should receive at least ambient light";
+    // Shadowed surface should receive no direct light
+    // (ambient/indirect is now handled by SkyLightPass, not SunLightPass)
+    EXPECT_EQ(luminance_shadowed, 0.0f)
+        << "Shadowed surface should receive no direct light";
 }
 
 TEST_F(SunLightPassTest, ShadowOcclusion_LitVsShadowed) {
@@ -672,7 +670,7 @@ TEST_F(SunLightPassTest, ShadowOcclusion_LitVsShadowed) {
 
         Barrier::ResourceTracker tracker;
         pass->execute(cmd, tracker, gb.light_view, gb.depth_view, gb.color_view,
-                      gb.position_view, gb.normal_view, gb.ao_view, sky_params);
+                      gb.position_view, gb.normal_view, sky_params);
 
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
@@ -705,7 +703,7 @@ TEST_F(SunLightPassTest, ShadowOcclusion_LitVsShadowed) {
 
         Barrier::ResourceTracker tracker;
         pass->execute(cmd, tracker, gb.light_view, gb.depth_view, gb.color_view,
-                      gb.position_view, gb.normal_view, gb.ao_view, sky_params);
+                      gb.position_view, gb.normal_view, sky_params);
 
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
@@ -761,7 +759,7 @@ TEST_F(SunLightPassTest, AtmosphericAttenuation_SunsetIsWarmerThanNoon) {
 
         Barrier::ResourceTracker tracker;
         pass->execute(cmd, tracker, gb.light_view, gb.depth_view, gb.color_view,
-                      gb.position_view, gb.normal_view, gb.ao_view, sky_params);
+                      gb.position_view, gb.normal_view, sky_params);
 
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
@@ -786,7 +784,7 @@ TEST_F(SunLightPassTest, AtmosphericAttenuation_SunsetIsWarmerThanNoon) {
 
         Barrier::ResourceTracker tracker;
         pass->execute(cmd, tracker, gb.light_view, gb.depth_view, gb.color_view,
-                      gb.position_view, gb.normal_view, gb.ao_view, sky_params);
+                      gb.position_view, gb.normal_view, sky_params);
 
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);

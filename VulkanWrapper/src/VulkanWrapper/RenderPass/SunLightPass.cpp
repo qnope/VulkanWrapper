@@ -20,7 +20,6 @@ void SunLightPass::execute(vk::CommandBuffer cmd,
                            std::shared_ptr<const ImageView> color_view,
                            std::shared_ptr<const ImageView> position_view,
                            std::shared_ptr<const ImageView> normal_view,
-                           std::shared_ptr<const ImageView> ao_view,
                            const SkyParameters &sky_params) {
 
     vk::Extent2D extent = light_view->image()->extent2D();
@@ -42,10 +41,6 @@ void SunLightPass::execute(vk::CommandBuffer cmd,
     descriptor_allocator.add_acceleration_structure(
         3, m_tlas, vk::PipelineStageFlagBits2::eFragmentShader,
         vk::AccessFlagBits2::eAccelerationStructureReadKHR);
-    descriptor_allocator.add_combined_image(
-        4, CombinedImage(ao_view, m_sampler),
-        vk::PipelineStageFlagBits2::eFragmentShader,
-        vk::AccessFlagBits2::eShaderRead);
 
     auto descriptor_set = m_descriptor_pool.allocate_set(descriptor_allocator);
 
@@ -103,7 +98,7 @@ void SunLightPass::execute(vk::CommandBuffer cmd,
 
 DescriptorPool
 SunLightPass::create_descriptor_pool(const std::filesystem::path &shader_dir) {
-    // Create descriptor layout
+    // Create descriptor layout (no AO - ambient is handled by SkyLightPass)
     m_descriptor_layout =
         DescriptorSetLayoutBuilder(m_device)
             .with_combined_image(vk::ShaderStageFlagBits::eFragment,
@@ -114,8 +109,6 @@ SunLightPass::create_descriptor_pool(const std::filesystem::path &shader_dir) {
                                  1) // Normal
             .with_acceleration_structure(
                 vk::ShaderStageFlagBits::eFragment) // TLAS
-            .with_combined_image(vk::ShaderStageFlagBits::eFragment,
-                                 1) // AO
             .build();
 
     // Compile shaders with Vulkan 1.2 for ray query support
