@@ -1,6 +1,7 @@
 #version 450
 
-layout(set = 0, binding = 0) uniform sampler2D hdr_buffer;
+layout(set = 0, binding = 0) uniform sampler2D hdr_buffer;      // direct light
+layout(set = 0, binding = 1) uniform sampler2D indirect_buffer; // indirect light
 
 layout(location = 0) in vec2 in_uv;
 layout(location = 0) out vec4 out_color;
@@ -13,10 +14,11 @@ const int OPERATOR_UNCHARTED2 = 3;
 const int OPERATOR_NEUTRAL = 4;
 
 layout(push_constant) uniform PushConstants {
-    float exposure;        // EV multiplier (default: 1.0)
-    int operator_id;       // ToneMappingOperator enum value
-    float white_point;     // For Reinhard Extended (default: 4.0)
-    float luminance_scale; // Normalization factor to de-normalize HDR values
+    float exposure;           // EV multiplier (default: 1.0)
+    int operator_id;          // ToneMappingOperator enum value
+    float white_point;        // For Reinhard Extended (default: 4.0)
+    float luminance_scale;    // Normalization factor to de-normalize HDR values
+    float indirect_intensity; // Multiplier for indirect light (0.0 = disabled)
 } push;
 
 // ACES (Academy Color Encoding System) approximation
@@ -93,17 +95,21 @@ void main() {
     // UVs are already in [0, 1] from fullscreen vertex shader
     vec2 uv = in_uv;
 
-    // Sample HDR buffer
+    // Sample HDR buffer (direct light)
     vec3 hdr_color = texture(hdr_buffer, uv).rgb;
 
-    hdr_color /= push.luminance_scale;
+    // Sample indirect light buffer and add with intensity multiplier
+    vec3 indirect_color = texture(indirect_buffer, uv).rgb;
+    vec3 combined = hdr_color + indirect_color * push.indirect_intensity;
+
+    combined /= push.luminance_scale;
 
     // Apply exposure (exposure is in terms of physical luminance now)
-    hdr_color *= push.exposure;
+    combined *= push.exposure;
 
     // Apply tone mapping (output is linear, gamma handled by sRGB format)
     vec3 ldr_color =
-        apply_tone_mapping(hdr_color, push.operator_id, push.white_point);
+        apply_tone_mapping(combined, push.operator_id, push.white_point);
 
     out_color = vec4(ldr_color, 1.0);
 }

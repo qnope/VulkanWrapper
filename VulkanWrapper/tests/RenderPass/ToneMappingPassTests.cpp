@@ -226,9 +226,9 @@ TEST_F(ToneMappingPassTest, ShaderFilesExistAndCompile) {
 }
 
 TEST_F(ToneMappingPassTest, PushConstantsHasCorrectSize) {
-    // 4 members: exposure (float), operator_id (int32_t), white_point (float),
-    //            luminance_scale (float)
-    EXPECT_EQ(sizeof(ToneMappingPass::PushConstants), 16);
+    // 5 members: exposure (float), operator_id (int32_t), white_point (float),
+    //            luminance_scale (float), indirect_intensity (float)
+    EXPECT_EQ(sizeof(ToneMappingPass::PushConstants), 20);
 }
 
 TEST_F(ToneMappingPassTest, ToneMappingOperatorValues) {
@@ -368,7 +368,8 @@ TEST_F(ToneMappingPassTest, Verify_NeutralOperatorPassesThrough) {
 
     Barrier::ResourceTracker tracker;
     // Use luminance_scale=1.0 for backward-compatible behavior
-    pass->execute(cmd, tracker, output_view, hdr_view,
+    // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
+    pass->execute(cmd, tracker, output_view, hdr_view, nullptr, 0.0f,
                   ToneMappingOperator::Neutral, 1.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
@@ -409,7 +410,8 @@ TEST_F(ToneMappingPassTest, Verify_ZeroExposureProducesBlack) {
 
     Barrier::ResourceTracker tracker;
     // Use luminance_scale=1.0 for backward-compatible behavior
-    pass->execute(cmd, tracker, output_view, hdr_view,
+    // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
+    pass->execute(cmd, tracker, output_view, hdr_view, nullptr, 0.0f,
                   ToneMappingOperator::ACES, 0.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
@@ -451,7 +453,8 @@ TEST_F(ToneMappingPassTest, Verify_ACESMatchesCPU) {
 
     Barrier::ResourceTracker tracker;
     // Use luminance_scale=1.0 for backward-compatible behavior
-    pass->execute(cmd, tracker, output_view, hdr_view,
+    // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
+    pass->execute(cmd, tracker, output_view, hdr_view, nullptr, 0.0f,
                   ToneMappingOperator::ACES, 1.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
@@ -495,7 +498,8 @@ TEST_F(ToneMappingPassTest, Verify_ReinhardMatchesCPU) {
 
     Barrier::ResourceTracker tracker;
     // Use luminance_scale=1.0 for backward-compatible behavior
-    pass->execute(cmd, tracker, output_view, hdr_view,
+    // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
+    pass->execute(cmd, tracker, output_view, hdr_view, nullptr, 0.0f,
                   ToneMappingOperator::Reinhard, 1.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
@@ -538,7 +542,8 @@ TEST_F(ToneMappingPassTest, Verify_Uncharted2MatchesCPU) {
 
     Barrier::ResourceTracker tracker;
     // Use luminance_scale=1.0 for backward-compatible behavior
-    pass->execute(cmd, tracker, output_view, hdr_view,
+    // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
+    pass->execute(cmd, tracker, output_view, hdr_view, nullptr, 0.0f,
                   ToneMappingOperator::Uncharted2, 1.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
@@ -583,7 +588,8 @@ TEST_F(ToneMappingPassTest, Verify_ExposureScalesInput) {
 
     Barrier::ResourceTracker tracker;
     // Use luminance_scale=1.0 for backward-compatible behavior
-    pass->execute(cmd, tracker, output_view, hdr_view,
+    // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
+    pass->execute(cmd, tracker, output_view, hdr_view, nullptr, 0.0f,
                   ToneMappingOperator::Reinhard, exposure, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
@@ -630,7 +636,8 @@ TEST_F(ToneMappingPassTest, Verify_ReinhardExtendedWhitePointAffectsResult) {
 
         Barrier::ResourceTracker tracker;
         // Use luminance_scale=1.0 for backward-compatible behavior
-        pass->execute(cmd, tracker, output_view, hdr_view,
+        // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
+        pass->execute(cmd, tracker, output_view, hdr_view, nullptr, 0.0f,
                       ToneMappingOperator::ReinhardExtended, 1.0f, 4.0f, 1.0f);
 
         std::ignore = cmd.end();
@@ -653,7 +660,8 @@ TEST_F(ToneMappingPassTest, Verify_ReinhardExtendedWhitePointAffectsResult) {
 
         Barrier::ResourceTracker tracker;
         // Use luminance_scale=1.0 for backward-compatible behavior
-        pass->execute(cmd, tracker, output_view, hdr_view,
+        // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
+        pass->execute(cmd, tracker, output_view, hdr_view, nullptr, 0.0f,
                       ToneMappingOperator::ReinhardExtended, 1.0f, 8.0f, 1.0f);
 
         std::ignore = cmd.end();
@@ -696,7 +704,8 @@ TEST_F(ToneMappingPassTest, Verify_BrightHDRClipsToWhite) {
 
     Barrier::ResourceTracker tracker;
     // Use luminance_scale=1.0 for backward-compatible behavior
-    pass->execute(cmd, tracker, output_view, hdr_view,
+    // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
+    pass->execute(cmd, tracker, output_view, hdr_view, nullptr, 0.0f,
                   ToneMappingOperator::ACES, 1.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
@@ -709,6 +718,203 @@ TEST_F(ToneMappingPassTest, Verify_BrightHDRClipsToWhite) {
     EXPECT_GT(result.r, 0.95f) << "Should be near white";
     EXPECT_GT(result.g, 0.95f) << "Should be near white";
     EXPECT_GT(result.b, 0.95f) << "Should be near white";
+}
+
+// =============================================================================
+// Indirect Light Tests
+// =============================================================================
+
+TEST_F(ToneMappingPassTest, Verify_IndirectLightAddsToDirectLight) {
+    constexpr Width width{4};
+    constexpr Height height{4};
+
+    auto pass = create_pass(vk::Format::eR8G8B8A8Unorm);
+
+    auto output_image =
+        create_test_image(width, height, vk::Format::eR8G8B8A8Unorm,
+                          vk::ImageUsageFlagBits::eColorAttachment |
+                              vk::ImageUsageFlagBits::eTransferSrc);
+    auto output_view = create_image_view(output_image);
+
+    // Direct light: 0.25
+    auto direct_image =
+        create_test_image(width, height, vk::Format::eR16G16B16A16Sfloat,
+                          vk::ImageUsageFlagBits::eSampled |
+                              vk::ImageUsageFlagBits::eTransferDst);
+    auto direct_view = create_image_view(direct_image);
+    fill_hdr_image(direct_image, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
+
+    // Indirect light: 0.25
+    auto indirect_image =
+        create_test_image(width, height, vk::Format::eR16G16B16A16Sfloat,
+                          vk::ImageUsageFlagBits::eSampled |
+                              vk::ImageUsageFlagBits::eTransferDst);
+    auto indirect_view = create_image_view(indirect_image);
+    fill_hdr_image(indirect_image, glm::vec4(0.25f, 0.25f, 0.25f, 1.0f));
+
+    auto cmd = cmdPool->allocate(1)[0];
+    std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
+        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+
+    Barrier::ResourceTracker tracker;
+    // Combined: 0.25 + 0.25 * 1.0 = 0.5 -> Neutral passes through
+    pass->execute(cmd, tracker, output_view, direct_view, indirect_view, 1.0f,
+                  ToneMappingOperator::Neutral, 1.0f, 4.0f, 1.0f);
+
+    std::ignore = cmd.end();
+    queue->enqueue_command_buffer(cmd);
+    queue->submit({}, {}, {}).wait();
+
+    auto result = read_first_pixel(output_image);
+
+    // Expected: 0.25 (direct) + 0.25 * 1.0 (indirect) = 0.5
+    constexpr float tolerance = 0.03f;
+    EXPECT_NEAR(result.r, 0.5f, tolerance);
+    EXPECT_NEAR(result.g, 0.5f, tolerance);
+    EXPECT_NEAR(result.b, 0.5f, tolerance);
+}
+
+TEST_F(ToneMappingPassTest, Verify_IndirectIntensityScalesIndirectLight) {
+    constexpr Width width{4};
+    constexpr Height height{4};
+
+    auto pass = create_pass(vk::Format::eR8G8B8A8Unorm);
+
+    auto output_image =
+        create_test_image(width, height, vk::Format::eR8G8B8A8Unorm,
+                          vk::ImageUsageFlagBits::eColorAttachment |
+                              vk::ImageUsageFlagBits::eTransferSrc);
+    auto output_view = create_image_view(output_image);
+
+    // Direct light: 0.2
+    auto direct_image =
+        create_test_image(width, height, vk::Format::eR16G16B16A16Sfloat,
+                          vk::ImageUsageFlagBits::eSampled |
+                              vk::ImageUsageFlagBits::eTransferDst);
+    auto direct_view = create_image_view(direct_image);
+    fill_hdr_image(direct_image, glm::vec4(0.2f, 0.2f, 0.2f, 1.0f));
+
+    // Indirect light: 0.4
+    auto indirect_image =
+        create_test_image(width, height, vk::Format::eR16G16B16A16Sfloat,
+                          vk::ImageUsageFlagBits::eSampled |
+                              vk::ImageUsageFlagBits::eTransferDst);
+    auto indirect_view = create_image_view(indirect_image);
+    fill_hdr_image(indirect_image, glm::vec4(0.4f, 0.4f, 0.4f, 1.0f));
+
+    auto cmd = cmdPool->allocate(1)[0];
+    std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
+        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+
+    Barrier::ResourceTracker tracker;
+    // Combined: 0.2 + 0.4 * 0.5 = 0.4 -> Neutral passes through
+    pass->execute(cmd, tracker, output_view, direct_view, indirect_view, 0.5f,
+                  ToneMappingOperator::Neutral, 1.0f, 4.0f, 1.0f);
+
+    std::ignore = cmd.end();
+    queue->enqueue_command_buffer(cmd);
+    queue->submit({}, {}, {}).wait();
+
+    auto result = read_first_pixel(output_image);
+
+    // Expected: 0.2 (direct) + 0.4 * 0.5 (indirect) = 0.4
+    constexpr float tolerance = 0.03f;
+    EXPECT_NEAR(result.r, 0.4f, tolerance);
+    EXPECT_NEAR(result.g, 0.4f, tolerance);
+    EXPECT_NEAR(result.b, 0.4f, tolerance);
+}
+
+TEST_F(ToneMappingPassTest, Verify_ZeroIndirectIntensityIgnoresIndirectLight) {
+    constexpr Width width{4};
+    constexpr Height height{4};
+
+    auto pass = create_pass(vk::Format::eR8G8B8A8Unorm);
+
+    auto output_image =
+        create_test_image(width, height, vk::Format::eR8G8B8A8Unorm,
+                          vk::ImageUsageFlagBits::eColorAttachment |
+                              vk::ImageUsageFlagBits::eTransferSrc);
+    auto output_view = create_image_view(output_image);
+
+    // Direct light: 0.3
+    auto direct_image =
+        create_test_image(width, height, vk::Format::eR16G16B16A16Sfloat,
+                          vk::ImageUsageFlagBits::eSampled |
+                              vk::ImageUsageFlagBits::eTransferDst);
+    auto direct_view = create_image_view(direct_image);
+    fill_hdr_image(direct_image, glm::vec4(0.3f, 0.3f, 0.3f, 1.0f));
+
+    // Indirect light: 0.7 (should be ignored)
+    auto indirect_image =
+        create_test_image(width, height, vk::Format::eR16G16B16A16Sfloat,
+                          vk::ImageUsageFlagBits::eSampled |
+                              vk::ImageUsageFlagBits::eTransferDst);
+    auto indirect_view = create_image_view(indirect_image);
+    fill_hdr_image(indirect_image, glm::vec4(0.7f, 0.7f, 0.7f, 1.0f));
+
+    auto cmd = cmdPool->allocate(1)[0];
+    std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
+        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+
+    Barrier::ResourceTracker tracker;
+    // Combined: 0.3 + 0.7 * 0.0 = 0.3 -> Neutral passes through
+    pass->execute(cmd, tracker, output_view, direct_view, indirect_view, 0.0f,
+                  ToneMappingOperator::Neutral, 1.0f, 4.0f, 1.0f);
+
+    std::ignore = cmd.end();
+    queue->enqueue_command_buffer(cmd);
+    queue->submit({}, {}, {}).wait();
+
+    auto result = read_first_pixel(output_image);
+
+    // Expected: 0.3 (direct) + 0.7 * 0.0 (indirect) = 0.3
+    constexpr float tolerance = 0.03f;
+    EXPECT_NEAR(result.r, 0.3f, tolerance);
+    EXPECT_NEAR(result.g, 0.3f, tolerance);
+    EXPECT_NEAR(result.b, 0.3f, tolerance);
+}
+
+TEST_F(ToneMappingPassTest, Verify_NullptrIndirectViewUsesBlackFallback) {
+    constexpr Width width{4};
+    constexpr Height height{4};
+
+    auto pass = create_pass(vk::Format::eR8G8B8A8Unorm);
+
+    auto output_image =
+        create_test_image(width, height, vk::Format::eR8G8B8A8Unorm,
+                          vk::ImageUsageFlagBits::eColorAttachment |
+                              vk::ImageUsageFlagBits::eTransferSrc);
+    auto output_view = create_image_view(output_image);
+
+    // Direct light: 0.4
+    auto direct_image =
+        create_test_image(width, height, vk::Format::eR16G16B16A16Sfloat,
+                          vk::ImageUsageFlagBits::eSampled |
+                              vk::ImageUsageFlagBits::eTransferDst);
+    auto direct_view = create_image_view(direct_image);
+    fill_hdr_image(direct_image, glm::vec4(0.4f, 0.4f, 0.4f, 1.0f));
+
+    auto cmd = cmdPool->allocate(1)[0];
+    std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
+        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+
+    Barrier::ResourceTracker tracker;
+    // nullptr indirect with intensity 1.0 - should read black (0,0,0)
+    // Combined: 0.4 + 0.0 * 1.0 = 0.4 -> Neutral passes through
+    pass->execute(cmd, tracker, output_view, direct_view, nullptr, 1.0f,
+                  ToneMappingOperator::Neutral, 1.0f, 4.0f, 1.0f);
+
+    std::ignore = cmd.end();
+    queue->enqueue_command_buffer(cmd);
+    queue->submit({}, {}, {}).wait();
+
+    auto result = read_first_pixel(output_image);
+
+    // Expected: 0.4 (direct) + 0.0 * 1.0 (black indirect) = 0.4
+    constexpr float tolerance = 0.03f;
+    EXPECT_NEAR(result.r, 0.4f, tolerance);
+    EXPECT_NEAR(result.g, 0.4f, tolerance);
+    EXPECT_NEAR(result.b, 0.4f, tolerance);
 }
 
 } // namespace vw::tests
