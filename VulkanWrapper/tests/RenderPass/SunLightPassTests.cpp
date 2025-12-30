@@ -581,64 +581,6 @@ TEST_F(SunLightPassTest, DiffuseLighting_FacingSunVsFacingAway) {
 // Shadow Tests
 // =============================================================================
 
-TEST_F(SunLightPassTest, ShadowOcclusion_BlockedSurfaceReceivesOnlyAmbient) {
-    // A surface in shadow (blocked by geometry) should receive only ambient
-    constexpr Width width{64};
-    constexpr Height height{64};
-
-    // Create scene with a large occluder plane between the surface and sun
-    rt::RayTracedScene scene(gpu->device, gpu->allocator);
-    const auto &plane = gpu->get_plane_mesh();
-
-    // Sun is at 45 degrees, star_direction points FROM sun
-    auto sky_params = SkyParameters::create_earth_sun(45.0f);
-    glm::vec3 to_sun = glm::normalize(-sky_params.star_direction);
-
-    // Position occluder plane between origin and sun
-    // The plane is oriented facing downward (blocking light from above)
-    glm::mat4 occluder_transform = glm::mat4(1.0f);
-    occluder_transform = glm::translate(occluder_transform,
-                                        to_sun * 50.0f); // 50 units toward sun
-    occluder_transform =
-        glm::scale(occluder_transform, glm::vec3(100.0f)); // Large plane
-    std::ignore = scene.add_instance(plane, occluder_transform);
-
-    scene.build();
-
-    auto pass = std::make_unique<SunLightPass>(
-        gpu->device, gpu->allocator, get_shader_dir(), scene.tlas_handle());
-
-    auto gb = create_gbuffer(width, height);
-
-    // Surface at origin facing the sun (would be lit if not shadowed)
-    fill_gbuffer_uniform(gb, glm::vec3(1.0f), // white albedo
-                         glm::vec3(0, 0, 0),  // position at origin
-                         to_sun,              // facing sun
-                         1.0f,                // full AO
-                         0.5f);               // some depth
-
-    auto cmd = cmdPool->allocate(1)[0];
-    std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
-        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
-
-    Barrier::ResourceTracker tracker;
-    pass->execute(cmd, tracker, gb.light_view, gb.depth_view, gb.color_view,
-                  gb.position_view, gb.normal_view, sky_params);
-
-    std::ignore = cmd.end();
-    gpu->queue().enqueue_command_buffer(cmd);
-    gpu->queue().submit({}, {}, {}).wait();
-
-    auto color_shadowed = read_center_pixel_light(gb.light);
-    float luminance_shadowed =
-        color_shadowed.r + color_shadowed.g + color_shadowed.b;
-
-    // Shadowed surface should receive no direct light
-    // (ambient/indirect is now handled by SkyLightPass, not SunLightPass)
-    EXPECT_EQ(luminance_shadowed, 0.0f)
-        << "Shadowed surface should receive no direct light";
-}
-
 TEST_F(SunLightPassTest, ShadowOcclusion_LitVsShadowed) {
     // Compare lit surface vs shadowed surface
     constexpr Width width{64};

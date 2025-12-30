@@ -9,9 +9,11 @@
 #include <VulkanWrapper/Model/Material/BindlessMaterialManager.h>
 #include <VulkanWrapper/Model/Scene.h>
 #include <VulkanWrapper/RayTracing/RayTracedScene.h>
+#include <VulkanWrapper/RenderPass/SkyLightPass.h>
 #include <VulkanWrapper/RenderPass/SkyParameters.h>
 #include <VulkanWrapper/RenderPass/SkyPass.h>
 #include <VulkanWrapper/RenderPass/SunLightPass.h>
+#include <VulkanWrapper/RenderPass/ToneMappingPass.h>
 #include <VulkanWrapper/Synchronization/ResourceTracker.h>
 #include <VulkanWrapper/Vulkan/Device.h>
 
@@ -62,6 +64,13 @@ class DeferredRenderingManager {
         m_sun_light_pass = std::make_unique<vw::SunLightPass>(
             m_device, m_allocator, shader_dir, ray_traced_scene.tlas_handle(),
             light_format);
+
+        m_sky_light_pass = std::make_unique<vw::SkyLightPass>(
+            m_device, m_allocator, shader_dir, ray_traced_scene.tlas(),
+            light_format);
+
+        m_tone_mapping_pass = std::make_unique<vw::ToneMappingPass>(
+            m_device, m_allocator, shader_dir);
     }
 
     /**
@@ -113,18 +122,35 @@ class DeferredRenderingManager {
             cmd, tracker, width, height, frame_index, depth_view, sky_params,
             ubo_data.inverseViewProj);
 
-        // 5. Sun Light Pass: add sun lighting with ray-traced shadows and AO
+        // 5. Sun Light Pass: add sun lighting with ray-traced shadows
+        //    (direct light only - ambient/AO is handled by SkyLightPass)
         m_sun_light_pass->execute(cmd, tracker,
                                   light_view,       // from SkyPass
                                   depth_view,       // from ZPass
                                   gbuffer.color,    // albedo from ColorPass
                                   gbuffer.position, // from ColorPass
                                   gbuffer.normal,   // from ColorPass
-                                  ao_view,          // from AO Pass
                                   sky_params);
 
-        // Return AO buffer directly to visualize progressive accumulation
-        return light_view;
+        // 6. Sky Light Pass: progressive indirect sky lighting with AO
+        auto indirect_light_view = m_sky_light_pass->execute(
+            cmd, tracker, width, height, gbuffer.position, gbuffer.normal,
+            gbuffer.color, ao_view, gbuffer.tangent, gbuffer.bitangent,
+            sky_params);
+
+        // 7. Tone Mapping Pass: combine direct + indirect and convert HDR to
+        // LDR Note: Both direct and indirect light are in physical units
+        // (cd/m²). We use luminance_scale = 10000 to normalize these values
+        // before tone mapping.
+        return m_tone_mapping_pass->execute(
+            cmd, tracker, width, height, frame_index,
+            light_view,          // direct light (sky + sun)
+            indirect_light_view, // indirect light from sky light pass
+            1.0f, // indirect_intensity - physically correct addition
+            vw::ToneMappingOperator::ACES,
+            1.0f,      // exposure
+            4.0f,      // white_point
+            10000.0f); // luminance_scale - normalize physical cd/m² values
     }
 
     /** @brief Access the Z-Pass for custom usage */
@@ -147,8 +173,21 @@ class DeferredRenderingManager {
     vw::SunLightPass &sun_light_pass() { return *m_sun_light_pass; }
     const vw::SunLightPass &sun_light_pass() const { return *m_sun_light_pass; }
 
-    /** @brief Reset progressive state (call on resize) */
-    void reset() { m_ao_pass->reset_accumulation(); }
+    /** @brief Access the Sky Light Pass for custom usage */
+    vw::SkyLightPass &sky_light_pass() { return *m_sky_light_pass; }
+    const vw::SkyLightPass &sky_light_pass() const { return *m_sky_light_pass; }
+
+    /** @brief Access the Tone Mapping Pass for custom usage */
+    vw::ToneMappingPass &tone_mapping_pass() { return *m_tone_mapping_pass; }
+    const vw::ToneMappingPass &tone_mapping_pass() const {
+        return *m_tone_mapping_pass;
+    }
+
+    /** @brief Reset progressive state (call on resize or camera move) */
+    void reset() {
+        m_ao_pass->reset_accumulation();
+        m_sky_light_pass->reset_accumulation();
+    }
 
   private:
     std::shared_ptr<vw::Device> m_device;
@@ -161,4 +200,6 @@ class DeferredRenderingManager {
     std::unique_ptr<AmbientOcclusionPass> m_ao_pass;
     std::unique_ptr<vw::SkyPass> m_sky_pass;
     std::unique_ptr<vw::SunLightPass> m_sun_light_pass;
+    std::unique_ptr<vw::SkyLightPass> m_sky_light_pass;
+    std::unique_ptr<vw::ToneMappingPass> m_tone_mapping_pass;
 };

@@ -7,10 +7,10 @@ namespace vw {
 SkyLightPass::SkyLightPass(std::shared_ptr<Device> device,
                            std::shared_ptr<Allocator> allocator,
                            const std::filesystem::path &shader_dir,
-                           vk::AccelerationStructureKHR tlas,
+                           const rt::as::TopLevelAccelerationStructure &tlas,
                            vk::Format output_format)
     : Subpass(device, allocator)
-    , m_tlas(tlas)
+    , m_tlas(&tlas)
     , m_output_format(output_format)
     , m_sampler(SamplerBuilder(m_device).build())
     , m_descriptor_pool(DescriptorPool(m_device, nullptr)) {
@@ -27,6 +27,8 @@ void SkyLightPass::create_pipeline_and_sbt(
     // binding 3: image2D storage (output - read/write)
     // binding 4: sampler2D (G-Buffer albedo)
     // binding 5: sampler2D (Ambient Occlusion)
+    // binding 6: sampler2D (G-Buffer tangent)
+    // binding 7: sampler2D (G-Buffer bitangent)
     // Note: Random values are now generated per-pixel using PCG hash in shader
     constexpr auto rt_stages = vk::ShaderStageFlagBits::eRaygenKHR |
                                vk::ShaderStageFlagBits::eMissKHR |
@@ -40,6 +42,8 @@ void SkyLightPass::create_pipeline_and_sbt(
             .with_storage_image(rt_stages, 1)       // binding 3: output
             .with_combined_image(rt_stages, 1)      // binding 4: albedo
             .with_combined_image(rt_stages, 1)      // binding 5: AO
+            .with_combined_image(rt_stages, 1)      // binding 6: tangent
+            .with_combined_image(rt_stages, 1)      // binding 7: bitangent
             .build();
 
     // Create pipeline layout with push constants
@@ -98,6 +102,8 @@ SkyLightPass::execute(vk::CommandBuffer cmd, Barrier::ResourceTracker &tracker,
                       std::shared_ptr<const ImageView> normal_view,
                       std::shared_ptr<const ImageView> albedo_view,
                       std::shared_ptr<const ImageView> ao_view,
+                      std::shared_ptr<const ImageView> tangent_view,
+                      std::shared_ptr<const ImageView> bitangent_view,
                       const SkyParameters &sky_params) {
 
     // Use fixed frame_index=0 so the image is shared across all swapchain
@@ -117,7 +123,7 @@ SkyLightPass::execute(vk::CommandBuffer cmd, Barrier::ResourceTracker &tracker,
 
     // binding 0: TLAS
     descriptor_allocator.add_acceleration_structure(
-        0, m_tlas, vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+        0, m_tlas->handle(), vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
         vk::AccessFlagBits2::eAccelerationStructureReadKHR);
 
     // binding 1: Position G-Buffer
@@ -146,6 +152,18 @@ SkyLightPass::execute(vk::CommandBuffer cmd, Barrier::ResourceTracker &tracker,
     // binding 5: Ambient Occlusion
     descriptor_allocator.add_combined_image(
         5, CombinedImage(ao_view, m_sampler),
+        vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+        vk::AccessFlagBits2::eShaderRead);
+
+    // binding 6: Tangent G-Buffer
+    descriptor_allocator.add_combined_image(
+        6, CombinedImage(tangent_view, m_sampler),
+        vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+        vk::AccessFlagBits2::eShaderRead);
+
+    // binding 7: Bitangent G-Buffer
+    descriptor_allocator.add_combined_image(
+        7, CombinedImage(bitangent_view, m_sampler),
         vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
         vk::AccessFlagBits2::eShaderRead);
 
@@ -179,11 +197,8 @@ SkyLightPass::execute(vk::CommandBuffer cmd, Barrier::ResourceTracker &tracker,
                            &descriptor_handle, 0, nullptr);
 
     // Push constants
-    // Note: sample_index is kept for backwards compatibility but unused
-    // (random values are now generated per-pixel using PCG hash)
     SkyLightPushConstants constants{.sky = sky_params.to_gpu(),
                                     .frame_count = m_frame_count,
-                                    .sample_index = m_frame_count,
                                     .width = static_cast<uint32_t>(width),
                                     .height = static_cast<uint32_t>(height)};
 

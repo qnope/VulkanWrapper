@@ -9,6 +9,7 @@
 #include "VulkanWrapper/Memory/Allocator.h"
 #include "VulkanWrapper/RayTracing/RayTracingPipeline.h"
 #include "VulkanWrapper/RayTracing/ShaderBindingTable.h"
+#include "VulkanWrapper/RayTracing/TopLevelAccelerationStructure.h"
 #include "VulkanWrapper/RenderPass/SkyParameters.h"
 #include "VulkanWrapper/RenderPass/Subpass.h"
 #include "VulkanWrapper/Shader/ShaderCompiler.h"
@@ -29,12 +30,11 @@ enum class SkyLightPassSlot {
  * Shared between raygen, miss, and closest hit shaders.
  */
 struct SkyLightPushConstants {
-    SkyParametersGPU sky;  // 96 bytes
-    uint32_t frame_count;  // 4 bytes
-    uint32_t sample_index; // 4 bytes
-    uint32_t width;        // 4 bytes
-    uint32_t height;       // 4 bytes
-}; // 112 bytes total
+    SkyParametersGPU sky; // 96 bytes
+    uint32_t frame_count; // 4 bytes
+    uint32_t width;       // 4 bytes
+    uint32_t height;      // 4 bytes
+}; // 108 bytes total
 
 static_assert(sizeof(SkyLightPushConstants) <= 128,
               "SkyLightPushConstants must fit in push constant limit");
@@ -72,7 +72,7 @@ class SkyLightPass : public Subpass<SkyLightPassSlot> {
     SkyLightPass(std::shared_ptr<Device> device,
                  std::shared_ptr<Allocator> allocator,
                  const std::filesystem::path &shader_dir,
-                 vk::AccelerationStructureKHR tlas,
+                 const rt::as::TopLevelAccelerationStructure &tlas,
                  vk::Format output_format = vk::Format::eR32G32B32A32Sfloat);
 
     /**
@@ -94,6 +94,8 @@ class SkyLightPass : public Subpass<SkyLightPassSlot> {
      * @param normal_view Normal G-Buffer view
      * @param albedo_view Albedo G-Buffer view (material color)
      * @param ao_view Ambient occlusion buffer view
+     * @param tangent_view Tangent G-Buffer view (for TBN)
+     * @param bitangent_view Bitangent G-Buffer view (for TBN)
      * @param sky_params Sky and sun parameters
      * @return The output sky light image view
      */
@@ -104,6 +106,8 @@ class SkyLightPass : public Subpass<SkyLightPassSlot> {
             std::shared_ptr<const ImageView> normal_view,
             std::shared_ptr<const ImageView> albedo_view,
             std::shared_ptr<const ImageView> ao_view,
+            std::shared_ptr<const ImageView> tangent_view,
+            std::shared_ptr<const ImageView> bitangent_view,
             const SkyParameters &sky_params);
 
     /**
@@ -122,7 +126,7 @@ class SkyLightPass : public Subpass<SkyLightPassSlot> {
   private:
     void create_pipeline_and_sbt(const std::filesystem::path &shader_dir);
 
-    vk::AccelerationStructureKHR m_tlas;
+    const rt::as::TopLevelAccelerationStructure *m_tlas;
     vk::Format m_output_format;
 
     // Progressive accumulation state

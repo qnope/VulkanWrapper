@@ -7,13 +7,14 @@ layout(set = 0, binding = 2) uniform sampler2D g_normal;
 layout(set = 0, binding = 3, rgba32f) coherent uniform image2D output_image;
 layout(set = 0, binding = 4) uniform sampler2D g_albedo;
 layout(set = 0, binding = 5) uniform sampler2D g_ao;
+layout(set = 0, binding = 6) uniform sampler2D g_tangent;
+layout(set = 0, binding = 7) uniform sampler2D g_bitangent;
 
 #include "atmosphere_params.glsl"
 
 layout(push_constant) uniform PushConstants {
     SkyParameters sky;
     uint frame_count;
-    uint sample_index;
     uint width;
     uint height;
 };
@@ -36,21 +37,8 @@ float rand_float(inout uint seed) {
     return float(seed) / 4294967296.0;
 }
 
-// Build orthonormal basis from normal (Frisvad's method)
-void build_basis(vec3 N, out vec3 T, out vec3 B) {
-    if (N.z < -0.999999) {
-        T = vec3(0.0, -1.0, 0.0);
-        B = vec3(-1.0, 0.0, 0.0);
-    } else {
-        float a = 1.0 / (1.0 + N.z);
-        float b = -N.x * N.y * a;
-        T = vec3(1.0 - N.x * N.x * a, b, -N.x);
-        B = vec3(b, 1.0 - N.y * N.y * a, -N.y);
-    }
-}
-
-// Cosine-weighted hemisphere sampling
-vec3 sample_hemisphere_cosine(vec3 N, vec2 xi) {
+// Cosine-weighted hemisphere sampling using TBN from G-buffer
+vec3 sample_hemisphere_cosine(vec3 N, vec3 T, vec3 B, vec2 xi) {
     float phi = 2.0 * ATMO_PI * xi.x;
     float cos_theta = sqrt(1.0 - xi.y);
     float sin_theta = sqrt(xi.y);
@@ -58,9 +46,7 @@ vec3 sample_hemisphere_cosine(vec3 N, vec2 xi) {
     // Direction in tangent space
     vec3 local = vec3(sin_theta * cos(phi), sin_theta * sin(phi), cos_theta);
 
-    // Transform to world space
-    vec3 T, B;
-    build_basis(N, T, B);
+    // Transform to world space using TBN from G-buffer
     return normalize(T * local.x + B * local.y + N * local.z);
 }
 
@@ -91,6 +77,8 @@ void main() {
     // Sample G-buffer
     vec3 position = texture(g_position, uv).rgb;
     vec3 normal = normalize(texture(g_normal, uv).rgb);
+    vec3 tangent = normalize(texture(g_tangent, uv).rgb);
+    vec3 bitangent = normalize(texture(g_bitangent, uv).rgb);
     vec3 albedo = texture(g_albedo, uv).rgb;
     float ao = texture(g_ao, uv).r;
 
@@ -111,7 +99,8 @@ void main() {
     vec2 xi = vec2(rand_float(seed), rand_float(seed));
 
     // Generate cosine-weighted direction in hemisphere around normal
-    vec3 ray_dir = sample_hemisphere_cosine(normal, xi);
+    // Use TBN from G-buffer for consistent tangent space
+    vec3 ray_dir = sample_hemisphere_cosine(normal, tangent, bitangent, xi);
 
     // Only trace rays going upward (toward the sky)
     // For rays going downward, we skip the trace (no sky contribution)
@@ -126,8 +115,13 @@ void main() {
 
         uint flags = gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT;
 
-        // Initialize payload to zero (occluded case)
-        payload = vec3(0.0);
+        // Pass albedo via payload for multiplication in miss shader
+        // For Lambertian BRDF (f = albedo/PI) with cosine-weighted sampling:
+        // L_out = (1/N) * sum (albedo/PI) * L(wi) * cos(theta_i) / PDF(wi)
+        // With PDF = cos(theta) / PI, this simplifies to:
+        // L_out = (1/N) * sum albedo * L(wi)
+        // The PI factors cancel out completely.
+        payload = albedo;
 
         traceRayEXT(
             tlas,
@@ -145,14 +139,8 @@ void main() {
 
         // payload now contains either:
         // - vec3(0.0) if we hit geometry (from closest hit shader)
-        // - sky radiance if we missed (from miss shader)
-        //
-        // For Lambertian BRDF (f = albedo/PI) with cosine-weighted sampling:
-        // L_out = (1/N) * sum (albedo/PI) * L(wi) * cos(theta_i) / PDF(wi)
-        // With PDF = cos(theta) / PI, this simplifies to:
-        // L_out = (1/N) * sum albedo * L(wi)
-        // The PI factors cancel out completely.
-        incoming_radiance = payload * albedo;
+        // - albedo * sky_radiance if we missed (from miss shader)
+        incoming_radiance = payload;
     }
 
     // Add ambient contribution with AO (same formula as sun_light.frag)

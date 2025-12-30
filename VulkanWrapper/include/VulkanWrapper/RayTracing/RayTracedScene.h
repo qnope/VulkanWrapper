@@ -68,6 +68,8 @@ class RayTracedScene {
 
     [[nodiscard]] vk::AccelerationStructureKHR tlas_handle() const;
 
+    [[nodiscard]] const as::TopLevelAccelerationStructure &tlas() const;
+
     [[nodiscard]] size_t mesh_count() const noexcept;
 
     [[nodiscard]] size_t instance_count() const noexcept;
