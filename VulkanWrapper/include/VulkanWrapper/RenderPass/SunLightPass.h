@@ -58,8 +58,10 @@ class SunLightPass : public ScreenSpacePass<SunLightPassSlot> {
     /**
      * @brief Execute the sun light rendering pass
      *
-     * Renders sun light contribution additively onto the light buffer.
-     * The light_view is both input (for blending) and output.
+     * Renders sun light contribution (direct light only) additively onto
+     * the light buffer. The light_view is both input (for blending) and output.
+     *
+     * Note: Ambient/indirect lighting with AO is handled by SkyLightPass.
      *
      * @param cmd Command buffer to record into
      * @param tracker Resource tracker for barrier management
@@ -68,7 +70,6 @@ class SunLightPass : public ScreenSpacePass<SunLightPassSlot> {
      * @param color_view Color G-Buffer view
      * @param position_view Position G-Buffer view
      * @param normal_view Normal G-Buffer view
-     * @param ao_view Ambient occlusion buffer view
      * @param sky_params Sky and sun parameters
      */
     void execute(vk::CommandBuffer cmd, Barrier::ResourceTracker &tracker,
@@ -77,7 +78,6 @@ class SunLightPass : public ScreenSpacePass<SunLightPassSlot> {
                  std::shared_ptr<const ImageView> color_view,
                  std::shared_ptr<const ImageView> position_view,
                  std::shared_ptr<const ImageView> normal_view,
-                 std::shared_ptr<const ImageView> ao_view,
                  const SkyParameters &sky_params);
 
   private:

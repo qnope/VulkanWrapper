@@ -9,7 +9,6 @@ layout (set = 0, binding = 0) uniform sampler2D samplerColor;
 layout (set = 0, binding = 1) uniform sampler2D samplerPosition;
 layout (set = 0, binding = 2) uniform sampler2D samplerNormal;
 layout (set = 0, binding = 3) uniform accelerationStructureEXT topLevelAS;
-layout (set = 0, binding = 4) uniform sampler2D samplerAO;
 
 #include "atmosphere_params.glsl"
 
@@ -67,9 +66,6 @@ void main()
         }
     }
 
-    // Sample ambient occlusion
-    float ao = texture(samplerAO, inUV).r;
-
     // Compute atmospheric transmittance using physical Rayleigh, Mie and ozone
     vec3 atmo_trans = atmo_transmittance_to_space(sky, atmo_observer_origin(sky), L);
 
@@ -86,10 +82,7 @@ void main()
     float solid_angle = atmo_star_solid_angle(sky);
     vec3 diffuse = (albedo / ATMO_PI) * L_sun * solid_angle * NdotL * shadow;
 
-    // Add ambient term with AO (proportional to sun radiance)
-    // Using ~10% as ambient contribution
-    vec3 ambient = (albedo / ATMO_PI) * L_sun * solid_angle * 0.1 * ao;
-
     // Output final luminance (cd/m^2)
-    outColor = vec4(diffuse + ambient, 1.0);
+    // Note: Ambient/indirect lighting with AO is now handled by SkyLightPass
+    outColor = vec4(diffuse, 1.0);
 }
