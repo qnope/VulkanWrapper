@@ -1,6 +1,7 @@
 #include "Application.h"
 #include "DeferredRenderingManager.h"
 #include "RenderPassInformation.h"
+#include "SceneSetup.h"
 #include <VulkanWrapper/3rd_party.h>
 #include <VulkanWrapper/Command/CommandBuffer.h>
 #include <VulkanWrapper/Command/CommandPool.h>
@@ -18,10 +19,11 @@
 #include <VulkanWrapper/Vulkan/Queue.h>
 
 vw::Buffer<UBOData, true, vw::UniformBufferUsage>
-createUbo(const vw::Allocator &allocator) {
+createUbo(const vw::Allocator &allocator, float aspect_ratio,
+          const CameraConfig &camera) {
     auto buffer =
         vw::create_buffer<UBOData, true, vw::UniformBufferUsage>(allocator, 1);
-    UBOData data;
+    auto data = UBOData::create(aspect_ratio, camera.view_matrix());
     buffer.write(data, 0);
     return buffer;
 }
@@ -32,39 +34,18 @@ int main() {
     try {
         App app;
 
-        auto uniform_buffer = createUbo(*app.allocator);
-
-        // Create mesh manager and ray traced scene directly
+        // Create mesh manager and ray traced scene
         vw::Model::MeshManager mesh_manager(app.device, app.allocator);
         vw::rt::RayTracedScene rayTracedScene(app.device, app.allocator);
 
-        // Load Sponza
-        mesh_manager.read_file("../../../Models/Sponza/sponza.obj");
-        auto sponza_mesh_count = mesh_manager.meshes().size();
+        // Setup scene - choose one:
+        auto camera = setup_plane_with_cube_scene(mesh_manager, rayTracedScene);
+        // auto camera = setup_sponza_scene(mesh_manager, rayTracedScene);
 
-        // Add all Sponza meshes with identity transform
-        for (size_t i = 0; i < sponza_mesh_count; ++i) {
-            std::ignore = rayTracedScene.add_instance(mesh_manager.meshes()[i],
-                                                      glm::mat4(1.0f));
-        }
-
-        // Load and add a cube in the middle of the scene
-        mesh_manager.read_file("../../../Models/cube.obj");
-
-        // Create transform: scale by 300 and position in the center of Sponza
-        // Sponza's courtyard is roughly at origin, raise cube slightly above
-        // ground
-        glm::mat4 cube_transform = glm::mat4(1.0f);
-        cube_transform =
-            glm::translate(cube_transform, glm::vec3(0.0f, 200.0f, 50.0f));
-        cube_transform = glm::scale(cube_transform, glm::vec3(200.0f));
-
-        // Add cube mesh (the last mesh loaded)
-        for (size_t i = sponza_mesh_count; i < mesh_manager.meshes().size();
-             ++i) {
-            std::ignore = rayTracedScene.add_instance(mesh_manager.meshes()[i],
-                                                      cube_transform);
-        }
+        // Create UBO with camera configuration
+        float aspect = static_cast<float>(app.swapchain.width()) /
+                       static_cast<float>(app.swapchain.height());
+        auto uniform_buffer = createUbo(*app.allocator, aspect, camera);
 
         // Upload mesh data to GPU
         auto meshUploadCmd = mesh_manager.fill_command_buffer();
@@ -128,12 +109,7 @@ int main() {
             // Update projection matrix with new aspect ratio
             float aspect =
                 static_cast<float>(width) / static_cast<float>(height);
-            UBOData ubo_data;
-            ubo_data.proj =
-                glm::perspective(glm::radians(60.0f), aspect, 2.f, 5'000.f);
-            ubo_data.proj[1][1] *= -1;
-            ubo_data.inverseViewProj =
-                glm::inverse(ubo_data.proj * ubo_data.view);
+            auto ubo_data = UBOData::create(aspect, camera.view_matrix());
             uniform_buffer.write(ubo_data, 0);
 
             i = 0;
@@ -163,7 +139,7 @@ int main() {
 
                     // Create sky parameters for sun at zenith
                     auto sky_params =
-                        vw::SkyParameters::create_earth_sun(90.0f);
+                        vw::SkyParameters::create_earth_sun(175.f);
 
                     // Execute deferred rendering pipeline with progressive AO
                     auto light_view = renderingManager.execute(
@@ -216,7 +192,7 @@ int main() {
                 std::cout << "Iteration: " << i++ << std::endl;
 
                 // Take screenshot after 16 samples and exit
-                if (renderingManager.ao_pass().get_frame_count() == 26) {
+                if (renderingManager.ao_pass().get_frame_count() == 16) {
                     // Record a new command buffer just for the screenshot
                     // Note: saveToFile ends the command buffer internally,
                     // so we don't use CommandBufferRecorder here

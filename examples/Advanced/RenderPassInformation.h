@@ -27,21 +27,21 @@ struct TonemapInformation {
 };
 
 struct UBOData {
-    glm::mat4 proj = [] {
-        auto proj =
-            glm::perspective(glm::radians(60.0f), 8.0f / 6.0f, 2.f, 5'000.f);
+    glm::mat4 proj = glm::mat4(1.0f);
+    glm::mat4 view = glm::mat4(1.0f);
+    glm::mat4 inverseViewProj = glm::mat4(1.0f);
 
-        proj[1][1] *= -1;
-        return proj;
-    }();
-    // Camera positioned to view curtains and lion head in Sponza
-    glm::mat4 view =
-        glm::lookAt(glm::vec3(-900.0f, 300.0f, 100.0f), // eye position
-                    glm::vec3(500.0f, 800.0f, 0.0f),
-                    glm::vec3(0.0f, 1.0f, 0.0f)); // up vector
-
-    // Inverse view-projection for reconstructing world position from depth
-    glm::mat4 inverseViewProj = glm::inverse(proj * view);
+    /// Create UBOData with default projection for the given aspect ratio and
+    /// view matrix.
+    static UBOData create(float aspect_ratio, const glm::mat4 &view_matrix) {
+        UBOData data;
+        data.proj =
+            glm::perspective(glm::radians(60.0f), aspect_ratio, 2.f, 5'000.f);
+        data.proj[1][1] *= -1; // Flip Y for Vulkan
+        data.view = view_matrix;
+        data.inverseViewProj = glm::inverse(data.proj * data.view);
+        return data;
+    }
 };
 
 // Push constant data for per-object transformation
