@@ -1,0 +1,180 @@
+#version 460
+#extension GL_EXT_ray_tracing : require
+
+layout(set = 0, binding = 0) uniform accelerationStructureEXT tlas;
+layout(set = 0, binding = 1) uniform sampler2D g_position;
+layout(set = 0, binding = 2) uniform sampler2D g_normal;
+layout(set = 0, binding = 3, rgba32f) coherent uniform image2D output_image;
+layout(set = 0, binding = 4) uniform sampler2D g_albedo;
+layout(set = 0, binding = 5) uniform sampler2D g_ao;
+
+#include "atmosphere_params.glsl"
+
+layout(push_constant) uniform PushConstants {
+    SkyParameters sky;
+    uint frame_count;
+    uint sample_index;
+    uint width;
+    uint height;
+};
+
+#include "atmosphere_scattering.glsl"
+
+layout(location = 0) rayPayloadEXT vec3 payload;
+
+// PCG hash - high quality, fast random number generator
+// Each pixel gets unique random values based on position and frame
+uint pcg_hash(uint v) {
+    uint state = v * 747796405u + 2891336453u;
+    uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    return (word >> 22u) ^ word;
+}
+
+// Generate random float in [0, 1) from seed, advances seed
+float rand_float(inout uint seed) {
+    seed = pcg_hash(seed);
+    return float(seed) / 4294967296.0;
+}
+
+// Build orthonormal basis from normal (Frisvad's method)
+void build_basis(vec3 N, out vec3 T, out vec3 B) {
+    if (N.z < -0.999999) {
+        T = vec3(0.0, -1.0, 0.0);
+        B = vec3(-1.0, 0.0, 0.0);
+    } else {
+        float a = 1.0 / (1.0 + N.z);
+        float b = -N.x * N.y * a;
+        T = vec3(1.0 - N.x * N.x * a, b, -N.x);
+        B = vec3(b, 1.0 - N.y * N.y * a, -N.y);
+    }
+}
+
+// Cosine-weighted hemisphere sampling
+vec3 sample_hemisphere_cosine(vec3 N, vec2 xi) {
+    float phi = 2.0 * ATMO_PI * xi.x;
+    float cos_theta = sqrt(1.0 - xi.y);
+    float sin_theta = sqrt(xi.y);
+
+    // Direction in tangent space
+    vec3 local = vec3(sin_theta * cos(phi), sin_theta * sin(phi), cos_theta);
+
+    // Transform to world space
+    vec3 T, B;
+    build_basis(N, T, B);
+    return normalize(T * local.x + B * local.y + N * local.z);
+}
+
+// Compute ambient contribution using the same formula as sun_light.frag
+// ambient = (albedo / PI) * L_sun * solid_angle * 0.05 * ao
+vec3 compute_ambient(SkyParameters p, vec3 albedo, float ao) {
+    // Direction TO the sun
+    vec3 L = normalize(-atmo_star_direction(p));
+
+    // Compute atmospheric transmittance
+    vec3 atmo_trans = atmo_transmittance_to_space(p, atmo_observer_origin(p), L);
+
+    // Compute sun radiance at ground level (W/m^2/sr)
+    vec3 L_sun = atmo_sun_radiance(p) * atmo_trans * atmo_star_color(p);
+
+    // Convert to luminance units (cd/m^2/sr)
+    L_sun *= atmo_luminous_efficiency(p);
+
+    // Ambient contribution: 5% of sun irradiance modulated by AO
+    float solid_angle = atmo_star_solid_angle(p);
+    return (albedo / ATMO_PI) * L_sun * solid_angle * 0.05 * ao;
+}
+
+void main() {
+    ivec2 pixel = ivec2(gl_LaunchIDEXT.xy);
+    vec2 uv = (vec2(pixel) + 0.5) / vec2(width, height);
+
+    // Sample G-buffer
+    vec3 position = texture(g_position, uv).rgb;
+    vec3 normal = normalize(texture(g_normal, uv).rgb);
+    vec3 albedo = texture(g_albedo, uv).rgb;
+    float ao = texture(g_ao, uv).r;
+
+    // Skip pixels with invalid normals (e.g., sky pixels)
+    if (length(normal) < 0.5) {
+        // For invalid pixels, write zero on first frame, keep existing otherwise
+        if (frame_count == 0) {
+            imageStore(output_image, pixel, vec4(0.0, 0.0, 0.0, 1.0));
+        }
+        return;
+    }
+
+    // Create unique seed per pixel and frame for decorrelation
+    // This ensures neighboring pixels don't shoot rays in the same direction
+    uint seed = uint(pixel.x) + uint(pixel.y) * width + frame_count * width * height;
+
+    // Generate random sample for this pixel/frame
+    vec2 xi = vec2(rand_float(seed), rand_float(seed));
+
+    // Generate cosine-weighted direction in hemisphere around normal
+    vec3 ray_dir = sample_hemisphere_cosine(normal, xi);
+
+    // Only trace rays going upward (toward the sky)
+    // For rays going downward, we skip the trace (no sky contribution)
+    vec3 incoming_radiance = vec3(0.0);
+
+    if (ray_dir.y > 0.0) {
+        // Trace ray to check occlusion
+        float bias = max(0.1, length(position) * 0.0005);
+        vec3 ray_origin = position + normal * bias;
+        float t_min = 0.0;
+        float t_max = 100000.0;
+
+        uint flags = gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT;
+
+        // Initialize payload to zero (occluded case)
+        payload = vec3(0.0);
+
+        traceRayEXT(
+            tlas,
+            flags,
+            0xFF,
+            0,  // sbtRecordOffset - hit group
+            0,  // sbtRecordStride
+            0,  // missIndex
+            ray_origin,
+            t_min,
+            ray_dir,
+            t_max,
+            0   // payload location
+        );
+
+        // payload now contains either:
+        // - vec3(0.0) if we hit geometry (from closest hit shader)
+        // - sky radiance if we missed (from miss shader)
+        //
+        // For Lambertian BRDF (f = albedo/PI) with cosine-weighted sampling:
+        // L_out = (1/N) * sum (albedo/PI) * L(wi) * cos(theta_i) / PDF(wi)
+        // With PDF = cos(theta) / PI, this simplifies to:
+        // L_out = (1/N) * sum albedo * L(wi)
+        // The PI factors cancel out completely.
+        incoming_radiance = payload * albedo;
+    }
+
+    // Add ambient contribution with AO (same formula as sun_light.frag)
+    vec3 ambient = compute_ambient(sky, albedo, ao);
+
+    // Total indirect lighting = ray-traced sky + ambient with AO
+    vec3 total_indirect = incoming_radiance + ambient;
+
+    // Read existing accumulated value
+    vec4 accumulated = imageLoad(output_image, pixel);
+
+    // Progressive accumulation with running average
+    // blend_factor = 1/(frameCount+1) gives equal weight to all samples
+    vec3 new_color;
+    if (frame_count == 0) {
+        // First frame: just use the new sample
+        new_color = total_indirect;
+    } else {
+        // Subsequent frames: blend with accumulated result
+        float blend_factor = 1.0 / float(frame_count + 1);
+        new_color = mix(accumulated.rgb, total_indirect, blend_factor);
+    }
+
+    imageStore(output_image, pixel, vec4(new_color, 1.0));
+}
