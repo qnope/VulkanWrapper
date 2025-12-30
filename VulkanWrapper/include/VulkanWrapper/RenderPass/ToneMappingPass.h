@@ -53,10 +53,11 @@ class ToneMappingPass : public ScreenSpacePass<ToneMappingPassSlot> {
      * @brief Push constants for tone mapping configuration
      */
     struct PushConstants {
-        float exposure;        ///< EV multiplier (default: 1.0)
-        int32_t operator_id;   ///< ToneMappingOperator enum value
-        float white_point;     ///< For Reinhard Extended (default: 4.0)
-        float luminance_scale; ///< Factor to de-normalize HDR values
+        float exposure;           ///< EV multiplier (default: 1.0)
+        int32_t operator_id;      ///< ToneMappingOperator enum value
+        float white_point;        ///< For Reinhard Extended (default: 4.0)
+        float luminance_scale;    ///< Factor to de-normalize HDR values
+        float indirect_intensity; ///< Multiplier for indirect light (0.0 = off)
     };
 
     /// Default luminance scale: 1.0 means no de-normalization
@@ -89,7 +90,9 @@ class ToneMappingPass : public ScreenSpacePass<ToneMappingPassSlot> {
      * @param cmd Command buffer to record into
      * @param tracker Resource tracker for barrier management
      * @param output_view Output image view to render into
-     * @param hdr_view HDR radiance buffer (from lighting passes)
+     * @param hdr_view HDR radiance buffer (direct light from lighting passes)
+     * @param indirect_view Optional indirect light buffer (nullptr = no indirect)
+     * @param indirect_intensity Multiplier for indirect light (0.0 = disabled)
      * @param tone_operator Tone mapping operator to use
      * @param exposure Exposure multiplier (EV)
      * @param white_point White point for Reinhard Extended operator
@@ -98,6 +101,8 @@ class ToneMappingPass : public ScreenSpacePass<ToneMappingPassSlot> {
     void execute(vk::CommandBuffer cmd, Barrier::ResourceTracker &tracker,
                  std::shared_ptr<const ImageView> output_view,
                  std::shared_ptr<const ImageView> hdr_view,
+                 std::shared_ptr<const ImageView> indirect_view = nullptr,
+                 float indirect_intensity = 0.0f,
                  ToneMappingOperator tone_operator = ToneMappingOperator::ACES,
                  float exposure = 1.0f, float white_point = 4.0f,
                  float luminance_scale = DEFAULT_LUMINANCE_SCALE);
@@ -110,7 +115,9 @@ class ToneMappingPass : public ScreenSpacePass<ToneMappingPassSlot> {
      * @param width Output width
      * @param height Output height
      * @param frame_index Frame index for multi-buffering
-     * @param hdr_view HDR radiance buffer
+     * @param hdr_view HDR radiance buffer (direct light)
+     * @param indirect_view Optional indirect light buffer (nullptr = no indirect)
+     * @param indirect_intensity Multiplier for indirect light (0.0 = disabled)
      * @param tone_operator Tone mapping operator
      * @param exposure Exposure multiplier
      * @param white_point White point for Reinhard Extended
@@ -121,6 +128,8 @@ class ToneMappingPass : public ScreenSpacePass<ToneMappingPassSlot> {
     execute(vk::CommandBuffer cmd, Barrier::ResourceTracker &tracker,
             Width width, Height height, size_t frame_index,
             std::shared_ptr<const ImageView> hdr_view,
+            std::shared_ptr<const ImageView> indirect_view = nullptr,
+            float indirect_intensity = 0.0f,
             ToneMappingOperator tone_operator = ToneMappingOperator::ACES,
             float exposure = 1.0f, float white_point = 4.0f,
             float luminance_scale = DEFAULT_LUMINANCE_SCALE);
@@ -163,6 +172,7 @@ class ToneMappingPass : public ScreenSpacePass<ToneMappingPassSlot> {
 
     CompiledShaders compile_shaders(const std::filesystem::path &shader_dir);
     DescriptorPool create_descriptor_pool(CompiledShaders shaders);
+    void create_black_fallback_image();
 
     vk::Format m_output_format;
 
@@ -176,6 +186,10 @@ class ToneMappingPass : public ScreenSpacePass<ToneMappingPassSlot> {
     std::shared_ptr<DescriptorSetLayout> m_descriptor_layout;
     std::shared_ptr<const Pipeline> m_pipeline;
     DescriptorPool m_descriptor_pool;
+
+    // Fallback 1x1 black image when indirect_view is nullptr
+    std::shared_ptr<const Image> m_black_image;
+    std::shared_ptr<const ImageView> m_black_image_view;
 };
 
 } // namespace vw
