@@ -11,7 +11,6 @@
 #include <VulkanWrapper/Model/MeshManager.h>
 #include <VulkanWrapper/RayTracing/RayTracedScene.h>
 #include <VulkanWrapper/RenderPass/SkyParameters.h>
-#include <VulkanWrapper/RenderPass/ToneMappingPass.h>
 #include <VulkanWrapper/Synchronization/Fence.h>
 #include <VulkanWrapper/Synchronization/ResourceTracker.h>
 #include <VulkanWrapper/Synchronization/Semaphore.h>
@@ -39,8 +38,9 @@ int main() {
         vw::rt::RayTracedScene rayTracedScene(app.device, app.allocator);
 
         // Setup scene - choose one:
-        auto camera = setup_plane_with_cube_scene(mesh_manager, rayTracedScene);
-        // auto camera = setup_sponza_scene(mesh_manager, rayTracedScene);
+        // auto camera = setup_plane_with_cube_scene(mesh_manager,
+        // rayTracedScene);
+        auto camera = setup_sponza_scene(mesh_manager, rayTracedScene);
 
         // Create UBO with camera configuration
         float aspect = static_cast<float>(app.swapchain.width()) /
@@ -71,11 +71,6 @@ int main() {
         DeferredRenderingManager renderingManager(
             app.device, app.allocator, mesh_manager.material_manager(),
             rayTracedScene, "../../../VulkanWrapper/Shaders");
-
-        // Create tone mapping pass for HDR to LDR conversion
-        vw::ToneMappingPass tonemapping_pass(app.device, app.allocator,
-                                             "../../../VulkanWrapper/Shaders",
-                                             app.swapchain.format());
 
         // Command pool with reset support for per-frame recording
         auto commandPool = vw::CommandPoolBuilder(app.device)
@@ -138,11 +133,11 @@ int main() {
                     vw::CommandBufferRecorder recorder(commandBuffers[index]);
 
                     // Create sky parameters for sun at zenith
-                    auto sky_params =
-                        vw::SkyParameters::create_earth_sun(175.f);
+                    auto sky_params = vw::SkyParameters::create_earth_sun(90.f);
 
                     // Execute deferred rendering pipeline with progressive AO
-                    auto light_view = renderingManager.execute(
+                    // Returns tone-mapped LDR output (direct + indirect light)
+                    auto ldr_view = renderingManager.execute(
                         commandBuffers[index], transfer.resourceTracker(),
                         app.swapchain.width(), app.swapchain.height(),
                         index, // frame_index
@@ -150,16 +145,9 @@ int main() {
                         200.0f // ao_radius
                     );
 
-                    // Apply tone mapping to convert HDR light buffer to LDR
-                    tonemapping_pass.execute(
-                        commandBuffers[index], transfer.resourceTracker(),
-                        image_view, // output: swapchain image
-                        light_view, // input: HDR light buffer
-                        vw::ToneMappingOperator::ACES,
-                        1.0f,    // exposure
-                        1.0f,    // white_point
-                        10000.0f // luminance_scale
-                    );
+                    // Blit the tone-mapped result to swapchain
+                    transfer.blit(commandBuffers[index], ldr_view->image(),
+                                  image_view->image());
 
                     // Transition swapchain image to present layout
                     transfer.resourceTracker().request(vw::Barrier::ImageState{

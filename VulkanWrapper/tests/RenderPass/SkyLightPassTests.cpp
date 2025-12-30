@@ -107,7 +107,7 @@ class SkyLightPassTest : public ::testing::Test {
             CommandPoolBuilder(gpu->device).build());
     }
 
-    // Simplified G-buffer for sky light (position + normal + albedo + AO)
+    // Simplified G-buffer for sky light (position + normal + albedo + AO + TBN)
     struct GBuffer {
         std::shared_ptr<const Image> position;
         std::shared_ptr<const ImageView> position_view;
@@ -117,6 +117,10 @@ class SkyLightPassTest : public ::testing::Test {
         std::shared_ptr<const ImageView> albedo_view;
         std::shared_ptr<const Image> ao;
         std::shared_ptr<const ImageView> ao_view;
+        std::shared_ptr<const Image> tangent;
+        std::shared_ptr<const ImageView> tangent_view;
+        std::shared_ptr<const Image> bitangent;
+        std::shared_ptr<const ImageView> bitangent_view;
     };
 
     GBuffer create_gbuffer(Width width, Height height) {
@@ -158,7 +162,38 @@ class SkyLightPassTest : public ::testing::Test {
                          .setImageType(vk::ImageViewType::e2D)
                          .build();
 
+        // Tangent (for TBN)
+        gb.tangent = gpu->allocator->create_image_2D(
+            width, height, false, vk::Format::eR32G32B32A32Sfloat,
+            vk::ImageUsageFlagBits::eSampled |
+                vk::ImageUsageFlagBits::eTransferDst);
+        gb.tangent_view = ImageViewBuilder(gpu->device, gb.tangent)
+                              .setImageType(vk::ImageViewType::e2D)
+                              .build();
+
+        // Bitangent (for TBN)
+        gb.bitangent = gpu->allocator->create_image_2D(
+            width, height, false, vk::Format::eR32G32B32A32Sfloat,
+            vk::ImageUsageFlagBits::eSampled |
+                vk::ImageUsageFlagBits::eTransferDst);
+        gb.bitangent_view = ImageViewBuilder(gpu->device, gb.bitangent)
+                                .setImageType(vk::ImageViewType::e2D)
+                                .build();
+
         return gb;
+    }
+
+    // Build orthonormal basis from normal (Frisvad's method)
+    static void build_basis(glm::vec3 N, glm::vec3 &T, glm::vec3 &B) {
+        if (N.z < -0.999999f) {
+            T = glm::vec3(0.0f, -1.0f, 0.0f);
+            B = glm::vec3(-1.0f, 0.0f, 0.0f);
+        } else {
+            float a = 1.0f / (1.0f + N.z);
+            float b = -N.x * N.y * a;
+            T = glm::vec3(1.0f - N.x * N.x * a, b, -N.x);
+            B = glm::vec3(b, 1.0f - N.y * N.y * a, -N.y);
+        }
     }
 
     // Fill G-buffer with uniform values across all pixels
@@ -179,6 +214,10 @@ class SkyLightPassTest : public ::testing::Test {
             create_buffer<StagingBuffer>(*gpu->allocator, float4_size);
         auto ao_staging =
             create_buffer<StagingBuffer>(*gpu->allocator, float4_size);
+        auto tangent_staging =
+            create_buffer<StagingBuffer>(*gpu->allocator, float4_size);
+        auto bitangent_staging =
+            create_buffer<StagingBuffer>(*gpu->allocator, float4_size);
 
         // Fill position
         std::vector<float> position_data(pixel_count * 4);
@@ -194,18 +233,43 @@ class SkyLightPassTest : public ::testing::Test {
                 float4_size),
             0);
 
-        // Fill normal (normalized)
+        // Fill normal (normalized) and compute TBN
         glm::vec3 n = glm::normalize(normal);
+        glm::vec3 t, b;
+        build_basis(n, t, b);
+
         std::vector<float> normal_data(pixel_count * 4);
+        std::vector<float> tangent_data(pixel_count * 4);
+        std::vector<float> bitangent_data(pixel_count * 4);
         for (size_t i = 0; i < pixel_count; ++i) {
             normal_data[i * 4 + 0] = n.x;
             normal_data[i * 4 + 1] = n.y;
             normal_data[i * 4 + 2] = n.z;
             normal_data[i * 4 + 3] = 0.0f;
+
+            tangent_data[i * 4 + 0] = t.x;
+            tangent_data[i * 4 + 1] = t.y;
+            tangent_data[i * 4 + 2] = t.z;
+            tangent_data[i * 4 + 3] = 0.0f;
+
+            bitangent_data[i * 4 + 0] = b.x;
+            bitangent_data[i * 4 + 1] = b.y;
+            bitangent_data[i * 4 + 2] = b.z;
+            bitangent_data[i * 4 + 3] = 0.0f;
         }
         normal_staging.write(
             std::span<const std::byte>(
                 reinterpret_cast<const std::byte *>(normal_data.data()),
+                float4_size),
+            0);
+        tangent_staging.write(
+            std::span<const std::byte>(
+                reinterpret_cast<const std::byte *>(tangent_data.data()),
+                float4_size),
+            0);
+        bitangent_staging.write(
+            std::span<const std::byte>(
+                reinterpret_cast<const std::byte *>(bitangent_data.data()),
                 float4_size),
             0);
 
@@ -248,6 +312,10 @@ class SkyLightPassTest : public ::testing::Test {
         transfer.copyBufferToImage(cmd, normal_staging.handle(), gb.normal, 0);
         transfer.copyBufferToImage(cmd, albedo_staging.handle(), gb.albedo, 0);
         transfer.copyBufferToImage(cmd, ao_staging.handle(), gb.ao, 0);
+        transfer.copyBufferToImage(cmd, tangent_staging.handle(), gb.tangent,
+                                   0);
+        transfer.copyBufferToImage(cmd, bitangent_staging.handle(),
+                                   gb.bitangent, 0);
 
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
@@ -382,7 +450,7 @@ TEST_F(SkyLightPassTest, ConstructWithValidParameters) {
     scene.build();
 
     auto pass = std::make_unique<SkyLightPass>(
-        gpu->device, gpu->allocator, get_shader_dir(), scene.tlas_handle(),
+        gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
         vk::Format::eR32G32B32A32Sfloat);
 
     ASSERT_NE(pass, nullptr);
@@ -430,7 +498,7 @@ TEST_F(SkyLightPassTest, ExecuteReturnsValidImageView) {
     scene.build();
 
     auto pass = std::make_unique<SkyLightPass>(
-        gpu->device, gpu->allocator, get_shader_dir(), scene.tlas_handle(),
+        gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
         vk::Format::eR32G32B32A32Sfloat);
 
     auto gb = create_gbuffer(width, height);
@@ -445,7 +513,7 @@ TEST_F(SkyLightPassTest, ExecuteReturnsValidImageView) {
     Barrier::ResourceTracker tracker;
     auto result = pass->execute(cmd, tracker, width, height, gb.position_view,
                                 gb.normal_view, gb.albedo_view, gb.ao_view,
-                                sky_params);
+                                gb.tangent_view, gb.bitangent_view, sky_params);
 
     std::ignore = cmd.end();
     gpu->queue().enqueue_command_buffer(cmd);
@@ -470,7 +538,7 @@ TEST_F(SkyLightPassTest, InitialFrameCount_IsZero) {
     scene.build();
 
     auto pass = std::make_unique<SkyLightPass>(
-        gpu->device, gpu->allocator, get_shader_dir(), scene.tlas_handle(),
+        gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
         vk::Format::eR32G32B32A32Sfloat);
 
     EXPECT_EQ(pass->get_frame_count(), 0u);
@@ -487,7 +555,7 @@ TEST_F(SkyLightPassTest, FrameCountIncrements_AfterExecute) {
     scene.build();
 
     auto pass = std::make_unique<SkyLightPass>(
-        gpu->device, gpu->allocator, get_shader_dir(), scene.tlas_handle(),
+        gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
         vk::Format::eR32G32B32A32Sfloat);
 
     auto gb = create_gbuffer(width, height);
@@ -505,7 +573,9 @@ TEST_F(SkyLightPassTest, FrameCountIncrements_AfterExecute) {
         Barrier::ResourceTracker tracker;
         std::ignore = pass->execute(cmd, tracker, width, height,
                                     gb.position_view, gb.normal_view,
-                                    gb.albedo_view, gb.ao_view, sky_params);
+                                    gb.albedo_view, gb.ao_view,
+                                    gb.tangent_view, gb.bitangent_view,
+                                    sky_params);
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
         gpu->queue().submit({}, {}, {}).wait();
@@ -521,7 +591,9 @@ TEST_F(SkyLightPassTest, FrameCountIncrements_AfterExecute) {
         Barrier::ResourceTracker tracker;
         std::ignore = pass->execute(cmd, tracker, width, height,
                                     gb.position_view, gb.normal_view,
-                                    gb.albedo_view, gb.ao_view, sky_params);
+                                    gb.albedo_view, gb.ao_view,
+                                    gb.tangent_view, gb.bitangent_view,
+                                    sky_params);
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
         gpu->queue().submit({}, {}, {}).wait();
@@ -541,7 +613,7 @@ TEST_F(SkyLightPassTest, ResetAccumulation_ResetsFrameCountToZero) {
     scene.build();
 
     auto pass = std::make_unique<SkyLightPass>(
-        gpu->device, gpu->allocator, get_shader_dir(), scene.tlas_handle(),
+        gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
         vk::Format::eR32G32B32A32Sfloat);
 
     auto gb = create_gbuffer(width, height);
@@ -557,7 +629,9 @@ TEST_F(SkyLightPassTest, ResetAccumulation_ResetsFrameCountToZero) {
         Barrier::ResourceTracker tracker;
         std::ignore = pass->execute(cmd, tracker, width, height,
                                     gb.position_view, gb.normal_view,
-                                    gb.albedo_view, gb.ao_view, sky_params);
+                                    gb.albedo_view, gb.ao_view,
+                                    gb.tangent_view, gb.bitangent_view,
+                                    sky_params);
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
         gpu->queue().submit({}, {}, {}).wait();
@@ -590,7 +664,7 @@ TEST_F(SkyLightPassTest, ZenithSun_ProducesBlueIndirectLight) {
     scene.build();
 
     auto pass = std::make_unique<SkyLightPass>(
-        gpu->device, gpu->allocator, get_shader_dir(), scene.tlas_handle(),
+        gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
         vk::Format::eR32G32B32A32Sfloat);
 
     auto gb = create_gbuffer(width, height);
@@ -608,7 +682,8 @@ TEST_F(SkyLightPassTest, ZenithSun_ProducesBlueIndirectLight) {
             vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
         Barrier::ResourceTracker tracker;
         result = pass->execute(cmd, tracker, width, height, gb.position_view,
-                               gb.normal_view, gb.albedo_view, gb.ao_view, sky_params);
+                               gb.normal_view, gb.albedo_view, gb.ao_view,
+                               gb.tangent_view, gb.bitangent_view, sky_params);
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
         gpu->queue().submit({}, {}, {}).wait();
@@ -644,7 +719,7 @@ TEST_F(SkyLightPassTest, HorizonSun_ProducesWarmIndirectLight) {
     scene.build();
 
     auto pass = std::make_unique<SkyLightPass>(
-        gpu->device, gpu->allocator, get_shader_dir(), scene.tlas_handle(),
+        gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
         vk::Format::eR32G32B32A32Sfloat);
 
     auto gb = create_gbuffer(width, height);
@@ -661,7 +736,8 @@ TEST_F(SkyLightPassTest, HorizonSun_ProducesWarmIndirectLight) {
             vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
         Barrier::ResourceTracker tracker;
         result = pass->execute(cmd, tracker, width, height, gb.position_view,
-                               gb.normal_view, gb.albedo_view, gb.ao_view, sky_params);
+                               gb.normal_view, gb.albedo_view, gb.ao_view,
+                               gb.tangent_view, gb.bitangent_view, sky_params);
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
         gpu->queue().submit({}, {}, {}).wait();
@@ -702,7 +778,7 @@ TEST_F(SkyLightPassTest, ChromaticShift_ZenithVsHorizon) {
     glm::vec4 color_zenith;
     {
         auto pass = std::make_unique<SkyLightPass>(
-            gpu->device, gpu->allocator, get_shader_dir(), scene.tlas_handle(),
+            gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
             vk::Format::eR32G32B32A32Sfloat);
 
         auto sky_params = SkyParameters::create_earth_sun(90.0f);
@@ -713,9 +789,10 @@ TEST_F(SkyLightPassTest, ChromaticShift_ZenithVsHorizon) {
             std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
                 vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
             Barrier::ResourceTracker tracker;
-            result =
-                pass->execute(cmd, tracker, width, height, gb.position_view,
-                              gb.normal_view, gb.albedo_view, gb.ao_view, sky_params);
+            result = pass->execute(cmd, tracker, width, height, gb.position_view,
+                                   gb.normal_view, gb.albedo_view, gb.ao_view,
+                                   gb.tangent_view, gb.bitangent_view,
+                                   sky_params);
             std::ignore = cmd.end();
             gpu->queue().enqueue_command_buffer(cmd);
             gpu->queue().submit({}, {}, {}).wait();
@@ -727,7 +804,7 @@ TEST_F(SkyLightPassTest, ChromaticShift_ZenithVsHorizon) {
     glm::vec4 color_horizon;
     {
         auto pass = std::make_unique<SkyLightPass>(
-            gpu->device, gpu->allocator, get_shader_dir(), scene.tlas_handle(),
+            gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
             vk::Format::eR32G32B32A32Sfloat);
 
         auto sky_params = SkyParameters::create_earth_sun(5.0f);
@@ -738,9 +815,10 @@ TEST_F(SkyLightPassTest, ChromaticShift_ZenithVsHorizon) {
             std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
                 vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
             Barrier::ResourceTracker tracker;
-            result =
-                pass->execute(cmd, tracker, width, height, gb.position_view,
-                              gb.normal_view, gb.albedo_view, gb.ao_view, sky_params);
+            result = pass->execute(cmd, tracker, width, height, gb.position_view,
+                                   gb.normal_view, gb.albedo_view, gb.ao_view,
+                                   gb.tangent_view, gb.bitangent_view,
+                                   sky_params);
             std::ignore = cmd.end();
             gpu->queue().enqueue_command_buffer(cmd);
             gpu->queue().submit({}, {}, {}).wait();
@@ -778,7 +856,7 @@ TEST_F(SkyLightPassTest, AccumulationConverges_VarianceDecreases) {
     scene.build();
 
     auto pass = std::make_unique<SkyLightPass>(
-        gpu->device, gpu->allocator, get_shader_dir(), scene.tlas_handle(),
+        gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
         vk::Format::eR32G32B32A32Sfloat);
 
     auto gb = create_gbuffer(width, height);
@@ -797,7 +875,8 @@ TEST_F(SkyLightPassTest, AccumulationConverges_VarianceDecreases) {
         Barrier::ResourceTracker tracker;
         auto result =
             pass->execute(cmd, tracker, width, height, gb.position_view,
-                          gb.normal_view, gb.albedo_view, gb.ao_view, sky_params);
+                          gb.normal_view, gb.albedo_view, gb.ao_view,
+                          gb.tangent_view, gb.bitangent_view, sky_params);
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
         gpu->queue().submit({}, {}, {}).wait();
@@ -847,7 +926,7 @@ TEST_F(SkyLightPassTest, SurfaceFacingUp_ReceivesSkyLight) {
     scene.build();
 
     auto pass = std::make_unique<SkyLightPass>(
-        gpu->device, gpu->allocator, get_shader_dir(), scene.tlas_handle(),
+        gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
         vk::Format::eR32G32B32A32Sfloat);
 
     auto gb = create_gbuffer(width, height);
@@ -863,7 +942,8 @@ TEST_F(SkyLightPassTest, SurfaceFacingUp_ReceivesSkyLight) {
             vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
         Barrier::ResourceTracker tracker;
         result = pass->execute(cmd, tracker, width, height, gb.position_view,
-                               gb.normal_view, gb.albedo_view, gb.ao_view, sky_params);
+                               gb.normal_view, gb.albedo_view, gb.ao_view,
+                               gb.tangent_view, gb.bitangent_view, sky_params);
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
         gpu->queue().submit({}, {}, {}).wait();
@@ -895,7 +975,7 @@ TEST_F(SkyLightPassTest, SurfaceFacingDown_ReceivesLessLight) {
     glm::vec4 color_up;
     {
         auto pass = std::make_unique<SkyLightPass>(
-            gpu->device, gpu->allocator, get_shader_dir(), scene.tlas_handle(),
+            gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
             vk::Format::eR32G32B32A32Sfloat);
 
         fill_gbuffer_uniform(gb, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
@@ -906,9 +986,10 @@ TEST_F(SkyLightPassTest, SurfaceFacingDown_ReceivesLessLight) {
             std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
                 vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
             Barrier::ResourceTracker tracker;
-            result =
-                pass->execute(cmd, tracker, width, height, gb.position_view,
-                              gb.normal_view, gb.albedo_view, gb.ao_view, sky_params);
+            result = pass->execute(cmd, tracker, width, height, gb.position_view,
+                                   gb.normal_view, gb.albedo_view, gb.ao_view,
+                                   gb.tangent_view, gb.bitangent_view,
+                                   sky_params);
             std::ignore = cmd.end();
             gpu->queue().enqueue_command_buffer(cmd);
             gpu->queue().submit({}, {}, {}).wait();
@@ -920,7 +1001,7 @@ TEST_F(SkyLightPassTest, SurfaceFacingDown_ReceivesLessLight) {
     glm::vec4 color_down;
     {
         auto pass = std::make_unique<SkyLightPass>(
-            gpu->device, gpu->allocator, get_shader_dir(), scene.tlas_handle(),
+            gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
             vk::Format::eR32G32B32A32Sfloat);
 
         fill_gbuffer_uniform(gb, glm::vec3(0, 0, 0), glm::vec3(0, -1, 0));
@@ -931,9 +1012,10 @@ TEST_F(SkyLightPassTest, SurfaceFacingDown_ReceivesLessLight) {
             std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
                 vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
             Barrier::ResourceTracker tracker;
-            result =
-                pass->execute(cmd, tracker, width, height, gb.position_view,
-                              gb.normal_view, gb.albedo_view, gb.ao_view, sky_params);
+            result = pass->execute(cmd, tracker, width, height, gb.position_view,
+                                   gb.normal_view, gb.albedo_view, gb.ao_view,
+                                   gb.tangent_view, gb.bitangent_view,
+                                   sky_params);
             std::ignore = cmd.end();
             gpu->queue().enqueue_command_buffer(cmd);
             gpu->queue().submit({}, {}, {}).wait();

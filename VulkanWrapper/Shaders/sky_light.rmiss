@@ -6,7 +6,6 @@
 layout(push_constant) uniform PushConstants {
     SkyParameters sky;
     uint frame_count;
-    uint sample_index;
     uint width;
     uint height;
 };
@@ -20,5 +19,8 @@ void main() {
     // Ray missed all geometry - compute sky radiance in ray direction
     vec3 ray_dir = gl_WorldRayDirectionEXT;
 
-    payload = compute_sky_radiance(sky, ray_dir);
+    // payload contains albedo from raygen shader
+    // Multiply sky radiance by albedo for final contribution
+    vec3 albedo = payload;
+    payload = compute_sky_radiance(sky, ray_dir) * albedo;
 }

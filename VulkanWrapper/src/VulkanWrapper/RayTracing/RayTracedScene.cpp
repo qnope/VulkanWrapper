@@ -240,6 +240,13 @@ vk::AccelerationStructureKHR RayTracedScene::tlas_handle() const {
     return m_tlas->handle();
 }
 
+const as::TopLevelAccelerationStructure &RayTracedScene::tlas() const {
+    if (!m_tlas.has_value()) {
+        throw LogicException::invalid_state("TLAS not built yet");
+    }
+    return *m_tlas;
+}
+
 size_t RayTracedScene::mesh_count() const noexcept {
     return m_mesh_to_blas_index.size();
 }
