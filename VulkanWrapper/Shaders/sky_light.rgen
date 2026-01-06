@@ -1,5 +1,6 @@
 #version 460
 #extension GL_EXT_ray_tracing : require
+#extension GL_GOOGLE_include_directive : require
 
 layout(set = 0, binding = 0) uniform accelerationStructureEXT tlas;
 layout(set = 0, binding = 1) uniform sampler2D g_position;
@@ -9,6 +10,11 @@ layout(set = 0, binding = 4) uniform sampler2D g_albedo;
 layout(set = 0, binding = 5) uniform sampler2D g_ao;
 layout(set = 0, binding = 6) uniform sampler2D g_tangent;
 layout(set = 0, binding = 7) uniform sampler2D g_bitangent;
+
+// Random sampling with Cranley-Patterson rotation
+#define RANDOM_XI_BUFFER_BINDING 8
+#define RANDOM_NOISE_TEXTURE_BINDING 9
+#include "random.glsl"
 
 #include "atmosphere_params.glsl"
 
@@ -22,33 +28,6 @@ layout(push_constant) uniform PushConstants {
 #include "atmosphere_scattering.glsl"
 
 layout(location = 0) rayPayloadEXT vec3 payload;
-
-// PCG hash - high quality, fast random number generator
-// Each pixel gets unique random values based on position and frame
-uint pcg_hash(uint v) {
-    uint state = v * 747796405u + 2891336453u;
-    uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
-    return (word >> 22u) ^ word;
-}
-
-// Generate random float in [0, 1) from seed, advances seed
-float rand_float(inout uint seed) {
-    seed = pcg_hash(seed);
-    return float(seed) / 4294967296.0;
-}
-
-// Cosine-weighted hemisphere sampling using TBN from G-buffer
-vec3 sample_hemisphere_cosine(vec3 N, vec3 T, vec3 B, vec2 xi) {
-    float phi = 2.0 * ATMO_PI * xi.x;
-    float cos_theta = sqrt(1.0 - xi.y);
-    float sin_theta = sqrt(xi.y);
-
-    // Direction in tangent space
-    vec3 local = vec3(sin_theta * cos(phi), sin_theta * sin(phi), cos_theta);
-
-    // Transform to world space using TBN from G-buffer
-    return normalize(T * local.x + B * local.y + N * local.z);
-}
 
 // Compute ambient contribution using the same formula as sun_light.frag
 // ambient = (albedo / PI) * L_sun * solid_angle * 0.05 * ao
@@ -91,12 +70,8 @@ void main() {
         return;
     }
 
-    // Create unique seed per pixel and frame for decorrelation
-    // This ensures neighboring pixels don't shoot rays in the same direction
-    uint seed = uint(pixel.x) + uint(pixel.y) * width + frame_count * width * height;
-
-    // Generate random sample for this pixel/frame
-    vec2 xi = vec2(rand_float(seed), rand_float(seed));
+    // Get random sample using Cranley-Patterson rotation for per-pixel decorrelation
+    vec2 xi = get_sample(frame_count, pixel);
 
     // Generate cosine-weighted direction in hemisphere around normal
     // Use TBN from G-buffer for consistent tangent space
