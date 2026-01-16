@@ -1,14 +1,19 @@
 # Vulkan TDD Skill
 
-This skill provides Test-Driven Development guidance for VulkanWrapper development.
+This document provides Test-Driven Development guidance for VulkanWrapper development.
 
-## Invocation
+## When to Use This Guide
 
-Use `/vulkan-tdd` to activate this skill when:
+Reference this documentation when:
 - Implementing new Vulkan features
 - Adding new render passes or pipelines
 - Fixing bugs in graphics code
 - Refactoring Vulkan-related code
+
+**Usage:** Ask Claude to follow TDD practices for this project, or point to this file:
+```
+"Utilise l'approche TDD décrite dans docs/skills/vulkan-tdd/ pour implémenter X"
+```
 
 ## Workflow Overview
 
