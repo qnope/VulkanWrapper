@@ -151,3 +151,18 @@ target_link_libraries(MaterialTests
 )
 
 gtest_discover_tests(MaterialTests)
+
+# Random tests
+add_executable(RandomTests
+    Random/RandomSamplingTests.cpp
+)
+
+target_link_libraries(RandomTests
+    PRIVATE
+    TestUtils
+    VulkanWrapperCoreLibrary
+    GTest::gtest
+    GTest::gtest_main
+)
+
+gtest_discover_tests(RandomTests)
