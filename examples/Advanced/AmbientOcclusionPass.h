@@ -6,42 +6,14 @@
 #include "VulkanWrapper/Image/CombinedImage.h"
 #include "VulkanWrapper/Image/ImageView.h"
 #include "VulkanWrapper/Image/Sampler.h"
-#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
 #include "VulkanWrapper/Memory/Allocator.h"
-#include "VulkanWrapper/Memory/Buffer.h"
 #include "VulkanWrapper/Pipeline/Pipeline.h"
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
+#include "VulkanWrapper/Random/NoiseTexture.h"
+#include "VulkanWrapper/Random/RandomSamplingBuffer.h"
 #include "VulkanWrapper/RenderPass/ScreenSpacePass.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include "VulkanWrapper/Vulkan/Device.h"
-#include <array>
-#include <glm/glm.hpp>
-#include <random>
-
-// Maximum number of AO samples supported (must match shader)
-constexpr int AO_MAX_SAMPLES = 1024;
-
-// UBO structure for AO samples (matches shader layout)
-// Each sample contains (xi1, xi2) for cosine-weighted hemisphere sampling
-struct AOSamplesUBO {
-    // Using vec4 for std140 alignment, only xy are used
-    std::array<glm::vec4, AO_MAX_SAMPLES> samples;
-};
-
-// Generate random samples for cosine-weighted hemisphere sampling
-inline AOSamplesUBO generate_ao_samples() {
-    AOSamplesUBO ubo{};
-
-    std::random_device engine;
-    std::mt19937 rng(engine());
-    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-
-    for (int i = 0; i < AO_MAX_SAMPLES; ++i) {
-        ubo.samples[i] = glm::vec4(dist(rng), dist(rng), 0.0f, 0.0f);
-    }
-
-    return ubo;
-}
 
 enum class AOPassSlot {
     Output // Single accumulation buffer (no ping-pong needed with blending)
@@ -58,7 +30,7 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
   public:
     struct PushConstants {
         float aoRadius;
-        int32_t sampleIndex; // Which sample to use (0 to AO_MAX_SAMPLES-1)
+        int32_t sampleIndex; // Which sample to use (for progressive accumulation)
     };
 
     AmbientOcclusionPass(
@@ -70,13 +42,10 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
         , m_tlas(tlas)
         , m_output_format(output_format)
         , m_sampler(create_default_sampler())
-        , m_ao_samples_buffer(
-              vw::create_buffer<AOSamplesUBO, true, vw::UniformBufferUsage>(
-                  *m_allocator, 1))
+        , m_samples_buffer(vw::create_hemisphere_samples_buffer(*m_allocator))
+        , m_noise_texture(std::make_unique<vw::NoiseTexture>(
+              m_device, m_allocator, m_device->graphicsQueue()))
         , m_descriptor_pool(create_descriptor_pool()) {
-        // Initialize AO samples buffer
-        auto samples = generate_ao_samples();
-        m_ao_samples_buffer.write(samples, 0);
     }
 
     /**
@@ -145,10 +114,14 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
         descriptor_allocator.add_acceleration_structure(
             4, m_tlas, vk::PipelineStageFlagBits2::eFragmentShader,
             vk::AccessFlagBits2::eAccelerationStructureReadKHR);
-        descriptor_allocator.add_uniform_buffer(
-            5, m_ao_samples_buffer.handle(), 0, sizeof(AOSamplesUBO),
+        descriptor_allocator.add_storage_buffer(
+            5, m_samples_buffer.handle(), 0, m_samples_buffer.size_bytes(),
             vk::PipelineStageFlagBits2::eFragmentShader,
-            vk::AccessFlagBits2::eUniformRead);
+            vk::AccessFlagBits2::eShaderRead);
+        descriptor_allocator.add_combined_image(
+            6, m_noise_texture->combined_image(),
+            vk::PipelineStageFlagBits2::eFragmentShader,
+            vk::AccessFlagBits2::eShaderRead);
 
         auto descriptor_set =
             m_descriptor_pool.allocate_set(descriptor_allocator);
@@ -200,9 +173,10 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
                 .setStoreOp(vk::AttachmentStoreOp::eNone);
 
         // Push constants
-        PushConstants constants{.aoRadius = ao_radius,
-                                .sampleIndex = static_cast<int32_t>(
-                                    m_total_frame_count % AO_MAX_SAMPLES)};
+        PushConstants constants{
+            .aoRadius = ao_radius,
+            .sampleIndex = static_cast<int32_t>(
+                m_total_frame_count % vw::DUAL_SAMPLE_COUNT)};
 
         // Set blend constants for progressive accumulation
         // blend_factor = 1/(frameCount+1) gives equal weight to all samples
@@ -233,8 +207,14 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
 
   private:
     vw::DescriptorPool create_descriptor_pool() {
-        // Create descriptor layout (no history texture needed with hardware
-        // blending)
+        // Create descriptor layout:
+        // binding 0: Position G-Buffer
+        // binding 1: Normal G-Buffer
+        // binding 2: Tangent G-Buffer
+        // binding 3: Bitangent G-Buffer
+        // binding 4: TLAS
+        // binding 5: Hemisphere samples buffer
+        // binding 6: Noise texture
         m_descriptor_layout =
             vw::DescriptorSetLayoutBuilder(m_device)
                 .with_combined_image(vk::ShaderStageFlagBits::eFragment,
@@ -247,8 +227,10 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
                                      1) // Bitangent
                 .with_acceleration_structure(
                     vk::ShaderStageFlagBits::eFragment) // TLAS
-                .with_uniform_buffer(vk::ShaderStageFlagBits::eFragment,
-                                     1) // AO samples UBO
+                .with_storage_buffer(vk::ShaderStageFlagBits::eFragment,
+                                     1) // Xi samples
+                .with_combined_image(vk::ShaderStageFlagBits::eFragment,
+                                     1) // Noise texture
                 .build();
 
         // Create pipeline with blending for temporal accumulation
@@ -277,7 +259,8 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
 
     // Resources (order matters! m_pipeline must be before m_descriptor_pool)
     std::shared_ptr<const vw::Sampler> m_sampler;
-    vw::Buffer<AOSamplesUBO, true, vw::UniformBufferUsage> m_ao_samples_buffer;
+    vw::DualRandomSampleBuffer m_samples_buffer;
+    std::unique_ptr<vw::NoiseTexture> m_noise_texture;
     std::shared_ptr<vw::DescriptorSetLayout> m_descriptor_layout;
     std::shared_ptr<const vw::Pipeline> m_pipeline;
     vw::DescriptorPool m_descriptor_pool;

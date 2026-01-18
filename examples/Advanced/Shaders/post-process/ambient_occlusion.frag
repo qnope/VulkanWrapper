@@ -1,5 +1,6 @@
 #version 460
 #extension GL_EXT_ray_query : require
+#extension GL_GOOGLE_include_directive : require
 
 layout (location = 0) in vec2 inUV;
 
@@ -11,46 +12,15 @@ layout (set = 0, binding = 2) uniform sampler2D samplerTangent;
 layout (set = 0, binding = 3) uniform sampler2D samplerBitangent;
 layout (set = 0, binding = 4) uniform accelerationStructureEXT topLevelAS;
 
-// Maximum number of samples supported
-const int MAX_SAMPLES = 1024;
-
-// UBO containing random values for cosine-weighted sampling
-layout (set = 0, binding = 5) uniform AOSamples {
-    // xi1 is used for azimuthal angle (phi = 2*PI*xi1)
-    // xi2 is used for polar angle via cosine-weighted distribution (cos(theta) = sqrt(xi2))
-    vec4 samples[MAX_SAMPLES]; // xy = (xi1, xi2) for each sample
-} aoSamples;
+// Random sampling with Cranley-Patterson rotation
+#define RANDOM_XI_BUFFER_BINDING 5
+#define RANDOM_NOISE_TEXTURE_BINDING 6
+#include "random.glsl"
 
 layout (push_constant) uniform PushConstants {
     float aoRadius;
-    int sampleIndex; // Which sample to use this frame (0 to MAX_SAMPLES-1)
+    int sampleIndex; // Which sample to use this frame (for progressive accumulation)
 } pushConstants;
-
-// Compute cosine-weighted hemisphere direction from random values
-// Uses the standard cosine-weighted sampling formula:
-// phi = 2*PI*xi1
-// cos(theta) = sqrt(xi2), sin(theta) = sqrt(1 - xi2)
-// x = sin(theta) * cos(phi)
-// y = sin(theta) * sin(phi)
-// z = cos(theta)
-// Simple hash function for per-pixel randomization
-float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-}
-
-vec3 cosineWeightedDirection(int index, float rotationAngle) {
-    vec2 xi = aoSamples.samples[index].xy;
-    // Add per-pixel rotation to the azimuthal angle
-    float phi = 2.0 * 3.14159265359 * xi.x + rotationAngle;
-    float cosTheta = sqrt(1.0 - xi.y);
-    float sinTheta = sqrt(xi.y);
-
-    return vec3(
-        sinTheta * cos(phi),
-        sinTheta * sin(phi),
-        cosTheta
-    );
-}
 
 void main()
 {
@@ -68,17 +38,14 @@ void main()
     vec3 tangent = normalize(texture(samplerTangent, inUV).rgb);
     vec3 bitangent = normalize(texture(samplerBitangent, inUV).rgb);
 
-    // Build TBN matrix to transform from tangent space to world space
-    mat3 TBN = mat3(tangent, bitangent, normal);
-
     float aoRadius = pushConstants.aoRadius;
 
-    // Per-pixel random rotation to break up banding patterns
-    // Using sampleIndex ensures different rotation each frame for same pixel
-    float rotationAngle = hash(gl_FragCoord.xy + float(pushConstants.sampleIndex) * 0.1) * 2.0 * 3.14159265359;
+    // Get random sample using Cranley-Patterson rotation for per-pixel decorrelation
+    ivec2 pixel = ivec2(gl_FragCoord.xy);
+    vec2 xi = get_sample(uint(pushConstants.sampleIndex), pixel);
 
-    // Single sample this frame using the sample index from push constants
-    vec3 sampleDir = TBN * cosineWeightedDirection(pushConstants.sampleIndex, rotationAngle);
+    // Generate cosine-weighted direction in hemisphere around normal
+    vec3 sampleDir = sample_hemisphere_cosine(normal, tangent, bitangent, xi);
 
     // Offset ray origin along normal to avoid self-intersection
     vec3 rayOrigin = position + normal * 0.01;
