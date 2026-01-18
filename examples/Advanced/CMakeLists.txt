@@ -22,5 +22,5 @@ VwCompileShader(Main Shaders/RayTracing/miss.rmiss Shaders/RayTracing/miss.rmiss
 VwCompileShader(Main Shaders/RayTracing/hit.rchit Shaders/RayTracing/hit.rchit.spv --target-env vulkan1.2)
 
 VwCompileShader(Main ../../VulkanWrapper/Shaders/fullscreen.vert Shaders/fullscreen.spv)
-VwCompileShader(Main Shaders/post-process/ambient_occlusion.frag Shaders/post-process/ambient_occlusion.spv --target-env vulkan1.2)
+VwCompileShader(Main Shaders/post-process/ambient_occlusion.frag Shaders/post-process/ambient_occlusion.spv --target-env vulkan1.2 -I${CMAKE_CURRENT_SOURCE_DIR}/../../VulkanWrapper/Shaders/include)
 

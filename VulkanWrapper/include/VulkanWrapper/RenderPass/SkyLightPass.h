@@ -7,6 +7,8 @@
 #include "VulkanWrapper/Image/ImageView.h"
 #include "VulkanWrapper/Image/Sampler.h"
 #include "VulkanWrapper/Memory/Allocator.h"
+#include "VulkanWrapper/Random/NoiseTexture.h"
+#include "VulkanWrapper/Random/RandomSamplingBuffer.h"
 #include "VulkanWrapper/RayTracing/RayTracingPipeline.h"
 #include "VulkanWrapper/RayTracing/ShaderBindingTable.h"
 #include "VulkanWrapper/RayTracing/TopLevelAccelerationStructure.h"
@@ -138,6 +140,10 @@ class SkyLightPass : public Subpass<SkyLightPassSlot> {
     std::unique_ptr<rt::RayTracingPipeline> m_pipeline;
     std::unique_ptr<rt::ShaderBindingTable> m_sbt;
     DescriptorPool m_descriptor_pool;
+
+    // Random sampling resources
+    DualRandomSampleBuffer m_samples_buffer;
+    std::unique_ptr<NoiseTexture> m_noise_texture;
 };
 
 } // namespace vw

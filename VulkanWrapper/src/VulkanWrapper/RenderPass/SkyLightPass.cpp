@@ -13,7 +13,10 @@ SkyLightPass::SkyLightPass(std::shared_ptr<Device> device,
     , m_tlas(&tlas)
     , m_output_format(output_format)
     , m_sampler(SamplerBuilder(m_device).build())
-    , m_descriptor_pool(DescriptorPool(m_device, nullptr)) {
+    , m_descriptor_pool(DescriptorPool(m_device, nullptr))
+    , m_samples_buffer(create_hemisphere_samples_buffer(*m_allocator))
+    , m_noise_texture(std::make_unique<NoiseTexture>(
+          m_device, m_allocator, m_device->graphicsQueue())) {
     // Create pipeline and SBT
     create_pipeline_and_sbt(shader_dir);
 }
@@ -29,7 +32,8 @@ void SkyLightPass::create_pipeline_and_sbt(
     // binding 5: sampler2D (Ambient Occlusion)
     // binding 6: sampler2D (G-Buffer tangent)
     // binding 7: sampler2D (G-Buffer bitangent)
-    // Note: Random values are now generated per-pixel using PCG hash in shader
+    // binding 8: SSBO (hemisphere samples for random sampling)
+    // binding 9: sampler2D (noise texture for per-pixel decorrelation)
     constexpr auto rt_stages = vk::ShaderStageFlagBits::eRaygenKHR |
                                vk::ShaderStageFlagBits::eMissKHR |
                                vk::ShaderStageFlagBits::eClosestHitKHR;
@@ -44,6 +48,8 @@ void SkyLightPass::create_pipeline_and_sbt(
             .with_combined_image(rt_stages, 1)      // binding 5: AO
             .with_combined_image(rt_stages, 1)      // binding 6: tangent
             .with_combined_image(rt_stages, 1)      // binding 7: bitangent
+            .with_storage_buffer(rt_stages, 1)      // binding 8: Xi samples
+            .with_combined_image(rt_stages, 1)      // binding 9: noise texture
             .build();
 
     // Create pipeline layout with push constants
@@ -164,6 +170,18 @@ SkyLightPass::execute(vk::CommandBuffer cmd, Barrier::ResourceTracker &tracker,
     // binding 7: Bitangent G-Buffer
     descriptor_allocator.add_combined_image(
         7, CombinedImage(bitangent_view, m_sampler),
+        vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+        vk::AccessFlagBits2::eShaderRead);
+
+    // binding 8: Hemisphere samples buffer
+    descriptor_allocator.add_storage_buffer(
+        8, m_samples_buffer.handle(), 0, m_samples_buffer.size_bytes(),
+        vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+        vk::AccessFlagBits2::eShaderRead);
+
+    // binding 9: Noise texture
+    descriptor_allocator.add_combined_image(
+        9, m_noise_texture->combined_image(),
         vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
         vk::AccessFlagBits2::eShaderRead);
 
