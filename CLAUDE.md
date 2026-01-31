@@ -9,6 +9,7 @@ VulkanWrapper is a modern C++23 library providing high-level abstractions over t
 - **RAII** for automatic resource management
 - **Builder patterns** for fluent object construction
 - **Modern Vulkan 1.3** features (dynamic rendering, synchronization2, ray tracing)
+- **Physical-based rendering** with radiance-based calculations
 
 ## Build Commands
 
@@ -85,12 +86,13 @@ VulkanWrapper/
 │   ├── include/VulkanWrapper/  # Public headers
 │   │   ├── Command/         # Command buffer recording
 │   │   ├── Descriptors/     # Descriptor sets and layouts
-│   │   ├── Image/           # Images, views, samplers
+│   │   ├── Image/           # Images, views, samplers, CombinedImage
 │   │   ├── Memory/          # Allocator, buffers, resource tracking
-│   │   ├── Model/           # Mesh loading and materials
+│   │   ├── Model/           # Mesh, materials, scene management
 │   │   ├── Pipeline/        # Graphics/compute pipelines
+│   │   ├── Random/          # Random sampling infrastructure
 │   │   ├── RayTracing/      # RT acceleration structures
-│   │   ├── RenderPass/      # Subpass and screen-space passes
+│   │   ├── RenderPass/      # Subpass, screen-space passes, sky/lighting
 │   │   ├── Shader/          # Shader compilation
 │   │   ├── Synchronization/ # Fences, semaphores, barriers
 │   │   ├── Utils/           # Error handling, helpers
@@ -98,7 +100,9 @@ VulkanWrapper/
 │   │   └── Window/          # SDL3 window management
 │   ├── src/VulkanWrapper/   # Implementation files
 │   ├── tests/               # Unit tests (GTest)
-│   └── Shaders/             # Common shaders (fullscreen.vert)
+│   └── Shaders/             # Common shaders and includes
+│       ├── fullscreen.vert
+│       └── include/         # Shared GLSL includes
 ├── examples/
 │   ├── Application/         # Base application framework
 │   └── Advanced/            # Deferred rendering demo
@@ -139,6 +143,10 @@ VulkanWrapper/
    tracker.flush(cmd);               // Generate barriers
    ```
 
+5. **Lazy Image Allocation**: `Subpass` base class manages image cache with automatic cleanup on dimension changes
+
+6. **Functional Passes**: Render passes don't force image allocation; they return views, caller manages buffers
+
 ### Module Details
 
 **Vulkan/** - Core initialization
@@ -161,6 +169,7 @@ VulkanWrapper/
 - `Sampler`: Filtering and addressing modes
 - `ImageLoader`: Load from disk (via SDL3_image)
 - `Mipmap`: Automatic mipmap generation
+- `CombinedImage`: Packages ImageView + Sampler for descriptor binding
 
 **Command/** - Recording
 - `CommandPool`: Command buffer allocation
@@ -177,18 +186,46 @@ VulkanWrapper/
 - `DescriptorPool`, `DescriptorSet`: Allocation and management
 - `DescriptorAllocator`: Tracks updates and states
 - `Vertex`: Concept + implementations for vertex types
+  - `ColoredVertex<Position>`: Position + color
+  - `ColoredAndTexturedVertex<Position>`: Position + color + UV
+  - `FullVertex3D`: Position + normal + tangent + bitangent + UV
+
+**Random/** - Random sampling infrastructure
+- `RandomSamplingBuffer`: Centralized random sampling for ray tracing
+  - `DualRandomSample`: 4096 precomputed hemisphere samples (vec2 array)
+  - `generate_hemisphere_samples()`: Reproducible samples with seed
+  - `create_hemisphere_samples_buffer()`: GPU storage buffer creation
+- `NoiseTexture`: 4096x4096 RG32F noise texture for Cranley-Patterson rotation
 
 **RenderPass/** - Rendering abstraction (Vulkan 1.3 dynamic rendering)
-- `Subpass<SlotEnum>`: Base class with lazy image allocation
+- `Subpass<SlotEnum>`: Base class with lazy image allocation (cached by slot/width/height/frame)
 - `ScreenSpacePass<SlotEnum>`: Full-screen post-processing helpers
+  - `create_default_sampler()`: Linear filtering, clamp-to-edge
+  - `render_fullscreen()`: Handles RenderingInfo, viewport, binding, push constants
 - `create_screen_space_pipeline()`: Pipeline factory for screen-space passes
+- `SkyParameters`: Physical sky parameter system
+  - `SkyParametersGPU`: 96-byte GPU-compatible struct (matches GLSL)
+  - `SkyParameters`: CPU-side physical parameters
+  - `create_earth_sun()`: Preconfigured Earth-Sun system
+  - Uses radiance values (cd/m²), not illuminance
+- **Concrete Passes:**
+  - `SkyPass`: Atmospheric rendering using Rayleigh/Mie scattering
+  - `SunLightPass`: Direct sun lighting with ray-traced shadows
+  - `SkyLightPass`: Ray-traced indirect sky lighting with progressive accumulation
+  - `ToneMappingPass`: HDR→LDR conversion (ACES, Reinhard, Uncharted2, Neutral)
 
-**Model/** - 3D assets
+**Model/** - 3D assets (namespace: `vw::Model`)
 - `Mesh`, `MeshManager`: Mesh data loading (via Assimp)
-- `Material`: Polymorphic material system
-- `MaterialManagerMap`: Material type to descriptor pool mapping
+- `Mesh::geometry_hash()`: Hash-based geometry identity for GPU data sharing
+- `Scene`: Container for mesh instances with transforms
+- `MeshInstance`: Mesh + transformation pair
+- **Material System** (namespace: `vw::Model::Material`):
+  - `Material`: Simple struct with `MaterialTypeTag` and `material_index`
+  - `BindlessMaterialManager`: Manages material handlers and texture allocations
+  - Handler system: `ColoredMaterialHandler`, `TexturedMaterialHandler`, `IMaterialTypeHandler`
+  - Extensible via `register_handler()` template method
 
-**RayTracing/** - Hardware RT
+**RayTracing/** - Hardware RT (namespace: `vw::rt`)
 - `BottomLevelAccelerationStructure` (BLAS)
 - `TopLevelAccelerationStructure` (TLAS)
 - `RayTracedScene`: Scene management with instance transforms
@@ -201,6 +238,31 @@ VulkanWrapper/
 **Window/** - Windowing
 - `SDL_Initializer`: RAII SDL init
 - `Window`: Window with builder pattern
+
+### Shader Infrastructure
+
+**Common Shaders** (`VulkanWrapper/Shaders/`):
+- `fullscreen.vert`: Fullscreen triangle vertex shader
+
+**GLSL Include Files** (`VulkanWrapper/Shaders/include/`):
+- `atmosphere_params.glsl`: SkyParameters struct definition
+- `atmosphere_scattering.glsl`: Rayleigh/Mie scattering functions
+- `sky_radiance.glsl`: Shared sky radiance computation
+- `random.glsl`: Random sampling utilities
+
+**Ray Tracing Shaders**:
+- `sky_light.rgen`, `sky_light.rmiss`, `sky_light.rchit`: Indirect sky lighting
+
+### Deferred Rendering Pipeline
+
+The Advanced example implements a complete deferred pipeline:
+1. **Z-Pass**: Depth prepass
+2. **Color Pass**: G-Buffer (position, normal, albedo, tangent, bitangent)
+3. **AO Pass**: Ambient occlusion
+4. **Sky Pass**: Atmospheric background
+5. **Sun Light Pass**: Direct sun with ray-traced shadows
+6. **Sky Light Pass**: Indirect sky lighting (progressive accumulation)
+7. **Tone Mapping**: HDR→LDR with indirect blending
 
 ### Error Handling
 
@@ -226,95 +288,6 @@ check_sdl(ptr, "context");             // Throws SDLException if nullptr
 check_vma(result, "context");          // Throws VMAException if !VK_SUCCESS
 ```
 
-### Key Patterns
-
-**Typical Initialization:**
-```cpp
-auto instance = InstanceBuilder()
-    .setDebug()                        // Enable validation layers
-    .addPortability()                  // For MoltenVK on macOS
-    .setApiVersion(ApiVersion::e13)
-    .build();
-
-auto device = instance->findGpu()
-    .with_queue(vk::QueueFlagBits::eGraphics)
-    .with_synchronization_2()
-    .with_dynamic_rendering()
-    .build();
-
-auto allocator = AllocatorBuilder(instance, device)
-    .set_flags(VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT)
-    .build();
-```
-
-**Resource Tracking:**
-```cpp
-vw::Transfer transfer;  // Contains a ResourceTracker
-
-// Track current state
-transfer.resourceTracker().track(vw::Barrier::ImageState{
-    .image = image->handle(),
-    .subresourceRange = image->full_range(),
-    .layout = vk::ImageLayout::eColorAttachmentOptimal,
-    .stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-    .access = vk::AccessFlagBits2::eColorAttachmentWrite
-});
-
-// Request new state
-transfer.resourceTracker().request(vw::Barrier::ImageState{...});
-
-// Generate and record barriers
-transfer.resourceTracker().flush(cmd);
-
-// High-level operations
-transfer.blit(cmd, srcImage, dstImage);
-transfer.saveToFile(cmd, allocator, queue, image, "output.png");
-```
-
-**Screen-Space Pass Pattern:**
-```cpp
-class MyPass : public ScreenSpacePass<MySlots> {
-public:
-    MyPass(std::shared_ptr<Device> device, std::shared_ptr<Allocator> allocator)
-        : ScreenSpacePass(device, allocator) {
-        // Create pipeline, descriptor pool, sampler...
-        m_sampler = create_default_sampler();
-    }
-
-    void execute(vk::CommandBuffer cmd, /*...*/) {
-        auto& cached = get_or_create_image(MySlots::Output, width, height, frameIndex, format, usage);
-
-        vk::RenderingAttachmentInfo color_attachment = /*...*/;
-        render_fullscreen(cmd, extent, color_attachment, nullptr, *m_pipeline, m_descriptor_set, push_constants, sizeof(push_constants));
-    }
-};
-```
-
-**Command Buffer Recording:**
-```cpp
-auto commandPool = vw::CommandPoolBuilder(device).build();
-auto commandBuffers = commandPool.allocate(count);
-
-{
-    vw::CommandBufferRecorder recorder(commandBuffers[0]); // Begins recording
-    // Record commands...
-} // Ends recording automatically
-```
-
-### Shader Compilation
-
-Use `VwCompileShader` CMake function:
-```cmake
-VwCompileShader(target_name "shader.vert" "output.vert.spv")
-VwCompileShader(target_name "shader.frag" "output.frag.spv")
-
-# With extra args (e.g., for ray tracing)
-VwCompileShader(target_name "raygen.rgen" "raygen.rgen.spv" --target-env vulkan1.2)
-```
-
-Shaders are compiled with `glslangValidator` and output to target's runtime directory.
-
-Runtime shader compilation is also available via `ShaderCompiler` class.
 
 ### Testing
 
@@ -336,6 +309,14 @@ namespace vw::tests {
 }
 ```
 
+**Test Suites:**
+- `MemoryTests`, `ImageTests`, `VulkanTests`: Core functionality
+- `RayTracingTests`: BLAS/TLAS and RT pipeline
+- `UtilsTests`, `ShaderTests`: Utilities and shader compilation
+- `RenderPassTests`: All render pass implementations
+- `Random/RandomSamplingTests.cpp`: Hemisphere sampling validation
+- `Material/`: Comprehensive material system tests
+
 **Adding a New Test:**
 1. Create test file in appropriate subdirectory (e.g., `Memory/NewTests.cpp`)
 2. Add to test executable in `VulkanWrapper/tests/CMakeLists.txt`
@@ -355,13 +336,14 @@ namespace vw::tests {
 
 ### Code Style Conventions
 
-- **Namespace**: `vw` (main), `vw::Barrier`, `vw::Model`, `vw::rt` (ray tracing)
+- **Namespaces**: `vw` (main), `vw::Barrier`, `vw::Model`, `vw::Model::Material`, `vw::rt` (ray tracing)
 - **Headers**: `.h` extension, `#pragma once`
 - **Naming**: `snake_case` for functions/variables, `PascalCase` for types
 - **Strong types**: `Width`, `Height`, `Depth`, `MipLevel` for type-safe dimensions
 - **Vulkan-Hpp**: Always use `vk::` types, not `Vk` C types
 - **Dynamic dispatcher**: Configured via `3rd_party.h` (no global dispatcher)
 - **GLM config**: `GLM_FORCE_RADIANS`, `GLM_FORCE_DEPTH_ZERO_TO_ONE`
+- **Push constants**: Passes use push constants for parameters (< 128 bytes)
 
 ### Code Formatting (clang-format)
 
@@ -409,6 +391,44 @@ clang-format --dry-run -Werror path/to/file.cpp
    DYLD_LIBRARY_PATH=../../vcpkg_installed/arm64-osx/lib:$DYLD_LIBRARY_PATH ./Main
    ```
 
+### Agent-Assisted Development Workflow
+
+For complex graphics engine features, use specialized agents in the following order:
+
+1. **Architecture & Planning** (`rendering-engine-architect`)
+   - Design implementation approach and rendering pipeline changes
+   - Evaluate performance trade-offs and architectural decisions
+   - Plan shader systems and resource management strategies
+   - Create frame graph designs and rendering pass structures
+
+2. **Write Tests** (`graphics-engine-tester`)
+   - Write unit tests for the planned feature (TDD approach)
+   - Create tests for GPU resources, memory management, and shader compilation
+   - Add tests for ray tracing features and rendering pipelines
+   - Verify tests compile and fail appropriately before implementation
+
+3. **Implement Feature** (`graphics-engine-dev`)
+   - Implement the feature following the architectural plan
+   - Write Vulkan-based rendering code, shader programs, and GPU optimizations
+   - Handle synchronization, memory barriers, and resource management
+   - Iterate until all tests pass
+
+4. **Code Review** (`graphics-engine-reviewer`)
+   - Review rendering pipeline correctness and performance
+   - Verify synchronization logic and memory management patterns
+   - Check shader code quality and ray tracing implementations
+   - Ensure adherence to project patterns and best practices
+
+**Example workflow for adding a new render pass:**
+```
+User: Add a screen-space reflections pass
+
+1. rendering-engine-architect → Plans SSR algorithm, buffer requirements, integration points
+2. graphics-engine-tester    → Writes tests for SSRPass class and shader compilation
+3. graphics-engine-dev       → Implements SSRPass, shaders, and pipeline integration
+4. graphics-engine-reviewer  → Reviews implementation for correctness and performance
+```
+
 ### Debugging Tips
 
 - Enable validation layers via `InstanceBuilder().setDebug()`
@@ -424,3 +444,5 @@ clang-format --dry-run -Werror path/to/file.cpp
 - `VulkanWrapper/include/VulkanWrapper/Utils/Error.h`: Exception hierarchy
 - `VulkanWrapper/tests/utils/create_gpu.hpp`: Test GPU singleton
 - `examples/Application/Application.h`: Base application class for examples
+- `VulkanWrapper/include/VulkanWrapper/RenderPass/SkyParameters.h`: Physical sky system
+- `VulkanWrapper/include/VulkanWrapper/Random/RandomSamplingBuffer.h`: Random sampling infrastructure
