@@ -1,0 +1,8 @@
+{
+  "label": "Ray Tracing",
+  "position": 9,
+  "link": {
+    "type": "generated-index",
+    "description": "Hardware ray tracing with acceleration structures."
+  }
+}

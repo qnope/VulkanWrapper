@@ -1,0 +1,8 @@
+{
+  "label": "Render Pass",
+  "position": 8,
+  "link": {
+    "type": "generated-index",
+    "description": "Render pass abstractions for modern Vulkan 1.3 dynamic rendering."
+  }
+}

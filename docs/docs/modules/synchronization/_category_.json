@@ -1,0 +1,8 @@
+{
+  "label": "Synchronization",
+  "position": 7,
+  "link": {
+    "type": "generated-index",
+    "description": "Synchronization primitives and barrier management."
+  }
+}
