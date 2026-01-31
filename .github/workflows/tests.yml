@@ -117,7 +117,8 @@ jobs:
         ctest --test-dir build --output-on-failure --timeout 120
       env:
         # Use Mesa's software renderer for Vulkan tests
-        VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+        # Note: Recent Mesa versions renamed lvp_icd.x86_64.json to lvp_icd.json
+        VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.json
         # Add validation layers from vcpkg
         VK_ADD_LAYER_PATH: ${{ github.workspace }}/build/vcpkg_installed/x64-linux-clang/share/vulkan/explicit_layer.d
         LIBGL_ALWAYS_SOFTWARE: 1
