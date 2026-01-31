@@ -1,0 +1,93 @@
+/**
+ * Custom CSS for VulkanWrapper Documentation
+ */
+
+:root {
+  --ifm-color-primary: #b71c1c;
+  --ifm-color-primary-dark: #a31919;
+  --ifm-color-primary-darker: #9a1818;
+  --ifm-color-primary-darkest: #7f1313;
+  --ifm-color-primary-light: #cb1f1f;
+  --ifm-color-primary-lighter: #d42020;
+  --ifm-color-primary-lightest: #e23535;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #ff5252;
+  --ifm-color-primary-dark: #ff3838;
+  --ifm-color-primary-darker: #ff2b2b;
+  --ifm-color-primary-darkest: #f00;
+  --ifm-color-primary-light: #ff6c6c;
+  --ifm-color-primary-lighter: #ff7979;
+  --ifm-color-primary-lightest: #ffa3a3;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+/* Code block styling for Vulkan/C++ */
+.language-cpp .token.keyword {
+  color: #569cd6;
+}
+
+.language-cpp .token.class-name {
+  color: #4ec9b0;
+}
+
+/* Screenshot images in tutorials */
+.tutorial-screenshot {
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  margin: 1rem 0;
+}
+
+/* Mermaid diagram container */
+.mermaid {
+  background-color: var(--ifm-background-surface-color);
+  padding: 1rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
+/* Tutorial step markers */
+.tutorial-step {
+  display: flex;
+  align-items: flex-start;
+  margin: 1.5rem 0;
+}
+
+.tutorial-step-number {
+  background-color: var(--ifm-color-primary);
+  color: white;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  margin-right: 1rem;
+  flex-shrink: 0;
+}
+
+/* Architecture diagrams */
+.architecture-diagram {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* API reference tables */
+.api-table {
+  width: 100%;
+}
+
+.api-table th {
+  background-color: var(--ifm-color-emphasis-100);
+}
+
+.api-table td code {
+  background-color: var(--ifm-code-background);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+}
