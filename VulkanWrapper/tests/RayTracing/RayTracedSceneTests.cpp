@@ -47,7 +47,7 @@ struct RayTracingGPU {
     const vw::Model::Mesh &get_mesh() { return get_cube_mesh(); }
 };
 
-std::optional<RayTracingGPU> create_ray_tracing_gpu() {
+RayTracingGPU *create_ray_tracing_gpu() {
     try {
         auto instance = vw::InstanceBuilder()
                             .setDebug()
@@ -64,15 +64,17 @@ std::optional<RayTracingGPU> create_ray_tracing_gpu() {
 
         auto allocator = vw::AllocatorBuilder(instance, device).build();
 
-        return RayTracingGPU{std::move(instance), std::move(device),
-                             std::move(allocator), std::nullopt};
+        // Intentionally leak GPU to avoid static destruction order issues
+        // The OS will clean up memory when the test process exits
+        return new RayTracingGPU{std::move(instance), std::move(device),
+                                 std::move(allocator), std::nullopt};
     } catch (...) {
-        return std::nullopt;
+        return nullptr;
     }
 }
 
-std::optional<RayTracingGPU> &get_ray_tracing_gpu() {
-    static std::optional<RayTracingGPU> gpu = create_ray_tracing_gpu();
+RayTracingGPU *get_ray_tracing_gpu() {
+    static RayTracingGPU *gpu = create_ray_tracing_gpu();
     return gpu;
 }
 
@@ -81,11 +83,10 @@ std::optional<RayTracingGPU> &get_ray_tracing_gpu() {
 class RayTracedSceneTest : public ::testing::Test {
   protected:
     void SetUp() override {
-        auto &gpu_opt = get_ray_tracing_gpu();
-        if (!gpu_opt) {
+        gpu = get_ray_tracing_gpu();
+        if (!gpu) {
             GTEST_SKIP() << "Ray tracing not available on this system";
         }
-        gpu = &(*gpu_opt);
     }
 
     RayTracingGPU *gpu = nullptr;

@@ -4,6 +4,7 @@
 #include "VulkanWrapper/fwd.h"
 #include "VulkanWrapper/Model/Scene.h"
 #include "VulkanWrapper/RayTracing/BottomLevelAccelerationStructure.h"
+#include "VulkanWrapper/RayTracing/GeometryReference.h"
 #include "VulkanWrapper/RayTracing/TopLevelAccelerationStructure.h"
 #include <glm/glm.hpp>
 #include <memory>
@@ -70,6 +71,12 @@ class RayTracedScene {
 
     [[nodiscard]] const as::TopLevelAccelerationStructure &tlas() const;
 
+    [[nodiscard]] vk::DeviceAddress geometry_buffer_address() const;
+
+    [[nodiscard]] const GeometryReferenceBuffer &geometry_buffer() const;
+
+    [[nodiscard]] bool has_geometry_buffer() const noexcept;
+
     [[nodiscard]] size_t mesh_count() const noexcept;
 
     [[nodiscard]] size_t instance_count() const noexcept;
@@ -92,9 +99,18 @@ class RayTracedScene {
         uint32_t custom_index = 0;
     };
 
+    struct MeshGeometry {
+        std::shared_ptr<const Model::FullVertex3DBuffer> full_vertex_buffer;
+        std::shared_ptr<const IndexBuffer> index_buffer;
+        int vertex_offset;
+        int first_index;
+        Model::Material::Material material;
+    };
+
     uint32_t get_or_create_blas_index(const Model::Mesh &mesh);
     void build_blas();
     void build_tlas();
+    void build_geometry_buffer();
 
     std::shared_ptr<const Device> m_device;
     std::shared_ptr<const Allocator> m_allocator;
@@ -109,6 +125,12 @@ class RayTracedScene {
 
     // Geometry deduplication: maps mesh -> BLAS index
     std::unordered_map<Model::Mesh, uint32_t> m_mesh_to_blas_index;
+
+    // Geometry data for each BLAS index (ordered by BLAS index)
+    std::vector<MeshGeometry> m_mesh_geometries;
+
+    // Geometry reference buffer for ray tracing shaders
+    std::optional<GeometryReferenceBuffer> m_geometry_buffer;
 
     // Embedded scene for rasterization
     Model::Scene m_scene;
