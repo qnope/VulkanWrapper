@@ -47,8 +47,9 @@ class TopLevelAccelerationStructureBuilder {
         std::shared_ptr<const Allocator> allocator);
 
     TopLevelAccelerationStructureBuilder &
-    add_bottom_level_acceleration_structure_address(vk::DeviceAddress address,
-                                                    const glm::mat4 &transform);
+    add_bottom_level_acceleration_structure_address(
+        vk::DeviceAddress address, const glm::mat4 &transform,
+        uint32_t custom_index = 0, uint32_t sbt_record_offset = 0);
 
     TopLevelAccelerationStructure build(vk::CommandBuffer command_buffer);
 
