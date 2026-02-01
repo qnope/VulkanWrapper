@@ -21,28 +21,28 @@
 
 namespace vw {
 
-enum class SkyLightPassSlot {
+enum class IndirectLightPassSlot {
     Output // Single accumulation buffer (storage image for RT)
 };
 
 /**
- * @brief Push constants for SkyLightPass
+ * @brief Push constants for IndirectLightPass
  *
  * Contains sky atmosphere parameters plus frame control for accumulation.
  * Shared between raygen, miss, and closest hit shaders.
  */
-struct SkyLightPushConstants {
+struct IndirectLightPushConstants {
     SkyParametersGPU sky; // 96 bytes
     uint32_t frame_count; // 4 bytes
     uint32_t width;       // 4 bytes
     uint32_t height;      // 4 bytes
 }; // 108 bytes total
 
-static_assert(sizeof(SkyLightPushConstants) <= 128,
-              "SkyLightPushConstants must fit in push constant limit");
+static_assert(sizeof(IndirectLightPushConstants) <= 128,
+              "IndirectLightPushConstants must fit in push constant limit");
 
 /**
- * @brief Ray Tracing Sky Light pass with progressive accumulation
+ * @brief Ray Tracing Indirect Light pass with progressive accumulation
  *
  * This pass computes indirect sky lighting using a ray tracing pipeline.
  * It traces cosine-weighted rays from each surface point:
@@ -56,14 +56,14 @@ static_assert(sizeof(SkyLightPushConstants) <= 128,
  * Output is written to an independent storage image (not additive to light_view).
  *
  * Shaders are compiled at runtime from GLSL source files using ShaderCompiler:
- * - sky_light.rgen: Ray generation shader
- * - sky_light.rmiss: Miss shader (computes atmosphere)
- * - sky_light.rchit: Closest hit shader (returns black)
+ * - indirect_light.rgen: Ray generation shader
+ * - indirect_light.rmiss: Miss shader (computes atmosphere)
+ * - indirect_light.rchit: Closest hit shader (returns black)
  */
-class SkyLightPass : public Subpass<SkyLightPassSlot> {
+class IndirectLightPass : public Subpass<IndirectLightPassSlot> {
   public:
     /**
-     * @brief Construct a SkyLightPass with shaders loaded from files
+     * @brief Construct an IndirectLightPass with shaders loaded from files
      *
      * @param device Vulkan device
      * @param allocator Memory allocator
@@ -71,14 +71,14 @@ class SkyLightPass : public Subpass<SkyLightPassSlot> {
      * @param tlas Top-level acceleration structure for occlusion rays
      * @param output_format Output buffer format (default: R32G32B32A32Sfloat)
      */
-    SkyLightPass(std::shared_ptr<Device> device,
-                 std::shared_ptr<Allocator> allocator,
-                 const std::filesystem::path &shader_dir,
-                 const rt::as::TopLevelAccelerationStructure &tlas,
-                 vk::Format output_format = vk::Format::eR32G32B32A32Sfloat);
+    IndirectLightPass(std::shared_ptr<Device> device,
+                      std::shared_ptr<Allocator> allocator,
+                      const std::filesystem::path &shader_dir,
+                      const rt::as::TopLevelAccelerationStructure &tlas,
+                      vk::Format output_format = vk::Format::eR32G32B32A32Sfloat);
 
     /**
-     * @brief Execute the sky light pass with progressive accumulation
+     * @brief Execute the indirect light pass with progressive accumulation
      *
      * Uses imageLoad/imageStore for temporal accumulation: each frame computes
      * 1 sample per pixel and blends it with the accumulated history.
@@ -99,7 +99,7 @@ class SkyLightPass : public Subpass<SkyLightPassSlot> {
      * @param tangent_view Tangent G-Buffer view (for TBN)
      * @param bitangent_view Bitangent G-Buffer view (for TBN)
      * @param sky_params Sky and sun parameters
-     * @return The output sky light image view
+     * @return The output indirect light image view
      */
     std::shared_ptr<const ImageView>
     execute(vk::CommandBuffer cmd, Barrier::ResourceTracker &tracker,

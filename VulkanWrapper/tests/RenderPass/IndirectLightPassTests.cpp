@@ -8,7 +8,7 @@
 #include "VulkanWrapper/Model/Mesh.h"
 #include "VulkanWrapper/Model/MeshManager.h"
 #include "VulkanWrapper/RayTracing/RayTracedScene.h"
-#include "VulkanWrapper/RenderPass/SkyLightPass.h"
+#include "VulkanWrapper/RenderPass/IndirectLightPass.h"
 #include "VulkanWrapper/Shader/ShaderCompiler.h"
 #include "VulkanWrapper/Synchronization/Fence.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
@@ -95,7 +95,7 @@ RayTracingGPU *get_ray_tracing_gpu() {
 // Test Fixture
 // =============================================================================
 
-class SkyLightPassTest : public ::testing::Test {
+class IndirectLightPassTest : public ::testing::Test {
   protected:
     void SetUp() override {
         gpu = get_ray_tracing_gpu();
@@ -441,7 +441,7 @@ class SkyLightPassTest : public ::testing::Test {
 // Construction & API Tests
 // =============================================================================
 
-TEST_F(SkyLightPassTest, ConstructWithValidParameters) {
+TEST_F(IndirectLightPassTest, ConstructWithValidParameters) {
     // Create a minimal scene with TLAS
     rt::RayTracedScene scene(gpu->device, gpu->allocator);
     const auto &plane = gpu->get_plane_mesh();
@@ -449,18 +449,18 @@ TEST_F(SkyLightPassTest, ConstructWithValidParameters) {
         plane, glm::translate(glm::mat4(1.0f), glm::vec3(0, -100, 0)));
     scene.build();
 
-    auto pass = std::make_unique<SkyLightPass>(
+    auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
         vk::Format::eR32G32B32A32Sfloat);
 
     ASSERT_NE(pass, nullptr);
 }
 
-TEST_F(SkyLightPassTest, ShaderFilesExistAndCompile) {
+TEST_F(IndirectLightPassTest, ShaderFilesExistAndCompile) {
     auto shader_dir = get_shader_dir();
-    auto raygen_path = shader_dir / "sky_light.rgen";
-    auto miss_path = shader_dir / "sky_light.rmiss";
-    auto chit_path = shader_dir / "sky_light.rchit";
+    auto raygen_path = shader_dir / "indirect_light.rgen";
+    auto miss_path = shader_dir / "indirect_light.rmiss";
+    auto chit_path = shader_dir / "indirect_light.rchit";
 
     ASSERT_TRUE(std::filesystem::exists(raygen_path))
         << "Ray generation shader not found: " << raygen_path;
@@ -487,7 +487,7 @@ TEST_F(SkyLightPassTest, ShaderFilesExistAndCompile) {
 // Execution Tests
 // =============================================================================
 
-TEST_F(SkyLightPassTest, ExecuteReturnsValidImageView) {
+TEST_F(IndirectLightPassTest, ExecuteReturnsValidImageView) {
     constexpr Width width{64};
     constexpr Height height{64};
 
@@ -497,7 +497,7 @@ TEST_F(SkyLightPassTest, ExecuteReturnsValidImageView) {
         plane, glm::translate(glm::mat4(1.0f), glm::vec3(0, -100, 0)));
     scene.build();
 
-    auto pass = std::make_unique<SkyLightPass>(
+    auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
         vk::Format::eR32G32B32A32Sfloat);
 
@@ -530,21 +530,21 @@ TEST_F(SkyLightPassTest, ExecuteReturnsValidImageView) {
 // Frame Count & Accumulation State Tests
 // =============================================================================
 
-TEST_F(SkyLightPassTest, InitialFrameCount_IsZero) {
+TEST_F(IndirectLightPassTest, InitialFrameCount_IsZero) {
     rt::RayTracedScene scene(gpu->device, gpu->allocator);
     const auto &plane = gpu->get_plane_mesh();
     std::ignore = scene.add_instance(
         plane, glm::translate(glm::mat4(1.0f), glm::vec3(0, -100, 0)));
     scene.build();
 
-    auto pass = std::make_unique<SkyLightPass>(
+    auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
         vk::Format::eR32G32B32A32Sfloat);
 
     EXPECT_EQ(pass->get_frame_count(), 0u);
 }
 
-TEST_F(SkyLightPassTest, FrameCountIncrements_AfterExecute) {
+TEST_F(IndirectLightPassTest, FrameCountIncrements_AfterExecute) {
     constexpr Width width{32};
     constexpr Height height{32};
 
@@ -554,7 +554,7 @@ TEST_F(SkyLightPassTest, FrameCountIncrements_AfterExecute) {
         plane, glm::translate(glm::mat4(1.0f), glm::vec3(0, -100, 0)));
     scene.build();
 
-    auto pass = std::make_unique<SkyLightPass>(
+    auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
         vk::Format::eR32G32B32A32Sfloat);
 
@@ -602,7 +602,7 @@ TEST_F(SkyLightPassTest, FrameCountIncrements_AfterExecute) {
     EXPECT_EQ(pass->get_frame_count(), 2u);
 }
 
-TEST_F(SkyLightPassTest, ResetAccumulation_ResetsFrameCountToZero) {
+TEST_F(IndirectLightPassTest, ResetAccumulation_ResetsFrameCountToZero) {
     constexpr Width width{32};
     constexpr Height height{32};
 
@@ -612,7 +612,7 @@ TEST_F(SkyLightPassTest, ResetAccumulation_ResetsFrameCountToZero) {
         plane, glm::translate(glm::mat4(1.0f), glm::vec3(0, -100, 0)));
     scene.build();
 
-    auto pass = std::make_unique<SkyLightPass>(
+    auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
         vk::Format::eR32G32B32A32Sfloat);
 
@@ -649,7 +649,7 @@ TEST_F(SkyLightPassTest, ResetAccumulation_ResetsFrameCountToZero) {
 // Chromatic Behavior Tests
 // =============================================================================
 
-TEST_F(SkyLightPassTest, ZenithSun_ProducesBlueIndirectLight) {
+TEST_F(IndirectLightPassTest, ZenithSun_ProducesBlueIndirectLight) {
     // When sun is at zenith (90 degrees), the sky is predominantly blue
     // due to Rayleigh scattering. A white surface facing up should receive
     // indirect light with blue/cyan tint.
@@ -663,7 +663,7 @@ TEST_F(SkyLightPassTest, ZenithSun_ProducesBlueIndirectLight) {
         plane, glm::translate(glm::mat4(1.0f), glm::vec3(0, -1000, 0)));
     scene.build();
 
-    auto pass = std::make_unique<SkyLightPass>(
+    auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
         vk::Format::eR32G32B32A32Sfloat);
 
@@ -706,7 +706,7 @@ TEST_F(SkyLightPassTest, ZenithSun_ProducesBlueIndirectLight) {
         << " (G=" << color.g << ", B=" << color.b << ")";
 }
 
-TEST_F(SkyLightPassTest, HorizonSun_ProducesWarmIndirectLight) {
+TEST_F(IndirectLightPassTest, HorizonSun_ProducesWarmIndirectLight) {
     // When sun is near horizon (sunset), the sky has warm colors
     // (orange/red). Indirect light should be warmer than at zenith.
     constexpr Width width{64};
@@ -718,7 +718,7 @@ TEST_F(SkyLightPassTest, HorizonSun_ProducesWarmIndirectLight) {
         plane, glm::translate(glm::mat4(1.0f), glm::vec3(0, -1000, 0)));
     scene.build();
 
-    auto pass = std::make_unique<SkyLightPass>(
+    auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
         vk::Format::eR32G32B32A32Sfloat);
 
@@ -759,7 +759,7 @@ TEST_F(SkyLightPassTest, HorizonSun_ProducesWarmIndirectLight) {
         << ", R/B ratio=" << red_to_blue_ratio << ")";
 }
 
-TEST_F(SkyLightPassTest, ChromaticShift_ZenithVsHorizon) {
+TEST_F(IndirectLightPassTest, ChromaticShift_ZenithVsHorizon) {
     // Compare the chromatic characteristics at zenith vs horizon
     // to verify the atmospheric model produces distinct results
     constexpr Width width{64};
@@ -777,7 +777,7 @@ TEST_F(SkyLightPassTest, ChromaticShift_ZenithVsHorizon) {
     // Zenith sun
     glm::vec4 color_zenith;
     {
-        auto pass = std::make_unique<SkyLightPass>(
+        auto pass = std::make_unique<IndirectLightPass>(
             gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
             vk::Format::eR32G32B32A32Sfloat);
 
@@ -803,7 +803,7 @@ TEST_F(SkyLightPassTest, ChromaticShift_ZenithVsHorizon) {
     // Horizon sun
     glm::vec4 color_horizon;
     {
-        auto pass = std::make_unique<SkyLightPass>(
+        auto pass = std::make_unique<IndirectLightPass>(
             gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
             vk::Format::eR32G32B32A32Sfloat);
 
@@ -843,7 +843,7 @@ TEST_F(SkyLightPassTest, ChromaticShift_ZenithVsHorizon) {
 // Accumulation Convergence Tests
 // =============================================================================
 
-TEST_F(SkyLightPassTest, AccumulationConverges_VarianceDecreases) {
+TEST_F(IndirectLightPassTest, AccumulationConverges_VarianceDecreases) {
     // Over multiple frames, the accumulated result should stabilize
     // (variance between consecutive frames should decrease)
     constexpr Width width{32};
@@ -855,7 +855,7 @@ TEST_F(SkyLightPassTest, AccumulationConverges_VarianceDecreases) {
         plane, glm::translate(glm::mat4(1.0f), glm::vec3(0, -1000, 0)));
     scene.build();
 
-    auto pass = std::make_unique<SkyLightPass>(
+    auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
         vk::Format::eR32G32B32A32Sfloat);
 
@@ -913,7 +913,7 @@ TEST_F(SkyLightPassTest, AccumulationConverges_VarianceDecreases) {
 // Surface Orientation Tests
 // =============================================================================
 
-TEST_F(SkyLightPassTest, SurfaceFacingUp_ReceivesSkyLight) {
+TEST_F(IndirectLightPassTest, SurfaceFacingUp_ReceivesSkyLight) {
     // A surface facing up (normal = 0,1,0) should receive significant
     // sky light since it sees the entire upper hemisphere
     constexpr Width width{64};
@@ -925,7 +925,7 @@ TEST_F(SkyLightPassTest, SurfaceFacingUp_ReceivesSkyLight) {
         plane, glm::translate(glm::mat4(1.0f), glm::vec3(0, -1000, 0)));
     scene.build();
 
-    auto pass = std::make_unique<SkyLightPass>(
+    auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
         vk::Format::eR32G32B32A32Sfloat);
 
@@ -956,7 +956,7 @@ TEST_F(SkyLightPassTest, SurfaceFacingUp_ReceivesSkyLight) {
         << "Surface facing up should receive significant sky light";
 }
 
-TEST_F(SkyLightPassTest, SurfaceFacingDown_ReceivesLessLight) {
+TEST_F(IndirectLightPassTest, SurfaceFacingDown_ReceivesLessLight) {
     // A surface facing down (normal = 0,-1,0) should receive much less
     // sky light since it cannot see the sky (only potential ground bounce)
     constexpr Width width{64};
@@ -974,7 +974,7 @@ TEST_F(SkyLightPassTest, SurfaceFacingDown_ReceivesLessLight) {
     // Surface facing up
     glm::vec4 color_up;
     {
-        auto pass = std::make_unique<SkyLightPass>(
+        auto pass = std::make_unique<IndirectLightPass>(
             gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
             vk::Format::eR32G32B32A32Sfloat);
 
@@ -1000,7 +1000,7 @@ TEST_F(SkyLightPassTest, SurfaceFacingDown_ReceivesLessLight) {
     // Surface facing down
     glm::vec4 color_down;
     {
-        auto pass = std::make_unique<SkyLightPass>(
+        auto pass = std::make_unique<IndirectLightPass>(
             gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
             vk::Format::eR32G32B32A32Sfloat);
 
