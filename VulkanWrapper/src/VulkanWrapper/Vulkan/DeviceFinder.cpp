@@ -122,6 +122,8 @@ DeviceFinder &DeviceFinder::with_ray_tracing() noexcept {
     m_features.get<vk::PhysicalDeviceRayTracingPipelineFeaturesKHR>()
         .setRayTracingPipeline(1U);
 
+    with_scalar_block_layout();
+
     return *this;
 }
 
@@ -158,6 +160,12 @@ DeviceFinder &DeviceFinder::with_descriptor_indexing() noexcept {
     // Enable update after bind for sampled images
     vulkan12Features.setDescriptorBindingSampledImageUpdateAfterBind(1U);
 
+    return *this;
+}
+
+DeviceFinder &DeviceFinder::with_scalar_block_layout() noexcept {
+    m_features.get<vk::PhysicalDeviceVulkan12Features>().setScalarBlockLayout(
+        1U);
     return *this;
 }
 
