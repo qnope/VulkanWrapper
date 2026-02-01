@@ -391,42 +391,104 @@ clang-format --dry-run -Werror path/to/file.cpp
    DYLD_LIBRARY_PATH=../../vcpkg_installed/arm64-osx/lib:$DYLD_LIBRARY_PATH ./Main
    ```
 
-### Agent-Assisted Development Workflow
+### Agent-Assisted Development Workflow (OBLIGATOIRE)
 
-For complex graphics engine features, use specialized agents in the following order:
+**RÈGLE CRITIQUE** : Pour toute tâche de développement graphique (nouvelle feature, bug fix, refactoring), tu DOIS utiliser les 4 agents en boucle via le Task tool. Ne JAMAIS implémenter directement sans passer par ce workflow.
 
-1. **Architecture & Planning** (`rendering-engine-architect`)
-   - Design implementation approach and rendering pipeline changes
-   - Evaluate performance trade-offs and architectural decisions
-   - Plan shader systems and resource management strategies
-   - Create frame graph designs and rendering pass structures
+#### Workflow en 4 étapes
 
-2. **Write Tests** (`graphics-engine-tester`)
-   - Write unit tests for the planned feature (TDD approach)
-   - Create tests for GPU resources, memory management, and shader compilation
-   - Add tests for ray tracing features and rendering pipelines
-   - Verify tests compile and fail appropriately before implementation
-
-3. **Implement Feature** (`graphics-engine-dev`)
-   - Implement the feature following the architectural plan
-   - Write Vulkan-based rendering code, shader programs, and GPU optimizations
-   - Handle synchronization, memory barriers, and resource management
-   - Iterate until all tests pass
-
-4. **Code Review** (`graphics-engine-reviewer`)
-   - Review rendering pipeline correctness and performance
-   - Verify synchronization logic and memory management patterns
-   - Check shader code quality and ray tracing implementations
-   - Ensure adherence to project patterns and best practices
-
-**Example workflow for adding a new render pass:**
+**Étape 1 : Architecture** (OBLIGATOIRE)
 ```
-User: Add a screen-space reflections pass
+Lancer un Task avec subagent_type="general-purpose" et ce prompt :
+"Lis docs/claude/agents/rendering-engine-architect.md et ses skills référencés.
+Applique ce rôle pour : [DESCRIPTION DE LA TÂCHE]
+Produis un plan détaillé avec : architecture, fichiers à modifier, interfaces, synchronisation."
+```
 
-1. rendering-engine-architect → Plans SSR algorithm, buffer requirements, integration points
-2. graphics-engine-tester    → Writes tests for SSRPass class and shader compilation
-3. graphics-engine-dev       → Implements SSRPass, shaders, and pipeline integration
-4. graphics-engine-reviewer  → Reviews implementation for correctness and performance
+**Étape 2 : Tests** (OBLIGATOIRE)
+```
+Lancer un Task avec subagent_type="general-purpose" et ce prompt :
+"Lis docs/claude/agents/graphics-engine-tester.md et docs/claude/skills/test/SKILL.md.
+Applique ce rôle pour écrire les tests TDD basés sur le plan de l'architecte.
+Crée les fichiers de test, vérifie qu'ils compilent et échouent."
+```
+
+**Étape 3 : Implémentation** (OBLIGATOIRE)
+```
+Lancer un Task avec subagent_type="general-purpose" et ce prompt :
+"Lis docs/claude/agents/graphics-engine-dev.md et docs/claude/skills/dev/SKILL.md.
+Applique ce rôle pour implémenter la feature.
+Les tests doivent passer. Itère jusqu'à succès."
+```
+
+**Étape 4 : Review** (OBLIGATOIRE)
+```
+Lancer un Task avec subagent_type="general-purpose" et ce prompt :
+"Lis docs/claude/agents/graphics-engine-reviewer.md.
+Revois le code implémenté. Liste les problèmes trouvés.
+Si problèmes critiques → retour à l'étape 3."
+```
+
+#### Boucle de Feedback
+
+```
+┌─────────────┐
+│  Architect  │ ──→ Plan validé?
+└─────────────┘     │
+      ↑             ↓ oui
+      │       ┌─────────────┐
+      │       │   Tester    │ ──→ Tests créés?
+      │       └─────────────┘     │
+      │             ↑             ↓ oui
+      │             │       ┌─────────────┐
+      │             │       │     Dev     │ ──→ Tests passent?
+      │             │       └─────────────┘     │
+      │             │             ↑             ↓ oui
+      │             │             │       ┌─────────────┐
+      │             │             │       │  Reviewer   │ ──→ Code OK?
+      │             │             │       └─────────────┘     │
+      │             │             │                           ↓ oui
+      │             │             └── non (bugs) ─────────────┤
+      │             └── non (tests insuffisants) ─────────────┤
+      └── non (architecture à revoir) ────────────────────────┘
+                                                              ↓
+                                                         ✓ TERMINÉ
+```
+
+#### Déclenchement Automatique
+
+Cette boucle DOIT être déclenchée quand l'utilisateur demande :
+- "Ajoute une feature..." / "Implémente..."
+- "Corrige le bug..." / "Fix..."
+- "Refactorise..." / "Améliore..."
+- Toute modification de code dans VulkanWrapper/
+
+#### Exemple d'utilisation
+
+```
+User: Ajoute une passe de Screen-Space Reflections
+
+Claude: Je lance le workflow en 4 agents.
+
+[Task 1 - Architect]
+→ Lit rendering-engine-architect.md
+→ Produit: "SSRPass hérite de ScreenSpacePass, utilise hierarchical ray marching,
+   nécessite depth buffer + normal buffer, intégration après lighting passes"
+
+[Task 2 - Tester]
+→ Lit graphics-engine-tester.md + skills/test/
+→ Crée: VulkanWrapper/tests/RenderPass/SSRPassTests.cpp
+→ Tests: compilation shader, création pipeline, coherence (réflexion > 0 sur surfaces miroir)
+
+[Task 3 - Dev]
+→ Lit graphics-engine-dev.md + skills/dev/
+→ Implémente: SSRPass.h, SSRPass.cpp, ssr.frag
+→ Build + run tests → itère jusqu'à succès
+
+[Task 4 - Reviewer]
+→ Lit graphics-engine-reviewer.md
+→ Vérifie: barriers corrects, pas de leak, shaders optimisés
+→ Si OK → TERMINÉ, sinon → retour Task 3
 ```
 
 ### Debugging Tips
