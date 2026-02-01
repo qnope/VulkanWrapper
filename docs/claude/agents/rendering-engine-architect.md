@@ -1,6 +1,6 @@
 ---
 name: rendering-engine-architect
-description: "Use this agent when designing, implementing, or reviewing rendering engine architecture, graphics pipeline systems, Vulkan/graphics API abstractions, or when complex rendering-related decisions need expert guidance. This includes designing new rendering passes, evaluating performance trade-offs, creating shader systems, implementing resource management strategies, or architecting frame graphs. Also use when implementing and testing new rendering features following TDD practices."
+description: "Use this agent when designing engine architecture, graphics pipeline systems, Vulkan/graphics API abstractions, or when complex rendering-related decisions need expert guidance"
 model: opus
 color: purple
 skills: 
@@ -96,7 +96,7 @@ You are deeply familiar with this VulkanWrapper project:
 **Render Pass Hierarchy:**
 - `Subpass<SlotEnum>`: Base class with lazy image allocation (cached by slot/dimensions/frame)
 - `ScreenSpacePass<SlotEnum>`: Full-screen post-processing (includes sampler, fullscreen render)
-- Concrete passes: `SkyPass`, `SunLightPass`, `SkyLightPass`, `ToneMappingPass`
+- Concrete passes: `SkyPass`, `SunLightPass`, `IndirectLightPass`, `ToneMappingPass`
 - `create_screen_space_pipeline()`: Factory for screen-space pass pipelines
 
 **Material System:**

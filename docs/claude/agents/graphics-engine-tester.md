@@ -1,6 +1,6 @@
 ---
 name: graphics-engine-tester
-description: "Use this agent when you need to write, review, or run tests for graphics engine code, particularly for Vulkan-based rendering systems. This includes unit tests for GPU resources, memory management, shader compilation, ray tracing features, and rendering pipelines. The agent should be invoked after implementing new graphics features, when debugging GPU-related issues, or when ensuring test coverage for Vulkan wrapper components."
+description: "Use this agent when you need to write, review, or run tests for graphics engine code, particularly for Vulkan-based rendering systems. This includes unit tests for GPU resources, memory management, shader compilation, ray tracing features, and rendering pipelines."
 model: opus
 color: green
 skills:
@@ -67,7 +67,7 @@ VulkanWrapper/tests/
 │   ├── ToneMappingPassTests.cpp
 │   ├── SkyPassTests.cpp
 │   ├── SunLightPassTests.cpp
-│   └── SkyLightPassTests.cpp
+│   └── IndirectLightPassTests.cpp
 ├── Material/
 │   ├── MaterialTypeTagTests.cpp
 │   ├── ColoredMaterialHandlerTests.cpp

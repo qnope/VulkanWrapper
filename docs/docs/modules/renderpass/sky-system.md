@@ -12,7 +12,7 @@ The sky system includes:
 - **SkyParameters**: Physical sky configuration
 - **SkyPass**: Atmospheric background rendering
 - **SunLightPass**: Direct sun lighting with ray-traced shadows
-- **SkyLightPass**: Indirect sky lighting with progressive accumulation
+- **IndirectLightPass**: Indirect sky lighting with progressive accumulation
 
 ## SkyParameters
 
@@ -123,14 +123,14 @@ auto& sunLight = sunLightPass.render(
 - Ray-traced hard shadows
 - Uses acceleration structure for shadow rays
 
-## SkyLightPass
+## IndirectLightPass
 
 Indirect sky lighting with progressive accumulation:
 
 ```cpp
-#include <VulkanWrapper/RenderPass/SkyLightPass.h>
+#include <VulkanWrapper/RenderPass/IndirectLightPass.h>
 
-SkyLightPass skyLightPass(device, allocator);
+IndirectLightPass skyLightPass(device, allocator);
 
 // Progressive rendering
 auto& skyLight = skyLightPass.render(

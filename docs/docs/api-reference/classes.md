@@ -95,7 +95,7 @@ Quick reference for main classes in VulkanWrapper.
 | `ScreenSpacePass<SlotEnum>` | Fullscreen effect base |
 | `SkyPass` | Atmospheric sky rendering |
 | `SunLightPass` | Direct sun with RT shadows |
-| `SkyLightPass` | Indirect sky lighting |
+| `IndirectLightPass` | Indirect sky lighting |
 | `ToneMappingPass` | HDR to LDR conversion |
 
 ## Ray Tracing (vw::rt)
