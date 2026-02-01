@@ -1,6 +1,7 @@
 #include "VulkanWrapper/RayTracing/RayTracedScene.h"
 
 #include "VulkanWrapper/Command/CommandPool.h"
+#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
 #include "VulkanWrapper/Model/Mesh.h"
 #include "VulkanWrapper/Synchronization/Fence.h"
 #include "VulkanWrapper/Utils/Error.h"
@@ -24,6 +25,13 @@ uint32_t RayTracedScene::get_or_create_blas_index(const Model::Mesh &mesh) {
     uint32_t index = static_cast<uint32_t>(m_mesh_to_blas_index.size());
     m_mesh_to_blas_index.emplace(mesh, index);
     m_blas_dirty = true;
+
+    m_mesh_geometries.push_back(MeshGeometry{
+        .full_vertex_buffer = mesh.full_vertex_buffer(),
+        .index_buffer = mesh.index_buffer(),
+        .vertex_offset = mesh.vertex_offset(),
+        .first_index = mesh.first_index(),
+        .material = mesh.material()});
 
     return index;
 }
@@ -197,6 +205,7 @@ void RayTracedScene::build() {
     }
 
     build_blas();
+    build_geometry_buffer();
     build_tlas();
 
     m_blas_dirty = false;
@@ -310,7 +319,8 @@ void RayTracedScene::build_tlas() {
         }
 
         builder.add_bottom_level_acceleration_structure_address(
-            blas_addresses[instance.blas_index], instance.transform);
+            blas_addresses[instance.blas_index], instance.transform,
+            instance.blas_index, instance.sbt_offset);
         ++visible_count;
     }
 
@@ -324,6 +334,50 @@ void RayTracedScene::build_tlas() {
     queue.enqueue_command_buffer(command_buffer);
     queue.submit({}, {}, {});
     m_device->wait_idle();
+}
+
+void RayTracedScene::build_geometry_buffer() {
+    if (m_mesh_geometries.empty()) {
+        return;
+    }
+
+    m_geometry_buffer.emplace(
+        create_buffer<GeometryReferenceBuffer>(*m_allocator,
+                                               m_mesh_geometries.size()));
+
+    std::vector<GeometryReference> references;
+    references.reserve(m_mesh_geometries.size());
+
+    for (const auto &geom : m_mesh_geometries) {
+        GeometryReference ref{
+            .vertex_buffer_address = geom.full_vertex_buffer->device_address(),
+            .vertex_offset = geom.vertex_offset,
+            .index_buffer_address = geom.index_buffer->device_address(),
+            .first_index = geom.first_index,
+            .material_type = geom.material.material_type.id(),
+            .material_index = geom.material.material_index};
+        references.push_back(ref);
+    }
+
+    m_geometry_buffer->write(references, 0);
+}
+
+vk::DeviceAddress RayTracedScene::geometry_buffer_address() const {
+    if (!m_geometry_buffer.has_value()) {
+        throw LogicException::invalid_state("Geometry buffer not built yet");
+    }
+    return m_geometry_buffer->device_address();
+}
+
+const GeometryReferenceBuffer &RayTracedScene::geometry_buffer() const {
+    if (!m_geometry_buffer.has_value()) {
+        throw LogicException::invalid_state("Geometry buffer not built yet");
+    }
+    return *m_geometry_buffer;
+}
+
+bool RayTracedScene::has_geometry_buffer() const noexcept {
+    return m_geometry_buffer.has_value();
 }
 
 } // namespace vw::rt
