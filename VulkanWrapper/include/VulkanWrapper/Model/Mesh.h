@@ -49,6 +49,20 @@ class Mesh {
         return m_material;
     }
 
+    [[nodiscard]] std::shared_ptr<const FullVertex3DBuffer>
+    full_vertex_buffer() const noexcept {
+        return m_full_vertex_buffer;
+    }
+
+    [[nodiscard]] std::shared_ptr<const IndexBuffer>
+    index_buffer() const noexcept {
+        return m_index_buffer;
+    }
+
+    [[nodiscard]] int vertex_offset() const noexcept { return m_vertex_offset; }
+
+    [[nodiscard]] int first_index() const noexcept { return m_first_index; }
+
     /// Returns a hash of this mesh's geometry.
     /// Meshes with the same geometry_hash() share identical triangle data.
     [[nodiscard]] size_t geometry_hash() const noexcept;
