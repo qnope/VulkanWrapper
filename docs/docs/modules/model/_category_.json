@@ -1,0 +1,8 @@
+{
+  "label": "Model",
+  "position": 10,
+  "link": {
+    "type": "generated-index",
+    "description": "3D model loading, mesh management, and material system."
+  }
+}
