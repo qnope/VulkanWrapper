@@ -94,7 +94,7 @@ class GeometryAccessTest : public ::testing::Test {
 // =============================================================================
 
 TEST(GeometryReferenceStructTest, StructSize) {
-    EXPECT_EQ(sizeof(vw::rt::GeometryReference), 40);
+    EXPECT_EQ(sizeof(vw::rt::GeometryReference), 96);
 }
 
 TEST(GeometryReferenceStructTest, StructLayout) {
@@ -257,55 +257,7 @@ TEST(GeometryAccessShaderTest, GeometryAccessGlslCompiles) {
 #extension GL_EXT_ray_tracing : require
 
 #define GEOMETRY_BUFFER_BINDING 0
-
-)" +
-                                    std::string(R"(
-#extension GL_EXT_buffer_reference : require
-#extension GL_EXT_buffer_reference2 : require
-#extension GL_EXT_scalar_block_layout : require
-#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
-
-struct FullVertex3D {
-    vec3 position;
-    vec3 normal;
-    vec3 tangent;
-    vec3 bitangent;
-    vec2 uv;
-};
-
-layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer FullVertexRef {
-    FullVertex3D vertices[];
-};
-
-layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer IndexRef {
-    uint indices[];
-};
-
-struct GeometryReference {
-    uint64_t vertex_buffer_address;
-    int vertex_offset;
-    int pad0;
-    uint64_t index_buffer_address;
-    int first_index;
-    int pad1;
-    uint material_type;
-    uint material_index;
-};
-
-layout(set = 0, binding = GEOMETRY_BUFFER_BINDING, scalar) readonly buffer GeometryReferenceBuffer {
-    GeometryReference geometry_refs[];
-};
-
-struct VertexData {
-    vec3 position;
-    vec3 normal;
-    vec3 tangent;
-    vec3 bitangent;
-    vec2 uv;
-    uint material_type;
-    uint material_index;
-};
-)") + R"(
+#include "geometry_access.glsl"
 
 layout(location = 0) rayPayloadInEXT vec3 hitValue;
 hitAttributeEXT vec2 bary;
@@ -337,6 +289,7 @@ void main() {
 
     vw::ShaderCompiler compiler;
     compiler.set_target_vulkan_version(VK_API_VERSION_1_3);
+    compiler.add_include_path("../../../VulkanWrapper/Shaders/include");
 
     auto result =
         compiler.compile(test_shader, vk::ShaderStageFlagBits::eClosestHitKHR);

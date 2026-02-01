@@ -105,6 +105,7 @@ class RayTracedScene {
         int vertex_offset;
         int first_index;
         Model::Material::Material material;
+        glm::mat4 matrix;
     };
 
     uint32_t get_or_create_blas_index(const Model::Mesh &mesh);
