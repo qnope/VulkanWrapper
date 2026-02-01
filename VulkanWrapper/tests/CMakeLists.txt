@@ -71,6 +71,7 @@ gtest_discover_tests(VulkanTests)
 # RayTracing tests
 add_executable(RayTracingTests
     RayTracing/RayTracedSceneTests.cpp
+    RayTracing/GeometryAccessTests.cpp
 )
 
 target_link_libraries(RayTracingTests
@@ -120,7 +121,7 @@ add_executable(RenderPassTests
     RenderPass/ToneMappingPassTests.cpp
     RenderPass/SkyPassTests.cpp
     RenderPass/SunLightPassTests.cpp
-    RenderPass/SkyLightPassTests.cpp
+    RenderPass/IndirectLightPassTests.cpp
 )
 
 target_link_libraries(RenderPassTests

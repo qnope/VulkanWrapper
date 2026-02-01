@@ -1,14 +1,13 @@
-#include "VulkanWrapper/RenderPass/SkyLightPass.h"
+#include "VulkanWrapper/RenderPass/IndirectLightPass.h"
 
 #include "VulkanWrapper/Pipeline/PipelineLayout.h"
 
 namespace vw {
 
-SkyLightPass::SkyLightPass(std::shared_ptr<Device> device,
-                           std::shared_ptr<Allocator> allocator,
-                           const std::filesystem::path &shader_dir,
-                           const rt::as::TopLevelAccelerationStructure &tlas,
-                           vk::Format output_format)
+IndirectLightPass::IndirectLightPass(
+    std::shared_ptr<Device> device, std::shared_ptr<Allocator> allocator,
+    const std::filesystem::path &shader_dir,
+    const rt::as::TopLevelAccelerationStructure &tlas, vk::Format output_format)
     : Subpass(device, allocator)
     , m_tlas(&tlas)
     , m_output_format(output_format)
@@ -21,7 +20,7 @@ SkyLightPass::SkyLightPass(std::shared_ptr<Device> device,
     create_pipeline_and_sbt(shader_dir);
 }
 
-void SkyLightPass::create_pipeline_and_sbt(
+void IndirectLightPass::create_pipeline_and_sbt(
     const std::filesystem::path &shader_dir) {
     // Create descriptor layout for RT pipeline:
     // binding 0: accelerationStructureEXT (TLAS)
@@ -56,8 +55,8 @@ void SkyLightPass::create_pipeline_and_sbt(
     auto pipeline_layout =
         PipelineLayoutBuilder(m_device)
             .with_descriptor_set_layout(m_descriptor_layout)
-            .with_push_constant_range(
-                vk::PushConstantRange(rt_stages, 0, sizeof(SkyLightPushConstants)))
+            .with_push_constant_range(vk::PushConstantRange(
+                rt_stages, 0, sizeof(IndirectLightPushConstants)))
             .build();
 
     // Compile shaders with Vulkan 1.2 for ray tracing support
@@ -66,11 +65,11 @@ void SkyLightPass::create_pipeline_and_sbt(
     compiler.add_include_path(shader_dir / "include");
 
     auto raygen_shader = compiler.compile_file_to_module(
-        m_device, shader_dir / "sky_light.rgen");
+        m_device, shader_dir / "indirect_light.rgen");
     auto miss_shader = compiler.compile_file_to_module(
-        m_device, shader_dir / "sky_light.rmiss");
+        m_device, shader_dir / "indirect_light.rmiss");
     auto closesthit_shader = compiler.compile_file_to_module(
-        m_device, shader_dir / "sky_light.rchit");
+        m_device, shader_dir / "indirect_light.rchit");
 
     // Build RT pipeline
     m_pipeline = std::make_unique<rt::RayTracingPipeline>(
@@ -102,24 +101,25 @@ void SkyLightPass::create_pipeline_and_sbt(
 }
 
 std::shared_ptr<const ImageView>
-SkyLightPass::execute(vk::CommandBuffer cmd, Barrier::ResourceTracker &tracker,
-                      Width width, Height height,
-                      std::shared_ptr<const ImageView> position_view,
-                      std::shared_ptr<const ImageView> normal_view,
-                      std::shared_ptr<const ImageView> albedo_view,
-                      std::shared_ptr<const ImageView> ao_view,
-                      std::shared_ptr<const ImageView> tangent_view,
-                      std::shared_ptr<const ImageView> bitangent_view,
-                      const SkyParameters &sky_params) {
+IndirectLightPass::execute(vk::CommandBuffer cmd,
+                           Barrier::ResourceTracker &tracker, Width width,
+                           Height height,
+                           std::shared_ptr<const ImageView> position_view,
+                           std::shared_ptr<const ImageView> normal_view,
+                           std::shared_ptr<const ImageView> albedo_view,
+                           std::shared_ptr<const ImageView> ao_view,
+                           std::shared_ptr<const ImageView> tangent_view,
+                           std::shared_ptr<const ImageView> bitangent_view,
+                           const SkyParameters &sky_params) {
 
     // Use fixed frame_index=0 so the image is shared across all swapchain
     // frames. This is required for progressive accumulation to work correctly.
-    constexpr size_t sky_light_frame_index = 0;
+    constexpr size_t indirect_light_frame_index = 0;
 
     // Single accumulation buffer (storage image for RT)
     const auto &output =
-        get_or_create_image(SkyLightPassSlot::Output, width, height,
-                            sky_light_frame_index, m_output_format,
+        get_or_create_image(IndirectLightPassSlot::Output, width, height,
+                            indirect_light_frame_index, m_output_format,
                             vk::ImageUsageFlagBits::eStorage |
                                 vk::ImageUsageFlagBits::eSampled |
                                 vk::ImageUsageFlagBits::eTransferSrc);
@@ -215,17 +215,17 @@ SkyLightPass::execute(vk::CommandBuffer cmd, Barrier::ResourceTracker &tracker,
                            &descriptor_handle, 0, nullptr);
 
     // Push constants
-    SkyLightPushConstants constants{.sky = sky_params.to_gpu(),
-                                    .frame_count = m_frame_count,
-                                    .width = static_cast<uint32_t>(width),
-                                    .height = static_cast<uint32_t>(height)};
+    IndirectLightPushConstants constants{.sky = sky_params.to_gpu(),
+                                         .frame_count = m_frame_count,
+                                         .width = static_cast<uint32_t>(width),
+                                         .height = static_cast<uint32_t>(height)};
 
     constexpr auto rt_stages = vk::ShaderStageFlagBits::eRaygenKHR |
                                vk::ShaderStageFlagBits::eMissKHR |
                                vk::ShaderStageFlagBits::eClosestHitKHR;
 
     cmd.pushConstants(m_pipeline->handle_layout(), rt_stages, 0,
-                      sizeof(SkyLightPushConstants), &constants);
+                      sizeof(IndirectLightPushConstants), &constants);
 
     // Trace rays
     cmd.traceRaysKHR(m_sbt->raygen_region(), m_sbt->miss_region(),

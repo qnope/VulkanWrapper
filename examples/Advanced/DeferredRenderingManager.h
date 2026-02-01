@@ -9,7 +9,7 @@
 #include <VulkanWrapper/Model/Material/BindlessMaterialManager.h>
 #include <VulkanWrapper/Model/Scene.h>
 #include <VulkanWrapper/RayTracing/RayTracedScene.h>
-#include <VulkanWrapper/RenderPass/SkyLightPass.h>
+#include <VulkanWrapper/RenderPass/IndirectLightPass.h>
 #include <VulkanWrapper/RenderPass/SkyParameters.h>
 #include <VulkanWrapper/RenderPass/SkyPass.h>
 #include <VulkanWrapper/RenderPass/SunLightPass.h>
@@ -65,7 +65,7 @@ class DeferredRenderingManager {
             m_device, m_allocator, shader_dir, ray_traced_scene.tlas_handle(),
             light_format);
 
-        m_sky_light_pass = std::make_unique<vw::SkyLightPass>(
+        m_indirect_light_pass = std::make_unique<vw::IndirectLightPass>(
             m_device, m_allocator, shader_dir, ray_traced_scene.tlas(),
             light_format);
 
@@ -123,7 +123,7 @@ class DeferredRenderingManager {
             ubo_data.inverseViewProj);
 
         // 5. Sun Light Pass: add sun lighting with ray-traced shadows
-        //    (direct light only - ambient/AO is handled by SkyLightPass)
+        //    (direct light only - ambient/AO is handled by IndirectLightPass)
         m_sun_light_pass->execute(cmd, tracker,
                                   light_view,       // from SkyPass
                                   depth_view,       // from ZPass
@@ -132,8 +132,8 @@ class DeferredRenderingManager {
                                   gbuffer.normal,   // from ColorPass
                                   sky_params);
 
-        // 6. Sky Light Pass: progressive indirect sky lighting with AO
-        auto indirect_light_view = m_sky_light_pass->execute(
+        // 6. Indirect Light Pass: progressive indirect sky lighting with AO
+        auto indirect_light_view = m_indirect_light_pass->execute(
             cmd, tracker, width, height, gbuffer.position, gbuffer.normal,
             gbuffer.color, ao_view, gbuffer.tangent, gbuffer.bitangent,
             sky_params);
@@ -145,7 +145,7 @@ class DeferredRenderingManager {
         return m_tone_mapping_pass->execute(
             cmd, tracker, width, height, frame_index,
             light_view,          // direct light (sky + sun)
-            indirect_light_view, // indirect light from sky light pass
+            indirect_light_view, // indirect light from indirect light pass
             1.0f, // indirect_intensity - physically correct addition
             vw::ToneMappingOperator::ACES,
             1.0f,      // exposure
@@ -173,9 +173,9 @@ class DeferredRenderingManager {
     vw::SunLightPass &sun_light_pass() { return *m_sun_light_pass; }
     const vw::SunLightPass &sun_light_pass() const { return *m_sun_light_pass; }
 
-    /** @brief Access the Sky Light Pass for custom usage */
-    vw::SkyLightPass &sky_light_pass() { return *m_sky_light_pass; }
-    const vw::SkyLightPass &sky_light_pass() const { return *m_sky_light_pass; }
+    /** @brief Access the Indirect Light Pass for custom usage */
+    vw::IndirectLightPass &indirect_light_pass() { return *m_indirect_light_pass; }
+    const vw::IndirectLightPass &indirect_light_pass() const { return *m_indirect_light_pass; }
 
     /** @brief Access the Tone Mapping Pass for custom usage */
     vw::ToneMappingPass &tone_mapping_pass() { return *m_tone_mapping_pass; }
@@ -186,7 +186,7 @@ class DeferredRenderingManager {
     /** @brief Reset progressive state (call on resize or camera move) */
     void reset() {
         m_ao_pass->reset_accumulation();
-        m_sky_light_pass->reset_accumulation();
+        m_indirect_light_pass->reset_accumulation();
     }
 
   private:
@@ -200,6 +200,6 @@ class DeferredRenderingManager {
     std::unique_ptr<AmbientOcclusionPass> m_ao_pass;
     std::unique_ptr<vw::SkyPass> m_sky_pass;
     std::unique_ptr<vw::SunLightPass> m_sun_light_pass;
-    std::unique_ptr<vw::SkyLightPass> m_sky_light_pass;
+    std::unique_ptr<vw::IndirectLightPass> m_indirect_light_pass;
     std::unique_ptr<vw::ToneMappingPass> m_tone_mapping_pass;
 };

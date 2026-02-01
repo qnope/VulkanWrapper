@@ -1,6 +1,6 @@
 target_sources(VulkanWrapperCoreLibrary PRIVATE
+    IndirectLightPass.cpp
     ScreenSpacePass.cpp
-    SkyLightPass.cpp
     SkyParameters.cpp
     SkyPass.cpp
     SunLightPass.cpp
