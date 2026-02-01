@@ -400,31 +400,48 @@ clang-format --dry-run -Werror path/to/file.cpp
 **Étape 1 : Architecture** (OBLIGATOIRE)
 ```
 Lancer un Task avec subagent_type="general-purpose" et ce prompt :
-"Lis docs/claude/agents/rendering-engine-architect.md et ses skills référencés.
-Applique ce rôle pour : [DESCRIPTION DE LA TÂCHE]
+"Lis ces fichiers dans l'ordre :
+1. docs/claude/agents/rendering-engine-architect.md
+2. docs/claude/skills/dev/SKILL.md
+3. docs/claude/skills/dev/patterns.md
+4. docs/claude/skills/test/SKILL.md
+
+Applique le rôle d'architecte pour : [DESCRIPTION DE LA TÂCHE]
 Produis un plan détaillé avec : architecture, fichiers à modifier, interfaces, synchronisation."
 ```
 
 **Étape 2 : Tests** (OBLIGATOIRE)
 ```
 Lancer un Task avec subagent_type="general-purpose" et ce prompt :
-"Lis docs/claude/agents/graphics-engine-tester.md et docs/claude/skills/test/SKILL.md.
-Applique ce rôle pour écrire les tests TDD basés sur le plan de l'architecte.
+"Lis ces fichiers dans l'ordre :
+1. docs/claude/agents/graphics-engine-tester.md
+2. docs/claude/skills/test/SKILL.md
+3. docs/claude/skills/test/UnitTest.md
+4. docs/claude/skills/test/RenderingTest.md
+
+Applique le rôle de testeur pour écrire les tests TDD basés sur le plan de l'architecte.
 Crée les fichiers de test, vérifie qu'ils compilent et échouent."
 ```
 
 **Étape 3 : Implémentation** (OBLIGATOIRE)
 ```
 Lancer un Task avec subagent_type="general-purpose" et ce prompt :
-"Lis docs/claude/agents/graphics-engine-dev.md et docs/claude/skills/dev/SKILL.md.
-Applique ce rôle pour implémenter la feature.
+"Lis ces fichiers dans l'ordre :
+1. docs/claude/agents/graphics-engine-dev.md
+2. docs/claude/skills/dev/SKILL.md
+3. Les skills spécifiques selon la tâche (barriers.md, ray-tracing.md, shaders.md, etc.)
+
+Applique le rôle de développeur pour implémenter la feature.
 Les tests doivent passer. Itère jusqu'à succès."
 ```
 
 **Étape 4 : Review** (OBLIGATOIRE)
 ```
 Lancer un Task avec subagent_type="general-purpose" et ce prompt :
-"Lis docs/claude/agents/graphics-engine-reviewer.md.
+"Lis ces fichiers dans l'ordre :
+1. docs/claude/agents/graphics-engine-reviewer.md
+2. docs/claude/skills/dev/SKILL.md (pour connaître les patterns attendus)
+
 Revois le code implémenté. Liste les problèmes trouvés.
 Si problèmes critiques → retour à l'étape 3."
 ```
