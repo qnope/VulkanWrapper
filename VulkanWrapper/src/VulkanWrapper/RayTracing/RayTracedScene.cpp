@@ -26,12 +26,13 @@ uint32_t RayTracedScene::get_or_create_blas_index(const Model::Mesh &mesh) {
     m_mesh_to_blas_index.emplace(mesh, index);
     m_blas_dirty = true;
 
-    m_mesh_geometries.push_back(MeshGeometry{
-        .full_vertex_buffer = mesh.full_vertex_buffer(),
-        .index_buffer = mesh.index_buffer(),
-        .vertex_offset = mesh.vertex_offset(),
-        .first_index = mesh.first_index(),
-        .material = mesh.material()});
+    m_mesh_geometries.push_back(
+        MeshGeometry{.full_vertex_buffer = mesh.full_vertex_buffer(),
+                     .index_buffer = mesh.index_buffer(),
+                     .vertex_offset = mesh.vertex_offset(),
+                     .first_index = mesh.first_index(),
+                     .material = mesh.material(),
+                     .matrix = glm::mat4(1.0f)});
 
     return index;
 }
@@ -341,9 +342,8 @@ void RayTracedScene::build_geometry_buffer() {
         return;
     }
 
-    m_geometry_buffer.emplace(
-        create_buffer<GeometryReferenceBuffer>(*m_allocator,
-                                               m_mesh_geometries.size()));
+    m_geometry_buffer.emplace(create_buffer<GeometryReferenceBuffer>(
+        *m_allocator, m_mesh_geometries.size()));
 
     std::vector<GeometryReference> references;
     references.reserve(m_mesh_geometries.size());
@@ -355,7 +355,8 @@ void RayTracedScene::build_geometry_buffer() {
             .index_buffer_address = geom.index_buffer->device_address(),
             .first_index = geom.first_index,
             .material_type = geom.material.material_type.id(),
-            .material_index = geom.material.material_index};
+            .material_index = geom.material.material_index,
+            .matrix = geom.matrix};
         references.push_back(ref);
     }
 

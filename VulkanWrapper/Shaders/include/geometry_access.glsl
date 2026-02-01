@@ -47,16 +47,15 @@ layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer Ind
     uint indices[];
 };
 
-// GeometryReference matches the C++ struct in GeometryReference.h (48 bytes)
+// GeometryReference matches the C++ struct in GeometryReference.h (96 bytes)
 struct GeometryReference {
     uint64_t vertex_buffer_address;
     int vertex_offset;
-    int pad0;
     uint64_t index_buffer_address;
     int first_index;
-    int pad1;
     uint material_type;
     uint material_index;
+    mat4 matrix;
 };
 
 // Storage buffer containing geometry references for all meshes
