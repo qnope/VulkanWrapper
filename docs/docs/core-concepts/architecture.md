@@ -87,7 +87,7 @@ Modern rendering abstractions (Vulkan 1.3 dynamic rendering):
 
 - **Subpass**: Base class with lazy image caching
 - **ScreenSpacePass**: Full-screen post-processing
-- **SkyPass/SunLightPass/SkyLightPass**: Physical sky system
+- **SkyPass/SunLightPass/IndirectLightPass**: Physical sky system
 - **ToneMappingPass**: HDR to LDR conversion
 
 ### Ray Tracing (`vw::rt`)

@@ -98,7 +98,7 @@ DYLD_LIBRARY_PATH=../../vcpkg_installed/arm64-osx/lib:$DYLD_LIBRARY_PATH ./Rende
 DYLD_LIBRARY_PATH=../../vcpkg_installed/arm64-osx/lib:$DYLD_LIBRARY_PATH ctest --verbose
 
 # Filter specific tests
-DYLD_LIBRARY_PATH=../../vcpkg_installed/arm64-osx/lib:$DYLD_LIBRARY_PATH ./RenderPassTests --gtest_filter='*SkyLight*'
+DYLD_LIBRARY_PATH=../../vcpkg_installed/arm64-osx/lib:$DYLD_LIBRARY_PATH ./RenderPassTests --gtest_filter='*IndirectLight*'
 ```
 
 ## Key Principles

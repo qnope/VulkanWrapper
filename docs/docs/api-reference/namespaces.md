@@ -66,7 +66,7 @@ namespace vw {
     class ScreenSpacePass;
     class SkyPass;
     class SunLightPass;
-    class SkyLightPass;
+    class IndirectLightPass;
     class ToneMappingPass;
 
     // Window

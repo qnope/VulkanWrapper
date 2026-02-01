@@ -1,6 +1,6 @@
 ---
 name: graphics-engine-dev
-description: "Use this agent when working on graphics engine development tasks, particularly involving Vulkan, rendering pipelines, shader programming, GPU optimization, or low-level graphics API work. This agent excels at implementing rendering techniques, debugging GPU issues, optimizing draw calls, and architecting graphics systems."
+description: "Use this agent when working on graphics engine development tasks, particularly involving Vulkan, rendering pipelines, shader programming, GPU optimization, or low-level graphics API work."
 model: opus
 color: red
 skills: 
@@ -101,11 +101,11 @@ This project implements a modern Vulkan 1.3 rendering engine. Key architectural 
 **Random Sampling Infrastructure:**
 - `RandomSamplingBuffer` provides 4096 precomputed hemisphere samples
 - `NoiseTexture` provides per-pixel decorrelation via Cranley-Patterson rotation
-- Used by ray-traced passes (SkyLightPass, AO) for progressive accumulation
+- Used by ray-traced passes (IndirectLightPass, AO) for progressive accumulation
 
 **Deferred Pipeline Architecture:**
-- Z-Pass -> G-Buffer -> AO -> Sky -> Sun Light -> Sky Light -> Tone Mapping
-- `SkyLightPass` uses progressive accumulation with frame counting for convergence
+- Z-Pass -> G-Buffer -> AO -> Sky -> Sun Light -> Indirect Light -> Tone Mapping
+- `IndirectLightPass` uses progressive accumulation with frame counting for convergence
 - All passes inherit from `ScreenSpacePass<SlotEnum>` with lazy image allocation
 
 The dev skill documentation covers implementation details. Reference CLAUDE.md for build commands and project structure.

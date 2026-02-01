@@ -250,7 +250,7 @@ TEST_F(SunLightPassTest, AtmosphericAttenuation_SunsetIsWarmerThanNoon) {
 Test Rayleigh scattering produces blue sky at zenith:
 
 ```cpp
-TEST_F(SkyLightPassTest, ZenithSun_ProducesBlueIndirectLight) {
+TEST_F(IndirectLightPassTest, ZenithSun_ProducesBlueIndirectLight) {
     // Sun at zenith (90 degrees)
     auto sky_params = SkyParameters::create_earth_sun(90.0f);
 
@@ -269,7 +269,7 @@ TEST_F(SkyLightPassTest, ZenithSun_ProducesBlueIndirectLight) {
 Compare zenith (blue sky) vs horizon (warm sunset):
 
 ```cpp
-TEST_F(SkyLightPassTest, ChromaticShift_ZenithVsHorizon) {
+TEST_F(IndirectLightPassTest, ChromaticShift_ZenithVsHorizon) {
     // Zenith (blue-dominant)
     auto color_zenith = render_with_sun_angle(90.0f);
 

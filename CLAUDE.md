@@ -211,7 +211,7 @@ VulkanWrapper/
 - **Concrete Passes:**
   - `SkyPass`: Atmospheric rendering using Rayleigh/Mie scattering
   - `SunLightPass`: Direct sun lighting with ray-traced shadows
-  - `SkyLightPass`: Ray-traced indirect sky lighting with progressive accumulation
+  - `IndirectLightPass`: Ray-traced indirect sky lighting with progressive accumulation
   - `ToneMappingPass`: HDR→LDR conversion (ACES, Reinhard, Uncharted2, Neutral)
 
 **Model/** - 3D assets (namespace: `vw::Model`)
@@ -251,7 +251,7 @@ VulkanWrapper/
 - `random.glsl`: Random sampling utilities
 
 **Ray Tracing Shaders**:
-- `sky_light.rgen`, `sky_light.rmiss`, `sky_light.rchit`: Indirect sky lighting
+- `indirect_light.rgen`, `indirect_light.rmiss`, `indirect_light.rchit`: Indirect sky lighting
 
 ### Deferred Rendering Pipeline
 
@@ -261,7 +261,7 @@ The Advanced example implements a complete deferred pipeline:
 3. **AO Pass**: Ambient occlusion
 4. **Sky Pass**: Atmospheric background
 5. **Sun Light Pass**: Direct sun with ray-traced shadows
-6. **Sky Light Pass**: Indirect sky lighting (progressive accumulation)
+6. **Indirect Light Pass**: Indirect sky lighting (progressive accumulation)
 7. **Tone Mapping**: HDR→LDR with indirect blending
 
 ### Error Handling

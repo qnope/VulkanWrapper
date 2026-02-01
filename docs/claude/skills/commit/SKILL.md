@@ -20,6 +20,9 @@ git diff origin/main...HEAD
 
 # View summary of changed files
 git diff origin/main...HEAD --stat
+
+# If there is any commit: reset them
+git reset --mixed origin/main
 ```
 
 ### 2. Categorize Changes
@@ -106,10 +109,10 @@ When creating multiple commits from a single set of changes:
 
 ```bash
 # 1. Review all changes
-git diff origin/dev...HEAD
+git diff origin/main...HEAD
 
 # 2. Reset to unstaged state (keep changes)
-git reset origin/dev
+git reset origin/main
 
 # 3. Stage and commit first logical group
 git add -p  # Interactive staging for fine control
@@ -120,7 +123,7 @@ git add path/to/next/group
 git commit
 
 # 5. Verify commit history
-git log origin/dev..HEAD --oneline
+git log origin/main..HEAD --oneline
 ```
 
 ### 6. Quality Checklist

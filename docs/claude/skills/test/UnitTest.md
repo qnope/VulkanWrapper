@@ -315,7 +315,7 @@ Run specific tests using GTest's filter:
 
 ```bash
 # Run tests matching a pattern
-./RenderPassTests --gtest_filter='*SkyLight*'
+./RenderPassTests --gtest_filter='*IndirectLight*'
 
 # Run single test
 ./MemoryTests --gtest_filter='BufferTests.CreateStagingBuffer'
@@ -418,7 +418,7 @@ TEST_F(RayTracingTest, BuildTLAS) { /* uses this->gpu */ }
 1. **Use Descriptive Test Names**
    ```cpp
    TEST_F(SunLightPassTest, ShadowOcclusion_LitVsShadowed)
-   TEST_F(SkyLightPassTest, ZenithSun_ProducesBlueIndirectLight)
+   TEST_F(IndirectLightPassTest, ZenithSun_ProducesBlueIndirectLight)
    ```
 
 2. **Provide Clear Failure Messages**
