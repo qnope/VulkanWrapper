@@ -26,7 +26,8 @@ TopLevelAccelerationStructureBuilder::TopLevelAccelerationStructureBuilder(
 
 TopLevelAccelerationStructureBuilder &TopLevelAccelerationStructureBuilder::
     add_bottom_level_acceleration_structure_address(
-        vk::DeviceAddress address, const glm::mat4 &transform) {
+        vk::DeviceAddress address, const glm::mat4 &transform,
+        uint32_t custom_index, uint32_t sbt_record_offset) {
     vk::AccelerationStructureInstanceKHR instance;
 
     // Convert glm::mat4 to vk::TransformMatrixKHR
@@ -39,9 +40,9 @@ TopLevelAccelerationStructureBuilder &TopLevelAccelerationStructureBuilder::
     }
 
     instance.setTransform(transform_matrix);
-    instance.setInstanceCustomIndex(static_cast<uint32_t>(m_instances.size()));
+    instance.setInstanceCustomIndex(custom_index);
     instance.setMask(0xFF);
-    instance.setInstanceShaderBindingTableRecordOffset(0);
+    instance.setInstanceShaderBindingTableRecordOffset(sbt_record_offset);
     instance.setFlags(
         vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable);
     instance.setAccelerationStructureReference(address);
