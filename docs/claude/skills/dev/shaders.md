@@ -44,8 +44,8 @@ Max size: 128 bytes (guaranteed minimum).
 
 ## Fullscreen Shader
 
-`VulkanWrapper/Shaders/fullscreen.vert` - generates fullscreen triangle from vertex ID.
+`VulkanWrapper/Shaders/fullscreen.vert` - generates fullscreen quad via triangle strip from vertex ID.
 
 ```cpp
-cmd.draw(3, 1, 0, 0);  // No vertex buffer needed
+cmd.draw(4, 1, 0, 0);  // No vertex buffer needed, 4 vertices triangle strip
 ```

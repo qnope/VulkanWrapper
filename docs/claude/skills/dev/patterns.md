@@ -8,7 +8,7 @@ enum class Slots { Output };
 class MyPass : public ScreenSpacePass<Slots> {
 public:
     void execute(vk::CommandBuffer cmd, vk::Extent2D extent, uint32_t frameIndex) {
-        auto& output = get_or_create_image(Slots::Output, extent.width, extent.height,
+        auto& output = get_or_create_image(Slots::Output, Width{extent.width}, Height{extent.height},
                                             frameIndex, format, usage);
 
         vk::RenderingAttachmentInfo colorAttachment{
@@ -38,9 +38,10 @@ auto sampler = SamplerBuilder(device).set_filter(eLinear).build();
 ```cpp
 check_vk(result, "context");   // Throws VulkanException
 check_vma(result, "context");  // Throws VMAException
-check_sdl(ptr, "context");     // Throws SDLException
+check_sdl(ptr_or_bool, "context");  // Throws SDLException (pointer and bool overloads)
 
-// Exception hierarchy: vw::Exception → VulkanException, VMAException, SDLException, FileException, ShaderCompilationException, LogicException
+// Exception hierarchy: vw::Exception → VulkanException, VMAException, SDLException, FileException,
+//   AssimpException, ShaderCompilationException, ValidationLayerException, SwapchainException, LogicException
 ```
 
 ## RAII Handles

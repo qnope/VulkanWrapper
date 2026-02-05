@@ -24,8 +24,9 @@ auto& gpu = vw::tests::create_gpu();  // Singleton
 // gpu.device, gpu.allocator, gpu.queue()
 ```
 
-For ray tracing, use specialized GPU struct and skip if unavailable:
+For ray tracing, use `RayTracingGPU` and skip if unavailable:
 ```cpp
+auto* gpu = get_ray_tracing_gpu();
 if (!gpu) GTEST_SKIP() << "Ray tracing unavailable";
 ```
 

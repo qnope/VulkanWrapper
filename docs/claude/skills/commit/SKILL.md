@@ -10,10 +10,13 @@ git fetch origin
 git diff origin/main...HEAD --stat
 git log origin/main..HEAD --oneline
 
-# 2. Reset if needed to reorganize
-git reset --mixed origin/main
+# 2. Run clang-format on changed files
+git diff --name-only origin/main...HEAD -- '*.h' '*.cpp' | xargs clang-format -i
 
-# 3. Stage and commit logical groups
+# 3. Run tests
+cd build-Clang20Debug && ctest --output-on-failure
+
+# 4. Stage and commit logical groups
 git add specific/files
 git commit
 ```
@@ -54,3 +57,5 @@ Fixes #42
 - [ ] Message explains **why**, not just what
 - [ ] No WIP or fixup commits
 - [ ] Sensitive files excluded
+- [ ] Code formatted with `clang-format`
+- [ ] Tests pass

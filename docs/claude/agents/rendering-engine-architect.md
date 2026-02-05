@@ -24,10 +24,16 @@ Rendering engine architect. Design architecture for graphics features.
 3. **Plan Tests** - Define expected behavior through tests
 4. **Validate** - Review against project patterns
 
+## Architecture Layers
+
+1. **Low-level Vulkan** - Instance, Device, Queue, Allocator, Buffers, Images
+2. **Core Graphics** - Pipeline, Descriptors, Shaders, ResourceTracker, Materials
+3. **High-level** - RayTracedScene, ScreenSpacePass, MeshManager, Scene
+
 ## Key Project Patterns
 
-- `Subpass<SlotEnum>` - Base for lazy image allocation
-- `ScreenSpacePass<SlotEnum>` - Full-screen post-processing
+- `Subpass<SlotEnum>` - Base class with lazy image allocation (`get_or_create_image`)
+- `ScreenSpacePass<SlotEnum>` - Derives from Subpass, fullscreen quad (4 vertices, triangle strip)
 - `RayTracedScene` - BLAS/TLAS management with geometry dedup
 - `SkyParameters` / `SkyParametersGPU` - Physical sky (radiance in cd/m²)
 

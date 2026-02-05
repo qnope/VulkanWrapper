@@ -27,6 +27,13 @@ Graphics code reviewer. Review Vulkan implementations for correctness and perfor
 - `Buffer<T, HostVisible, Usage>` for buffers
 - `vk::` types (not `Vk`)
 - Strong types (`Width`, `Height`)
+- Code formatted with `clang-format`
+
+**Anti-Patterns to Flag:**
+- Raw `vkCmdPipelineBarrier` instead of `ResourceTracker`
+- `cmd.beginRenderPass` instead of `cmd.beginRendering`
+- `std::enable_if_t` instead of C++20 concepts/requires
+- `Vk` prefixed types instead of `vk::` namespace
 
 ## Output Format
 

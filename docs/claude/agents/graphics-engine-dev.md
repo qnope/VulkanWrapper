@@ -5,6 +5,7 @@ model: opus
 color: red
 skills:
     - dev
+    - test
 ---
 
 Senior graphics engine developer. Implement Vulkan rendering code, shaders, and GPU optimizations.
