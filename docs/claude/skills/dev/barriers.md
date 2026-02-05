@@ -1,6 +1,8 @@
 # Barriers
 
-Use `ResourceTracker` for all synchronization. Never use raw `vkCmdPipelineBarrier`.
+Use `ResourceTracker` (`Synchronization/ResourceTracker.h`, namespace `vw::Barrier`) for all synchronization. Never use raw `vkCmdPipelineBarrier`.
+
+Note: `Memory/Barrier.h` contains legacy standalone helpers (`execute_image_barrier_*`). Prefer `ResourceTracker` for new code.
 
 ## Basic Pattern
 
