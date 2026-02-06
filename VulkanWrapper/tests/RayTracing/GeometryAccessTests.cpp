@@ -1,6 +1,10 @@
 #include "utils/create_gpu.hpp"
+#include "VulkanWrapper/Command/CommandPool.h"
+#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
 #include "VulkanWrapper/Model/Mesh.h"
 #include "VulkanWrapper/Model/MeshManager.h"
+#include "VulkanWrapper/Pipeline/ComputePipeline.h"
+#include "VulkanWrapper/Pipeline/PipelineLayout.h"
 #include "VulkanWrapper/RayTracing/GeometryReference.h"
 #include "VulkanWrapper/RayTracing/RayTracedScene.h"
 #include "VulkanWrapper/Shader/ShaderCompiler.h"
@@ -403,5 +407,118 @@ TEST(ScalarBlockLayoutTest, RayTracingEnablesScalarBlockLayout) {
         device->wait_idle();
     } catch (...) {
         GTEST_SKIP() << "Could not create device with ray_tracing";
+    }
+}
+
+// =============================================================================
+// Compute Shader Buffer Reference Execution Test
+// =============================================================================
+
+TEST_F(GeometryAccessTest, BufferReferenceComputeShaderExecution) {
+    constexpr std::string_view compute_source = R"(
+#version 460
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+
+layout(local_size_x = 64) in;
+
+layout(buffer_reference, scalar) buffer FloatBuffer { float values[]; };
+
+layout(push_constant, scalar) uniform PushConstants {
+    uint64_t input_address;
+    uint64_t output_address;
+    uint count;
+};
+
+void main() {
+    uint idx = gl_GlobalInvocationID.x;
+    if (idx >= count) return;
+    FloatBuffer src = FloatBuffer(input_address);
+    FloatBuffer dst = FloatBuffer(output_address);
+    dst.values[idx] = src.values[idx] * 2.0;
+}
+)";
+
+    constexpr uint32_t element_count = 256;
+
+    // Compile compute shader
+    vw::ShaderCompiler compiler;
+    compiler.set_target_vulkan_version(VK_API_VERSION_1_3);
+    auto shader_module = compiler.compile_to_module(
+        gpu->device, compute_source, vk::ShaderStageFlagBits::eCompute);
+
+    // Create pipeline layout with push constants
+    struct PushConstants {
+        uint64_t input_address;
+        uint64_t output_address;
+        uint32_t count;
+    };
+
+    auto pipeline_layout =
+        vw::PipelineLayoutBuilder(gpu->device)
+            .with_push_constant_range(
+                vk::PushConstantRange()
+                    .setStageFlags(vk::ShaderStageFlagBits::eCompute)
+                    .setOffset(0)
+                    .setSize(sizeof(PushConstants)))
+            .build();
+
+    // Build compute pipeline
+    auto pipeline = vw::ComputePipelineBuilder(gpu->device,
+                                               std::move(pipeline_layout))
+                        .set_shader(shader_module)
+                        .build();
+
+    // Create input/output buffers
+    auto input_buffer =
+        vw::create_buffer<float, true, vw::StorageBufferUsage>(
+            *gpu->allocator, element_count);
+    auto output_buffer =
+        vw::create_buffer<float, true, vw::StorageBufferUsage>(
+            *gpu->allocator, element_count);
+
+    // Fill input buffer
+    std::vector<float> input_data(element_count);
+    for (uint32_t i = 0; i < element_count; ++i) {
+        input_data[i] = static_cast<float>(i) + 0.5f;
+    }
+    input_buffer.write(input_data, 0);
+
+    // Zero output buffer
+    std::vector<float> zeros(element_count, 0.0f);
+    output_buffer.write(zeros, 0);
+
+    // Record and submit command buffer
+    auto cmd_pool = vw::CommandPoolBuilder(gpu->device).build();
+    auto cmds = cmd_pool.allocate(1);
+    auto cmd = cmds[0];
+
+    std::ignore =
+        cmd.begin(vk::CommandBufferBeginInfo().setFlags(
+            vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+
+    cmd.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline->handle());
+
+    PushConstants pc{
+        .input_address = input_buffer.device_address(),
+        .output_address = output_buffer.device_address(),
+        .count = element_count,
+    };
+    cmd.pushConstants(pipeline->layout().handle(),
+                      vk::ShaderStageFlagBits::eCompute, 0, sizeof(pc), &pc);
+
+    cmd.dispatch(element_count / 64, 1, 1);
+
+    std::ignore = cmd.end();
+
+    gpu->queue().enqueue_command_buffer(cmd);
+    gpu->queue().submit({}, {}, {}).wait();
+
+    // Read back and verify
+    auto result = output_buffer.read_as_vector(0, element_count);
+    for (uint32_t i = 0; i < element_count; ++i) {
+        EXPECT_FLOAT_EQ(result[i], input_data[i] * 2.0f)
+            << "Mismatch at index " << i;
     }
 }
