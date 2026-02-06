@@ -188,4 +188,5 @@ class GraphicsPipelineBuilder {
     vk::PrimitiveTopology m_topology = vk::PrimitiveTopology::eTriangleList;
     vk::CullModeFlags m_cullMode = vk::CullModeFlagBits::eBack;
 };
+
 } // namespace vw
