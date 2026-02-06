@@ -1,15 +1,19 @@
 # Unit Tests
 
-GTest unit tests for GPU code.
+GTest unit tests for GPU code. Test resource creation, memory management, APIs, and error handling.
 
 ## GPU Singleton
 
 ```cpp
-auto& gpu = vw::tests::create_gpu();  // Shared singleton (tests/utils/create_gpu.hpp)
-// gpu.instance, gpu.device, gpu.allocator, gpu.queue()
+#include "utils/create_gpu.hpp"
+auto& gpu = vw::tests::create_gpu();  // Shared singleton
+// gpu.instance  -- shared_ptr<Instance>
+// gpu.device    -- shared_ptr<Device>
+// gpu.allocator -- shared_ptr<Allocator>
+// gpu.queue()   -- Queue&
 ```
 
-For ray tracing, define `get_ray_tracing_gpu()` locally in your test file (not in a shared header — see existing RT tests for the pattern):
+For ray tracing, define `get_ray_tracing_gpu()` locally in your test file (not in a shared header -- see `VulkanWrapper/tests/RayTracingTests.cpp`):
 ```cpp
 auto* gpu = get_ray_tracing_gpu();
 if (!gpu) GTEST_SKIP() << "Ray tracing unavailable";
@@ -17,31 +21,55 @@ if (!gpu) GTEST_SKIP() << "Ray tracing unavailable";
 
 ## Common Patterns
 
-**Buffer creation:**
+**Buffer creation and validation:**
 ```cpp
 auto buffer = create_buffer<std::byte, true, StagingBufferUsage>(*gpu.allocator, 1024);
 EXPECT_EQ(buffer.size(), 1024);
+EXPECT_NE(buffer.device_address(), 0);
 ```
 
-**Image creation:**
+**Image creation and validation:**
 ```cpp
 auto image = gpu.allocator->create_image_2D(Width{64}, Height{64}, false, format, usage);
 EXPECT_EQ(image->extent2D().width, 64);
 ```
 
-**Command recording:**
+**Command recording and submission:**
 ```cpp
+auto cmdPool = CommandPoolBuilder(gpu.device).build();
 auto cmd = cmdPool.allocate(1)[0];
 std::ignore = cmd.begin(vk::CommandBufferBeginInfo{}.setFlags(eOneTimeSubmit));
-// record...
+// record commands...
 std::ignore = cmd.end();
 gpu.queue().enqueue_command_buffer(cmd);
-gpu.queue().submit({}, {}, {}).wait();
+gpu.queue().submit({}, {}, {}).wait();  // Always wait for GPU
 ```
 
 **Exception testing:**
 ```cpp
 EXPECT_THROW(check_vk(vk::Result::eErrorUnknown, "test"), vw::VulkanException);
+EXPECT_THROW(check_vma(VK_ERROR_OUT_OF_DEVICE_MEMORY, "test"), vw::VMAException);
+EXPECT_NO_THROW(check_vk(vk::Result::eSuccess, "ok"));
+```
+
+**ResourceTracker testing:**
+```cpp
+vw::Barrier::ResourceTracker tracker;
+tracker.track(ImageState{image, range, eUndefined, eTopOfPipe, eNone});
+tracker.request(ImageState{image, range, eColorAttachmentOptimal, eColorAttachmentOutput, eColorAttachmentWrite});
+tracker.flush(cmd);
+// Verify no validation errors after flush
+```
+
+**Staging buffer upload and readback:**
+```cpp
+StagingBufferManager staging(gpu.device, gpu.allocator);
+staging.fill_buffer(std::span<const float>(data), device_buffer, 0);
+auto cmd = staging.fill_command_buffer();
+gpu.queue().enqueue_command_buffer(cmd);
+gpu.queue().submit({}, {}, {}).wait();
+// Readback to verify
+auto result = staging_buffer.read_as_vector(0, count);
 ```
 
 ## Adding Tests
@@ -53,3 +81,9 @@ add_executable(MyTests MyTests.cpp)
 target_link_libraries(MyTests PRIVATE TestUtils VulkanWrapperCoreLibrary GTest::gtest GTest::gtest_main)
 gtest_discover_tests(MyTests)
 ```
+
+## Important Notes
+
+- The GPU singleton intentionally leaks to avoid static destruction order issues -- this is expected
+- Always call `.wait()` after `queue().submit()` to ensure GPU work completes before assertions
+- Validation layers are enabled by default -- any Vulkan misuse will trigger validation errors

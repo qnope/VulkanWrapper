@@ -7,9 +7,18 @@ Use `Allocator` for all memory. Never use raw Vulkan allocation APIs.
 ```cpp
 // Template: Buffer<typename T, bool HostVisible, VkBufferUsageFlags Flags>
 // Create via: create_buffer<T, HostVisible, UsageConstant>(allocator, count)
-// Usage constants (VkBufferUsageFlags2 in BufferUsage.h):
-//   UniformBufferUsage, StorageBufferUsage, StagingBufferUsage, VertexBufferUsage, IndexBufferUsage
+// Or type-alias: create_buffer<BufferType>(allocator, count)
+// Factory functions in: Memory/AllocateBufferUtils.h
 ```
+
+**Usage constants** (defined in `Memory/BufferUsage.h`):
+| Constant | Includes | Use Case |
+|----------|----------|----------|
+| `VertexBufferUsage` | vertex + transferDst + deviceAddress + AS build input | Vertex data |
+| `IndexBufferUsage` | index + transferDst + deviceAddress + AS build input | Index data |
+| `UniformBufferUsage` | uniform + transferDst + deviceAddress | Uniform buffers |
+| `StorageBufferUsage` | storage + transferDst + deviceAddress | SSBOs |
+| `StagingBufferUsage` | transferSrc + transferDst + deviceAddress | CPU-GPU transfers |
 
 **When to use host-visible vs staging:**
 - `HostVisible = true`: small buffers updated frequently from CPU (uniforms, push-style data)
@@ -21,20 +30,24 @@ Use `Allocator` for all memory. Never use raw Vulkan allocation APIs.
 // Create allocator (buffer device address always enabled)
 auto allocator = AllocatorBuilder(instance, device).build();
 
-// Allocate buffers
+// Allocate buffers (AllocateBufferUtils.h)
 auto vb = allocate_vertex_buffer<Vertex3D, false>(*allocator, count);
 auto staging = create_buffer<std::byte, true, StagingBufferUsage>(*allocator, size);
 
 // Type-alias style (recommended for complex usage flags)
-using DeviceBuffer = Buffer<float, false, DeviceBufferUsage>;
+using DeviceBuffer = Buffer<float, false, StorageBufferUsage>;
 auto buffer = create_buffer<DeviceBuffer>(*allocator, element_count);
 
 // Create image
 auto image = allocator->create_image_2D(Width{1920}, Height{1080}, false, format, usage);
 
-// Host-visible buffer operations
-buffer.write(data, offset);
+// Host-visible buffer operations (only when HostVisible = true, enforced by requires clause)
+buffer.write(data, offset);         // std::span<const T>, offset in elements
 auto result = buffer.read_as_vector(offset, count);
+
+// Buffer properties
+buffer.size_bytes();      // VkDeviceSize in bytes
+buffer.device_address();  // vk::DeviceAddress for shader access
 ```
 
 ## Staging Uploads
@@ -65,3 +78,10 @@ auto combined_image = staging.stage_image_from_path("texture.png", mipmaps);
 auto samples = create_hemisphere_samples_buffer(*allocator);
 NoiseTexture noise(device, allocator, queue);
 ```
+
+## Important Notes
+
+- All usage constants include `eShaderDeviceAddress` (buffers accessible via device address in shaders)
+- `VertexBufferUsage` and `IndexBufferUsage` include `eAccelerationStructureBuildInputReadOnlyKHR` for RT
+- `buffer.write()` / `buffer.read_as_vector()` only available when `HostVisible = true` (enforced via `requires`)
+- `Buffer::does_support(usage)` is `consteval` -- checks buffer usage flags at compile time
