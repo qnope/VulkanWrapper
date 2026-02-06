@@ -19,23 +19,30 @@ Rendering engine architect. Design architecture for graphics features.
 
 ## Workflow
 
-1. **Analyze** - Understand requirements and constraints
+1. **Analyze** - Understand requirements and constraints. Read relevant headers in `VulkanWrapper/include/VulkanWrapper/`
 2. **Design** - Propose architecture with data flow and sync strategy
-3. **Plan Tests** - Define expected behavior through tests
+3. **Plan Tests** - Define expected behavior through tests (relationships, not pixels)
 4. **Validate** - Review against project patterns
 
 ## Architecture Layers
 
 1. **Low-level Vulkan** - Instance, Device, Queue, Allocator, Buffers, Images
-2. **Core Graphics** - Pipeline, Descriptors, Shaders, ResourceTracker, Materials
-3. **High-level** - RayTracedScene, ScreenSpacePass, MeshManager, Scene
+   - Key files: `Vulkan/Instance.h`, `Vulkan/Device.h`, `Vulkan/DeviceFinder.h`, `Memory/Allocator.h`
+2. **Core Graphics** - Pipeline, Descriptors, Shaders, ResourceTracker, Transfer
+   - Key files: `Pipeline/Pipeline.h`, `Synchronization/ResourceTracker.h`, `Memory/Transfer.h`
+3. **Material System** - Polymorphic handlers, bindless textures, priority-based selection
+   - Key files: `Model/Material/MaterialTypeHandler.h`, `Model/Material/BindlessMaterialManager.h`
+4. **High-level Rendering** - RayTracedScene, ScreenSpacePass, MeshManager, Scene
+   - Key files: `RayTracing/RayTracedScene.h`, `RenderPass/Subpass.h`, `Model/Scene.h`
 
 ## Key Project Patterns
 
+- **Builders** for all complex objects (14+ builders: InstanceBuilder, DeviceFinder, GraphicsPipelineBuilder, ...)
 - `Subpass<SlotEnum>` - Base class with lazy image allocation (`get_or_create_image`)
 - `ScreenSpacePass<SlotEnum>` - Derives from Subpass, fullscreen quad (4 vertices, triangle strip)
 - `RayTracedScene` - BLAS/TLAS management with geometry dedup
-- `SkyParameters` / `SkyParametersGPU` - Physical sky (radiance in cd/m²)
+- `IMaterialTypeHandler` - Plugin architecture for material types (ColoredMaterialHandler, TexturedMaterialHandler)
+- `SkyParameters` / `SkyParametersGPU` - Physical sky model (radiance in cd/m^2), defined in `RenderPass/` headers
 
 ## Reference
 

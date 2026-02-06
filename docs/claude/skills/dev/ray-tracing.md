@@ -6,10 +6,8 @@
 // Device with RT
 auto device = instance->findGpu().with_ray_tracing().build();
 
-// Allocator with buffer device address
-auto allocator = AllocatorBuilder(instance, device)
-    .set_flags(VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT)
-    .build();
+// Allocator (buffer device address always enabled)
+auto allocator = AllocatorBuilder(instance, device).build();
 ```
 
 ## RayTracedScene (Recommended)
