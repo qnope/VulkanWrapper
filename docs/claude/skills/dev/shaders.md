@@ -2,6 +2,8 @@
 
 ## Compilation
 
+Runtime GLSL -> SPIR-V via shaderc (`Shader/ShaderCompiler.h`):
+
 ```cpp
 auto compiler = ShaderCompiler()
     .add_include_path("VulkanWrapper/Shaders/include")
@@ -12,13 +14,21 @@ auto module = compiler.compile_file_to_module(device, "shader.frag");
 
 Stage detected from extension: `.vert`, `.frag`, `.comp`, `.rgen`, `.rmiss`, `.rchit`
 
+Build-time compilation uses `VwCompileShader()` CMake function with glslangValidator.
+
 ## GLSL Includes
 
 Available in `VulkanWrapper/Shaders/include/`:
-- `random.glsl` - Hemisphere sampling
-- `atmosphere_params.glsl` - Sky parameters
-- `atmosphere_scattering.glsl` - Rayleigh/Mie
 
+| File | Purpose |
+|------|---------|
+| `random.glsl` | Hemisphere sampling, noise functions |
+| `atmosphere_params.glsl` | Sky model parameters |
+| `atmosphere_scattering.glsl` | Rayleigh/Mie scattering |
+| `geometry_access.glsl` | RT geometry vertex/index access in hit shaders |
+| `sky_radiance.glsl` | Sky radiance computation |
+
+**Random sampling example:**
 ```glsl
 #define RANDOM_XI_BUFFER_BINDING 8
 #define RANDOM_NOISE_TEXTURE_BINDING 9
@@ -40,12 +50,23 @@ auto layout = PipelineLayoutBuilder(device)
 cmd.pushConstants(layout.handle(), stages, 0, sizeof(pc), &pc);
 ```
 
-Max size: 128 bytes (guaranteed minimum).
+Max size: 128 bytes (guaranteed minimum by Vulkan spec).
 
 ## Fullscreen Shader
 
-`VulkanWrapper/Shaders/fullscreen.vert` - generates fullscreen quad via triangle strip from vertex ID.
+`VulkanWrapper/Shaders/fullscreen.vert` generates fullscreen quad via triangle strip from vertex ID. No vertex buffer needed.
 
 ```cpp
-cmd.draw(4, 1, 0, 0);  // No vertex buffer needed, 4 vertices triangle strip
+cmd.draw(4, 1, 0, 0);  // 4 vertices, triangle strip
+```
+
+Used by all `ScreenSpacePass` derivatives. Pipeline created via `create_screen_space_pipeline()`.
+
+## Descriptor Set Layout
+
+```cpp
+auto layout = DescriptorSetLayoutBuilder(device)
+    .add_binding(0, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment)
+    .add_binding(1, vk::DescriptorType::eUniformBuffer, vk::ShaderStageFlagBits::eFragment)
+    .build();
 ```

@@ -22,18 +22,29 @@ Graphics engine test engineer. Write and run GTest tests for GPU code.
 **Test relationships, not pixel values.** No golden images. Test physical plausibility:
 - "lit area > shadowed area" not "pixel == RGB(127, 89, 45)"
 - "sunset is warmer than noon" not "red channel == 0.8"
+- Use `EXPECT_NEAR` with tolerance for floats, `EXPECT_GT`/`EXPECT_LT` for ordering
 
 ## Test Patterns
 
 ```cpp
-auto& gpu = vw::tests::create_gpu();  // Singleton (tests/utils/create_gpu.hpp)
-// gpu.instance, gpu.device, gpu.allocator, gpu.queue()
+#include "utils/create_gpu.hpp"
+#include <gtest/gtest.h>
+
+TEST(MyFeature, BasicTest) {
+    auto& gpu = vw::tests::create_gpu();  // Singleton (tests/utils/create_gpu.hpp)
+    // gpu.instance, gpu.device, gpu.allocator, gpu.queue()
+}
 ```
 
 For ray tracing, define `get_ray_tracing_gpu()` locally in your test file (not in a shared header) and skip if unavailable:
 ```cpp
 auto* gpu = get_ray_tracing_gpu();
 if (!gpu) GTEST_SKIP() << "Ray tracing unavailable";
+```
+
+Always wait for GPU after submitting work:
+```cpp
+gpu.queue().submit({}, {}, {}).wait();
 ```
 
 ## Build & Run
@@ -66,7 +77,14 @@ target_link_libraries(MyTests PRIVATE TestUtils VulkanWrapperCoreLibrary GTest::
 gtest_discover_tests(MyTests)
 ```
 
+## Existing Test Examples to Study
+
+- `VulkanWrapper/tests/RenderPassTests.cpp` -- ScreenSpacePass, SkyPass, SunLightPass, IndirectLightPass coherence tests
+- `VulkanWrapper/tests/MemoryTests.cpp` -- Buffer, Allocator, StagingBufferManager, ResourceTracker unit tests
+- `VulkanWrapper/tests/MaterialTests.cpp` -- Material system unit tests
+- `VulkanWrapper/tests/RayTracingTests.cpp` -- RayTracedScene, geometry access tests
+
 ## Reference
 
-- `/test` skill for detailed test patterns (unit and rendering)
+- `/test` skill for detailed test patterns (unit tests and rendering coherence tests)
 - Tests in `VulkanWrapper/tests/`

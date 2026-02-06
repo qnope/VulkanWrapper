@@ -1,16 +1,23 @@
 # Ray Tracing
 
+All RT code is in namespace `vw::rt`. Headers in `VulkanWrapper/include/VulkanWrapper/RayTracing/`.
+
 ## Setup
 
 ```cpp
-// Device with RT
-auto device = instance->findGpu().with_ray_tracing().build();
+// Device with RT extensions
+auto device = instance->findGpu()
+    .with_queue(vk::QueueFlagBits::eGraphics)
+    .with_synchronization_2()
+    .with_dynamic_rendering()
+    .with_ray_tracing()    // Enables RT pipeline, AS, buffer device address
+    .build();
 
 // Allocator (buffer device address always enabled)
 auto allocator = AllocatorBuilder(instance, device).build();
 ```
 
-## RayTracedScene (Recommended)
+## RayTracedScene (Recommended High-Level API)
 
 ```cpp
 vw::rt::RayTracedScene scene(device, allocator);
@@ -18,18 +25,32 @@ vw::rt::RayTracedScene scene(device, allocator);
 // Add instances (BLAS created automatically, deduped by geometry hash)
 auto id = scene.add_instance(mesh, transform);
 
-// Modify
+// Modify instances
 scene.set_transform(id, newTransform);
 scene.set_visible(id, false);
 
-// Build
-scene.build();  // Initial: BLAS + TLAS
+// Build (initial: creates BLAS + TLAS)
+scene.build();
 
-// Update (refit TLAS only)
+// Update (refit TLAS only -- for transform/visibility changes)
 if (scene.needs_update()) scene.update();
 
-// Access
+// Access TLAS for descriptor binding
 vk::AccelerationStructureKHR tlas = scene.tlas_handle();
+```
+
+## Low-Level API (BLAS/TLAS Builders)
+
+```cpp
+// BLAS
+auto blas = vw::rt::BottomLevelAccelerationStructureBuilder(device, allocator)
+    .add_geometry(vertexBuffer, indexBuffer, vertexCount, indexCount, stride)
+    .build();
+
+// TLAS
+auto tlas = vw::rt::TopLevelAccelerationStructureBuilder(device, allocator)
+    .add_instance(blas, transform)
+    .build();
 ```
 
 ## Pipeline & SBT
@@ -48,11 +69,28 @@ for (auto& h : pipeline.closest_hit_handles()) sbt.add_hit_record(h);
 cmd.traceRaysKHR(sbt.raygen_region(), sbt.miss_region(), sbt.hit_region(), {}, w, h, 1);
 ```
 
+## GeometryReference
+
+`GeometryReference` (`RayTracing/GeometryReference.h`) provides shader access to geometry data:
+```cpp
+// In GLSL: use geometry_access.glsl include for vertex/index access in hit shaders
+#include "geometry_access.glsl"
+```
+
 ## Barriers
 
 Always barrier between AS build and trace:
 ```cpp
-tracker.track({tlas, eBuild, eWrite});
-tracker.request({tlas, eRTShader, eRead});
+tracker.track(AccelerationStructureState{tlas, eAccelerationStructureBuildKHR, eAccelerationStructureWriteKHR});
+tracker.request(AccelerationStructureState{tlas, eRayTracingShaderKHR, eAccelerationStructureReadKHR});
 tracker.flush(cmd);
 ```
+
+## Testing
+
+Define `get_ray_tracing_gpu()` locally in each RT test file (not in a shared header):
+```cpp
+auto* gpu = get_ray_tracing_gpu();
+if (!gpu) GTEST_SKIP() << "Ray tracing unavailable";
+```
+See `VulkanWrapper/tests/RayTracingTests.cpp` for examples.
