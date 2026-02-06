@@ -114,7 +114,7 @@ jobs:
 
     - name: Run tests
       run: |
-        ctest --test-dir build --output-on-failure --timeout 120
+        ctest --test-dir build --output-on-failure --timeout 120 -j8
       env:
         # Use Mesa's software renderer for Vulkan tests
         # Note: Recent Mesa versions renamed lvp_icd.x86_64.json to lvp_icd.json
