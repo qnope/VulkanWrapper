@@ -26,36 +26,53 @@ clang-format -i <file>
 ## Directory Structure
 
 ```
-VulkanWrapper/
-├── include/VulkanWrapper/   # Public headers
-│   ├── Command/             # CommandBuffer, CommandPool
-│   ├── Descriptors/         # DescriptorSet, DescriptorSetLayout, Vertex
-│   ├── Image/               # Image, ImageView, Sampler, CombinedImage, Mipmap
-│   ├── Memory/              # Allocator, Buffer<T,HostVisible,Usage>, Barrier helpers
-│   ├── Model/               # Scene, Mesh, MeshManager, Importer
-│   │   └── Material/        # BindlessMaterialManager, MaterialTypeHandler
-│   ├── Pipeline/            # Pipeline (GraphicsPipelineBuilder), PipelineLayout, ShaderModule
-│   ├── Random/              # NoiseTexture, RandomSamplingBuffer
-│   ├── RayTracing/          # BLAS/TLAS, RayTracedScene, RayTracingPipeline, ShaderBindingTable
-│   ├── RenderPass/          # Subpass (lazy image cache), ScreenSpacePass, SkyPass, ToneMappingPass
-│   ├── Shader/              # ShaderCompiler (GLSL → SPIR-V)
-│   ├── Synchronization/     # ResourceTracker, Fence, Semaphore
-│   ├── Utils/               # Error (exception hierarchy), ObjectWithHandle, Algos
-│   ├── Vulkan/              # Instance, Device, DeviceFinder, Queue, Swapchain
-│   └── Window/              # SDL3 Window
-├── tests/                   # GTest tests (use create_gpu() singleton)
-├── Shaders/include/         # GLSL includes (random.glsl, atmosphere_*.glsl)
-examples/                    # Advanced (deferred rendering), Application (basic)
+VulkanWrapper/                          # Library root
+├── include/VulkanWrapper/              # Public headers
+│   ├── Command/                        # CommandBuffer, CommandPool
+│   ├── Descriptors/                    # DescriptorSet, DescriptorSetLayout, Vertex
+│   ├── Image/                          # Image, ImageView, Sampler, CombinedImage, Mipmap, ImageLoader
+│   ├── Memory/                         # Allocator, Buffer<T,HostVisible,Usage>, Transfer, StagingBufferManager
+│   ├── Model/                          # Scene, Mesh, MeshManager, Importer
+│   │   └── Material/                   # BindlessMaterialManager, MaterialTypeHandler, TexturedMaterialHandler
+│   ├── Pipeline/                       # GraphicsPipelineBuilder, Pipeline, PipelineLayout, ShaderModule, MeshRenderer
+│   ├── Random/                         # NoiseTexture, RandomSamplingBuffer
+│   ├── RayTracing/                     # BLAS/TLAS, RayTracedScene, RayTracingPipeline, ShaderBindingTable
+│   ├── RenderPass/                     # Subpass, ScreenSpacePass, SkyPass, ToneMappingPass, SunLightPass, IndirectLightPass
+│   ├── Shader/                         # ShaderCompiler (GLSL -> SPIR-V)
+│   ├── Synchronization/               # ResourceTracker, Fence, Semaphore
+│   ├── Utils/                          # Error (exception hierarchy), ObjectWithHandle, Algos
+│   ├── Vulkan/                         # Instance, Device, DeviceFinder, Queue, Swapchain, PhysicalDevice
+│   └── Window/                         # SDL3 Window, SDL_Initializer
+├── src/VulkanWrapper/                  # Implementation (.cpp files, mirrors include/ structure)
+├── tests/                              # GTest tests (use create_gpu() singleton)
+├── Shaders/include/                    # GLSL includes (random.glsl, atmosphere_*.glsl)
+examples/                               # Advanced (deferred rendering), Application (basic)
 ```
 
 ## Core Patterns
+
+**Builder Pattern** (all complex objects):
+```cpp
+auto instance = InstanceBuilder().setDebug().setApiVersion(ApiVersion::e13).build();
+auto device = instance->findGpu().with_queue(eGraphics).with_synchronization_2().with_dynamic_rendering().build();
+auto allocator = AllocatorBuilder(instance, device).build();
+// Also: ImageViewBuilder, SamplerBuilder, CommandPoolBuilder, FenceBuilder,
+//       GraphicsPipelineBuilder, RayTracingPipelineBuilder, DescriptorSetLayoutBuilder, ...
+```
 
 **Type-Safe Buffers:**
 ```cpp
 Buffer<T, HostVisible, Usage>  // e.g., Buffer<float, true, UniformBufferUsage>
 ```
 
-**Subpass → ScreenSpacePass hierarchy:**
+**RAII Handles** (`ObjectWithHandle<T>`, ownership via template parameter):
+```cpp
+ObjectWithHandle<vk::Pipeline>          // Non-owning
+ObjectWithHandle<vk::UniquePipeline>    // Owning (auto-destroyed)
+// ObjectWithUniqueHandle<T> is a type alias, not a separate class
+```
+
+**Subpass -> ScreenSpacePass hierarchy:**
 ```cpp
 Subpass<SlotEnum>            // Base: lazy image allocation via get_or_create_image()
 ScreenSpacePass<SlotEnum>    // Derived: fullscreen quad rendering (4 vertices, triangle strip)
@@ -90,7 +107,7 @@ check_vma(result, "context");       // VMAException
 check_sdl(ptr_or_bool, "context");  // SDLException (pointer and bool overloads)
 ```
 
-Exception hierarchy: `vw::Exception` → `VulkanException`, `VMAException`, `SDLException`, `FileException`, `AssimpException`, `ShaderCompilationException`, `ValidationLayerException`, `SwapchainException`, `LogicException`
+Exception hierarchy: `vw::Exception` -> `VulkanException`, `VMAException`, `SDLException`, `FileException`, `AssimpException`, `ShaderCompilationException`, `ValidationLayerException`, `SwapchainException`, `LogicException`
 
 ## Test GPU Singleton
 

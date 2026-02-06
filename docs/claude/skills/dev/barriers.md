@@ -21,19 +21,19 @@ tracker.flush(cmd);
 
 ## Common Transitions
 
-**Undefined → Color Attachment:**
+**Undefined -> Color Attachment:**
 ```cpp
 tracker.track({image, range, eUndefined, eTopOfPipe, eNone});
 tracker.request({image, range, eColorAttachmentOptimal, eColorAttachmentOutput, eColorAttachmentWrite});
 ```
 
-**Color Attachment → Shader Read:**
+**Color Attachment -> Shader Read:**
 ```cpp
 tracker.track({image, range, eColorAttachmentOptimal, eColorAttachmentOutput, eColorAttachmentWrite});
 tracker.request({image, range, eShaderReadOnlyOptimal, eFragmentShader, eShaderSampledRead});
 ```
 
-**After TLAS Build → Ray Tracing:**
+**After TLAS Build -> Ray Tracing:**
 ```cpp
 tracker.track({tlas, eAccelerationStructureBuildKHR, eAccelerationStructureWriteKHR});
 tracker.request({tlas, eRayTracingShaderKHR, eAccelerationStructureReadKHR});
@@ -41,8 +41,25 @@ tracker.request({tlas, eRayTracingShaderKHR, eAccelerationStructureReadKHR});
 
 ## Transfer API
 
+`Transfer` (`Memory/Transfer.h`, namespace `vw`) wraps copy operations with an embedded `ResourceTracker` for automatic barrier management.
+
 ```cpp
 vw::Transfer transfer;
+
+// Blit image (automatic barrier management)
 transfer.blit(cmd, srcImage, dstImage);
-transfer.copyBuffer(cmd, src, dst, size, srcOffset, dstOffset);
+transfer.blit(cmd, srcImage, dstImage, srcSubresource, dstSubresource, vk::Filter::eLinear);
+
+// Copy buffer (srcOffset, dstOffset, then size)
+transfer.copyBuffer(cmd, src, dst, srcOffset, dstOffset, size);
+
+// Copy between buffer and image
+transfer.copyBufferToImage(cmd, srcBuffer, dstImage, srcOffset);
+transfer.copyImageToBuffer(cmd, srcImage, dstBuffer, dstOffset);
+
+// Save GPU image to disk (handles staging, format conversion, submission)
+transfer.saveToFile(cmd, allocator, queue, image, "output.png");
+
+// Access embedded tracker for manual state management
+auto& tracker = transfer.resourceTracker();
 ```

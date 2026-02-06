@@ -11,7 +11,7 @@ git diff origin/main...HEAD --stat
 git log origin/main..HEAD --oneline
 
 # 2. Run clang-format on changed files
-git diff --name-only origin/main...HEAD -- '*.h' '*.cpp' | xargs clang-format -i
+git diff --name-only origin/main...HEAD -- '*.h' '*.cpp' | xargs -r clang-format -i
 
 # 3. Run tests
 cd build-Clang20Debug && ctest --output-on-failure
