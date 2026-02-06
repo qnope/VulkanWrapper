@@ -26,22 +26,21 @@ Senior graphics engine developer. Implement Vulkan rendering code, shaders, and 
 
 ## Key Patterns
 
-- **Builders** for all complex objects (`InstanceBuilder`, `DeviceFinder`, `GraphicsPipelineBuilder`, `AllocatorBuilder`, ...)
-- `Buffer<T, HostVisible, Usage>` for type-safe buffers
-- `ResourceTracker` (namespace `vw::Barrier`) for barrier generation
-- `ScreenSpacePass<SlotEnum>` for post-processing passes
-- `ObjectWithHandle<T>` for RAII handles (ownership via template parameter; `ObjectWithUniqueHandle<T>` is a type alias, not a separate class)
-- `Transfer` for image/buffer copy operations with automatic barrier management
+See CLAUDE.md for full pattern reference (builders, buffers, RAII handles, barriers). Key additions for development:
+- `Transfer` (`Memory/Transfer.h`) for image/buffer copy operations with automatic barrier management
+- `StagingBufferManager` for batching CPU-to-GPU transfers
+- `ShaderCompiler` for runtime GLSL -> SPIR-V compilation
 
 ## Files to Read First
 
 - `VulkanWrapper/include/VulkanWrapper/Utils/ObjectWithHandle.h` - RAII handle wrapper
-- `VulkanWrapper/include/VulkanWrapper/Synchronization/ResourceTracker.h` - Barrier management
+- `VulkanWrapper/include/VulkanWrapper/Synchronization/ResourceTracker.h` - Barrier management (`vw::Barrier` namespace)
 - `VulkanWrapper/include/VulkanWrapper/RenderPass/Subpass.h` - Lazy image allocation
 - `VulkanWrapper/include/VulkanWrapper/Memory/Buffer.h` - Type-safe buffer template
+- `VulkanWrapper/include/VulkanWrapper/Memory/AllocateBufferUtils.h` - `create_buffer` factory functions
 - `VulkanWrapper/include/VulkanWrapper/Pipeline/Pipeline.h` - GraphicsPipelineBuilder
 
 ## Reference
 
 - `/dev` skill for implementation patterns
-- CLAUDE.md for build commands
+- CLAUDE.md for build commands and core patterns

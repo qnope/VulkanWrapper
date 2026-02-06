@@ -24,22 +24,15 @@ Graphics code reviewer. Review Vulkan implementations for correctness and perfor
 - Proper memory access patterns
 - Staging uploads batched via `StagingBufferManager`
 
-**Patterns:**
-- Builder patterns for complex objects (never construct Vulkan objects directly)
-- `Buffer<T, HostVisible, Usage>` for buffers
-- `vk::` types (not `Vk` C-style prefixes)
+**Patterns & Anti-Patterns:**
+See CLAUDE.md for code style rules. Additionally check:
 - `vk::PipelineStageFlagBits2` (not v1 `vk::PipelineStageFlagBits`)
-- Strong types (`Width`, `Height`, `MipLevel`)
+- `create_buffer<T, HostVisible, UsageConstant>()` (not raw `vkCreateBuffer` + `vkAllocateMemory`)
+- `ResourceTracker` for barriers (not raw `cmd.pipelineBarrier()`)
+- `cmd.beginRendering()` (not `cmd.beginRenderPass()`)
+- C++23 concepts/requires (not `std::enable_if_t` / SFINAE)
+- Ranges/algorithms (not raw loops)
 - Code formatted with `clang-format`
-- C++23 features: concepts/requires, ranges, structured bindings
-
-**Anti-Patterns to Flag:**
-- Raw `vkCmdPipelineBarrier` or `cmd.pipelineBarrier()` instead of `ResourceTracker`
-- `cmd.beginRenderPass` instead of `cmd.beginRendering`
-- `std::enable_if_t` / SFINAE instead of C++20 concepts/requires
-- `Vk` prefixed types instead of `vk::` namespace
-- `vkAllocateMemory` / `vkCreateBuffer` instead of `Allocator`
-- Raw loops instead of ranges/algorithms
 
 **Material System:**
 - `IMaterialTypeHandler` interface respected (tag, try_create, layout, descriptor_set)

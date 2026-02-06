@@ -5,11 +5,11 @@ GTest unit tests for GPU code.
 ## GPU Singleton
 
 ```cpp
-auto& gpu = vw::tests::create_gpu();
+auto& gpu = vw::tests::create_gpu();  // Shared singleton (tests/utils/create_gpu.hpp)
 // gpu.instance, gpu.device, gpu.allocator, gpu.queue()
 ```
 
-For ray tracing:
+For ray tracing, define `get_ray_tracing_gpu()` locally in your test file (not in a shared header — see existing RT tests for the pattern):
 ```cpp
 auto* gpu = get_ray_tracing_gpu();
 if (!gpu) GTEST_SKIP() << "Ray tracing unavailable";
@@ -47,7 +47,7 @@ EXPECT_THROW(check_vk(vk::Result::eErrorUnknown, "test"), vw::VulkanException);
 ## Adding Tests
 
 1. Create `VulkanWrapper/tests/MyTests.cpp`
-2. Add to `CMakeLists.txt`:
+2. Add to `VulkanWrapper/tests/CMakeLists.txt`:
 ```cmake
 add_executable(MyTests MyTests.cpp)
 target_link_libraries(MyTests PRIVATE TestUtils VulkanWrapperCoreLibrary GTest::gtest GTest::gtest_main)

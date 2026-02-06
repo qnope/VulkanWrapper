@@ -26,10 +26,12 @@ Rendering engine architect. Design architecture for graphics features.
 
 ## Architecture Layers
 
+All paths relative to `VulkanWrapper/include/VulkanWrapper/`.
+
 1. **Low-level Vulkan** - Instance, Device, Queue, Allocator, Buffers, Images
    - Key files: `Vulkan/Instance.h`, `Vulkan/Device.h`, `Vulkan/DeviceFinder.h`, `Memory/Allocator.h`
 2. **Core Graphics** - Pipeline, Descriptors, Shaders, ResourceTracker, Transfer
-   - Key files: `Pipeline/Pipeline.h`, `Synchronization/ResourceTracker.h`, `Memory/Transfer.h`
+   - Key files: `Pipeline/Pipeline.h`, `Synchronization/ResourceTracker.h` (`vw::Barrier` namespace), `Memory/Transfer.h`
 3. **Material System** - Polymorphic handlers, bindless textures, priority-based selection
    - Key files: `Model/Material/MaterialTypeHandler.h`, `Model/Material/BindlessMaterialManager.h`
 4. **High-level Rendering** - RayTracedScene, ScreenSpacePass, MeshManager, Scene
@@ -37,9 +39,7 @@ Rendering engine architect. Design architecture for graphics features.
 
 ## Key Project Patterns
 
-- **Builders** for all complex objects (14+ builders: InstanceBuilder, DeviceFinder, GraphicsPipelineBuilder, ...)
-- `Subpass<SlotEnum>` - Base class with lazy image allocation (`get_or_create_image`)
-- `ScreenSpacePass<SlotEnum>` - Derives from Subpass, fullscreen quad (4 vertices, triangle strip)
+See CLAUDE.md for core patterns (builders, buffers, RAII handles, barriers, dynamic rendering). Domain-specific patterns:
 - `RayTracedScene` - BLAS/TLAS management with geometry dedup
 - `IMaterialTypeHandler` - Plugin architecture for material types (ColoredMaterialHandler, TexturedMaterialHandler)
 - `SkyParameters` / `SkyParametersGPU` - Physical sky model (radiance in cd/m^2), defined in `RenderPass/` headers

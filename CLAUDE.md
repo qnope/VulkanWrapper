@@ -9,14 +9,20 @@ Modern C++23 Vulkan 1.3 wrapper library with RAII, type safety, and ray tracing 
 cmake -B build-Clang20Debug -DCMAKE_BUILD_TYPE=Debug
 cmake --build build-Clang20Debug
 
+# Build specific test target
+cmake --build build-Clang20Debug --target RenderPassTests
+
 # Run all tests
-cd build-Clang20Debug && ctest
+cd build-Clang20Debug && ctest --output-on-failure
 
 # Run specific test
 cd build-Clang20Debug/VulkanWrapper/tests && ./RenderPassTests
 
-# Format code
-clang-format -i <file>
+# Filter tests
+cd build-Clang20Debug/VulkanWrapper/tests && ./RenderPassTests --gtest_filter='*IndirectLight*'
+
+# Format changed files
+git diff --name-only -- '*.h' '*.cpp' | xargs -r clang-format -i
 ```
 
 **Note:** Uses llvmpipe (software Vulkan driver with full ray tracing support).
@@ -26,12 +32,12 @@ clang-format -i <file>
 ## Directory Structure
 
 ```
-VulkanWrapper/                          # Library root
+VulkanWrapper/                          # Library root (paths below are relative to repo root)
 ├── include/VulkanWrapper/              # Public headers
 │   ├── Command/                        # CommandBuffer, CommandPool
 │   ├── Descriptors/                    # DescriptorSet, DescriptorSetLayout, Vertex
 │   ├── Image/                          # Image, ImageView, Sampler, CombinedImage, Mipmap, ImageLoader
-│   ├── Memory/                         # Allocator, Buffer<T,HostVisible,Usage>, Transfer, StagingBufferManager
+│   ├── Memory/                         # Allocator, Buffer, Transfer, StagingBufferManager, Barrier
 │   ├── Model/                          # Scene, Mesh, MeshManager, Importer
 │   │   └── Material/                   # BindlessMaterialManager, MaterialTypeHandler, TexturedMaterialHandler
 │   ├── Pipeline/                       # GraphicsPipelineBuilder, Pipeline, PipelineLayout, ShaderModule, MeshRenderer
@@ -39,7 +45,7 @@ VulkanWrapper/                          # Library root
 │   ├── RayTracing/                     # BLAS/TLAS, RayTracedScene, RayTracingPipeline, ShaderBindingTable
 │   ├── RenderPass/                     # Subpass, ScreenSpacePass, SkyPass, ToneMappingPass, SunLightPass, IndirectLightPass
 │   ├── Shader/                         # ShaderCompiler (GLSL -> SPIR-V)
-│   ├── Synchronization/               # ResourceTracker, Fence, Semaphore
+│   ├── Synchronization/               # ResourceTracker (vw::Barrier namespace), Fence, Semaphore
 │   ├── Utils/                          # Error (exception hierarchy), ObjectWithHandle, Algos
 │   ├── Vulkan/                         # Instance, Device, DeviceFinder, Queue, Swapchain, PhysicalDevice
 │   └── Window/                         # SDL3 Window, SDL_Initializer
@@ -62,7 +68,10 @@ auto allocator = AllocatorBuilder(instance, device).build();
 
 **Type-Safe Buffers:**
 ```cpp
-Buffer<T, HostVisible, Usage>  // e.g., Buffer<float, true, UniformBufferUsage>
+// Template: Buffer<typename T, bool HostVisible, VkBufferUsageFlags Flags>
+// Create via: create_buffer<T, HostVisible, UsageConstant>(allocator, count)
+// Usage constants (VkBufferUsageFlags2 in BufferUsage.h): UniformBufferUsage, StorageBufferUsage, StagingBufferUsage, ...
+auto buf = create_buffer<float, true, UniformBufferUsage>(*allocator, 100);
 ```
 
 **RAII Handles** (`ObjectWithHandle<T>`, ownership via template parameter):
@@ -113,9 +122,9 @@ Exception hierarchy: `vw::Exception` -> `VulkanException`, `VMAException`, `SDLE
 
 ```cpp
 auto& gpu = vw::tests::create_gpu();
-// gpu.device, gpu.allocator, gpu.queue()
+// gpu.instance, gpu.device, gpu.allocator, gpu.queue()
 
-// For ray tracing tests:
+// For ray tracing tests (get_ray_tracing_gpu() is defined per-test-file, not in a shared header):
 auto* gpu = get_ray_tracing_gpu();
 if (!gpu) GTEST_SKIP() << "Ray tracing unavailable";
 ```
