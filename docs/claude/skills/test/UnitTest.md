@@ -19,7 +19,7 @@ auto* gpu = get_ray_tracing_gpu();
 if (!gpu) GTEST_SKIP() << "Ray tracing unavailable";
 ```
 
-## Common Patterns
+## Examples and Common Patterns
 
 **Buffer creation and validation:**
 ```cpp
@@ -77,4 +77,3 @@ auto result = staging_buffer.read_as_vector(0, count);
 - The GPU singleton intentionally leaks to avoid static destruction order issues -- this is expected
 - Always call `.wait()` after `queue().submit()` to ensure GPU work completes before assertions
 - Validation layers are enabled by default -- any Vulkan misuse will trigger validation errors
-- See SKILL.md "Debugging Test Failures" for troubleshooting guidance

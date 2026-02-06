@@ -15,22 +15,6 @@ TEST(MyFeature, BasicTest) {
 }
 ```
 
-## Build & Run
-
-```bash
-# Build specific test target
-cmake --build build-Clang20Debug --target RenderPassTests
-
-# Run specific test
-cd build-Clang20Debug/VulkanWrapper/tests && ./RenderPassTests
-
-# Run all tests
-cd build-Clang20Debug && ctest --output-on-failure
-
-# Filter tests
-cd build-Clang20Debug/VulkanWrapper/tests && ./RenderPassTests --gtest_filter='*IndirectLight*'
-```
-
 ## Test Types
 
 | Type | File | Purpose |
@@ -42,40 +26,11 @@ cd build-Clang20Debug/VulkanWrapper/tests && ./RenderPassTests --gtest_filter='*
 
 1. **Use GPU singleton:** `vw::tests::create_gpu()` (defined in `tests/utils/create_gpu.hpp`)
 2. **Skip unavailable features:** `GTEST_SKIP() << "Ray tracing unavailable"`
-3. **Wait for GPU after submit:** `gpu.queue().submit({}, {}, {}).wait()`
-4. **Test relationships, not pixels:** "lit > shadowed", not "pixel == RGB(127,89,45)"
-5. **Validation layers always on:** The test GPU singleton enables debug/validation by default
-
-## Debugging Test Failures
-
-```bash
-# Run a single failing test with verbose output
-cd build-Clang20Debug/VulkanWrapper/tests && ./RenderPassTests --gtest_filter='*FailingTest*'
-
-# Validation layer errors appear in stderr — look for "Validation Error" or "VUID"
-# Common causes:
-#   - Missing barrier: add track() + request() + flush() before the operation
-#   - Wrong image layout: check ResourceTracker transitions
-#   - Missing .wait() after submit: GPU work not complete before readback
-```
-
-**If a test hangs:** Usually a missing fence/wait or a deadlocked queue submit. Check that `.wait()` is called after every `queue().submit()`.
-
-**If validation errors appear:** The test GPU singleton always enables validation. Any error means incorrect Vulkan usage — fix the code, not the test.
-
-## Test Executables
-
-| Executable | Tests |
-|-----------|-------|
-| `MemoryTests` | Buffer, Allocator, StagingBufferManager, ResourceTracker, Interval, Transfer |
-| `ImageTests` | Image, ImageView, Sampler |
-| `VulkanTests` | Instance |
-| `RenderPassTests` | Subpass, ScreenSpacePass, ToneMapping, Sky, SunLight, IndirectLight |
-| `MaterialTests` | MaterialTypeTag, ColoredMaterial, TexturedMaterial, BindlessTexture, BindlessMaterial |
-| `ShaderTests` | ShaderCompiler |
-| `RayTracingTests` | RayTracedScene, GeometryAccess |
-| `UtilsTests` | Error/Exception |
-| `RandomTests` | RandomSampling |
+3. **Always include `<< "explanation"` in assertions**
+4. **Wait for GPU after submit:** `gpu.queue().submit({}, {}, {}).wait()`
+5. **Test relationships, not pixels:** "lit > shadowed", not "pixel == RGB(127,89,45)"
+6. **Validation layers always on:** The test GPU singleton enables debug/validation by default
+   
 
 ## Adding a New Test
 
@@ -86,3 +41,5 @@ add_executable(MyTests <Category>/MyTests.cpp)
 target_link_libraries(MyTests PRIVATE TestUtils VulkanWrapperCoreLibrary GTest::gtest GTest::gtest_main)
 gtest_discover_tests(MyTests)
 ```
+
+## Definition of Done
