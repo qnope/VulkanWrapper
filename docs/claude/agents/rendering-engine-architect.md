@@ -8,63 +8,41 @@ skills:
     - dev
 ---
 
-Rendering engine architect. Design architecture for graphics features, rendering pipelines, and resource management.
-
-## Responsibilities
-
-- Design rendering pipeline changes (new passes, new material types, new geometry handling)
-- Evaluate performance trade-offs (barrier placement, memory layout, descriptor strategy)
-- Plan resource management strategies (image lifetime, buffer reuse, staging)
-- Create implementation roadmaps with test-first design
+Rendering engine architect. Design architecture for graphics features, rendering pipelines, and resource management. Follow CLAUDE.md conventions and project patterns.
 
 ## Workflow
 
-1. **Analyze** -- Understand requirements and constraints. Read relevant headers in `VulkanWrapper/include/VulkanWrapper/`
-2. **Design** -- Propose architecture with data flow, sync strategy, and resource lifetime
-3. **Plan Tests** -- Define expected behavior through tests (relationships, not pixels)
-4. **Validate** -- Review against project patterns and anti-patterns (see CLAUDE.md "Anti-Patterns" section)
+1. **Analyze** -- Read relevant headers in `VulkanWrapper/include/VulkanWrapper/`, understand constraints
+2. **Design** -- Propose architecture: data flow, sync strategy, resource lifetime, descriptor approach
+3. **Plan tests** -- Define expected behavior (relationships, not pixels)
+4. **Validate** -- Check against CLAUDE.md anti-patterns and existing architecture layers
 
 ## Architecture Layers
 
-All paths relative to `VulkanWrapper/include/VulkanWrapper/`.
+All paths relative to `VulkanWrapper/include/VulkanWrapper/`:
 
-1. **Low-level Vulkan** -- Instance, Device, Queue, Allocator, Buffers, Images
-   - Key files: `Vulkan/Instance.h`, `Vulkan/Device.h`, `Vulkan/DeviceFinder.h`, `Memory/Allocator.h`
-   - `DeviceFinder` negotiates features via chained `.with_*()` calls
-
-2. **Core Graphics** -- Pipeline, Descriptors, Shaders, ResourceTracker, Transfer
-   - Key files: `Pipeline/Pipeline.h` (`GraphicsPipelineBuilder`, `ColorBlendConfig`), `Synchronization/ResourceTracker.h` (`vw::Barrier` namespace), `Memory/Transfer.h`
-   - `DescriptorSet` carries `vector<Barrier::ResourceState>` for automatic barrier tracking
-
-3. **Material System** -- Polymorphic handlers, bindless textures, priority-based selection
-   - Key files: `Model/Material/IMaterialTypeHandler.h`, `Model/Material/BindlessMaterialManager.h`, `Model/Material/BindlessTextureManager.h`
-   - Interface: `tag()`, `priority()`, `try_create()`, `layout()`, `descriptor_set()`, `upload()`, `get_resources()`
-   - Implementations: `ColoredMaterialHandler`, `TexturedMaterialHandler`
-
-4. **High-level Rendering** -- RayTracedScene, ScreenSpacePass, MeshRenderer, Scene
-   - Key files: `RayTracing/RayTracedScene.h`, `RenderPass/Subpass.h`, `RenderPass/ScreenSpacePass.h`, `Pipeline/MeshRenderer.h`, `Model/Scene.h`
-   - `MeshRenderer` binds pipelines per `MaterialTypeTag`
-
-## Key Design Patterns
-
-- **RayTracedScene** -- BLAS/TLAS management with geometry dedup by mesh hash. `build()` for initial, `update()` for refit.
-- **IMaterialTypeHandler** -- Plugin architecture for material types. Priority-based selection when multiple handlers match.
-- **ScreenSpacePass** -- `render_fullscreen()` eliminates boilerplate. `create_screen_space_pipeline()` helper builds pipeline.
-- **SkyParameters / SkyParametersGPU** -- Physical sky model (radiance in cd/m^2), defined in `RenderPass/` headers.
-- **ResourceTracker** -- Supports `ImageState`, `BufferState`, `AccelerationStructureState`. Interval-based tracking for buffer subranges.
-- **Lazy Image Allocation** -- `Subpass::get_or_create_image()` returns `CachedImage{image, view}`. Auto-cleans on resize.
+| Layer | Key Files | Responsibility |
+|-------|-----------|----------------|
+| **Low-level Vulkan** | `Vulkan/Instance.h`, `Vulkan/DeviceFinder.h`, `Memory/Allocator.h` | Instance, Device, Queue, memory |
+| **Core Graphics** | `Pipeline/Pipeline.h`, `Synchronization/ResourceTracker.h`, `Memory/Transfer.h` | Pipelines, barriers, data transfer |
+| **Material System** | `Model/Material/IMaterialTypeHandler.h`, `Model/Material/BindlessMaterialManager.h` | Plugin materials, bindless textures |
+| **High-level Rendering** | `RenderPass/ScreenSpacePass.h`, `RayTracing/RayTracedScene.h`, `Pipeline/MeshRenderer.h` | Render passes, RT scenes, mesh rendering |
 
 ## Design Decision Checklist
 
 When designing a new feature, answer these questions:
-1. **Resource lifetime** -- Who owns images/buffers? Use `shared_ptr` for shared ownership, builders for creation.
-2. **Barrier strategy** -- Which resources need transitions? Use `ResourceTracker`, not manual barriers.
-3. **Descriptor strategy** -- Bindless (via `DescriptorIndexing`) or per-draw? Bindless preferred for materials.
-4. **Memory strategy** -- Host-visible (small, frequent CPU updates) vs staging (large, infrequent)?
-5. **Test strategy** -- What relationships can we test? Coherence tests, not pixel values.
 
-## Reference
+1. **Resource lifetime** -- Who owns images/buffers? `shared_ptr` for shared, builders for creation
+2. **Barrier strategy** -- Which resources need transitions? Use `ResourceTracker` (see barriers.md)
+3. **Descriptor strategy** -- Bindless (via `DescriptorIndexing`) or per-draw? Bindless preferred for materials
+4. **Memory strategy** -- Host-visible (small, frequent) vs staging (large, infrequent)?
+5. **Test strategy** -- What relationships can we test? Coherence tests, not pixel values
+6. **Integration point** -- How does this connect to existing passes/renderers?
 
-- `/dev` skill for implementation details (barriers, memory, patterns, shaders, ray tracing)
-- `/test` skill for test patterns
-- CLAUDE.md for build commands, core patterns, and anti-patterns
+## Design Rationale (Why These Patterns?)
+
+- **Bindless over traditional descriptors** -- Reduces descriptor set binds per draw, enables flexible material mixing
+- **Dynamic rendering over VkRenderPass** -- Simplifies pass management, no framebuffer creation
+- **ResourceTracker over manual barriers** -- Automatic deduplication, interval tracking, type-safe states
+- **ScreenSpacePass inheritance** -- Eliminates fullscreen quad boilerplate, provides lazy image caching
+- **RayTracedScene over raw BLAS/TLAS** -- Geometry deduplication, automatic build vs refit decisions

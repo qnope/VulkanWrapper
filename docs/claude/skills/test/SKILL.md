@@ -46,6 +46,23 @@ cd build-Clang20Debug/VulkanWrapper/tests && ./RenderPassTests --gtest_filter='*
 4. **Test relationships, not pixels:** "lit > shadowed", not "pixel == RGB(127,89,45)"
 5. **Validation layers always on:** The test GPU singleton enables debug/validation by default
 
+## Debugging Test Failures
+
+```bash
+# Run a single failing test with verbose output
+cd build-Clang20Debug/VulkanWrapper/tests && ./RenderPassTests --gtest_filter='*FailingTest*'
+
+# Validation layer errors appear in stderr — look for "Validation Error" or "VUID"
+# Common causes:
+#   - Missing barrier: add track() + request() + flush() before the operation
+#   - Wrong image layout: check ResourceTracker transitions
+#   - Missing .wait() after submit: GPU work not complete before readback
+```
+
+**If a test hangs:** Usually a missing fence/wait or a deadlocked queue submit. Check that `.wait()` is called after every `queue().submit()`.
+
+**If validation errors appear:** The test GPU singleton always enables validation. Any error means incorrect Vulkan usage — fix the code, not the test.
+
 ## Test Executables
 
 | Executable | Tests |
@@ -62,10 +79,10 @@ cd build-Clang20Debug/VulkanWrapper/tests && ./RenderPassTests --gtest_filter='*
 
 ## Adding a New Test
 
-1. Create `VulkanWrapper/tests/MyTests.cpp`
+1. Create `VulkanWrapper/tests/<Category>/MyTests.cpp`
 2. Add to `VulkanWrapper/tests/CMakeLists.txt`:
 ```cmake
-add_executable(MyTests MyTests.cpp)
+add_executable(MyTests <Category>/MyTests.cpp)
 target_link_libraries(MyTests PRIVATE TestUtils VulkanWrapperCoreLibrary GTest::gtest GTest::gtest_main)
 gtest_discover_tests(MyTests)
 ```

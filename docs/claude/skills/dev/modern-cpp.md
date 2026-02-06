@@ -38,18 +38,20 @@ auto vec = myRange | to<std::vector>;                    // Range -> container
 auto handles = objects | vw::to_handle | to<std::vector>; // Extract handles from ObjectWithHandle
 ```
 
+`to<Container>` is a custom range adaptor in `Utils/Algos.h` -- it materializes any range into a container. `vw::to_handle` extracts `.handle()` from each element.
+
 **DO NOT** write raw `for` loops when ranges/algorithms express the intent more clearly.
 
 ## Other C++23 Features Used
 
 ```cpp
-// consteval (compile-time only evaluation)
+// consteval (compile-time only, not constexpr)
 static consteval bool does_support(vk::BufferUsageFlags usage);
 
 // Default comparisons (spaceship operator)
 auto operator<=>(const Interval&) const noexcept = default;
 
-// source_location for error context (no macros needed)
+// source_location for error context (replaces __FILE__/__LINE__ macros)
 Exception(std::string msg, std::source_location loc = std::source_location::current());
 
 // Structured bindings
@@ -68,7 +70,7 @@ vk::RenderingAttachmentInfo colorAttachment{
 
 ## Strong Types
 
-The project uses enum-based strong types for type safety:
+The project uses strong types for type safety (avoid mixing up width/height/depth):
 ```cpp
 Width{1920}    // not uint32_t
 Height{1080}   // not uint32_t

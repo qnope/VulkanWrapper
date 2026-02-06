@@ -1,6 +1,6 @@
 # Rendering Tests
 
-Test visual coherence through relationships, not pixel-perfect comparisons. See `VulkanWrapper/tests/RenderPassTests.cpp` for real examples.
+Test visual coherence through relationships, not pixel-perfect comparisons. See `VulkanWrapper/tests/RenderPass/` for real examples.
 
 ## Philosophy
 
@@ -82,3 +82,4 @@ for (int i = 0; i < 16; ++i) {
 - **Luminance helper:** `float luminance(glm::vec4 c) { return 0.2126f * c.r + 0.7152f * c.g + 0.0722f * c.b; }`
 - **Multiple assertions:** Test several relationships per test case for robustness
 - **Descriptive messages:** Always include `<< "explanation"` in `EXPECT_*` for debugging
+- **Save debug images:** Use `transfer.saveToFile(cmd, allocator, queue, image, "debug.png")` to visually inspect failures

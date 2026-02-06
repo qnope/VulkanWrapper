@@ -5,8 +5,10 @@ Modern C++23 Vulkan 1.3 wrapper library with RAII, type safety, and ray tracing 
 ## Build & Test
 
 ```bash
-# Build
+# Configure (first time only — vcpkg is auto-detected via VCPKG_ROOT or CMAKE_TOOLCHAIN_FILE)
 cmake -B build-Clang20Debug -DCMAKE_BUILD_TYPE=Debug
+
+# Build
 cmake --build build-Clang20Debug
 
 # Build specific test target
@@ -21,7 +23,10 @@ cd build-Clang20Debug/VulkanWrapper/tests && ./RenderPassTests
 # Filter tests
 cd build-Clang20Debug/VulkanWrapper/tests && ./RenderPassTests --gtest_filter='*IndirectLight*'
 
-# Format changed files
+# Format changed files (staged only)
+git diff --cached --name-only -- '*.h' '*.cpp' | xargs -r clang-format -i
+
+# Format all changed files (staged + unstaged)
 git diff --name-only -- '*.h' '*.cpp' | xargs -r clang-format -i
 ```
 
@@ -34,20 +39,25 @@ git diff --name-only -- '*.h' '*.cpp' | xargs -r clang-format -i
 ```
 VulkanWrapper/                          # Library root (paths below are relative to repo root)
 ├── include/VulkanWrapper/              # Public headers
+│   ├── 3rd_party.h                     # Third-party includes (used as PCH)
+│   ├── fwd.h                           # Forward declarations
 │   ├── Command/                        # CommandBuffer, CommandPool
 │   ├── Descriptors/                    # DescriptorSet, DescriptorSetLayout, DescriptorPool, DescriptorAllocator, Vertex
 │   ├── Image/                          # Image, ImageView, Sampler, CombinedImage, Mipmap, ImageLoader
-│   ├── Memory/                         # Allocator, Buffer, BufferUsage, AllocateBufferUtils, Transfer, StagingBufferManager, Barrier
+│   ├── Memory/                         # Allocator, Buffer, BufferBase, BufferList, BufferUsage, AllocateBufferUtils,
+│   │                                   #   Transfer, StagingBufferManager, Barrier, UniformBufferAllocator, Interval, IntervalSet
 │   ├── Model/                          # Scene, Mesh, MeshManager, Importer
-│   │   └── Material/                   # IMaterialTypeHandler, BindlessMaterialManager, BindlessTextureManager, TexturedMaterialHandler, ColoredMaterialHandler
+│   │   ├── Internal/                   # MaterialInfo, MeshInfo (internal implementation details)
+│   │   └── Material/                   # IMaterialTypeHandler, BindlessMaterialManager, BindlessTextureManager,
+│   │                                   #   TexturedMaterialHandler, ColoredMaterialHandler, MaterialTypeTag, MaterialPriority
 │   ├── Pipeline/                       # GraphicsPipelineBuilder, Pipeline, PipelineLayout, ShaderModule, MeshRenderer, ColorBlendConfig
 │   ├── Random/                         # NoiseTexture, RandomSamplingBuffer
 │   ├── RayTracing/                     # BLAS/TLAS, RayTracedScene, RayTracingPipeline, ShaderBindingTable, GeometryReference
 │   ├── RenderPass/                     # Subpass, ScreenSpacePass, SkyPass, ToneMappingPass, SunLightPass, IndirectLightPass
 │   ├── Shader/                         # ShaderCompiler (GLSL -> SPIR-V via shaderc)
 │   ├── Synchronization/               # ResourceTracker (vw::Barrier namespace), Fence, Semaphore
-│   ├── Utils/                          # Error (exception hierarchy), ObjectWithHandle, Algos
-│   ├── Vulkan/                         # Instance, Device, DeviceFinder, Queue, Swapchain, PhysicalDevice
+│   ├── Utils/                          # Error (exception hierarchy), ObjectWithHandle, Algos, Alignment
+│   ├── Vulkan/                         # Instance, Device, DeviceFinder, Queue, PresentQueue, Swapchain, PhysicalDevice, Surface
 │   └── Window/                         # SDL3 Window, SDL_Initializer
 ├── src/VulkanWrapper/                  # Implementation (.cpp files, mirrors include/ structure)
 ├── tests/                              # GTest tests (use create_gpu() singleton)
@@ -56,6 +66,24 @@ VulkanWrapper/                          # Library root (paths below are relative
 │   ├── fullscreen.vert                 # Fullscreen quad from vertex ID (4 verts, triangle strip)
 │   └── include/                        # GLSL includes (random.glsl, atmosphere_*.glsl, geometry_access.glsl, sky_radiance.glsl)
 examples/                               # Advanced (deferred rendering + RT), Application (basic)
+```
+
+## Adding New Code
+
+When creating a new class in an existing module:
+1. **Header**: `VulkanWrapper/include/VulkanWrapper/<Category>/NewClass.h`
+2. **Source**: `VulkanWrapper/src/VulkanWrapper/<Category>/NewClass.cpp`
+3. **Register in CMake**: Add filename to both `include/VulkanWrapper/<Category>/CMakeLists.txt` (PUBLIC) and `src/VulkanWrapper/<Category>/CMakeLists.txt` (PRIVATE)
+4. **PCH**: `3rd_party.h` is pre-compiled — no need to include it manually
+5. **Tests**: Add test file to `VulkanWrapper/tests/<Category>/NewClassTests.cpp`, register in `VulkanWrapper/tests/CMakeLists.txt`
+
+Example CMake registration (header):
+```cmake
+target_sources(VulkanWrapperCoreLibrary PUBLIC NewClass.h)
+```
+Example CMake registration (source):
+```cmake
+target_sources(VulkanWrapperCoreLibrary PRIVATE NewClass.cpp)
 ```
 
 ## Core Patterns
@@ -73,7 +101,6 @@ auto allocator = AllocatorBuilder(instance, device).build();
 ```cpp
 // Template: Buffer<typename T, bool HostVisible, VkBufferUsageFlags Flags>
 // Create via: create_buffer<T, HostVisible, UsageConstant>(allocator, count)
-// Or type-alias style: create_buffer<BufferType>(allocator, count)
 // Usage constants (BufferUsage.h): VertexBufferUsage, IndexBufferUsage, UniformBufferUsage, StorageBufferUsage, StagingBufferUsage
 auto buf = create_buffer<float, true, UniformBufferUsage>(*allocator, 100);
 // Also: allocate_vertex_buffer<VertexType, HostVisible>(allocator, count)
@@ -173,3 +200,5 @@ if (!gpu) GTEST_SKIP() << "Ray tracing unavailable";
 | Fullscreen pipeline | `create_screen_space_pipeline(device, vert, frag, layout, fmt)` | `RenderPass/ScreenSpacePass.h` |
 | Batch uploads | `StagingBufferManager::fill_buffer(data, dst, offset)` | `Memory/StagingBufferManager.h` |
 | Save image to disk | `transfer.saveToFile(cmd, allocator, queue, image, "out.png")` | `Memory/Transfer.h` |
+| DeviceFinder | `instance->findGpu().with_queue(eGraphics).with_ray_tracing().build()` | `Vulkan/DeviceFinder.h` |
+| Compile shader (CMake) | `VwCompileShader(TARGET "shader.frag" "output.spv")` | `VulkanWrapper/CMakeLists.txt` |

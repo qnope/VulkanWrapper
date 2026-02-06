@@ -1,8 +1,8 @@
 # Shaders
 
-## Compilation
+## Runtime Compilation
 
-Runtime GLSL -> SPIR-V via shaderc (`Shader/ShaderCompiler.h`):
+GLSL -> SPIR-V via shaderc (`Shader/ShaderCompiler.h`):
 
 ```cpp
 auto compiler = ShaderCompiler()
@@ -14,7 +14,20 @@ auto module = compiler.compile_file_to_module(device, "shader.frag");
 
 Stage detected from extension: `.vert`, `.frag`, `.comp`, `.rgen`, `.rmiss`, `.rchit`
 
-Build-time compilation uses `VwCompileShader()` CMake function with glslangValidator.
+## Build-Time Compilation (CMake)
+
+`VwCompileShader()` compiles shaders at build time using glslangValidator. Defined in `VulkanWrapper/CMakeLists.txt`:
+
+```cmake
+# VwCompileShader(TARGET_NAME SHADER_PATH RELATIVE_OUTPUT_PATH [extra glslang args...])
+VwCompileShader(MyTarget "Shaders/my_shader.frag" "Shaders/my_shader.frag.spv")
+
+# With extra args (e.g., include paths):
+VwCompileShader(MyTarget "Shaders/my_shader.frag" "Shaders/my_shader.frag.spv"
+    -I "${CMAKE_CURRENT_SOURCE_DIR}/Shaders/include")
+```
+
+The compiled `.spv` file is placed in the target's runtime output directory. A build dependency is automatically created so the shader is recompiled when modified.
 
 ## GLSL Includes
 
@@ -38,15 +51,15 @@ vec2 xi = get_sample(sampleIndex, ivec2(gl_FragCoord.xy));
 vec3 dir = sample_hemisphere_cosine(normal, tangent, bitangent, xi);
 ```
 
+**Adding a new GLSL include:** Place it in `VulkanWrapper/Shaders/include/` and use `#include "filename.glsl"` in your shader. For runtime compilation, ensure the include path is set via `ShaderCompiler::add_include_path()`. For build-time, pass `-I` to `VwCompileShader()`.
+
 ## Push Constants
 
 ```cpp
-// Layout
 auto layout = PipelineLayoutBuilder(device)
     .add_push_constant_range<PushConstants>(vk::ShaderStageFlagBits::eVertex | eFragment)
     .build();
 
-// Usage
 cmd.pushConstants(layout.handle(), stages, 0, sizeof(pc), &pc);
 ```
 
@@ -54,7 +67,7 @@ Max size: 128 bytes (guaranteed minimum by Vulkan spec).
 
 ## Fullscreen Shader
 
-`VulkanWrapper/Shaders/fullscreen.vert` generates fullscreen quad via triangle strip from vertex ID. No vertex buffer needed.
+`VulkanWrapper/Shaders/fullscreen.vert` generates a fullscreen quad via triangle strip from vertex ID. No vertex buffer needed:
 
 ```cpp
 cmd.draw(4, 1, 0, 0);  // 4 vertices, triangle strip

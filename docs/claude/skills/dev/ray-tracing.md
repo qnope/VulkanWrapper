@@ -5,7 +5,6 @@ All RT code is in namespace `vw::rt`. Headers in `VulkanWrapper/include/VulkanWr
 ## Setup
 
 ```cpp
-// Device with RT extensions
 auto device = instance->findGpu()
     .with_queue(vk::QueueFlagBits::eGraphics)
     .with_synchronization_2()
@@ -13,11 +12,12 @@ auto device = instance->findGpu()
     .with_ray_tracing()    // Enables RT pipeline, AS, buffer device address
     .build();
 
-// Allocator (buffer device address always enabled)
 auto allocator = AllocatorBuilder(instance, device).build();
 ```
 
 ## RayTracedScene (Recommended High-Level API)
+
+Manages BLAS/TLAS lifecycle, deduplicates geometry by mesh hash:
 
 ```cpp
 vw::rt::RayTracedScene scene(device, allocator);
@@ -41,19 +41,19 @@ vk::AccelerationStructureKHR tlas = scene.tlas_handle();
 
 ## Low-Level API (BLAS/TLAS Builders)
 
+For custom control over acceleration structure construction:
+
 ```cpp
-// BLAS
 auto blas = vw::rt::BottomLevelAccelerationStructureBuilder(device, allocator)
     .add_geometry(vertexBuffer, indexBuffer, vertexCount, indexCount, stride)
     .build();
 
-// TLAS
 auto tlas = vw::rt::TopLevelAccelerationStructureBuilder(device, allocator)
     .add_instance(blas, transform)
     .build();
 ```
 
-## Pipeline & SBT
+## Pipeline & Shader Binding Table
 
 ```cpp
 auto pipeline = vw::rt::RayTracingPipelineBuilder(device, allocator, layout)
@@ -71,11 +71,14 @@ cmd.traceRaysKHR(sbt.raygen_region(), sbt.miss_region(), sbt.hit_region(), {}, w
 
 ## GeometryReference
 
-`GeometryReference` (`RayTracing/GeometryReference.h`) provides shader access to geometry data:
-```cpp
-// In GLSL: use geometry_access.glsl include for vertex/index access in hit shaders
+Provides shader access to geometry data via `GeometryReference` (`RayTracing/GeometryReference.h`):
+
+```glsl
+// In GLSL: use geometry_access.glsl for vertex/index access in hit shaders
 #include "geometry_access.glsl"
 ```
+
+Exposes vertex positions, normals, texture coordinates and index data to ray tracing hit shaders. Includes transform matrix support.
 
 ## Barriers
 
@@ -86,6 +89,15 @@ tracker.request(AccelerationStructureState{tlas, eRayTracingShaderKHR, eAccelera
 tracker.flush(cmd);
 ```
 
+## Integration with Render Passes
+
+RT results are typically consumed by a ScreenSpacePass (e.g., `IndirectLightPass`):
+1. Build/update `RayTracedScene` -> barrier -> trace rays -> write to storage image
+2. Barrier storage image to `eShaderReadOnlyOptimal`
+3. `ScreenSpacePass` samples the RT result as input texture
+
+See `examples/Advanced/` for a complete deferred rendering + RT pipeline.
+
 ## Testing
 
 Define `get_ray_tracing_gpu()` locally in each RT test file (not in a shared header):
@@ -93,4 +105,4 @@ Define `get_ray_tracing_gpu()` locally in each RT test file (not in a shared hea
 auto* gpu = get_ray_tracing_gpu();
 if (!gpu) GTEST_SKIP() << "Ray tracing unavailable";
 ```
-See `VulkanWrapper/tests/RayTracingTests.cpp` for examples.
+See `VulkanWrapper/tests/RayTracing/` for examples.
