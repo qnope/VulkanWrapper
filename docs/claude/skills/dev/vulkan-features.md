@@ -35,10 +35,10 @@ cmd.endRendering();
 
 **Ray Tracing:** BLAS/TLAS, RT shaders (requires buffer device address in allocator)
 
-## Anti-Patterns
+## Vulkan-Specific Anti-Pattern
 
-| DON'T | DO |
-|-------|-----|
-| `vk::PipelineStageFlagBits::e...` | `vk::PipelineStageFlagBits2::e...` |
-| `cmd.beginRenderPass(...)` | `cmd.beginRendering(...)` |
-| `cmd.pipelineBarrier(...)` | `tracker.flush(cmd)` |
+Use Synchronization2 stage/access flags everywhere:
+- `vk::PipelineStageFlagBits2::e...` (not v1 `vk::PipelineStageFlagBits::e...`)
+- `vk::AccessFlagBits2::e...` (not v1 `vk::AccessFlagBits::e...`)
+
+See CLAUDE.md for general anti-patterns (barriers, render pass, memory allocation).

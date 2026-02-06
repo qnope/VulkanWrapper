@@ -26,27 +26,13 @@ public:
 
 ## Builders
 
-All complex Vulkan objects are created through builders with method chaining:
+See CLAUDE.md for core builder examples. Additional builders:
 
 ```cpp
-auto instance = InstanceBuilder().setDebug().setApiVersion(ApiVersion::e13).build();
-auto device = instance->findGpu().with_queue(eGraphics).with_synchronization_2().with_dynamic_rendering().build();
-auto allocator = AllocatorBuilder(instance, device).build();
 auto imageView = ImageViewBuilder(device, image).set_aspect(eColor).build();
 auto sampler = SamplerBuilder(device).set_filter(eLinear).build();
 auto cmdPool = CommandPoolBuilder(device).build();
 auto fence = FenceBuilder(device).build();
-```
-
-## Error Handling
-
-```cpp
-check_vk(result, "context");   // Throws VulkanException
-check_vma(result, "context");  // Throws VMAException
-check_sdl(ptr_or_bool, "context");  // Throws SDLException (pointer and bool overloads)
-
-// Exception hierarchy: vw::Exception -> VulkanException, VMAException, SDLException, FileException,
-//   AssimpException, ShaderCompilationException, ValidationLayerException, SwapchainException, LogicException
 ```
 
 ## RAII Handles

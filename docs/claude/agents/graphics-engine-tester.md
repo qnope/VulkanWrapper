@@ -26,11 +26,11 @@ Graphics engine test engineer. Write and run GTest tests for GPU code.
 ## Test Patterns
 
 ```cpp
-auto& gpu = vw::tests::create_gpu();  // Singleton
-// gpu.device, gpu.allocator, gpu.queue()
+auto& gpu = vw::tests::create_gpu();  // Singleton (tests/utils/create_gpu.hpp)
+// gpu.instance, gpu.device, gpu.allocator, gpu.queue()
 ```
 
-For ray tracing, use `RayTracingGPU` and skip if unavailable:
+For ray tracing, define `get_ray_tracing_gpu()` locally in your test file (not in a shared header) and skip if unavailable:
 ```cpp
 auto* gpu = get_ray_tracing_gpu();
 if (!gpu) GTEST_SKIP() << "Ray tracing unavailable";

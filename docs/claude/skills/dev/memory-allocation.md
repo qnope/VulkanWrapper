@@ -5,11 +5,15 @@ Use `Allocator` for all memory. Never use raw Vulkan allocation APIs.
 ## Buffer Types
 
 ```cpp
-Buffer<T, HostVisible, Usage>
-// T: Element type
-// HostVisible: true = CPU-accessible, false = GPU-only
-// Usage: VkBufferUsageFlags
+// Template: Buffer<typename T, bool HostVisible, VkBufferUsageFlags Flags>
+// Create via: create_buffer<T, HostVisible, UsageConstant>(allocator, count)
+// Usage constants (VkBufferUsageFlags2 in BufferUsage.h):
+//   UniformBufferUsage, StorageBufferUsage, StagingBufferUsage, VertexBufferUsage, IndexBufferUsage
 ```
+
+**When to use host-visible vs staging:**
+- `HostVisible = true`: small buffers updated frequently from CPU (uniforms, push-style data)
+- `HostVisible = false` + `StagingBufferManager`: large, infrequently-updated data (vertex/index buffers, textures)
 
 ## Common Operations
 

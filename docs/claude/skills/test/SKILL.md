@@ -10,12 +10,14 @@ GTest-based testing for VulkanWrapper.
 
 TEST(MyFeature, BasicTest) {
     auto& gpu = vw::tests::create_gpu();
-    // gpu.device, gpu.allocator, gpu.queue()
+    // gpu.instance, gpu.device, gpu.allocator, gpu.queue()
     EXPECT_TRUE(gpu.device->handle());
 }
 ```
 
 ## Build & Run
+
+See CLAUDE.md for full build/test commands. Quick reference:
 
 ```bash
 cmake --build build-Clang20Debug --target RenderPassTests
