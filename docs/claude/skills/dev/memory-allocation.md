@@ -7,7 +7,6 @@ Use `Allocator` for all memory. Never use raw Vulkan allocation APIs.
 ```cpp
 // Template: Buffer<typename T, bool HostVisible, VkBufferUsageFlags Flags>
 // Create via: create_buffer<T, HostVisible, UsageConstant>(allocator, count)
-// Or type-alias: create_buffer<BufferType>(allocator, count)
 // Factory functions in: Memory/AllocateBufferUtils.h
 ```
 
@@ -33,10 +32,6 @@ auto allocator = AllocatorBuilder(instance, device).build();
 // Allocate buffers (AllocateBufferUtils.h)
 auto vb = allocate_vertex_buffer<Vertex3D, false>(*allocator, count);
 auto staging = create_buffer<std::byte, true, StagingBufferUsage>(*allocator, size);
-
-// Type-alias style (recommended for complex usage flags)
-using DeviceBuffer = Buffer<float, false, StorageBufferUsage>;
-auto buffer = create_buffer<DeviceBuffer>(*allocator, element_count);
 
 // Create image
 auto image = allocator->create_image_2D(Width{1920}, Height{1080}, false, format, usage);
@@ -72,11 +67,14 @@ Also supports image loading:
 auto combined_image = staging.stage_image_from_path("texture.png", mipmaps);
 ```
 
-## Random Sampling (for RT)
+## UniformBufferAllocator
+
+For allocating multiple small uniform buffers from a shared backing buffer:
 
 ```cpp
-auto samples = create_hemisphere_samples_buffer(*allocator);
-NoiseTexture noise(device, allocator, queue);
+// Manages sub-allocations with proper alignment from a single large buffer
+UniformBufferAllocator ubo_allocator(device, allocator, total_size);
+auto [buffer, offset] = ubo_allocator.create_buffer(size);
 ```
 
 ## Important Notes
@@ -85,3 +83,4 @@ NoiseTexture noise(device, allocator, queue);
 - `VertexBufferUsage` and `IndexBufferUsage` include `eAccelerationStructureBuildInputReadOnlyKHR` for RT
 - `buffer.write()` / `buffer.read_as_vector()` only available when `HostVisible = true` (enforced via `requires`)
 - `Buffer::does_support(usage)` is `consteval` -- checks buffer usage flags at compile time
+- After staging upload, remember to barrier before GPU reads (see barriers.md)

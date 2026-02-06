@@ -49,31 +49,39 @@ Binds pipelines per `MaterialTypeTag` for bindless mesh rendering:
 ```cpp
 vw::MeshRenderer renderer;
 renderer.add_pipeline(material_tag, pipeline);
-renderer.draw_mesh(cmd, mesh, transform);
-auto pipeline = renderer.pipeline_for(tag);
+
+// In render loop:
+for (auto& mesh : scene.meshes()) {
+    auto tag = mesh.material_type_tag();
+    renderer.bind_pipeline(cmd, tag);           // Binds pipeline for this material type
+    renderer.draw_mesh(cmd, mesh, transform);   // Issues draw call
+}
 ```
 
 ## Builders
 
-See CLAUDE.md for core builder examples. Additional builders:
+See CLAUDE.md "Core Patterns" for main builder examples. Additional builders:
 
 ```cpp
 auto imageView = ImageViewBuilder(device, image).set_aspect(eColor).build();
 auto sampler = SamplerBuilder(device).set_filter(eLinear).build();
 auto cmdPool = CommandPoolBuilder(device).build();
 auto fence = FenceBuilder(device).build();
+auto dsLayout = DescriptorSetLayoutBuilder(device)
+    .add_binding(0, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment)
+    .build();
 ```
 
 ## RAII Handles
 
-`ObjectWithHandle<T>` is the base wrapper for all Vulkan handles. Ownership depends on the template parameter:
+`ObjectWithHandle<T>` wraps all Vulkan handles. Ownership depends on the template parameter:
 
 ```cpp
 ObjectWithHandle<vk::Pipeline>          // Non-owning (raw handle)
 ObjectWithHandle<vk::UniquePipeline>    // Owning (auto-destroyed)
 ```
 
-`ObjectWithUniqueHandle<T>` is a type alias for `ObjectWithHandle<T>` (not a separate class):
+`ObjectWithUniqueHandle<T>` is a type alias (not a separate class):
 ```cpp
 template <typename UniqueHandle>
 using ObjectWithUniqueHandle = ObjectWithHandle<UniqueHandle>;
@@ -88,10 +96,10 @@ auto handles = objects | vw::to_handle | to<std::vector>;
 
 `DescriptorSet` carries resource states for automatic barrier tracking:
 ```cpp
-class DescriptorSet : public ObjectWithHandle<vk::DescriptorSet> {
-    const std::vector<Barrier::ResourceState>& resources() const;
-};
-// Use resources() to feed ResourceTracker when binding descriptors
+const auto& states = descriptor_set.resources();  // vector<Barrier::ResourceState>
+for (const auto& state : states) {
+    tracker.track(state);  // Feed to ResourceTracker before binding
+}
 ```
 
 ## CachedImage
@@ -104,3 +112,21 @@ struct CachedImage {
 };
 ```
 Images are cached by (slot, width, height, frame_index). Old images with different dimensions are auto-cleaned on resize.
+
+## Material Type System
+
+Plugin architecture for extensible material handling:
+```cpp
+// Interface (IMaterialTypeHandler):
+tag()             // MaterialTypeTag identifier
+priority()        // MaterialPriority for handler selection
+try_create()      // Attempt to create material from data
+layout()          // DescriptorSetLayout for this material type
+descriptor_set()  // Bound descriptor set
+upload()          // Upload material data to GPU
+get_resources()   // ResourceState vector for barrier tracking
+
+// Register handler with BindlessMaterialManager:
+manager.register_handler(std::make_unique<TexturedMaterialHandler>(...));
+manager.register_handler(std::make_unique<ColoredMaterialHandler>(...));
+```

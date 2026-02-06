@@ -1,27 +1,34 @@
-# Vulkan 1.3 Features
+# Vulkan Feature Negotiation
+
+`DeviceFinder` (`Vulkan/DeviceFinder.h`) negotiates Vulkan features via chained `.with_*()` calls. See CLAUDE.md for anti-patterns.
 
 ## Device Setup
-
-`DeviceFinder` (`Vulkan/DeviceFinder.h`) negotiates features via chained `.with_*()` calls:
 
 ```cpp
 auto device = instance->findGpu()
     .with_queue(vk::QueueFlagBits::eGraphics)
-    .with_synchronization_2()     // Required: modern barriers
-    .with_dynamic_rendering()     // Required: no VkRenderPass
-    .with_descriptor_indexing()   // Optional: bindless
-    .with_ray_tracing()           // Optional: RT extensions
+    .with_synchronization_2()     // Required: Synchronization2 barriers
+    .with_dynamic_rendering()     // Required: no VkRenderPass/VkFramebuffer
+    .with_descriptor_indexing()   // Optional: bindless resources
+    .with_ray_tracing()           // Optional: RT extensions + buffer device address
     .build();
 ```
 
 ## Required Features
 
-**Synchronization2:** 64-bit pipeline stages/access flags, `cmd.pipelineBarrier2()`
-- Always use `vk::PipelineStageFlagBits2` (not v1 `vk::PipelineStageFlagBits`)
-- Always use `vk::AccessFlags2` (not v1 `vk::AccessFlagBits`)
-- Used by `ResourceTracker` internally
+| Feature | What It Enables | Used By |
+|---------|-----------------|---------|
+| `with_synchronization_2()` | `vk::PipelineStageFlagBits2`, `vk::AccessFlags2`, `cmd.pipelineBarrier2()` | `ResourceTracker` |
+| `with_dynamic_rendering()` | `cmd.beginRendering()` / `cmd.endRendering()`, no framebuffers | All rendering code |
 
-**Dynamic Rendering:** `cmd.beginRendering()` / `cmd.endRendering()`, no framebuffers
+## Optional Features
+
+| Feature | What It Enables | Used By |
+|---------|-----------------|---------|
+| `with_descriptor_indexing()` | Bindless resources, non-uniform indexing, variable descriptor counts | `BindlessMaterialManager`, `BindlessTextureManager` |
+| `with_ray_tracing()` | RT pipeline, acceleration structures, buffer device address | `RayTracedScene`, `RayTracingPipeline`, `ShaderBindingTable` |
+
+## Dynamic Rendering Example
 
 ```cpp
 vk::RenderingAttachmentInfo colorAttachment{
@@ -41,22 +48,10 @@ cmd.beginRendering(vk::RenderingInfo{
 cmd.endRendering();
 ```
 
-## Optional Features
+## Queue Types
 
-**Descriptor Indexing:** Bindless resources, non-uniform indexing
-- Used by `BindlessMaterialManager` and `BindlessTextureManager`
-- Enable via `.with_descriptor_indexing()` on `DeviceFinder`
-
-**Ray Tracing:** BLAS/TLAS, RT shaders
-- Requires buffer device address (always enabled in `Allocator`)
-- Enable via `.with_ray_tracing()` on `DeviceFinder`
-- See [ray-tracing.md](ray-tracing.md) for details
-
-## Anti-Patterns (DO NOT)
-
-- **DO NOT** use v1 stage/access flags: `vk::PipelineStageFlagBits::e...` -> use `vk::PipelineStageFlagBits2::e...`
-- **DO NOT** use `cmd.beginRenderPass()` -> use `cmd.beginRendering()`
-- **DO NOT** create `VkFramebuffer` or `VkRenderPass` objects -- dynamic rendering eliminates these
-- **DO NOT** use `Vk` C prefix types -> use `vk::` C++ bindings
-
-See CLAUDE.md "Anti-Patterns" section for the full list.
+```cpp
+.with_queue(vk::QueueFlagBits::eGraphics)   // Graphics + compute + transfer
+.with_queue(vk::QueueFlagBits::eCompute)     // Async compute
+.with_queue(vk::QueueFlagBits::eTransfer)    // Dedicated transfer (DMA)
+```

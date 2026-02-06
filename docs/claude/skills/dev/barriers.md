@@ -8,9 +8,28 @@ Note: `Memory/Barrier.h` contains legacy standalone helpers (`execute_image_barr
 
 ```cpp
 // All in namespace vw::Barrier
-struct ImageState { vk::Image; vk::ImageSubresourceRange; vk::ImageLayout; vk::PipelineStageFlags2; vk::AccessFlags2; };
-struct BufferState { vk::Buffer; vk::DeviceSize offset; vk::DeviceSize size; vk::PipelineStageFlags2; vk::AccessFlags2; };
-struct AccelerationStructureState { vk::AccelerationStructureKHR; vk::PipelineStageFlags2; vk::AccessFlags2; };
+struct ImageState {
+    vk::Image image;
+    vk::ImageSubresourceRange range;
+    vk::ImageLayout layout;
+    vk::PipelineStageFlags2 stage;
+    vk::AccessFlags2 access;
+};
+
+struct BufferState {
+    vk::Buffer buffer;
+    vk::DeviceSize offset;
+    vk::DeviceSize size;
+    vk::PipelineStageFlags2 stage;
+    vk::AccessFlags2 access;
+};
+
+struct AccelerationStructureState {
+    vk::AccelerationStructureKHR as;
+    vk::PipelineStageFlags2 stage;
+    vk::AccessFlags2 access;
+};
+
 using ResourceState = std::variant<ImageState, BufferState, AccelerationStructureState>;
 ```
 
@@ -19,13 +38,13 @@ using ResourceState = std::variant<ImageState, BufferState, AccelerationStructur
 ```cpp
 vw::Barrier::ResourceTracker tracker;
 
-// Track current state
+// 1. Track current state
 tracker.track(ImageState{image, range, eUndefined, eTopOfPipe, eNone});
 
-// Request new state
+// 2. Request new state
 tracker.request(ImageState{image, range, eColorAttachmentOptimal, eColorAttachmentOutput, eColorAttachmentWrite});
 
-// Generate barriers
+// 3. Generate and submit barriers
 tracker.flush(cmd);
 ```
 
@@ -49,6 +68,12 @@ tracker.track({image, range, eTransferDstOptimal, eTransfer, eTransferWrite});
 tracker.request({image, range, eShaderReadOnlyOptimal, eFragmentShader, eShaderSampledRead});
 ```
 
+**Shader Write -> Shader Read (storage image):**
+```cpp
+tracker.track({image, range, eGeneral, eComputeShader, eShaderStorageWrite});
+tracker.request({image, range, eShaderReadOnlyOptimal, eFragmentShader, eShaderSampledRead});
+```
+
 ## Common Buffer Transitions
 
 **After staging upload -> Vertex shader read:**
@@ -63,6 +88,18 @@ tracker.track(BufferState{buffer, 0, VK_WHOLE_SIZE, eComputeShader, eShaderStora
 tracker.request(BufferState{buffer, 0, VK_WHOLE_SIZE, eFragmentShader, eShaderStorageRead});
 ```
 
+**After compute write -> Compute read (multi-pass compute):**
+```cpp
+tracker.track(BufferState{buffer, 0, VK_WHOLE_SIZE, eComputeShader, eShaderStorageWrite});
+tracker.request(BufferState{buffer, 0, VK_WHOLE_SIZE, eComputeShader, eShaderStorageRead});
+```
+
+**After compute write -> Indirect draw read:**
+```cpp
+tracker.track(BufferState{buffer, 0, VK_WHOLE_SIZE, eComputeShader, eShaderStorageWrite});
+tracker.request(BufferState{buffer, 0, VK_WHOLE_SIZE, eDrawIndirect, eIndirectCommandRead});
+```
+
 ## Acceleration Structure Transitions
 
 **After TLAS Build -> Ray Tracing:**
@@ -71,25 +108,23 @@ tracker.track({tlas, eAccelerationStructureBuildKHR, eAccelerationStructureWrite
 tracker.request({tlas, eRayTracingShaderKHR, eAccelerationStructureReadKHR});
 ```
 
+**After TLAS Build -> Compute Shader read:**
+```cpp
+tracker.track({tlas, eAccelerationStructureBuildKHR, eAccelerationStructureWriteKHR});
+tracker.request({tlas, eComputeShader, eAccelerationStructureReadKHR});
+```
+
 ## Transfer API
 
-`Transfer` (`Memory/Transfer.h`, namespace `vw`) wraps copy operations with an embedded `ResourceTracker` for automatic barrier management.
+`Transfer` (`Memory/Transfer.h`) wraps copy operations with an embedded `ResourceTracker`:
 
 ```cpp
 vw::Transfer transfer;
 
-// Blit image (automatic barrier management)
 transfer.blit(cmd, srcImage, dstImage);
-transfer.blit(cmd, srcImage, dstImage, srcSubresource, dstSubresource, vk::Filter::eLinear);
-
-// Copy buffer (srcOffset, dstOffset, then size)
 transfer.copyBuffer(cmd, src, dst, srcOffset, dstOffset, size);
-
-// Copy between buffer and image
 transfer.copyBufferToImage(cmd, srcBuffer, dstImage, srcOffset);
 transfer.copyImageToBuffer(cmd, srcImage, dstBuffer, dstOffset);
-
-// Save GPU image to disk (handles staging, format conversion, submission)
 transfer.saveToFile(cmd, allocator, queue, image, "output.png");
 
 // Access embedded tracker for manual state management
@@ -101,3 +136,4 @@ auto& tracker = transfer.resourceTracker();
 - Always use `vk::PipelineStageFlagBits2` and `vk::AccessFlags2` (Synchronization2), never v1 flags
 - `DescriptorSet` carries `vector<Barrier::ResourceState>` -- use `descriptor_set.resources()` to get states to track
 - `ResourceTracker` supports interval-based tracking for buffer subranges (partial buffer barriers)
+- Multiple `track()` + `request()` calls can be batched before a single `flush()` -- this minimizes barrier commands

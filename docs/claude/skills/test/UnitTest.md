@@ -13,7 +13,7 @@ auto& gpu = vw::tests::create_gpu();  // Shared singleton
 // gpu.queue()   -- Queue&
 ```
 
-For ray tracing, define `get_ray_tracing_gpu()` locally in your test file (not in a shared header -- see `VulkanWrapper/tests/RayTracingTests.cpp`):
+For ray tracing, define `get_ray_tracing_gpu()` locally in your test file (not in a shared header):
 ```cpp
 auto* gpu = get_ray_tracing_gpu();
 if (!gpu) GTEST_SKIP() << "Ray tracing unavailable";
@@ -72,18 +72,9 @@ gpu.queue().submit({}, {}, {}).wait();
 auto result = staging_buffer.read_as_vector(0, count);
 ```
 
-## Adding Tests
-
-1. Create `VulkanWrapper/tests/MyTests.cpp`
-2. Add to `VulkanWrapper/tests/CMakeLists.txt`:
-```cmake
-add_executable(MyTests MyTests.cpp)
-target_link_libraries(MyTests PRIVATE TestUtils VulkanWrapperCoreLibrary GTest::gtest GTest::gtest_main)
-gtest_discover_tests(MyTests)
-```
-
 ## Important Notes
 
 - The GPU singleton intentionally leaks to avoid static destruction order issues -- this is expected
 - Always call `.wait()` after `queue().submit()` to ensure GPU work completes before assertions
 - Validation layers are enabled by default -- any Vulkan misuse will trigger validation errors
+- See SKILL.md "Debugging Test Failures" for troubleshooting guidance

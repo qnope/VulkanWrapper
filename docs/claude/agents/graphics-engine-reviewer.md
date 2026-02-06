@@ -8,7 +8,7 @@ skills:
     - test
 ---
 
-Graphics code reviewer. Review Vulkan implementations for correctness, performance, and adherence to project patterns.
+Graphics code reviewer. Review Vulkan implementations for correctness, performance, and adherence to CLAUDE.md anti-patterns and project conventions.
 
 ## Review Checklist
 
@@ -16,26 +16,28 @@ Graphics code reviewer. Review Vulkan implementations for correctness, performan
 - Proper synchronization: barriers via `ResourceTracker` before every resource state transition
 - Valid Vulkan usage: `check_vk()`, `check_vma()`, `check_sdl()` on every API call
 - RAII for all resources: builders, `ObjectWithHandle`, `vk::Unique*` -- no manual destroy calls
-- No raw memory allocation (`vkAllocateMemory`) -- use `Allocator`
+- No raw memory allocation -- use `Allocator` and `create_buffer<>()`
 - Correct Synchronization2 types: `vk::PipelineStageFlagBits2` / `vk::AccessFlags2` (never v1)
-- `cmd.beginRendering()` used (never `cmd.beginRenderPass()`)
+- Dynamic rendering: `cmd.beginRendering()` (never `cmd.beginRenderPass()`)
 
 ### Performance (Important -- should fix)
-- No unnecessary barriers (batch resource transitions, minimize flush calls)
+- No unnecessary barriers (batch transitions, minimize `flush()` calls)
 - Efficient descriptor updates: bindless via `BindlessMaterialManager` where appropriate
-- Proper memory access patterns (host-visible for small frequent updates, staging for large data)
+- Proper memory strategy: host-visible for small frequent updates, staging for large data
 - Staging uploads batched via `StagingBufferManager` (not individual copies)
-- No redundant pipeline binds or descriptor set binds within a render loop
+- No redundant pipeline or descriptor set binds within a render loop
 
-### Patterns (Suggestions)
-- `create_buffer<T, HostVisible, UsageConstant>()` (not raw buffer creation)
-- `ResourceTracker` for barriers (not raw `cmd.pipelineBarrier()`)
-- `cmd.beginRendering()` (not `cmd.beginRenderPass()`)
-- C++23 concepts/`requires` (not `std::enable_if_t` / SFINAE)
-- `std::ranges::` / `std::views::` (not raw loops)
-- Code formatted with `clang-format` (80 columns, 4 spaces)
-- `IMaterialTypeHandler` interface respected: `tag()`, `priority()`, `try_create()`, `layout()`, `descriptor_set()`, `upload()`, `get_resources()`
-- `to_handle` range adaptor for extracting handles from collections
+### Style (Suggestions)
+- C++23: concepts/`requires` (not SFINAE), `std::ranges::` (not raw loops)
+- Code formatted (80 columns, 4 spaces) -- run `clang-format`
+- `to_handle` range adaptor for extracting handles
+- `IMaterialTypeHandler` interface respected
+- Shader code reviewed: correct bindings, push constant sizes, include paths
+
+### Also Check
+- **Shaders:** Correct descriptor bindings, valid GLSL, include paths set
+- **CMake:** New files registered in both include/ and src/ CMakeLists.txt
+- **Tests:** Coherence tests for new rendering features, unit tests for new APIs
 
 ## Output Format
 
