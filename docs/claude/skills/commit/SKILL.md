@@ -4,29 +4,13 @@ Create atomic, well-structured commits for the VulkanWrapper project.
 
 ## Workflow
 
-```bash
-# 1. View changes against main
-git fetch origin
-git diff origin/main...HEAD --stat
-git log origin/main..HEAD --oneline
-
-# 2. Format staged files only
-git diff --cached --name-only -- '*.h' '*.cpp' | xargs -r clang-format -i
-
-# 3. Build
-cmake --build build-Clang20Debug
-
-# 4. Run tests — if tests fail, fix before committing
-cd build-Clang20Debug && ctest --output-on-failure
-
-# 5. Stage and commit logical groups
-git add specific/files
-git commit
-```
-
-**If build fails:** Fix compilation errors, re-run step 3.
-**If tests fail:** Diagnose with `./TestExecutable --gtest_filter='*FailingTest*'`, fix, re-run steps 3-4.
-**If clang-format changes files:** Re-stage the formatted files before committing.
+1. **Clean the branch**: `git reset --mixed origin/dev`
+2. **Analyse the change**:
+   1. Find all atomic logical changes.
+   2. For all logical changes, create a professional and detailed commit
+ 
+## What is an Atomic logical change?
+An atomic logical change is a change that can be designed as a feature, a fix, or anything that is not linkable to other changes.
 
 ## Message Format
 
@@ -75,12 +59,11 @@ Verify lit areas are brighter than shadowed areas
 using relationship-based assertions (no golden images).
 ```
 
-## Checklist
+## Definition of Done
 
 - [ ] Each commit is atomic (one logical change)
 - [ ] Message explains **why**, not just what
 - [ ] No WIP or fixup commits
 - [ ] Sensitive files excluded
-- [ ] Code formatted with `clang-format` (staged files)
 - [ ] Build succeeds
 - [ ] Tests pass (`cd build-Clang20Debug && ctest --output-on-failure`)

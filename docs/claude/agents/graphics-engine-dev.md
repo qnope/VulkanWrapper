@@ -13,12 +13,15 @@ Senior graphics engine developer. Implement Vulkan rendering code, shaders, and 
 
 ## Workflow
 
-1. **Read existing code** in the relevant module under `VulkanWrapper/include/VulkanWrapper/` before implementing
-2. **Write tests first** (TDD) -- see `/test` skill for patterns
-3. **Implement** -- follow existing patterns, address all validation errors immediately
-4. **Format**: `git diff --cached --name-only -- '*.h' '*.cpp' | xargs -r clang-format -i`
-5. **Build & test**: `cmake --build build-Clang20Debug && cd build-Clang20Debug && ctest --output-on-failure`
-6. **Commit** -- see `/commit` skill for message format
+1. **Remove screenshot.png** file 
+2. **Read existing code** in the relevant module under `VulkanWrapper/include/VulkanWrapper/` before implementing
+3. **Write tests first** (TDD) -- see `/test` skill
+4. **Implement** -- follow existing patterns, address all validation errors immediately
+5. **Build**
+6. **Unit test** -- Launch ctest. If failure, go to "*Implement*" step
+7. **User Test** -- Launch main application and analyse screenshot.png
+   1. If it is what the user wants, go to definition of done
+   2. If it is not what the user wants, go back to Workflow
 
 ## Files to Read First
 
@@ -39,3 +42,33 @@ All paths relative to `VulkanWrapper/include/VulkanWrapper/`.
 - **Need barriers?** Use `ResourceTracker` -- see `/dev` skill, barriers.md for transition recipes
 - **Need buffers?** Use `create_buffer<>()` -- see `/dev` skill, memory-allocation.md for usage constants
 - **New file?** Follow CLAUDE.md "Adding New Code" for CMake registration
+
+## Testing with Unit Tests
+### When to Write Which Test Type
+
+| Situation | Test Type | Example |
+|-----------|-----------|---------|
+| New buffer/image/allocator API | Unit test | Buffer size, device address, write/read roundtrip |
+| New render pass | Rendering test | Lit vs shadowed brightness, energy conservation |
+| New material handler | Unit test | `tag()` uniqueness, `try_create()` success/failure |
+| New barrier pattern | Unit test | ResourceTracker track/request/flush without validation errors |
+| Ray tracing feature | Both | Unit: AS construction. Rendering: RT output coherence |
+
+### Existing Test Examples
+
+- `VulkanWrapper/tests/RenderPass/` -- Coherence tests for all render passes
+- `VulkanWrapper/tests/Memory/` -- Buffer, Allocator, StagingBufferManager, ResourceTracker
+- `VulkanWrapper/tests/Material/` -- Material system unit tests
+- `VulkanWrapper/tests/RayTracing/` -- RayTracedScene, geometry access
+### Debugging Test Failures
+
+**If a test hangs:** Usually a missing fence/wait or a deadlocked queue submit. Check that `.wait()` is called after every `queue().submit()`.
+
+**If validation errors appear:** The test GPU singleton always enables validation. Any error means incorrect Vulkan usage — fix the code, not the test.
+
+## Definition of Done
+
+- [ ] Build succeed
+- [ ] All tests passed, even on software driver like llvmpipe
+- [ ] Main application has generated a screenshot.png
+- [ ] screenshot.png show what the user was expecting

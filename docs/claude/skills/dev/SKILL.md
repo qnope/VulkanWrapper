@@ -1,6 +1,6 @@
 # Dev Skill
 
-Implementation guide for VulkanWrapper. Refer to CLAUDE.md for build commands, directory structure, core patterns, and anti-patterns.
+Implementation guide for VulkanWrapper.
 
 ## Sub-Guides
 
@@ -8,8 +8,6 @@ Implementation guide for VulkanWrapper. Refer to CLAUDE.md for build commands, d
 |-------|------|--------------|
 | Memory | [memory-allocation.md](memory-allocation.md) | Creating buffers, images, staging uploads |
 | Barriers | [barriers.md](barriers.md) | Synchronizing resources, image transitions |
-| Patterns | [patterns.md](patterns.md) | Creating ScreenSpacePass, MeshRenderer, descriptors |
-| C++23 | [modern-cpp.md](modern-cpp.md) | Concepts, ranges, strong types, consteval |
 | Shaders | [shaders.md](shaders.md) | Compiling GLSL, includes, push constants, CMake integration |
 | Ray Tracing | [ray-tracing.md](ray-tracing.md) | BLAS/TLAS, RayTracedScene, SBT, GeometryReference |
 | Vulkan Setup | [vulkan-features.md](vulkan-features.md) | DeviceFinder, feature negotiation, optional extensions |
