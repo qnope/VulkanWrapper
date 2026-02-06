@@ -14,14 +14,17 @@ cmake --build build-Clang20Debug
 # Build specific test target
 cmake --build build-Clang20Debug --target RenderPassTests
 
-# Run all tests
-cd build-Clang20Debug && ctest --output-on-failure
+# Run all tests(ctest)
+cd build-Clang20Debug && DYLD_LIBRARY_PATH=vcpkg_installed/arm64-osx/lib ctest --stop-on-failure --output-on-failure -j8
 
-# Run specific test
-cd build-Clang20Debug/VulkanWrapper/tests && ./RenderPassTests
+# Run specific test suite
+cd build-Clang20Debug/VulkanWrapper/tests && DYLD_LIBRARY_PATH=../../vcpkg_installed/arm64-osx/lib ./RenderPassTests
 
-# Filter tests
-cd build-Clang20Debug/VulkanWrapper/tests && ./RenderPassTests --gtest_filter='*IndirectLight*'
+# Run specific test from a test suite
+cd build-Clang20Debug/VulkanWrapper/tests && DYLD_LIBRARY_PATH=../../vcpkg_installed/arm64-osx/lib ./RenderPassTests --gtest_filter='*IndirectLight*'
+
+# Run main application which generate screenshot.png
+cd build-Clang20Debug/examples/Advanced && DYLD_LIBRARY_PATH=../../vcpkg_installed/arm64-osx/lib ./Main
 
 # Format changed files (staged only)
 git diff --cached --name-only -- '*.h' '*.cpp' | xargs -r clang-format -i
@@ -169,7 +172,7 @@ cmd.endRendering();
 ## Error Handling
 
 ```cpp
-check_vk(result, "context");        // VulkanException
+auto unwrappedResult = check_vk(result, "context");        // VulkanException
 check_vma(result, "context");       // VMAException
 check_sdl(ptr_or_bool, "context");  // SDLException (pointer and bool overloads)
 ```
