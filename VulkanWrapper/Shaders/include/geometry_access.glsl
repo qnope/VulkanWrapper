@@ -48,10 +48,11 @@ layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer Ind
 };
 
 // GeometryReference matches the C++ struct in GeometryReference.h (96 bytes)
+// Both uint64_t fields are first to ensure 8-byte alignment with scalar layout
 struct GeometryReference {
     uint64_t vertex_buffer_address;
-    int vertex_offset;
     uint64_t index_buffer_address;
+    int vertex_offset;
     int first_index;
     uint material_type;
     uint material_index;
