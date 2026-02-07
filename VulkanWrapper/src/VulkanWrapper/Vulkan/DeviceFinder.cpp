@@ -114,7 +114,9 @@ DeviceFinder &DeviceFinder::with_ray_tracing() noexcept {
         remove_device_not_supporting_extension(extension);
 
     for (auto &information : m_physicalDevicesInformation)
-        information.extensions.append_range(extensions);
+        information.extensions.insert(information.extensions.end(),
+                                       extensions.begin(),
+                                       extensions.end());
 
     m_features.get<vk::PhysicalDeviceAccelerationStructureFeaturesKHR>()
         .setAccelerationStructure(1U);
