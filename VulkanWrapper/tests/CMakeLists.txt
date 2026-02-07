@@ -122,6 +122,7 @@ add_executable(RenderPassTests
     RenderPass/SkyPassTests.cpp
     RenderPass/SunLightPassTests.cpp
     RenderPass/IndirectLightPassTests.cpp
+    RenderPass/IndirectLightPassSunBounceTests.cpp
 )
 
 target_link_libraries(RenderPassTests
