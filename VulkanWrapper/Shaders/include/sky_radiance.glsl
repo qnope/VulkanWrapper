@@ -41,7 +41,13 @@ vec3 sky_integrate_scattering(SkyParameters p, vec3 out_atmosphere,
                               vec3 sun_dir) {
     vec3 origin = atmo_observer_origin(p);
     vec3 ds = (out_atmosphere - origin) / ATMO_STEPS;
-    vec3 direction = normalize(ds);
+    float step_len = length(ds);
+
+    // Zero-length path (e.g., ray grazing the planet surface) -
+    // no atmosphere to integrate through
+    if (step_len < 1e-6) return vec3(0.0);
+
+    vec3 direction = ds / step_len;
     vec3 acc = vec3(0.0);
 
     for (int i = 0; i < ATMO_STEPS; ++i) {
@@ -50,7 +56,7 @@ vec3 sky_integrate_scattering(SkyParameters p, vec3 out_atmosphere,
                sky_scattering_at_point(p, s, direction, sun_dir);
     }
 
-    return acc * length(ds);
+    return acc * step_len;
 }
 
 // Compute sky radiance for a given view direction
@@ -63,8 +69,18 @@ vec3 compute_sky_radiance(SkyParameters p, vec3 view_dir) {
     vec3 origin = atmo_observer_origin(p);
 
     // Find intersection with atmosphere boundary
-    float dist_out = atmo_intersect_ray_sphere_from_inside(
+    float dist_atmo = atmo_intersect_ray_sphere_from_inside(
         origin, view_dir, atmo_radius_atmosphere(p));
+
+    // If the ray hits the planet surface, cap the integration there.
+    // Rays going below the horizon should only integrate through the
+    // atmosphere above the planet, not through the planet interior.
+    float dist_planet = atmo_intersect_ray_sphere_from_outside(
+        origin, view_dir, atmo_radius_planet(p));
+    float dist_out = (dist_planet > 0.0)
+                   ? min(dist_planet, dist_atmo)
+                   : dist_atmo;
+
     vec3 out_pos = origin + view_dir * dist_out;
 
     // Integrate scattering along the view ray

@@ -4,7 +4,7 @@ Create atomic, well-structured commits for the VulkanWrapper project.
 
 ## Workflow
 
-1. **Clean the branch**: `git reset --mixed origin/dev`
+1. **Clean the change from origin/main (only origin/main)**: `git reset --mixed origin/main`
 2. **Analyse the change**:
    1. Find all atomic logical changes.
    2. For all logical changes, create a professional and detailed commit

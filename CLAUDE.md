@@ -23,8 +23,15 @@ cd build-Clang20Debug/VulkanWrapper/tests && DYLD_LIBRARY_PATH=../../vcpkg_insta
 # Run specific test from a test suite
 cd build-Clang20Debug/VulkanWrapper/tests && DYLD_LIBRARY_PATH=../../vcpkg_installed/arm64-osx/lib ./RenderPassTests --gtest_filter='*IndirectLight*'
 
+# Debug a specific test suite: if there is a crash for example.
+cd build-Clang20Debug/VulkanWrapper/tests && DYLD_LIBRARY_PATH=../../vcpkg_installed/arm64-osx/lib $(brew --prefix llvm)/bin/lldb ./RenderPassTests
+
 # Run main application which generate screenshot.png
 cd build-Clang20Debug/examples/Advanced && DYLD_LIBRARY_PATH=../../vcpkg_installed/arm64-osx/lib ./Main
+
+# Debug main application if there is a crash for example
+cd build-Clang20Debug/examples/Advanced && DYLD_LIBRARY_PATH=../../vcpkg_installed/arm64-osx/lib $(brew --prefix llvm)/bin/lldb ./Main
+
 
 # Format changed files (staged only)
 git diff --cached --name-only -- '*.h' '*.cpp' | xargs -r clang-format -i

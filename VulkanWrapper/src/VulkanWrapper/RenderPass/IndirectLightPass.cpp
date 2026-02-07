@@ -7,9 +7,12 @@ namespace vw {
 IndirectLightPass::IndirectLightPass(
     std::shared_ptr<Device> device, std::shared_ptr<Allocator> allocator,
     const std::filesystem::path &shader_dir,
-    const rt::as::TopLevelAccelerationStructure &tlas, vk::Format output_format)
+    const rt::as::TopLevelAccelerationStructure &tlas,
+    const rt::GeometryReferenceBuffer &geometry_buffer,
+    vk::Format output_format)
     : Subpass(device, allocator)
     , m_tlas(&tlas)
+    , m_geometry_buffer(&geometry_buffer)
     , m_output_format(output_format)
     , m_sampler(SamplerBuilder(m_device).build())
     , m_descriptor_pool(DescriptorPool(m_device, nullptr))
@@ -49,6 +52,7 @@ void IndirectLightPass::create_pipeline_and_sbt(
             .with_combined_image(rt_stages, 1)      // binding 7: bitangent
             .with_storage_buffer(rt_stages, 1)      // binding 8: Xi samples
             .with_combined_image(rt_stages, 1)      // binding 9: noise texture
+            .with_storage_buffer(rt_stages, 1)      // binding 10: geometry refs
             .build();
 
     // Create pipeline layout with push constants
@@ -182,6 +186,13 @@ IndirectLightPass::execute(vk::CommandBuffer cmd,
     // binding 9: Noise texture
     descriptor_allocator.add_combined_image(
         9, m_noise_texture->combined_image(),
+        vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+        vk::AccessFlagBits2::eShaderRead);
+
+    // binding 10: Geometry reference buffer (for closest hit shader)
+    descriptor_allocator.add_storage_buffer(
+        10, m_geometry_buffer->handle(), 0,
+        m_geometry_buffer->size_bytes(),
         vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
         vk::AccessFlagBits2::eShaderRead);
 

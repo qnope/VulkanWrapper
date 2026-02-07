@@ -9,6 +9,7 @@
 #include "VulkanWrapper/Memory/Allocator.h"
 #include "VulkanWrapper/Random/NoiseTexture.h"
 #include "VulkanWrapper/Random/RandomSamplingBuffer.h"
+#include "VulkanWrapper/RayTracing/GeometryReference.h"
 #include "VulkanWrapper/RayTracing/RayTracingPipeline.h"
 #include "VulkanWrapper/RayTracing/ShaderBindingTable.h"
 #include "VulkanWrapper/RayTracing/TopLevelAccelerationStructure.h"
@@ -69,12 +70,15 @@ class IndirectLightPass : public Subpass<IndirectLightPassSlot> {
      * @param allocator Memory allocator
      * @param shader_dir Path to the shader directory containing the RT shaders
      * @param tlas Top-level acceleration structure for occlusion rays
+     * @param geometry_buffer Geometry reference buffer for vertex access
+     *        in closest hit shader (sun bounce)
      * @param output_format Output buffer format (default: R32G32B32A32Sfloat)
      */
     IndirectLightPass(std::shared_ptr<Device> device,
                       std::shared_ptr<Allocator> allocator,
                       const std::filesystem::path &shader_dir,
                       const rt::as::TopLevelAccelerationStructure &tlas,
+                      const rt::GeometryReferenceBuffer &geometry_buffer,
                       vk::Format output_format = vk::Format::eR32G32B32A32Sfloat);
 
     /**
@@ -129,6 +133,7 @@ class IndirectLightPass : public Subpass<IndirectLightPassSlot> {
     void create_pipeline_and_sbt(const std::filesystem::path &shader_dir);
 
     const rt::as::TopLevelAccelerationStructure *m_tlas;
+    const rt::GeometryReferenceBuffer *m_geometry_buffer;
     vk::Format m_output_format;
 
     // Progressive accumulation state
