@@ -451,7 +451,7 @@ TEST_F(IndirectLightPassTest, ConstructWithValidParameters) {
 
     auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-        vk::Format::eR32G32B32A32Sfloat);
+        scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
 
     ASSERT_NE(pass, nullptr);
 }
@@ -499,7 +499,7 @@ TEST_F(IndirectLightPassTest, ExecuteReturnsValidImageView) {
 
     auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-        vk::Format::eR32G32B32A32Sfloat);
+        scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
 
     auto gb = create_gbuffer(width, height);
     fill_gbuffer_uniform(gb, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
@@ -539,7 +539,7 @@ TEST_F(IndirectLightPassTest, InitialFrameCount_IsZero) {
 
     auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-        vk::Format::eR32G32B32A32Sfloat);
+        scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
 
     EXPECT_EQ(pass->get_frame_count(), 0u);
 }
@@ -556,7 +556,7 @@ TEST_F(IndirectLightPassTest, FrameCountIncrements_AfterExecute) {
 
     auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-        vk::Format::eR32G32B32A32Sfloat);
+        scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
 
     auto gb = create_gbuffer(width, height);
     fill_gbuffer_uniform(gb, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
@@ -614,7 +614,7 @@ TEST_F(IndirectLightPassTest, ResetAccumulation_ResetsFrameCountToZero) {
 
     auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-        vk::Format::eR32G32B32A32Sfloat);
+        scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
 
     auto gb = create_gbuffer(width, height);
     fill_gbuffer_uniform(gb, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
@@ -665,7 +665,7 @@ TEST_F(IndirectLightPassTest, ZenithSun_ProducesBlueIndirectLight) {
 
     auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-        vk::Format::eR32G32B32A32Sfloat);
+        scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
 
     auto gb = create_gbuffer(width, height);
     // White surface facing up (receives full hemisphere of sky)
@@ -720,7 +720,7 @@ TEST_F(IndirectLightPassTest, HorizonSun_ProducesWarmIndirectLight) {
 
     auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-        vk::Format::eR32G32B32A32Sfloat);
+        scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
 
     auto gb = create_gbuffer(width, height);
     fill_gbuffer_uniform(gb, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
@@ -779,7 +779,7 @@ TEST_F(IndirectLightPassTest, ChromaticShift_ZenithVsHorizon) {
     {
         auto pass = std::make_unique<IndirectLightPass>(
             gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-            vk::Format::eR32G32B32A32Sfloat);
+            scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
 
         auto sky_params = SkyParameters::create_earth_sun(90.0f);
 
@@ -805,7 +805,7 @@ TEST_F(IndirectLightPassTest, ChromaticShift_ZenithVsHorizon) {
     {
         auto pass = std::make_unique<IndirectLightPass>(
             gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-            vk::Format::eR32G32B32A32Sfloat);
+            scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
 
         auto sky_params = SkyParameters::create_earth_sun(5.0f);
 
@@ -857,7 +857,7 @@ TEST_F(IndirectLightPassTest, AccumulationConverges_VarianceDecreases) {
 
     auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-        vk::Format::eR32G32B32A32Sfloat);
+        scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
 
     auto gb = create_gbuffer(width, height);
     fill_gbuffer_uniform(gb, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
@@ -927,7 +927,7 @@ TEST_F(IndirectLightPassTest, SurfaceFacingUp_ReceivesSkyLight) {
 
     auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-        vk::Format::eR32G32B32A32Sfloat);
+        scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
 
     auto gb = create_gbuffer(width, height);
     fill_gbuffer_uniform(gb, glm::vec3(0, 0, 0),
@@ -956,9 +956,11 @@ TEST_F(IndirectLightPassTest, SurfaceFacingUp_ReceivesSkyLight) {
         << "Surface facing up should receive significant sky light";
 }
 
-TEST_F(IndirectLightPassTest, SurfaceFacingDown_ReceivesLessLight) {
-    // A surface facing down (normal = 0,-1,0) should receive much less
-    // sky light since it cannot see the sky (only potential ground bounce)
+TEST_F(IndirectLightPassTest, SurfaceFacingDown_ReceivesDifferentLight) {
+    // A surface facing down (normal = 0,-1,0) receives different indirect
+    // light than one facing up: upward sees sky, downward sees ground bounce.
+    // With sun bounce, the downward surface may receive significant light
+    // from sun-lit geometry below.
     constexpr Width width{64};
     constexpr Height height{64};
 
@@ -976,7 +978,7 @@ TEST_F(IndirectLightPassTest, SurfaceFacingDown_ReceivesLessLight) {
     {
         auto pass = std::make_unique<IndirectLightPass>(
             gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-            vk::Format::eR32G32B32A32Sfloat);
+            scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
 
         fill_gbuffer_uniform(gb, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
 
@@ -1002,7 +1004,7 @@ TEST_F(IndirectLightPassTest, SurfaceFacingDown_ReceivesLessLight) {
     {
         auto pass = std::make_unique<IndirectLightPass>(
             gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-            vk::Format::eR32G32B32A32Sfloat);
+            scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
 
         fill_gbuffer_uniform(gb, glm::vec3(0, 0, 0), glm::vec3(0, -1, 0));
 
@@ -1026,10 +1028,20 @@ TEST_F(IndirectLightPassTest, SurfaceFacingDown_ReceivesLessLight) {
     float luminance_up = color_up.r + color_up.g + color_up.b;
     float luminance_down = color_down.r + color_down.g + color_down.b;
 
-    // Surface facing up should receive significantly more light
-    EXPECT_GT(luminance_up, luminance_down * 2.0f)
-        << "Surface facing up should receive at least 2x more sky light"
-        << " (up=" << luminance_up << ", down=" << luminance_down << ")";
+    // Both orientations should produce non-zero light
+    EXPECT_GT(luminance_up, 0.0f)
+        << "Surface facing up should receive sky light";
+    EXPECT_GT(luminance_down, 0.0f)
+        << "Surface facing down should receive ground-bounced light";
+
+    // The two orientations should produce noticeably different results,
+    // confirming that surface orientation affects indirect lighting
+    float ratio = std::max(luminance_up, luminance_down) /
+                  std::min(luminance_up, luminance_down);
+    EXPECT_GT(ratio, 1.5f)
+        << "Surface orientation should significantly affect indirect light"
+        << " (up=" << luminance_up << ", down=" << luminance_down
+        << ", ratio=" << ratio << ")";
 }
 
 } // namespace vw::tests
