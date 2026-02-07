@@ -351,8 +351,8 @@ void RayTracedScene::build_geometry_buffer() {
     for (const auto &geom : m_mesh_geometries) {
         GeometryReference ref{
             .vertex_buffer_address = geom.full_vertex_buffer->device_address(),
-            .vertex_offset = geom.vertex_offset,
             .index_buffer_address = geom.index_buffer->device_address(),
+            .vertex_offset = geom.vertex_offset,
             .first_index = geom.first_index,
             .material_type = geom.material.material_type.id(),
             .material_index = geom.material.material_index,

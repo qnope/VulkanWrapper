@@ -104,15 +104,15 @@ TEST(GeometryReferenceStructTest, StructSize) {
 TEST(GeometryReferenceStructTest, StructLayout) {
     vw::rt::GeometryReference ref{};
     ref.vertex_buffer_address = 0x123456789ABCDEF0ULL;
-    ref.vertex_offset = 42;
     ref.index_buffer_address = 0x0FEDCBA987654321ULL;
+    ref.vertex_offset = 42;
     ref.first_index = 100;
     ref.material_type = 1;
     ref.material_index = 5;
 
     EXPECT_EQ(ref.vertex_buffer_address, 0x123456789ABCDEF0ULL);
-    EXPECT_EQ(ref.vertex_offset, 42);
     EXPECT_EQ(ref.index_buffer_address, 0x0FEDCBA987654321ULL);
+    EXPECT_EQ(ref.vertex_offset, 42);
     EXPECT_EQ(ref.first_index, 100);
     EXPECT_EQ(ref.material_type, 1);
     EXPECT_EQ(ref.material_index, 5);

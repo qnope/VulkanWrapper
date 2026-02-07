@@ -9,8 +9,8 @@ namespace vw::rt {
 #pragma pack(push, 1)
 struct GeometryReference {
     uint64_t vertex_buffer_address;
-    int32_t vertex_offset;
     uint64_t index_buffer_address;
+    int32_t vertex_offset;
     int32_t first_index;
     uint32_t material_type;
     uint32_t material_index;
