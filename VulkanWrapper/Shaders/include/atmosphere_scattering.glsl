@@ -50,21 +50,39 @@ float atmo_intersect_ray_sphere_from_inside(vec3 rayOrigin, vec3 rayDir, float r
     return -b + sqrt(discriminant);
 }
 
+// Ray-sphere intersection for rays starting outside the sphere
+// Returns the distance to the near intersection point, or -1.0 if no hit
+float atmo_intersect_ray_sphere_from_outside(vec3 rayOrigin, vec3 rayDir, float radius) {
+    float b = dot(rayOrigin, rayDir);
+    float c = dot(rayOrigin, rayOrigin) - radius * radius;
+    float discriminant = b * b - c;
+    if (discriminant < 0.0) return -1.0;
+    float t = -b - sqrt(discriminant);
+    return (t > 0.0) ? t : -1.0;
+}
+
+// Altitude above planet surface, clamped to 0 to prevent density blow-up
+// for sample points below the surface (e.g., when integrating through the
+// planet along sun-direction transmittance paths).
+float atmo_altitude(SkyParameters p, vec3 position) {
+    return max(0.0, length(position) - atmo_radius_planet(p));
+}
+
 // Rayleigh scattering coefficient at given position
 vec3 atmo_sigma_s_rayleigh(SkyParameters p, vec3 position) {
-    float h = length(position) - atmo_radius_planet(p);
+    float h = atmo_altitude(p, position);
     return atmo_rayleigh_coef(p) * exp(-h / atmo_height_rayleigh(p));
 }
 
 // Mie scattering coefficient at given position
 vec3 atmo_sigma_s_mie(SkyParameters p, vec3 position) {
-    float h = length(position) - atmo_radius_planet(p);
+    float h = atmo_altitude(p, position);
     return atmo_mie_coef(p) * exp(-h / atmo_height_mie(p));
 }
 
 // Ozone absorption coefficient at given position
 vec3 atmo_sigma_a_ozone(SkyParameters p, vec3 position) {
-    float h = length(position) - atmo_radius_planet(p);
+    float h = atmo_altitude(p, position);
     return atmo_ozone_coef(p) * exp(-h / atmo_height_ozone(p));
 }
 
