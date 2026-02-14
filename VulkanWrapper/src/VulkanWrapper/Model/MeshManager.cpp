@@ -14,7 +14,8 @@ MeshManager::MeshManager(std::shared_ptr<const Device> device,
     , m_full_vertex_buffer{allocator}
     , m_index_buffer{allocator}
     , m_material_manager{device, allocator, m_staging_buffer_manager} {
-    m_material_manager.register_handler<Material::TexturedMaterialHandler>();
+    m_material_manager.register_handler<Material::TexturedMaterialHandler>(
+        m_material_manager.texture_manager());
     m_material_manager.register_handler<Material::ColoredMaterialHandler>();
 }
 

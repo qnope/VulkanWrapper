@@ -4,6 +4,7 @@
 #include "VulkanWrapper/Model/Material/IMaterialTypeHandler.h"
 #include "VulkanWrapper/Model/Material/Material.h"
 #include <memory>
+#include <ranges>
 #include <unordered_map>
 
 struct aiMaterial;
@@ -16,9 +17,10 @@ class BindlessMaterialManager {
                             std::shared_ptr<Allocator> allocator,
                             std::shared_ptr<StagingBufferManager> staging);
 
-    template <typename Handler> void register_handler() {
-        auto handler = Handler::template create<Handler>(m_device, m_allocator,
-                                                         m_texture_manager);
+    template <typename Handler, typename... Args>
+    void register_handler(Args &&...args) {
+        auto handler = Handler::Base::template create<Handler>(
+            m_device, m_allocator, std::forward<Args>(args)...);
         auto tag = handler->tag();
         m_handlers[tag] = std::move(handler);
         m_sorted_handlers.clear();
@@ -37,6 +39,15 @@ class BindlessMaterialManager {
     handler(MaterialTypeTag tag) const;
 
     void upload_all();
+
+    [[nodiscard]] auto handlers() const {
+        return m_handlers
+               | std::views::transform([](const auto &pair)
+                     -> std::pair<MaterialTypeTag,
+                                  const IMaterialTypeHandler *> {
+                   return {pair.first, pair.second.get()};
+               });
+    }
 
     [[nodiscard]] std::vector<Barrier::ResourceState> get_resources() const;
 

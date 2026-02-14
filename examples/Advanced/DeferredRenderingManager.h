@@ -5,6 +5,8 @@
 #include "ZPass.h"
 #include <filesystem>
 #include <memory>
+#include <VulkanWrapper/Model/Material/ColoredMaterialHandler.h>
+#include <VulkanWrapper/Model/Material/TexturedMaterialHandler.h>
 #include <VulkanWrapper/Memory/Buffer.h>
 #include <VulkanWrapper/Model/Material/BindlessMaterialManager.h>
 #include <VulkanWrapper/Model/Scene.h>
@@ -52,8 +54,14 @@ class DeferredRenderingManager {
         // Create functional passes - each owns its output images lazily
         m_zpass = std::make_unique<ZPass>(m_device, m_allocator, depth_format);
 
+        ColorPass::FragmentShaderMap fragment_shaders{
+            {vw::Model::Material::textured_material_tag,
+             "Shaders/GBuffer/gbuffer_textured.spv"},
+            {vw::Model::Material::colored_material_tag,
+             "Shaders/GBuffer/gbuffer_colored.spv"}};
         m_color_pass = std::make_unique<ColorPass>(
-            m_device, m_allocator, material_manager, depth_format);
+            m_device, m_allocator, material_manager,
+            std::move(fragment_shaders), depth_format);
 
         m_ao_pass = std::make_unique<AmbientOcclusionPass>(
             m_device, m_allocator, ray_traced_scene.tlas_handle(), ao_format);

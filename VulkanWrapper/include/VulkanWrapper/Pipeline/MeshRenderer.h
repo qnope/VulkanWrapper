@@ -14,7 +14,6 @@ class MeshRenderer {
                       std::shared_ptr<const Pipeline> pipeline);
 
     /// Draw a mesh. Binds the pipeline for the mesh's material type.
-    /// Material descriptor sets should be bound before calling this.
     void draw_mesh(vk::CommandBuffer cmd_buffer, const Model::Mesh &mesh,
                    const glm::mat4 &transform) const;
 

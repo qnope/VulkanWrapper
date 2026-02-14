@@ -6,13 +6,12 @@ namespace vw::Model::Material {
 
 struct TexturedMaterialData {
     uint32_t diffuse_texture_index;
-    uint32_t _pad[3];
 };
-static_assert(sizeof(TexturedMaterialData) == 16);
+static_assert(sizeof(TexturedMaterialData) == 4);
 
 struct ColoredMaterialData {
-    glm::vec4 color;
+    glm::vec3 color;
 };
-static_assert(sizeof(ColoredMaterialData) == 16);
+static_assert(sizeof(ColoredMaterialData) == 12);
 
 } // namespace vw::Model::Material

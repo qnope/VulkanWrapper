@@ -22,14 +22,9 @@ class ColoredMaterialHandler : public MaterialTypeHandler<ColoredMaterialData> {
     try_create_gpu_data(const aiMaterial *mat,
                         const std::filesystem::path &base_path) override;
 
-    void setup_layout(DescriptorSetLayoutBuilder &builder) override;
-
-    void setup_descriptors(DescriptorAllocator &alloc) override;
-
   private:
     ColoredMaterialHandler(std::shared_ptr<const Device> device,
-                           std::shared_ptr<Allocator> allocator,
-                           BindlessTextureManager &texture_manager);
+                           std::shared_ptr<Allocator> allocator);
 };
 
 } // namespace vw::Model::Material

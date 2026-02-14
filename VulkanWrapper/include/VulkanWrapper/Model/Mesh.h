@@ -4,16 +4,15 @@
 #include "VulkanWrapper/Descriptors/Vertex.h"
 #include "VulkanWrapper/Memory/Buffer.h"
 #include "VulkanWrapper/Model/Material/Material.h"
-#include <functional>
 
 namespace vw::Model {
 using Vertex3DBuffer = Buffer<Vertex3D, false, VertexBufferUsage>;
 using FullVertex3DBuffer = Buffer<FullVertex3D, false, VertexBufferUsage>;
 
-/// Push constants for mesh rendering with bindless materials.
+/// Push constants for mesh rendering with buffer reference materials.
 struct MeshPushConstants {
     glm::mat4 transform;
-    uint32_t material_index;
+    vk::DeviceAddress material_address;
 };
 
 class Mesh {
@@ -26,7 +25,7 @@ class Mesh {
 
     [[nodiscard]] Material::MaterialTypeTag material_type_tag() const noexcept;
 
-    /// Draw the mesh using push constants for material index (bindless).
+    /// Draw the mesh using push constants with buffer device address.
     void draw(vk::CommandBuffer cmd_buffer,
               const PipelineLayout &pipeline_layout,
               const glm::mat4 &transform) const;
