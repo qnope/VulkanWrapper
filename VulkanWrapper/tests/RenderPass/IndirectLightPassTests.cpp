@@ -4,7 +4,11 @@
 #include "VulkanWrapper/Image/ImageView.h"
 #include "VulkanWrapper/Memory/AllocateBufferUtils.h"
 #include "VulkanWrapper/Memory/Buffer.h"
+#include "VulkanWrapper/Memory/StagingBufferManager.h"
 #include "VulkanWrapper/Memory/Transfer.h"
+#include "VulkanWrapper/Model/Material/BindlessMaterialManager.h"
+#include "VulkanWrapper/Model/Material/ColoredMaterialHandler.h"
+#include "VulkanWrapper/Model/Material/TexturedMaterialHandler.h"
 #include "VulkanWrapper/Model/Mesh.h"
 #include "VulkanWrapper/Model/MeshManager.h"
 #include "VulkanWrapper/RayTracing/RayTracedScene.h"
@@ -41,6 +45,8 @@ struct RayTracingGPU {
     std::shared_ptr<Instance> instance;
     std::shared_ptr<Device> device;
     std::shared_ptr<Allocator> allocator;
+    std::shared_ptr<StagingBufferManager> staging;
+    std::unique_ptr<Model::Material::BindlessMaterialManager> material_manager;
     std::optional<Model::MeshManager> mesh_manager;
 
     Queue &queue() { return device->graphicsQueue(); }
@@ -76,9 +82,22 @@ RayTracingGPU *create_ray_tracing_gpu() {
 
         auto allocator = AllocatorBuilder(instance, device).build();
 
+        auto staging =
+            std::make_shared<StagingBufferManager>(device, allocator);
+        auto material_manager =
+            std::make_unique<Model::Material::BindlessMaterialManager>(
+                device, allocator, staging);
+        material_manager
+            ->register_handler<Model::Material::ColoredMaterialHandler>();
+        material_manager
+            ->register_handler<Model::Material::TexturedMaterialHandler>(
+                material_manager->texture_manager());
+
         // Intentionally leak to avoid static destruction order issues
-        return new RayTracingGPU{std::move(instance), std::move(device),
-                                 std::move(allocator), std::nullopt};
+        return new RayTracingGPU{
+            std::move(instance),         std::move(device),
+            std::move(allocator),        std::move(staging),
+            std::move(material_manager), std::nullopt};
     } catch (...) {
         return nullptr;
     }
@@ -451,7 +470,8 @@ TEST_F(IndirectLightPassTest, ConstructWithValidParameters) {
 
     auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-        scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
+        scene.geometry_buffer(), *gpu->material_manager,
+        vk::Format::eR32G32B32A32Sfloat);
 
     ASSERT_NE(pass, nullptr);
 }
@@ -460,14 +480,17 @@ TEST_F(IndirectLightPassTest, ShaderFilesExistAndCompile) {
     auto shader_dir = get_shader_dir();
     auto raygen_path = shader_dir / "indirect_light.rgen";
     auto miss_path = shader_dir / "indirect_light.rmiss";
-    auto chit_path = shader_dir / "indirect_light.rchit";
+    auto colored_chit_path = shader_dir / "indirect_light_colored.rchit";
+    auto textured_chit_path = shader_dir / "indirect_light_textured.rchit";
 
     ASSERT_TRUE(std::filesystem::exists(raygen_path))
         << "Ray generation shader not found: " << raygen_path;
     ASSERT_TRUE(std::filesystem::exists(miss_path))
         << "Miss shader not found: " << miss_path;
-    ASSERT_TRUE(std::filesystem::exists(chit_path))
-        << "Closest hit shader not found: " << chit_path;
+    ASSERT_TRUE(std::filesystem::exists(colored_chit_path))
+        << "Colored closest hit shader not found: " << colored_chit_path;
+    ASSERT_TRUE(std::filesystem::exists(textured_chit_path))
+        << "Textured closest hit shader not found: " << textured_chit_path;
 
     ShaderCompiler compiler;
     compiler.set_target_vulkan_version(VK_API_VERSION_1_2);
@@ -476,11 +499,15 @@ TEST_F(IndirectLightPassTest, ShaderFilesExistAndCompile) {
     auto raygen_shader =
         compiler.compile_file_to_module(gpu->device, raygen_path);
     auto miss_shader = compiler.compile_file_to_module(gpu->device, miss_path);
-    auto chit_shader = compiler.compile_file_to_module(gpu->device, chit_path);
+    auto colored_chit_shader =
+        compiler.compile_file_to_module(gpu->device, colored_chit_path);
+    auto textured_chit_shader =
+        compiler.compile_file_to_module(gpu->device, textured_chit_path);
 
     ASSERT_NE(raygen_shader, nullptr);
     ASSERT_NE(miss_shader, nullptr);
-    ASSERT_NE(chit_shader, nullptr);
+    ASSERT_NE(colored_chit_shader, nullptr);
+    ASSERT_NE(textured_chit_shader, nullptr);
 }
 
 // =============================================================================
@@ -499,7 +526,8 @@ TEST_F(IndirectLightPassTest, ExecuteReturnsValidImageView) {
 
     auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-        scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
+        scene.geometry_buffer(), *gpu->material_manager,
+        vk::Format::eR32G32B32A32Sfloat);
 
     auto gb = create_gbuffer(width, height);
     fill_gbuffer_uniform(gb, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
@@ -539,7 +567,8 @@ TEST_F(IndirectLightPassTest, InitialFrameCount_IsZero) {
 
     auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-        scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
+        scene.geometry_buffer(), *gpu->material_manager,
+        vk::Format::eR32G32B32A32Sfloat);
 
     EXPECT_EQ(pass->get_frame_count(), 0u);
 }
@@ -556,7 +585,8 @@ TEST_F(IndirectLightPassTest, FrameCountIncrements_AfterExecute) {
 
     auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-        scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
+        scene.geometry_buffer(), *gpu->material_manager,
+        vk::Format::eR32G32B32A32Sfloat);
 
     auto gb = create_gbuffer(width, height);
     fill_gbuffer_uniform(gb, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
@@ -614,7 +644,8 @@ TEST_F(IndirectLightPassTest, ResetAccumulation_ResetsFrameCountToZero) {
 
     auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-        scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
+        scene.geometry_buffer(), *gpu->material_manager,
+        vk::Format::eR32G32B32A32Sfloat);
 
     auto gb = create_gbuffer(width, height);
     fill_gbuffer_uniform(gb, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
@@ -665,7 +696,8 @@ TEST_F(IndirectLightPassTest, ZenithSun_ProducesBlueIndirectLight) {
 
     auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-        scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
+        scene.geometry_buffer(), *gpu->material_manager,
+        vk::Format::eR32G32B32A32Sfloat);
 
     auto gb = create_gbuffer(width, height);
     // White surface facing up (receives full hemisphere of sky)
@@ -720,7 +752,8 @@ TEST_F(IndirectLightPassTest, HorizonSun_ProducesWarmIndirectLight) {
 
     auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-        scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
+        scene.geometry_buffer(), *gpu->material_manager,
+        vk::Format::eR32G32B32A32Sfloat);
 
     auto gb = create_gbuffer(width, height);
     fill_gbuffer_uniform(gb, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
@@ -779,7 +812,8 @@ TEST_F(IndirectLightPassTest, ChromaticShift_ZenithVsHorizon) {
     {
         auto pass = std::make_unique<IndirectLightPass>(
             gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-            scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
+            scene.geometry_buffer(), *gpu->material_manager,
+            vk::Format::eR32G32B32A32Sfloat);
 
         auto sky_params = SkyParameters::create_earth_sun(90.0f);
 
@@ -805,7 +839,8 @@ TEST_F(IndirectLightPassTest, ChromaticShift_ZenithVsHorizon) {
     {
         auto pass = std::make_unique<IndirectLightPass>(
             gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-            scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
+            scene.geometry_buffer(), *gpu->material_manager,
+            vk::Format::eR32G32B32A32Sfloat);
 
         auto sky_params = SkyParameters::create_earth_sun(5.0f);
 
@@ -857,7 +892,8 @@ TEST_F(IndirectLightPassTest, AccumulationConverges_VarianceDecreases) {
 
     auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-        scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
+        scene.geometry_buffer(), *gpu->material_manager,
+        vk::Format::eR32G32B32A32Sfloat);
 
     auto gb = create_gbuffer(width, height);
     fill_gbuffer_uniform(gb, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
@@ -927,7 +963,8 @@ TEST_F(IndirectLightPassTest, SurfaceFacingUp_ReceivesSkyLight) {
 
     auto pass = std::make_unique<IndirectLightPass>(
         gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-        scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
+        scene.geometry_buffer(), *gpu->material_manager,
+        vk::Format::eR32G32B32A32Sfloat);
 
     auto gb = create_gbuffer(width, height);
     fill_gbuffer_uniform(gb, glm::vec3(0, 0, 0),
@@ -978,7 +1015,8 @@ TEST_F(IndirectLightPassTest, SurfaceFacingDown_ReceivesDifferentLight) {
     {
         auto pass = std::make_unique<IndirectLightPass>(
             gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-            scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
+            scene.geometry_buffer(), *gpu->material_manager,
+            vk::Format::eR32G32B32A32Sfloat);
 
         fill_gbuffer_uniform(gb, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
 
@@ -1004,7 +1042,8 @@ TEST_F(IndirectLightPassTest, SurfaceFacingDown_ReceivesDifferentLight) {
     {
         auto pass = std::make_unique<IndirectLightPass>(
             gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-            scene.geometry_buffer(), vk::Format::eR32G32B32A32Sfloat);
+            scene.geometry_buffer(), *gpu->material_manager,
+            vk::Format::eR32G32B32A32Sfloat);
 
         fill_gbuffer_uniform(gb, glm::vec3(0, 0, 0), glm::vec3(0, -1, 0));
 
@@ -1042,6 +1081,64 @@ TEST_F(IndirectLightPassTest, SurfaceFacingDown_ReceivesDifferentLight) {
         << "Surface orientation should significantly affect indirect light"
         << " (up=" << luminance_up << ", down=" << luminance_down
         << ", ratio=" << ratio << ")";
+}
+
+// =============================================================================
+// Material-Aware Shader Tests
+// =============================================================================
+
+TEST_F(IndirectLightPassTest, PerMaterialShaderFilesExist) {
+    auto shader_dir = get_shader_dir();
+    auto colored_chit_path = shader_dir / "indirect_light_colored.rchit";
+    auto textured_chit_path = shader_dir / "indirect_light_textured.rchit";
+
+    EXPECT_TRUE(std::filesystem::exists(colored_chit_path))
+        << "Colored closest hit shader not found: " << colored_chit_path;
+    EXPECT_TRUE(std::filesystem::exists(textured_chit_path))
+        << "Textured closest hit shader not found: " << textured_chit_path;
+}
+
+TEST_F(IndirectLightPassTest, PerMaterialShadersCompile) {
+    auto shader_dir = get_shader_dir();
+    auto colored_chit_path = shader_dir / "indirect_light_colored.rchit";
+    auto textured_chit_path = shader_dir / "indirect_light_textured.rchit";
+
+    if (!std::filesystem::exists(colored_chit_path) ||
+        !std::filesystem::exists(textured_chit_path)) {
+        GTEST_SKIP() << "Per-material shaders not yet created";
+    }
+
+    ShaderCompiler compiler;
+    compiler.set_target_vulkan_version(VK_API_VERSION_1_2);
+    compiler.add_include_path(shader_dir / "include");
+
+    auto colored_shader =
+        compiler.compile_file_to_module(gpu->device, colored_chit_path);
+    auto textured_shader =
+        compiler.compile_file_to_module(gpu->device, textured_chit_path);
+
+    EXPECT_NE(colored_shader, nullptr)
+        << "Colored closest hit shader failed to compile";
+    EXPECT_NE(textured_shader, nullptr)
+        << "Textured closest hit shader failed to compile";
+}
+
+TEST_F(IndirectLightPassTest, ConstructWithMaterialManager) {
+    rt::RayTracedScene scene(gpu->device, gpu->allocator);
+    const auto &plane = gpu->get_plane_mesh();
+    std::ignore = scene.add_instance(
+        plane, glm::translate(glm::mat4(1.0f), glm::vec3(0, -100, 0)));
+    scene.set_material_sbt_mapping(
+        {{Model::Material::colored_material_tag, 0},
+         {Model::Material::textured_material_tag, 1}});
+    scene.build();
+
+    auto pass = std::make_unique<IndirectLightPass>(
+        gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
+        scene.geometry_buffer(), *gpu->material_manager,
+        vk::Format::eR32G32B32A32Sfloat);
+
+    ASSERT_NE(pass, nullptr);
 }
 
 } // namespace vw::tests

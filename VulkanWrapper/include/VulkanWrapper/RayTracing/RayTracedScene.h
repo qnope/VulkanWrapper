@@ -2,6 +2,7 @@
 
 #include "VulkanWrapper/3rd_party.h"
 #include "VulkanWrapper/fwd.h"
+#include "VulkanWrapper/Model/Material/MaterialTypeTag.h"
 #include "VulkanWrapper/Model/Scene.h"
 #include "VulkanWrapper/RayTracing/BottomLevelAccelerationStructure.h"
 #include "VulkanWrapper/RayTracing/GeometryReference.h"
@@ -89,6 +90,10 @@ class RayTracedScene {
     /// Access the embedded Scene for rasterization rendering (mutable).
     [[nodiscard]] Model::Scene &scene() noexcept { return m_scene; }
 
+    void set_material_sbt_mapping(
+        std::unordered_map<Model::Material::MaterialTypeTag, uint32_t>
+            mapping);
+
   private:
     struct Instance {
         uint32_t blas_index;
@@ -135,6 +140,11 @@ class RayTracedScene {
 
     // Embedded scene for rasterization
     Model::Scene m_scene;
+
+    // Optional material-based SBT offset mapping
+    std::optional<
+        std::unordered_map<Model::Material::MaterialTypeTag, uint32_t>>
+        m_material_sbt_mapping;
 };
 
 } // namespace vw::rt

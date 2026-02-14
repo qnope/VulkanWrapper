@@ -7,6 +7,7 @@
 #include "VulkanWrapper/Image/ImageView.h"
 #include "VulkanWrapper/Image/Sampler.h"
 #include "VulkanWrapper/Memory/Allocator.h"
+#include "VulkanWrapper/Model/Material/BindlessMaterialManager.h"
 #include "VulkanWrapper/Random/NoiseTexture.h"
 #include "VulkanWrapper/Random/RandomSamplingBuffer.h"
 #include "VulkanWrapper/RayTracing/GeometryReference.h"
@@ -48,7 +49,8 @@ static_assert(sizeof(IndirectLightPushConstants) <= 128,
  * This pass computes indirect sky lighting using a ray tracing pipeline.
  * It traces cosine-weighted rays from each surface point:
  * - Rays that escape to the sky contribute atmospheric radiance (miss shader)
- * - Rays that hit geometry contribute zero (closest hit shader)
+ * - Rays that hit geometry contribute sun bounce with per-material albedo
+ *   (closest hit shaders)
  *
  * The pass uses progressive accumulation: each frame computes 1 sample per
  * pixel and blends it with the accumulated history using imageLoad/imageStore.
@@ -59,7 +61,8 @@ static_assert(sizeof(IndirectLightPushConstants) <= 128,
  * Shaders are compiled at runtime from GLSL source files using ShaderCompiler:
  * - indirect_light.rgen: Ray generation shader
  * - indirect_light.rmiss: Miss shader (computes atmosphere)
- * - indirect_light.rchit: Closest hit shader (returns black)
+ * - indirect_light_colored.rchit: Closest hit shader for colored materials
+ * - indirect_light_textured.rchit: Closest hit shader for textured materials
  */
 class IndirectLightPass : public Subpass<IndirectLightPassSlot> {
   public:
@@ -72,6 +75,8 @@ class IndirectLightPass : public Subpass<IndirectLightPassSlot> {
      * @param tlas Top-level acceleration structure for occlusion rays
      * @param geometry_buffer Geometry reference buffer for vertex access
      *        in closest hit shader (sun bounce)
+     * @param material_manager Bindless material manager for per-material
+     *        texture access in closest hit shaders
      * @param output_format Output buffer format (default: R32G32B32A32Sfloat)
      */
     IndirectLightPass(std::shared_ptr<Device> device,
@@ -79,6 +84,7 @@ class IndirectLightPass : public Subpass<IndirectLightPassSlot> {
                       const std::filesystem::path &shader_dir,
                       const rt::as::TopLevelAccelerationStructure &tlas,
                       const rt::GeometryReferenceBuffer &geometry_buffer,
+                      Model::Material::BindlessMaterialManager &material_manager,
                       vk::Format output_format = vk::Format::eR32G32B32A32Sfloat);
 
     /**
@@ -134,6 +140,7 @@ class IndirectLightPass : public Subpass<IndirectLightPassSlot> {
 
     const rt::as::TopLevelAccelerationStructure *m_tlas;
     const rt::GeometryReferenceBuffer *m_geometry_buffer;
+    Model::Material::BindlessMaterialManager *m_material_manager;
     vk::Format m_output_format;
 
     // Progressive accumulation state
@@ -145,6 +152,10 @@ class IndirectLightPass : public Subpass<IndirectLightPassSlot> {
     std::unique_ptr<rt::RayTracingPipeline> m_pipeline;
     std::unique_ptr<rt::ShaderBindingTable> m_sbt;
     DescriptorPool m_descriptor_pool;
+
+    // Texture descriptor resources for per-material hit shaders
+    std::shared_ptr<DescriptorSetLayout> m_texture_descriptor_layout;
+    DescriptorPool m_texture_descriptor_pool;
 
     // Random sampling resources
     DualRandomSampleBuffer m_samples_buffer;

@@ -9,13 +9,16 @@ IndirectLightPass::IndirectLightPass(
     const std::filesystem::path &shader_dir,
     const rt::as::TopLevelAccelerationStructure &tlas,
     const rt::GeometryReferenceBuffer &geometry_buffer,
+    Model::Material::BindlessMaterialManager &material_manager,
     vk::Format output_format)
     : Subpass(device, allocator)
     , m_tlas(&tlas)
     , m_geometry_buffer(&geometry_buffer)
+    , m_material_manager(&material_manager)
     , m_output_format(output_format)
     , m_sampler(SamplerBuilder(m_device).build())
     , m_descriptor_pool(DescriptorPool(m_device, nullptr))
+    , m_texture_descriptor_pool(DescriptorPool(m_device, nullptr))
     , m_samples_buffer(create_hemisphere_samples_buffer(*m_allocator))
     , m_noise_texture(std::make_unique<NoiseTexture>(
           m_device, m_allocator, m_device->graphicsQueue())) {
@@ -25,7 +28,7 @@ IndirectLightPass::IndirectLightPass(
 
 void IndirectLightPass::create_pipeline_and_sbt(
     const std::filesystem::path &shader_dir) {
-    // Create descriptor layout for RT pipeline:
+    // Create descriptor layout for RT pipeline (set 0):
     // binding 0: accelerationStructureEXT (TLAS)
     // binding 1: sampler2D (G-Buffer position)
     // binding 2: sampler2D (G-Buffer normal)
@@ -36,6 +39,7 @@ void IndirectLightPass::create_pipeline_and_sbt(
     // binding 7: sampler2D (G-Buffer bitangent)
     // binding 8: SSBO (hemisphere samples for random sampling)
     // binding 9: sampler2D (noise texture for per-pixel decorrelation)
+    // binding 10: SSBO (geometry references)
     constexpr auto rt_stages = vk::ShaderStageFlagBits::eRaygenKHR |
                                vk::ShaderStageFlagBits::eMissKHR |
                                vk::ShaderStageFlagBits::eClosestHitKHR;
@@ -55,10 +59,20 @@ void IndirectLightPass::create_pipeline_and_sbt(
             .with_storage_buffer(rt_stages, 1)      // binding 10: geometry refs
             .build();
 
-    // Create pipeline layout with push constants
+    // Create texture descriptor layout (set 1) for per-material hit shaders
+    m_texture_descriptor_layout =
+        DescriptorSetLayoutBuilder(m_device)
+            .with_sampler(vk::ShaderStageFlagBits::eClosestHitKHR)
+            .with_sampled_images_bindless(
+                vk::ShaderStageFlagBits::eClosestHitKHR,
+                Model::Material::BindlessTextureManager::MAX_TEXTURES)
+            .build();
+
+    // Create pipeline layout with both descriptor set layouts
     auto pipeline_layout =
         PipelineLayoutBuilder(m_device)
             .with_descriptor_set_layout(m_descriptor_layout)
+            .with_descriptor_set_layout(m_texture_descriptor_layout)
             .with_push_constant_range(vk::PushConstantRange(
                 rt_stages, 0, sizeof(IndirectLightPushConstants)))
             .build();
@@ -72,16 +86,19 @@ void IndirectLightPass::create_pipeline_and_sbt(
         m_device, shader_dir / "indirect_light.rgen");
     auto miss_shader = compiler.compile_file_to_module(
         m_device, shader_dir / "indirect_light.rmiss");
-    auto closesthit_shader = compiler.compile_file_to_module(
-        m_device, shader_dir / "indirect_light.rchit");
+    auto colored_hit = compiler.compile_file_to_module(
+        m_device, shader_dir / "indirect_light_colored.rchit");
+    auto textured_hit = compiler.compile_file_to_module(
+        m_device, shader_dir / "indirect_light_textured.rchit");
 
-    // Build RT pipeline
+    // Build RT pipeline with per-material closest hit shaders
     m_pipeline = std::make_unique<rt::RayTracingPipeline>(
         rt::RayTracingPipelineBuilder(m_device, m_allocator,
                                       std::move(pipeline_layout))
             .set_ray_generation_shader(raygen_shader)
             .add_miss_shader(miss_shader)
-            .add_closest_hit_shader(closesthit_shader)
+            .add_closest_hit_shader(colored_hit)
+            .add_closest_hit_shader(textured_hit)
             .build());
 
     // Create shader binding table
@@ -94,14 +111,19 @@ void IndirectLightPass::create_pipeline_and_sbt(
         m_sbt->add_miss_record(miss_handles[0]);
     }
 
-    // Add hit shader record
+    // Add all hit shader records (one per material type)
     auto hit_handles = m_pipeline->closest_hit_handles();
-    if (!hit_handles.empty()) {
-        m_sbt->add_hit_record(hit_handles[0]);
+    for (const auto &handle : hit_handles) {
+        m_sbt->add_hit_record(handle);
     }
 
-    // Create descriptor pool
-    m_descriptor_pool = DescriptorPoolBuilder(m_device, m_descriptor_layout).build();
+    // Create descriptor pools
+    m_descriptor_pool =
+        DescriptorPoolBuilder(m_device, m_descriptor_layout).build();
+    m_texture_descriptor_pool =
+        DescriptorPoolBuilder(m_device, m_texture_descriptor_layout)
+            .with_update_after_bind()
+            .build();
 }
 
 std::shared_ptr<const ImageView>
@@ -198,9 +220,29 @@ IndirectLightPass::execute(vk::CommandBuffer cmd,
 
     auto descriptor_set = m_descriptor_pool.allocate_set(descriptor_allocator);
 
+    // Allocate texture descriptor set for per-material hit shaders
+    auto tex_desc_set = m_texture_descriptor_pool.allocate_set();
+    {
+        DescriptorAllocator tex_alloc;
+        tex_alloc.add_sampler(
+            0, m_material_manager->texture_manager().sampler());
+        m_texture_descriptor_pool.update_set(tex_desc_set.handle(), tex_alloc);
+    }
+    m_material_manager->texture_manager().write_image_descriptors(
+        tex_desc_set.handle(), 1);
+
     // Request resource states for barriers
     for (const auto &resource : descriptor_set.resources()) {
         tracker.request(resource);
+    }
+
+    // Track texture resources for per-material hit shaders
+    for (const auto &resource :
+         m_material_manager->texture_manager().get_resources()) {
+        auto image_state = std::get<Barrier::ImageState>(resource);
+        image_state.stage =
+            vk::PipelineStageFlagBits2::eRayTracingShaderKHR;
+        tracker.request(image_state);
     }
 
     // Output image needs to be in General layout for storage image access
@@ -219,11 +261,13 @@ IndirectLightPass::execute(vk::CommandBuffer cmd,
     cmd.bindPipeline(vk::PipelineBindPoint::eRayTracingKHR,
                      m_pipeline->handle());
 
-    // Bind descriptor set
+    // Bind both descriptor sets (set 0: main, set 1: textures)
     auto descriptor_handle = descriptor_set.handle();
+    auto tex_descriptor_handle = tex_desc_set.handle();
+    std::array desc_sets = {descriptor_handle, tex_descriptor_handle};
     cmd.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR,
-                           m_pipeline->handle_layout(), 0, 1,
-                           &descriptor_handle, 0, nullptr);
+                           m_pipeline->handle_layout(), 0, desc_sets,
+                           {});
 
     // Push constants
     IndirectLightPushConstants constants{.sky = sky_params.to_gpu(),

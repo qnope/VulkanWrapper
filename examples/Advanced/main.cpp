@@ -61,6 +61,11 @@ int main() {
 
         add_instances(rayTracedScene, mesh_manager, scene_config.instances);
 
+        // Set per-material SBT offsets for indirect light hit shaders
+        rayTracedScene.set_material_sbt_mapping(
+            {{vw::Model::Material::colored_material_tag, 0},
+             {vw::Model::Material::textured_material_tag, 1}});
+
         // Build acceleration structures
         rayTracedScene.build();
 
@@ -131,7 +136,7 @@ int main() {
                     vw::CommandBufferRecorder recorder(commandBuffers[index]);
 
                     // Create sky parameters for sun at zenith
-                    auto sky_params = vw::SkyParameters::create_earth_sun(90.f);
+                    auto sky_params = vw::SkyParameters::create_earth_sun(72.f);
 
                     // Execute deferred rendering pipeline with progressive AO
                     // Returns tone-mapped LDR output (direct + indirect light)

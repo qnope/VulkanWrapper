@@ -5,6 +5,7 @@
 #extension GL_EXT_buffer_reference2 : require
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+#extension GL_EXT_nonuniform_qualifier : require
 #extension GL_GOOGLE_include_directive : require
 
 #define GEOMETRY_BUFFER_BINDING 10
@@ -23,8 +24,17 @@ layout(push_constant) uniform PushConstants {
 
 layout(set = 0, binding = 0) uniform accelerationStructureEXT tlas;
 
+// Bindless texture array for textured materials
+layout(set = 1, binding = 0) uniform sampler tex_sampler;
+layout(set = 1, binding = 1) uniform texture2D textures[];
+
 layout(location = 0) rayPayloadInEXT vec3 payload;
 hitAttributeEXT vec2 bary;
+
+// Buffer reference for textured material data
+layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer TexturedMaterialRef {
+    uint diffuse_texture_index;
+};
 
 // Extract vec3 from vec4 push constant without using .xyz swizzle
 // to work around a llvmpipe code generation bug
@@ -50,9 +60,11 @@ void main() {
     }
     vec3 world_normal = raw_normal / normal_len;
 
-    // Hardcoded default gray albedo (simplified version without material
-    // colors)
-    vec3 hit_albedo = vec3(0.5);
+    uint tex_idx =
+        TexturedMaterialRef(v.material_address).diffuse_texture_index;
+    // lod level can be replaced later by bounce number
+    vec3 hit_albedo = textureLod(
+        sampler2D(textures[nonuniformEXT(tex_idx)], tex_sampler), v.uv, 1).rgb;
 
     // Direction TO the sun (extract components individually)
     vec3 sun_from = sky.star_direction_and_constant.xyz;
@@ -68,7 +80,7 @@ void main() {
     // Shadow test using ray query (avoids increasing recursion depth)
     float shadow = 1.0;
     {
-        float bias = max(0.1, length(world_hit_pos) * 0.0005);
+        float bias = max(0.5, length(world_hit_pos) * 0.0005);
         vec3 shadow_origin = world_hit_pos + world_normal * bias;
 
         rayQueryEXT shadow_query;
@@ -76,7 +88,7 @@ void main() {
             shadow_query, tlas,
             gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT,
             0xFF,
-            shadow_origin, 0.0, L, 100000.0
+            shadow_origin, 0.5, L, 100000.0
         );
 
         while (rayQueryProceedEXT(shadow_query)) {}

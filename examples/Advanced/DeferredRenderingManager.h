@@ -75,7 +75,8 @@ class DeferredRenderingManager {
 
         m_indirect_light_pass = std::make_unique<vw::IndirectLightPass>(
             m_device, m_allocator, shader_dir, ray_traced_scene.tlas(),
-            ray_traced_scene.geometry_buffer(), light_format);
+            ray_traced_scene.geometry_buffer(), material_manager,
+            light_format);
 
         m_tone_mapping_pass = std::make_unique<vw::ToneMappingPass>(
             m_device, m_allocator, shader_dir);
