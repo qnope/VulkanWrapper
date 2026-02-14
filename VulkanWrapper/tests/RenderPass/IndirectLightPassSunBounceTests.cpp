@@ -4,7 +4,11 @@
 #include "VulkanWrapper/Image/ImageView.h"
 #include "VulkanWrapper/Memory/AllocateBufferUtils.h"
 #include "VulkanWrapper/Memory/Buffer.h"
+#include "VulkanWrapper/Memory/StagingBufferManager.h"
 #include "VulkanWrapper/Memory/Transfer.h"
+#include "VulkanWrapper/Model/Material/BindlessMaterialManager.h"
+#include "VulkanWrapper/Model/Material/ColoredMaterialHandler.h"
+#include "VulkanWrapper/Model/Material/TexturedMaterialHandler.h"
 #include "VulkanWrapper/Model/Mesh.h"
 #include "VulkanWrapper/Model/MeshManager.h"
 #include "VulkanWrapper/RayTracing/RayTracedScene.h"
@@ -39,6 +43,8 @@ struct RayTracingGPU {
     std::shared_ptr<Instance> instance;
     std::shared_ptr<Device> device;
     std::shared_ptr<Allocator> allocator;
+    std::shared_ptr<StagingBufferManager> staging;
+    std::unique_ptr<Model::Material::BindlessMaterialManager> material_manager;
     std::optional<Model::MeshManager> mesh_manager;
 
     Queue &queue() { return device->graphicsQueue(); }
@@ -80,9 +86,22 @@ RayTracingGPU *create_ray_tracing_gpu() {
 
         auto allocator = AllocatorBuilder(instance, device).build();
 
+        auto staging =
+            std::make_shared<StagingBufferManager>(device, allocator);
+        auto material_manager =
+            std::make_unique<Model::Material::BindlessMaterialManager>(
+                device, allocator, staging);
+        material_manager
+            ->register_handler<Model::Material::ColoredMaterialHandler>();
+        material_manager
+            ->register_handler<Model::Material::TexturedMaterialHandler>(
+                material_manager->texture_manager());
+
         // Intentionally leak to avoid static destruction order issues
-        return new RayTracingGPU{std::move(instance), std::move(device),
-                                 std::move(allocator), std::nullopt};
+        return new RayTracingGPU{
+            std::move(instance),         std::move(device),
+            std::move(allocator),        std::move(staging),
+            std::move(material_manager), std::nullopt};
     } catch (...) {
         return nullptr;
     }
@@ -332,7 +351,7 @@ class IndirectLightSunBounceTest : public ::testing::Test {
                        Height height, int num_frames = 16) {
         auto pass = std::make_unique<IndirectLightPass>(
             gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
-            scene.geometry_buffer(),
+            scene.geometry_buffer(), *gpu->material_manager,
             vk::Format::eR32G32B32A32Sfloat);
 
         std::shared_ptr<const ImageView> result;

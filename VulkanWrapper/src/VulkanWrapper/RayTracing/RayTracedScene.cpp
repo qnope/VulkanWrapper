@@ -200,6 +200,11 @@ bool RayTracedScene::is_valid(InstanceId instance_id) const {
     return m_instances[instance_id.value].active;
 }
 
+void RayTracedScene::set_material_sbt_mapping(
+    std::unordered_map<Model::Material::MaterialTypeTag, uint32_t> mapping) {
+    m_material_sbt_mapping = std::move(mapping);
+}
+
 void RayTracedScene::build() {
     if (m_mesh_to_blas_index.empty()) {
         throw LogicException::invalid_state("No meshes registered");
@@ -319,9 +324,19 @@ void RayTracedScene::build_tlas() {
             continue;
         }
 
+        uint32_t sbt_offset = instance.sbt_offset;
+        if (m_material_sbt_mapping) {
+            auto material_type =
+                m_mesh_geometries[instance.blas_index].material.material_type;
+            auto it = m_material_sbt_mapping->find(material_type);
+            if (it != m_material_sbt_mapping->end()) {
+                sbt_offset = it->second;
+            }
+        }
+
         builder.add_bottom_level_acceleration_structure_address(
             blas_addresses[instance.blas_index], instance.transform,
-            instance.blas_index, instance.sbt_offset);
+            instance.blas_index, sbt_offset);
         ++visible_count;
     }
 
