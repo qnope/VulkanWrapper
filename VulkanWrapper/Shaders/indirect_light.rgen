@@ -124,7 +124,7 @@ void main() {
     }
 
     // Add ambient contribution with AO (same formula as sun_light.frag)
-    vec3 ambient = compute_ambient(sky, albedo, ao);
+    vec3 ambient = vec3(0.0); //compute_ambient(sky, albedo, ao);
 
     // Total indirect lighting = ray-traced sky + ambient with AO
     vec3 total_indirect = incoming_radiance + ambient;
