@@ -513,17 +513,17 @@ TEST_F(SkyPassTest, SkyOutputFormatIsHDR) {
 TEST_F(SkyPassTest, SkyParameters_AngleToDirection) {
     // 0 degrees = horizon (direction pointing along x-axis)
     auto dir0 = SkyParameters::angle_to_direction(0.0f);
-    EXPECT_NEAR(dir0.x, 1.0f, 0.001f);
+    EXPECT_NEAR(dir0.z, 1.0f, 0.001f);
     EXPECT_NEAR(dir0.y, 0.0f, 0.001f);
 
     // 90 degrees = zenith (direction pointing up)
     auto dir90 = SkyParameters::angle_to_direction(90.0f);
-    EXPECT_NEAR(dir90.x, 0.0f, 0.001f);
+    EXPECT_NEAR(dir90.z, 0.0f, 0.001f);
     EXPECT_NEAR(dir90.y, 1.0f, 0.001f);
 
     // 45 degrees = halfway
     auto dir45 = SkyParameters::angle_to_direction(45.0f);
-    EXPECT_NEAR(dir45.x, std::cos(glm::radians(45.0f)), 0.001f);
+    EXPECT_NEAR(dir45.z, std::cos(glm::radians(45.0f)), 0.001f);
     EXPECT_NEAR(dir45.y, std::sin(glm::radians(45.0f)), 0.001f);
 }
 
