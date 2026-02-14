@@ -36,10 +36,10 @@ void main()
     if (NdotL > 0.0) {
         // Offset along normal to avoid self-intersection
         // Use distance-adaptive bias for numerical stability at large world coordinates
-        float bias = max(0.1, length(position) * 0.0005);
-        vec3 rayOrigin = position;
+        float bias = max(0.5, length(position) * 0.0005);
+        vec3 rayOrigin = position + normal * bias;
         vec3 rayDirection = L;
-        float tMin = 1;
+        float tMin = 0.5;
         float tMax = 100001.0;
 
         rayQueryEXT rayQuery;
