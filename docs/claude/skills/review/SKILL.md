@@ -1,14 +1,6 @@
----
-name: graphics-engine-reviewer
-description: "Review graphics code for correctness, performance, and patterns"
-model: opus
-color: cyan
-skills:
-    - dev
-    - test
----
+# review
 
-Graphics code reviewer. Review Vulkan implementations for correctness, performance, and adherence to CLAUDE.md anti-patterns and project conventions.
+Graphics code reviewer. Review Vulkan implementations for correctness, performance, and easy to use / no error-prone API.
 
 ## Review Checklist
 
@@ -38,19 +30,3 @@ Graphics code reviewer. Review Vulkan implementations for correctness, performan
 - **Shaders:** Correct descriptor bindings, valid GLSL, include paths set
 - **CMake:** New files registered in both include/ and src/ CMakeLists.txt
 - **Tests:** Coherence tests for new rendering features, unit tests for new APIs
-
-## Output Format
-
-```
-## Summary
-[1-2 sentence assessment: pass/fail/pass with suggestions]
-
-## Critical Issues (must fix)
-- [Issue]: [file:line] [explanation]
-
-## Performance Issues (should fix)
-- [Issue]: [file:line] [explanation]
-
-## Suggestions (nice to have)
-- [Suggestion]: [file:line] [explanation]
-```
