@@ -4,7 +4,7 @@ namespace vw {
 
 glm::vec3 SkyParameters::angle_to_direction(float angle_deg) {
     float angle_rad = glm::radians(angle_deg);
-    return glm::vec3(std::cos(angle_rad), std::sin(angle_rad), 0.0f);
+    return glm::vec3(0.0, std::sin(angle_rad), std::cos(angle_rad));
 }
 
 glm::vec3 SkyParameters::temperature_to_color(float temperature_kelvin) {
@@ -48,7 +48,8 @@ glm::vec3 SkyParameters::temperature_to_color(float temperature_kelvin) {
     return color;
 }
 
-float SkyParameters::angular_diameter_to_solid_angle(float angular_diameter_deg) {
+float SkyParameters::angular_diameter_to_solid_angle(
+    float angular_diameter_deg) {
     float radius_rad = glm::radians(angular_diameter_deg / 2.0f);
     constexpr float PI = 3.14159265359f;
     return 2.0f * PI * (1.0f - std::cos(radius_rad));
