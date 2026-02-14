@@ -81,9 +81,9 @@ void main() {
     // Upward rays may hit sky (miss shader returns sky radiance * albedo)
     // or geometry (closest hit shader returns sun bounce * albedo).
     // Downward rays that hit geometry contribute bounced sun light.
-    float bias = max(0.1, length(position) * 0.0005);
+    float bias = max(0.5, length(position) * 0.0005);
     vec3 ray_origin = position + normal * bias;
-    float t_min = 0.0;
+    float t_min = 0.5;
     float t_max = 100000.0;
 
     uint flags = gl_RayFlagsOpaqueEXT;
