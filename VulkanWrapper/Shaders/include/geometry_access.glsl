@@ -11,7 +11,7 @@
 //   void main() {
 //       VertexData v = interpolate_vertex(gl_InstanceCustomIndexEXT, gl_PrimitiveID, bary);
 //       // Use v.position, v.normal, v.tangent, v.bitangent, v.uv
-//       // Use v.material_type, v.material_index
+//       // Use v.material_type, v.material_address
 //   }
 
 #ifndef GEOMETRY_ACCESS_GLSL
@@ -47,7 +47,7 @@ layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer Ind
     uint indices[];
 };
 
-// GeometryReference matches the C++ struct in GeometryReference.h (96 bytes)
+// GeometryReference matches the C++ struct in GeometryReference.h (104 bytes)
 // Both uint64_t fields are first to ensure 8-byte alignment with scalar layout
 struct GeometryReference {
     uint64_t vertex_buffer_address;
@@ -55,7 +55,8 @@ struct GeometryReference {
     int vertex_offset;
     int first_index;
     uint material_type;
-    uint material_index;
+    uint _padding;
+    uint64_t material_address;
     mat4 matrix;
 };
 
@@ -72,7 +73,7 @@ struct VertexData {
     vec3 bitangent;
     vec2 uv;
     uint material_type;
-    uint material_index;
+    uint64_t material_address;
 };
 
 // Get the three vertices of a triangle
@@ -113,7 +114,7 @@ VertexData interpolate_vertex(uint geometry_index, uint primitive_id, vec2 bary)
 
     GeometryReference geom = geometry_refs[geometry_index];
     result.material_type = geom.material_type;
-    result.material_index = geom.material_index;
+    result.material_address = geom.material_address;
 
     return result;
 }

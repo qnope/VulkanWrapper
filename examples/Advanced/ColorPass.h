@@ -9,9 +9,6 @@
 #include "VulkanWrapper/Memory/Allocator.h"
 #include "VulkanWrapper/Memory/Buffer.h"
 #include "VulkanWrapper/Model/Material/BindlessMaterialManager.h"
-#include "VulkanWrapper/Model/Material/ColoredMaterialHandler.h"
-#include "VulkanWrapper/Model/Material/IMaterialTypeHandler.h"
-#include "VulkanWrapper/Model/Material/TexturedMaterialHandler.h"
 #include "VulkanWrapper/Model/Mesh.h"
 #include "VulkanWrapper/Model/Scene.h"
 #include "VulkanWrapper/Pipeline/MeshRenderer.h"
@@ -19,6 +16,7 @@
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
 #include "VulkanWrapper/RenderPass/Subpass.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
+#include "VulkanWrapper/Utils/Error.h"
 #include <span>
 
 enum class ColorPassSlot { Color, Normal, Tangent, Bitangent, Position };
@@ -35,8 +33,8 @@ struct ColorPassOutput {
 };
 
 /**
- * @brief Functional G-Buffer fill pass with lazy image allocation and bindless
- * materials
+ * @brief Functional G-Buffer fill pass with lazy image allocation and buffer
+ * reference materials
  *
  * This pass lazily allocates its G-Buffer images on first execute() call.
  * Images are cached by (width, height, frame_index) and reused on subsequent
@@ -52,28 +50,23 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
         vk::Format::eR32G32B32A32Sfloat  // position
     };
 
+    using FragmentShaderMap =
+        std::unordered_map<vw::Model::Material::MaterialTypeTag, std::string>;
+
     ColorPass(std::shared_ptr<vw::Device> device,
               std::shared_ptr<vw::Allocator> allocator,
               vw::Model::Material::BindlessMaterialManager &material_manager,
+              FragmentShaderMap fragment_shaders,
               vk::Format depth_format = vk::Format::eD32Sfloat,
               std::span<const vk::Format> color_formats = default_color_formats)
         : Subpass(std::move(device), std::move(allocator))
         , m_color_formats(color_formats.begin(), color_formats.end())
         , m_material_manager(material_manager)
+        , m_fragment_shaders(std::move(fragment_shaders))
         , m_descriptor_pool(create_descriptor_pool(depth_format)) {}
 
     /**
      * @brief Execute the G-Buffer fill pass
-     *
-     * @param cmd Command buffer to record into
-     * @param tracker Resource tracker for barrier management
-     * @param width Render width
-     * @param height Render height
-     * @param frame_index Frame index for multi-buffering
-     * @param scene Scene containing mesh instances to render
-     * @param depth_view Depth buffer from Z-Pass (used for depth testing)
-     * @param uniform_buffer Uniform buffer containing view/projection matrices
-     * @return ColorPassOutput containing all G-Buffer image views
      */
     template <typename UBOType>
     ColorPassOutput
@@ -147,7 +140,7 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
                      vk::PipelineStageFlagBits2::eLateFragmentTests,
             .access = vk::AccessFlagBits2::eDepthStencilAttachmentRead});
 
-        // Request bindless material resources
+        // Request material resources (storage buffers + textures)
         for (const auto &resource : m_material_manager.get_resources()) {
             tracker.request(resource);
         }
@@ -200,8 +193,7 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
         for (const auto &instance : scene.instances()) {
             auto material_type = instance.mesh.material_type_tag();
 
-            // Bind pipeline and material descriptor set when material type
-            // changes
+            // Bind pipeline and descriptor sets when material type changes
             if (material_type != current_tag) {
                 current_tag = material_type;
                 auto pipeline = m_mesh_renderer->pipeline_for(material_type);
@@ -214,12 +206,14 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
                                        pipeline->layout().handle(), 0,
                                        uniform_descriptor_handle, nullptr);
 
-                // Bind appropriate material descriptor set (set 1)
-                auto *handler = m_material_manager.handler(material_type);
-                if (handler) {
-                    cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-                                           pipeline->layout().handle(), 1,
-                                           handler->descriptor_set(), nullptr);
+                // Bind additional descriptor set if handler provides one
+                auto *h = m_material_manager.handler(material_type);
+                if (h) {
+                    if (auto ds = h->additional_descriptor_set()) {
+                        cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+                                               pipeline->layout().handle(), 1,
+                                               *ds, nullptr);
+                    }
                 }
             }
 
@@ -255,67 +249,62 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
     }
 
     std::shared_ptr<vw::MeshRenderer> create_renderer(vk::Format depth_format) {
-        auto vertexShader = vw::ShaderModule::create_from_spirv_file(
+        auto vertex_shader = vw::ShaderModule::create_from_spirv_file(
             m_device, "Shaders/GBuffer/gbuffer.spv");
-        auto fragment_textured = vw::ShaderModule::create_from_spirv_file(
-            m_device, "Shaders/GBuffer/gbuffer_textured.spv");
-        auto fragment_colored = vw::ShaderModule::create_from_spirv_file(
-            m_device, "Shaders/GBuffer/gbuffer_colored.spv");
 
-        auto create_pipeline =
-            [&](std::shared_ptr<const vw::ShaderModule> fragment,
-                std::shared_ptr<const vw::DescriptorSetLayout>
-                    material_layout) {
-                auto pipelineLayout =
-                    vw::PipelineLayoutBuilder(m_device)
-                        .with_descriptor_set_layout(m_descriptor_layout)
-                        .with_descriptor_set_layout(material_layout)
-                        .with_push_constant_range(
-                            vk::PushConstantRange()
-                                .setStageFlags(
-                                    vk::ShaderStageFlagBits::eVertex |
-                                    vk::ShaderStageFlagBits::eFragment)
-                                .setOffset(0)
-                                .setSize(sizeof(vw::Model::MeshPushConstants)))
-                        .build();
-
-                vw::GraphicsPipelineBuilder builder(m_device,
-                                                    std::move(pipelineLayout));
-                builder.add_vertex_binding<vw::FullVertex3D>()
-                    .add_shader(vk::ShaderStageFlagBits::eVertex, vertexShader)
-                    .add_shader(vk::ShaderStageFlagBits::eFragment, fragment)
-                    .with_dynamic_viewport_scissor()
-                    .with_depth_test(false, vk::CompareOp::eEqual)
-                    .set_depth_format(depth_format);
-
-                for (auto format : m_color_formats) {
-                    builder.add_color_attachment(format);
-                }
-
-                return builder.build();
-            };
-
-        auto *textured_handler = m_material_manager.handler(
-            vw::Model::Material::textured_material_tag);
-        auto *colored_handler = m_material_manager.handler(
-            vw::Model::Material::colored_material_tag);
-
-        auto textured_pipeline =
-            create_pipeline(fragment_textured, textured_handler->layout());
-
-        auto colored_pipeline =
-            create_pipeline(fragment_colored, colored_handler->layout());
+        auto push_constant_range =
+            vk::PushConstantRange()
+                .setStageFlags(vk::ShaderStageFlagBits::eVertex |
+                               vk::ShaderStageFlagBits::eFragment)
+                .setOffset(0)
+                .setSize(sizeof(vw::Model::MeshPushConstants));
 
         auto renderer = std::make_shared<vw::MeshRenderer>();
-        renderer->add_pipeline(vw::Model::Material::textured_material_tag,
-                               std::move(textured_pipeline));
-        renderer->add_pipeline(vw::Model::Material::colored_material_tag,
-                               std::move(colored_pipeline));
+
+        for (auto [tag, handler] : m_material_manager.handlers()) {
+            auto it = m_fragment_shaders.find(tag);
+
+            if (it == m_fragment_shaders.end()) {
+                throw vw::LogicException::invalid_state(
+                    "The tag has no fragment shader associated");
+            }
+
+            auto fragment =
+                vw::ShaderModule::create_from_spirv_file(m_device, it->second);
+
+            auto layout_builder =
+                vw::PipelineLayoutBuilder(m_device)
+                    .with_descriptor_set_layout(m_descriptor_layout)
+                    .with_push_constant_range(push_constant_range);
+
+            auto extra_layout = handler->additional_descriptor_set_layout();
+            if (extra_layout) {
+                layout_builder.with_descriptor_set_layout(
+                    std::move(extra_layout));
+            }
+
+            vw::GraphicsPipelineBuilder builder(m_device,
+                                                layout_builder.build());
+            builder.add_vertex_binding<vw::FullVertex3D>()
+                .add_shader(vk::ShaderStageFlagBits::eVertex, vertex_shader)
+                .add_shader(vk::ShaderStageFlagBits::eFragment, fragment)
+                .with_dynamic_viewport_scissor()
+                .with_depth_test(false, vk::CompareOp::eEqual)
+                .set_depth_format(depth_format);
+
+            for (auto format : m_color_formats) {
+                builder.add_color_attachment(format);
+            }
+
+            renderer->add_pipeline(tag, builder.build());
+        }
+
         return renderer;
     }
 
     std::vector<vk::Format> m_color_formats;
     vw::Model::Material::BindlessMaterialManager &m_material_manager;
+    FragmentShaderMap m_fragment_shaders;
 
     // Resources (order matters!)
     std::shared_ptr<vw::DescriptorSetLayout> m_descriptor_layout;

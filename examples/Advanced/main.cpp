@@ -37,10 +37,10 @@ int main() {
         vw::Model::MeshManager mesh_manager(app.device, app.allocator);
         vw::rt::RayTracedScene rayTracedScene(app.device, app.allocator);
 
-        // Setup scene - choose one:
-        // auto camera = setup_plane_with_cube_scene(mesh_manager,
-        // rayTracedScene);
-        auto camera = setup_sponza_scene(mesh_manager, rayTracedScene);
+        // Load meshes (no instances yet - addresses not resolved)
+        // auto scene_config = load_plane_with_cube_scene(mesh_manager);
+        auto scene_config = load_sponza_scene(mesh_manager);
+        auto camera = scene_config.camera;
 
         // Create UBO with camera configuration
         float aspect = static_cast<float>(app.swapchain.width()) /
@@ -53,17 +53,15 @@ int main() {
         app.device->graphicsQueue().submit({}, {}, {}).wait();
 
         // Track initial texture states after staging
-        // This is needed because ResourceTracker doesn't know about textures
-        // staged before it was created. Without this, the first request()
-        // would generate Undefined -> ShaderReadOnlyOptimal barriers,
-        // discarding the texture data.
         vw::Transfer transfer;
         for (const auto &resource :
              mesh_manager.material_manager().get_resources()) {
             transfer.resourceTracker().track(resource);
         }
 
-        // Build acceleration structures for ray-traced shadows
+        add_instances(rayTracedScene, mesh_manager, scene_config.instances);
+
+        // Build acceleration structures
         rayTracedScene.build();
 
         // Create the deferred rendering manager with functional passes
@@ -179,8 +177,8 @@ int main() {
                 app.device->wait_idle();
                 std::cout << "Iteration: " << i++ << std::endl;
 
-                // Take screenshot after 16 samples and exit
-                if (renderingManager.ao_pass().get_frame_count() == 16) {
+                // Take screenshot after 32 samples and exit
+                if (renderingManager.ao_pass().get_frame_count() == 32) {
                     // Record a new command buffer just for the screenshot
                     // Note: saveToFile ends the command buffer internally,
                     // so we don't use CommandBufferRecorder here

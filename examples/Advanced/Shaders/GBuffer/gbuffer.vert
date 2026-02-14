@@ -1,13 +1,15 @@
-#version 450
+#version 460
+#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 
 layout(set = 0, binding = 0, std140) uniform UBO {
     mat4 proj;
     mat4 view;
 };
 
-layout(push_constant) uniform PushConstants {
+layout(push_constant, scalar) uniform PushConstants {
     mat4 model;
-    uint materialIndex;
+    uint64_t materialAddress;
 };
 
 layout(location = 0) in vec3 inPosition;
@@ -21,14 +23,12 @@ layout(location = 1) out vec3 outTangeant;
 layout(location = 2) out vec3 outBiTangeant;
 layout(location = 3) out vec2 outTexCoord;
 layout(location = 4) out vec3 outWorldPosition;
-layout(location = 5) flat out uint outMaterialIndex;
 
 void main() {
     vec4 worldPos = model * vec4(inPosition, 1.0);
     gl_Position = proj * view * worldPos;
     outTexCoord = inTexCoord;
     outWorldPosition = worldPos.xyz;
-    outMaterialIndex = materialIndex;
 
     // Transform TBN vectors by the model matrix (normal matrix for correct transformation)
     // For uniform scaling, mat3(model) is sufficient; for non-uniform scaling,

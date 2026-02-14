@@ -355,7 +355,7 @@ void RayTracedScene::build_geometry_buffer() {
             .vertex_offset = geom.vertex_offset,
             .first_index = geom.first_index,
             .material_type = geom.material.material_type.id(),
-            .material_index = geom.material.material_index,
+            .material_address = geom.material.buffer_address,
             .matrix = geom.matrix};
         references.push_back(ref);
     }

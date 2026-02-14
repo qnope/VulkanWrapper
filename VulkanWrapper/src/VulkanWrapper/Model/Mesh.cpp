@@ -31,7 +31,7 @@ void Mesh::draw(vk::CommandBuffer cmd_buffer, const PipelineLayout &layout,
 
     MeshPushConstants push{};
     push.transform = transform;
-    push.material_index = m_material.material_index;
+    push.material_address = m_material.buffer_address;
 
     cmd_buffer.pushConstants(layout.handle(),
                              vk::ShaderStageFlagBits::eVertex |
