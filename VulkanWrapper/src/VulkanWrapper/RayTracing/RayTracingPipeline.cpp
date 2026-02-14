@@ -60,7 +60,7 @@ RayTracingPipeline::miss_handles() const {
 std::span<const ShaderBindingTableHandle>
 RayTracingPipeline::closest_hit_handles() const {
     return std::span(m_handles.data() + 1 + m_number_miss_shader,
-                     m_number_miss_shader);
+                     m_number_close_hit_shader);
 }
 
 vk::PipelineLayout RayTracingPipeline::handle_layout() const {
