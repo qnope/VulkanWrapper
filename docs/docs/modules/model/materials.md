@@ -25,12 +25,12 @@ auto texMat = materialManager.create_textured(albedoTexture, normalTexture);
 
 ## Material Structure
 
-Materials are lightweight references:
+Materials are lightweight references containing a type tag and a GPU buffer address:
 
 ```cpp
 struct Material {
-    MaterialTypeTag type;    // Type identifier
-    uint32_t material_index; // Index in type's data array
+    MaterialTypeTag material_type;  // Type identifier
+    uint64_t buffer_address;        // GPU device address of material data
 };
 ```
 
@@ -99,10 +99,8 @@ auto descriptorSet = materialManager.get_descriptor_set(material.type);
 // Bind in shader
 cmd.bindDescriptorSets(bindPoint, layout, setIndex, descriptorSet, {});
 
-// Push material index
-cmd.pushConstants(layout, stages, offset,
-                  sizeof(material.material_index),
-                  &material.material_index);
+// Material address is available directly via buffer_address
+// Push via push constants or buffer device address
 ```
 
 ## Material Handlers
@@ -264,4 +262,4 @@ enum class MaterialPriority {
 2. **Group by material type** for efficient batching
 3. **Consider material priority** for transparency
 4. **Pack material data** efficiently
-5. **Use material indices** in push constants
+5. **Use buffer device addresses** for material data access

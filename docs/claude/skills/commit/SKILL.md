@@ -1,13 +1,16 @@
 # Commit Skill
 
 Create atomic, well-structured commits for the VulkanWrapper project.
+Take into account files that are not yet tracked.
 
 ## Workflow
 
 1. **Clean the change from origin/main (only origin/main)**: `git reset --mixed origin/main`
 2. **Analyse the change**:
-   1. Find all atomic logical changes.
+   1. Find all atomic logical changes. Take into account untracked one.
    2. For all logical changes, create a professional and detailed commit
+3. If the PR does not exist: create it with a good description
+4. If the PR exists: update the description and update it.
  
 ## What is an Atomic logical change?
 An atomic logical change is a change that can be designed as a feature, a fix, or anything that is not linkable to other changes.
