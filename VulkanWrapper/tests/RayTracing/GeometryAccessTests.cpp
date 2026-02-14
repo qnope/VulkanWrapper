@@ -98,7 +98,7 @@ class GeometryAccessTest : public ::testing::Test {
 // =============================================================================
 
 TEST(GeometryReferenceStructTest, StructSize) {
-    EXPECT_EQ(sizeof(vw::rt::GeometryReference), 96);
+    EXPECT_EQ(sizeof(vw::rt::GeometryReference), 104);
 }
 
 TEST(GeometryReferenceStructTest, StructLayout) {
@@ -108,14 +108,14 @@ TEST(GeometryReferenceStructTest, StructLayout) {
     ref.vertex_offset = 42;
     ref.first_index = 100;
     ref.material_type = 1;
-    ref.material_index = 5;
+    ref.material_address = 0xAAAABBBBCCCCDDDDULL;
 
     EXPECT_EQ(ref.vertex_buffer_address, 0x123456789ABCDEF0ULL);
     EXPECT_EQ(ref.index_buffer_address, 0x0FEDCBA987654321ULL);
     EXPECT_EQ(ref.vertex_offset, 42);
     EXPECT_EQ(ref.first_index, 100);
     EXPECT_EQ(ref.material_type, 1);
-    EXPECT_EQ(ref.material_index, 5);
+    EXPECT_EQ(ref.material_address, 0xAAAABBBBCCCCDDDDULL);
 }
 
 // =============================================================================
@@ -174,7 +174,7 @@ TEST_F(GeometryAccessTest, GeometryBufferContentsCorrect) {
     EXPECT_EQ(ref.vertex_offset, mesh.vertex_offset());
     EXPECT_EQ(ref.first_index, mesh.first_index());
     EXPECT_EQ(ref.material_type, mesh.material().material_type.id());
-    EXPECT_EQ(ref.material_index, mesh.material().material_index);
+    EXPECT_EQ(ref.material_address, mesh.material().buffer_address);
 }
 
 TEST_F(GeometryAccessTest, MultiMeshGeometryBufferCorrect) {

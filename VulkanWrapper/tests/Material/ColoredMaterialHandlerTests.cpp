@@ -1,6 +1,4 @@
 #include "utils/create_gpu.hpp"
-#include "VulkanWrapper/Memory/StagingBufferManager.h"
-#include "VulkanWrapper/Model/Material/BindlessTextureManager.h"
 #include "VulkanWrapper/Model/Material/ColoredMaterialHandler.h"
 #include <assimp/material.h>
 #include <gtest/gtest.h>
@@ -11,16 +9,10 @@ class ColoredMaterialHandlerTest : public ::testing::Test {
   protected:
     void SetUp() override {
         auto &gpu = vw::tests::create_gpu();
-        m_staging = std::make_shared<vw::StagingBufferManager>(gpu.device,
-                                                               gpu.allocator);
-        m_texture_manager = std::make_unique<BindlessTextureManager>(
-            gpu.device, gpu.allocator, m_staging);
         m_handler = ColoredMaterialHandler::create<ColoredMaterialHandler>(
-            gpu.device, gpu.allocator, *m_texture_manager);
+            gpu.device, gpu.allocator);
     }
 
-    std::shared_ptr<vw::StagingBufferManager> m_staging;
-    std::unique_ptr<BindlessTextureManager> m_texture_manager;
     std::unique_ptr<ColoredMaterialHandler> m_handler;
 };
 
@@ -32,14 +24,8 @@ TEST_F(ColoredMaterialHandlerTest, HandlerHasCorrectPriority) {
     EXPECT_EQ(m_handler->priority(), colored_material_priority);
 }
 
-TEST_F(ColoredMaterialHandlerTest, HandlerHasValidLayout) {
-    auto layout = m_handler->layout();
-    EXPECT_NE(layout, nullptr);
-}
-
-TEST_F(ColoredMaterialHandlerTest, HandlerHasValidDescriptorSet) {
-    auto descriptor_set = m_handler->descriptor_set();
-    EXPECT_TRUE(descriptor_set);
+TEST_F(ColoredMaterialHandlerTest, StrideMatchesDataSize) {
+    EXPECT_EQ(m_handler->stride(), sizeof(ColoredMaterialData));
 }
 
 TEST_F(ColoredMaterialHandlerTest, CreateMaterialWithDiffuseColor) {
@@ -51,7 +37,7 @@ TEST_F(ColoredMaterialHandlerTest, CreateMaterialWithDiffuseColor) {
 
     ASSERT_TRUE(result.has_value());
     EXPECT_EQ(result->material_type, colored_material_tag);
-    EXPECT_EQ(result->material_index, 0);
+    EXPECT_NE(result->buffer_address, 0);
 }
 
 TEST_F(ColoredMaterialHandlerTest, CreateMaterialWithDefaultColor) {
@@ -62,7 +48,7 @@ TEST_F(ColoredMaterialHandlerTest, CreateMaterialWithDefaultColor) {
 
     ASSERT_TRUE(result.has_value());
     EXPECT_EQ(result->material_type, colored_material_tag);
-    EXPECT_EQ(result->material_index, 0);
+    EXPECT_NE(result->buffer_address, 0);
 }
 
 TEST_F(ColoredMaterialHandlerTest, CreateMultipleMaterials) {
@@ -86,12 +72,17 @@ TEST_F(ColoredMaterialHandlerTest, CreateMultipleMaterials) {
     ASSERT_TRUE(result2.has_value());
     ASSERT_TRUE(result3.has_value());
 
-    EXPECT_EQ(result1->material_index, 0);
-    EXPECT_EQ(result2->material_index, 1);
-    EXPECT_EQ(result3->material_index, 2);
+    // Each material should have a different buffer_address (base + i * stride)
+    EXPECT_NE(result1->buffer_address, result2->buffer_address);
+    EXPECT_NE(result2->buffer_address, result3->buffer_address);
+    EXPECT_NE(result1->buffer_address, result3->buffer_address);
+
+    auto stride = m_handler->stride();
+    EXPECT_EQ(result2->buffer_address - result1->buffer_address, stride);
+    EXPECT_EQ(result3->buffer_address - result2->buffer_address, stride);
 }
 
-TEST_F(ColoredMaterialHandlerTest, UploadCreatesSSBO) {
+TEST_F(ColoredMaterialHandlerTest, UploadCreatesBuffer) {
     aiMaterial material;
     aiColor4D color(1.0f, 0.0f, 0.0f, 1.0f);
     material.AddProperty(&color, 1, AI_MATKEY_COLOR_DIFFUSE);
@@ -99,24 +90,74 @@ TEST_F(ColoredMaterialHandlerTest, UploadCreatesSSBO) {
     m_handler->try_create(&material, "");
     m_handler->upload();
 
-    // After upload, resources should include the SSBO
+    // After upload, resources should include the buffer
     auto resources = m_handler->get_resources();
     EXPECT_FALSE(resources.empty());
 }
 
-TEST_F(ColoredMaterialHandlerTest, NoResourcesBeforeUpload) {
+TEST_F(ColoredMaterialHandlerTest, BufferAddressAvailableWithoutUpload) {
+    aiMaterial material;
+    aiColor4D color(1.0f, 0.0f, 0.0f, 1.0f);
+    material.AddProperty(&color, 1, AI_MATKEY_COLOR_DIFFUSE);
+
+    m_handler->try_create(&material, "");
+
+    // SSBO is pre-allocated at construction, buffer_address works without upload
+    EXPECT_NE(m_handler->buffer_address(), vk::DeviceAddress{0});
+}
+
+TEST_F(ColoredMaterialHandlerTest, ResourcesAvailableAfterConstruction) {
     aiMaterial material;
     m_handler->try_create(&material, "");
 
-    // Before upload, SSBO not allocated
+    // SSBO is pre-allocated at construction, resources should not be empty
     auto resources = m_handler->get_resources();
-    EXPECT_TRUE(resources.empty());
+    EXPECT_FALSE(resources.empty());
 }
 
 TEST_F(ColoredMaterialHandlerTest, UploadWithNoMaterialsDoesNothing) {
     // No materials created - upload should be a no-op
     m_handler->upload();
 
+    // SSBO is pre-allocated, so resources always include the buffer
     auto resources = m_handler->get_resources();
-    EXPECT_TRUE(resources.empty());
+    EXPECT_FALSE(resources.empty());
+}
+
+TEST_F(ColoredMaterialHandlerTest, AdditionalDescriptorSetIsNullopt) {
+    EXPECT_FALSE(m_handler->additional_descriptor_set().has_value());
+}
+
+TEST_F(ColoredMaterialHandlerTest, AdditionalDescriptorSetLayoutIsNull) {
+    EXPECT_EQ(m_handler->additional_descriptor_set_layout(), nullptr);
+}
+
+TEST_F(ColoredMaterialHandlerTest, MaterialAddressMatchesBufferAddress) {
+    aiMaterial material;
+    aiColor4D color(1.0f, 0.0f, 0.0f, 1.0f);
+    material.AddProperty(&color, 1, AI_MATKEY_COLOR_DIFFUSE);
+
+    auto result = m_handler->try_create(&material, "");
+    ASSERT_TRUE(result.has_value());
+
+    // First material at offset 0 should match handler's buffer_address
+    EXPECT_EQ(result->buffer_address, m_handler->buffer_address());
+}
+
+TEST_F(ColoredMaterialHandlerTest, MaterialAddressesEvenlySpaced) {
+    std::vector<Material> materials;
+    for (int i = 0; i < 3; ++i) {
+        aiMaterial material;
+        aiColor4D color(static_cast<float>(i) / 3.0f, 0.0f, 0.0f, 1.0f);
+        material.AddProperty(&color, 1, AI_MATKEY_COLOR_DIFFUSE);
+        auto result = m_handler->try_create(&material, "");
+        ASSERT_TRUE(result.has_value());
+        materials.push_back(*result);
+    }
+
+    auto base = m_handler->buffer_address();
+    auto stride = m_handler->stride();
+    for (uint32_t i = 0; i < 3; ++i) {
+        EXPECT_EQ(materials[i].buffer_address, base + i * stride);
+    }
 }
