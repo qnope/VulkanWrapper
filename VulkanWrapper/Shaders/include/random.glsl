@@ -60,7 +60,7 @@ vec3 sample_hemisphere_cosine(vec3 N, vec3 T, vec3 B, vec2 xi) {
     vec3 local = vec3(sin_theta * cos(phi), sin_theta * sin(phi), cos_theta);
 
     // Transform to world space using TBN
-    return normalize(T * local.x + B * local.y + N * local.z);
+    return normalize(mat3(T, B, N) * local);
 }
 
 // PDF for cosine-weighted hemisphere sampling.
