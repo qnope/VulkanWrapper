@@ -38,9 +38,9 @@ vec3 compute_ambient(SkyParameters p, vec3 albedo, float ao) {
     // Convert to luminance units (cd/m^2/sr)
     L_sun *= atmo_luminous_efficiency(p);
 
-    // Ambient contribution: 3% of sun irradiance modulated by AO
+    // Ambient contribution: 1% of sun irradiance modulated by AO
     float solid_angle = atmo_star_solid_angle(p);
-    return (albedo / ATMO_PI) * L_sun * solid_angle * 0.03 * ao;
+    return (albedo / ATMO_PI) * L_sun * solid_angle * 0.01 * ao;
 }
 
 void main() {
