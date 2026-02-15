@@ -18,10 +18,7 @@ IndirectLightPass::IndirectLightPass(
     , m_output_format(output_format)
     , m_sampler(SamplerBuilder(m_device).build())
     , m_descriptor_pool(DescriptorPool(m_device, nullptr))
-    , m_texture_descriptor_pool(DescriptorPool(m_device, nullptr))
-    , m_samples_buffer(create_hemisphere_samples_buffer(*m_allocator))
-    , m_noise_texture(std::make_unique<NoiseTexture>(
-          m_device, m_allocator, m_device->graphicsQueue())) {
+    , m_texture_descriptor_pool(DescriptorPool(m_device, nullptr)) {
     // Create pipeline and SBT
     create_pipeline_and_sbt(shader_dir);
 }
@@ -35,11 +32,8 @@ void IndirectLightPass::create_pipeline_and_sbt(
     // binding 3: image2D storage (output - read/write)
     // binding 4: sampler2D (G-Buffer albedo)
     // binding 5: sampler2D (Ambient Occlusion)
-    // binding 6: sampler2D (G-Buffer tangent)
-    // binding 7: sampler2D (G-Buffer bitangent)
-    // binding 8: SSBO (hemisphere samples for random sampling)
-    // binding 9: sampler2D (noise texture for per-pixel decorrelation)
-    // binding 10: SSBO (geometry references)
+    // binding 6: sampler2D (G-Buffer indirect_ray)
+    // binding 7: SSBO (geometry references)
     constexpr auto rt_stages = vk::ShaderStageFlagBits::eRaygenKHR |
                                vk::ShaderStageFlagBits::eMissKHR |
                                vk::ShaderStageFlagBits::eClosestHitKHR;
@@ -52,11 +46,8 @@ void IndirectLightPass::create_pipeline_and_sbt(
             .with_storage_image(rt_stages, 1)       // binding 3: output
             .with_combined_image(rt_stages, 1)      // binding 4: albedo
             .with_combined_image(rt_stages, 1)      // binding 5: AO
-            .with_combined_image(rt_stages, 1)      // binding 6: tangent
-            .with_combined_image(rt_stages, 1)      // binding 7: bitangent
-            .with_storage_buffer(rt_stages, 1)      // binding 8: Xi samples
-            .with_combined_image(rt_stages, 1)      // binding 9: noise texture
-            .with_storage_buffer(rt_stages, 1)      // binding 10: geometry refs
+            .with_combined_image(rt_stages, 1)      // binding 6: indirect_ray
+            .with_storage_buffer(rt_stages, 1)      // binding 7: geometry refs
             .build();
 
     // Create texture descriptor layout (set 1) for per-material hit shaders
@@ -134,8 +125,7 @@ IndirectLightPass::execute(vk::CommandBuffer cmd,
                            std::shared_ptr<const ImageView> normal_view,
                            std::shared_ptr<const ImageView> albedo_view,
                            std::shared_ptr<const ImageView> ao_view,
-                           std::shared_ptr<const ImageView> tangent_view,
-                           std::shared_ptr<const ImageView> bitangent_view,
+                           std::shared_ptr<const ImageView> indirect_ray_view,
                            const SkyParameters &sky_params) {
 
     // Use fixed frame_index=0 so the image is shared across all swapchain
@@ -187,33 +177,15 @@ IndirectLightPass::execute(vk::CommandBuffer cmd,
         vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
         vk::AccessFlagBits2::eShaderRead);
 
-    // binding 6: Tangent G-Buffer
+    // binding 6: Indirect ray direction G-Buffer
     descriptor_allocator.add_combined_image(
-        6, CombinedImage(tangent_view, m_sampler),
+        6, CombinedImage(indirect_ray_view, m_sampler),
         vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
         vk::AccessFlagBits2::eShaderRead);
 
-    // binding 7: Bitangent G-Buffer
-    descriptor_allocator.add_combined_image(
-        7, CombinedImage(bitangent_view, m_sampler),
-        vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
-        vk::AccessFlagBits2::eShaderRead);
-
-    // binding 8: Hemisphere samples buffer
+    // binding 7: Geometry reference buffer (for closest hit shader)
     descriptor_allocator.add_storage_buffer(
-        8, m_samples_buffer.handle(), 0, m_samples_buffer.size_bytes(),
-        vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
-        vk::AccessFlagBits2::eShaderRead);
-
-    // binding 9: Noise texture
-    descriptor_allocator.add_combined_image(
-        9, m_noise_texture->combined_image(),
-        vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
-        vk::AccessFlagBits2::eShaderRead);
-
-    // binding 10: Geometry reference buffer (for closest hit shader)
-    descriptor_allocator.add_storage_buffer(
-        10, m_geometry_buffer->handle(), 0,
+        7, m_geometry_buffer->handle(), 0,
         m_geometry_buffer->size_bytes(),
         vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
         vk::AccessFlagBits2::eShaderRead);

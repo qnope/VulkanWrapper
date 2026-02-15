@@ -116,10 +116,10 @@ class DeferredRenderingManager {
         auto depth_view = m_zpass->execute(cmd, tracker, width, height,
                                            frame_index, scene, uniform_buffer);
 
-        // 2. Color Pass: G-Buffer fill
-        auto gbuffer =
-            m_color_pass->execute(cmd, tracker, width, height, frame_index,
-                                  scene, depth_view, uniform_buffer);
+        // 2. Color Pass: G-Buffer fill (with ray direction generation)
+        auto gbuffer = m_color_pass->execute(
+            cmd, tracker, width, height, frame_index, scene, depth_view,
+            uniform_buffer, m_indirect_light_pass->get_frame_count());
 
         // 3. AO Pass: progressive ambient occlusion (1 sample per frame)
         auto ao_view = m_ao_pass->execute(
@@ -144,8 +144,7 @@ class DeferredRenderingManager {
         // 6. Indirect Light Pass: progressive indirect sky lighting with AO
         auto indirect_light_view = m_indirect_light_pass->execute(
             cmd, tracker, width, height, gbuffer.position, gbuffer.normal,
-            gbuffer.color, ao_view, gbuffer.tangent, gbuffer.bitangent,
-            sky_params);
+            gbuffer.color, ao_view, gbuffer.indirect_ray, sky_params);
 
         // 7. Tone Mapping Pass: combine direct + indirect and convert HDR to
         // LDR Note: Both direct and indirect light are in physical units

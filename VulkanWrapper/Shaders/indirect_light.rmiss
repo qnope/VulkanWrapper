@@ -18,9 +18,5 @@ layout(location = 0) rayPayloadInEXT vec3 payload;
 void main() {
     // Ray missed all geometry - compute sky radiance in ray direction
     vec3 ray_dir = gl_WorldRayDirectionEXT;
-
-    // payload contains albedo from raygen shader
-    // Multiply sky radiance by albedo for final contribution
-    vec3 albedo = payload;
-    payload = compute_sky_radiance(sky, ray_dir) * albedo;
+    payload = compute_sky_radiance(sky, ray_dir);
 }

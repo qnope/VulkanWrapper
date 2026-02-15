@@ -140,10 +140,8 @@ class IndirectLightSunBounceTest : public ::testing::Test {
         std::shared_ptr<const ImageView> albedo_view;
         std::shared_ptr<const Image> ao;
         std::shared_ptr<const ImageView> ao_view;
-        std::shared_ptr<const Image> tangent;
-        std::shared_ptr<const ImageView> tangent_view;
-        std::shared_ptr<const Image> bitangent;
-        std::shared_ptr<const ImageView> bitangent_view;
+        std::shared_ptr<const Image> indirect_ray;
+        std::shared_ptr<const ImageView> indirect_ray_view;
     };
 
     GBuffer create_gbuffer(Width width, Height height) {
@@ -176,32 +174,14 @@ class IndirectLightSunBounceTest : public ::testing::Test {
                          .setImageType(vk::ImageViewType::e2D)
                          .build();
 
-        gb.tangent = gpu->allocator->create_image_2D(width, height, false,
-                                                      fmt, usage);
-        gb.tangent_view = ImageViewBuilder(gpu->device, gb.tangent)
-                              .setImageType(vk::ImageViewType::e2D)
-                              .build();
-
-        gb.bitangent = gpu->allocator->create_image_2D(width, height, false,
-                                                        fmt, usage);
-        gb.bitangent_view = ImageViewBuilder(gpu->device, gb.bitangent)
-                                .setImageType(vk::ImageViewType::e2D)
-                                .build();
+        gb.indirect_ray = gpu->allocator->create_image_2D(
+            width, height, false, fmt, usage);
+        gb.indirect_ray_view =
+            ImageViewBuilder(gpu->device, gb.indirect_ray)
+                .setImageType(vk::ImageViewType::e2D)
+                .build();
 
         return gb;
-    }
-
-    // Build orthonormal basis from normal (Frisvad's method)
-    static void build_basis(glm::vec3 N, glm::vec3 &T, glm::vec3 &B) {
-        if (N.z < -0.999999f) {
-            T = glm::vec3(0.0f, -1.0f, 0.0f);
-            B = glm::vec3(-1.0f, 0.0f, 0.0f);
-        } else {
-            float a = 1.0f / (1.0f + N.z);
-            float b = -N.x * N.y * a;
-            T = glm::vec3(1.0f - N.x * N.x * a, b, -N.x);
-            B = glm::vec3(b, 1.0f - N.y * N.y * a, -N.y);
-        }
     }
 
     // Fill G-buffer with uniform values across all pixels
@@ -223,21 +203,16 @@ class IndirectLightSunBounceTest : public ::testing::Test {
             create_buffer<StagingBuffer>(*gpu->allocator, float4_size);
         auto ao_staging =
             create_buffer<StagingBuffer>(*gpu->allocator, float4_size);
-        auto tangent_staging =
-            create_buffer<StagingBuffer>(*gpu->allocator, float4_size);
-        auto bitangent_staging =
+        auto indirect_ray_staging =
             create_buffer<StagingBuffer>(*gpu->allocator, float4_size);
 
         glm::vec3 n = glm::normalize(normal);
-        glm::vec3 t, b;
-        build_basis(n, t, b);
 
         std::vector<float> pos_data(pixel_count * 4);
         std::vector<float> norm_data(pixel_count * 4);
         std::vector<float> alb_data(pixel_count * 4);
         std::vector<float> ao_data(pixel_count * 4);
-        std::vector<float> tan_data(pixel_count * 4);
-        std::vector<float> bitan_data(pixel_count * 4);
+        std::vector<float> indirect_ray_data(pixel_count * 4);
 
         for (size_t i = 0; i < pixel_count; ++i) {
             pos_data[i * 4 + 0] = position.x;
@@ -260,15 +235,11 @@ class IndirectLightSunBounceTest : public ::testing::Test {
             ao_data[i * 4 + 2] = ao;
             ao_data[i * 4 + 3] = 1.0f;
 
-            tan_data[i * 4 + 0] = t.x;
-            tan_data[i * 4 + 1] = t.y;
-            tan_data[i * 4 + 2] = t.z;
-            tan_data[i * 4 + 3] = 0.0f;
-
-            bitan_data[i * 4 + 0] = b.x;
-            bitan_data[i * 4 + 1] = b.y;
-            bitan_data[i * 4 + 2] = b.z;
-            bitan_data[i * 4 + 3] = 0.0f;
+            // Use normal as ray direction for test simplicity
+            indirect_ray_data[i * 4 + 0] = n.x;
+            indirect_ray_data[i * 4 + 1] = n.y;
+            indirect_ray_data[i * 4 + 2] = n.z;
+            indirect_ray_data[i * 4 + 3] = 1.0f; // w=1.0 means valid pixel
         }
 
         auto write_staging = [&](auto &staging, const auto &data) {
@@ -283,8 +254,7 @@ class IndirectLightSunBounceTest : public ::testing::Test {
         write_staging(normal_staging, norm_data);
         write_staging(albedo_staging, alb_data);
         write_staging(ao_staging, ao_data);
-        write_staging(tangent_staging, tan_data);
-        write_staging(bitangent_staging, bitan_data);
+        write_staging(indirect_ray_staging, indirect_ray_data);
 
         auto cmd = cmdPool->allocate(1)[0];
         std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
@@ -298,10 +268,8 @@ class IndirectLightSunBounceTest : public ::testing::Test {
         transfer.copyBufferToImage(cmd, albedo_staging.handle(),
                                    gb.albedo, 0);
         transfer.copyBufferToImage(cmd, ao_staging.handle(), gb.ao, 0);
-        transfer.copyBufferToImage(cmd, tangent_staging.handle(),
-                                   gb.tangent, 0);
-        transfer.copyBufferToImage(cmd, bitangent_staging.handle(),
-                                   gb.bitangent, 0);
+        transfer.copyBufferToImage(cmd, indirect_ray_staging.handle(),
+                                   gb.indirect_ray, 0);
 
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
@@ -363,8 +331,7 @@ class IndirectLightSunBounceTest : public ::testing::Test {
             result = pass->execute(cmd, tracker, width, height,
                                    gb.position_view, gb.normal_view,
                                    gb.albedo_view, gb.ao_view,
-                                   gb.tangent_view, gb.bitangent_view,
-                                   sky_params);
+                                   gb.indirect_ray_view, sky_params);
             std::ignore = cmd.end();
             gpu->queue().enqueue_command_buffer(cmd);
             gpu->queue().submit({}, {}, {}).wait();

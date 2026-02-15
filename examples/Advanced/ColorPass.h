@@ -14,12 +14,21 @@
 #include "VulkanWrapper/Pipeline/MeshRenderer.h"
 #include "VulkanWrapper/Pipeline/Pipeline.h"
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
+#include "VulkanWrapper/Random/NoiseTexture.h"
+#include "VulkanWrapper/Random/RandomSamplingBuffer.h"
 #include "VulkanWrapper/RenderPass/Subpass.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include "VulkanWrapper/Utils/Error.h"
 #include <span>
 
-enum class ColorPassSlot { Color, Normal, Tangent, Bitangent, Position };
+enum class ColorPassSlot {
+    Color,
+    Normal,
+    Tangent,
+    Bitangent,
+    Position,
+    IndirectRay
+};
 
 /**
  * @brief Output structure for the ColorPass G-Buffer
@@ -30,6 +39,7 @@ struct ColorPassOutput {
     std::shared_ptr<const vw::ImageView> tangent;
     std::shared_ptr<const vw::ImageView> bitangent;
     std::shared_ptr<const vw::ImageView> position;
+    std::shared_ptr<const vw::ImageView> indirect_ray;
 };
 
 /**
@@ -42,12 +52,13 @@ struct ColorPassOutput {
  */
 class ColorPass : public vw::Subpass<ColorPassSlot> {
   public:
-    static constexpr std::array<vk::Format, 5> default_color_formats = {
+    static constexpr std::array<vk::Format, 6> default_color_formats = {
         vk::Format::eR8G8B8A8Unorm,      // color
-        vk::Format::eR32G32B32A32Sfloat, // normal
-        vk::Format::eR32G32B32A32Sfloat, // tangent
-        vk::Format::eR32G32B32A32Sfloat, // bitangent
-        vk::Format::eR32G32B32A32Sfloat  // position
+        vk::Format::eR32G32B32A32Sfloat,  // normal
+        vk::Format::eR32G32B32A32Sfloat,  // tangent
+        vk::Format::eR32G32B32A32Sfloat,  // bitangent
+        vk::Format::eR32G32B32A32Sfloat,  // position
+        vk::Format::eR32G32B32A32Sfloat   // indirect_ray
     };
 
     using FragmentShaderMap =
@@ -63,6 +74,10 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
         , m_color_formats(color_formats.begin(), color_formats.end())
         , m_material_manager(material_manager)
         , m_fragment_shaders(std::move(fragment_shaders))
+        , m_samples_buffer(
+              vw::create_hemisphere_samples_buffer(*m_allocator))
+        , m_noise_texture(std::make_unique<vw::NoiseTexture>(
+              m_device, m_allocator, m_device->graphicsQueue()))
         , m_descriptor_pool(create_descriptor_pool(depth_format)) {}
 
     /**
@@ -75,14 +90,15 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
             const vw::Model::Scene &scene,
             std::shared_ptr<const vw::ImageView> depth_view,
             const vw::Buffer<UBOType, true, vw::UniformBufferUsage>
-                &uniform_buffer) {
+                &uniform_buffer,
+            uint32_t frame_count) {
 
         constexpr auto usageFlags = vk::ImageUsageFlagBits::eColorAttachment |
                                     vk::ImageUsageFlagBits::eInputAttachment |
                                     vk::ImageUsageFlagBits::eSampled |
                                     vk::ImageUsageFlagBits::eTransferSrc;
 
-        // Lazy allocation of 5 G-Buffer images
+        // Lazy allocation of 6 G-Buffer images
         const auto &color =
             get_or_create_image(ColorPassSlot::Color, width, height,
                                 frame_index, m_color_formats[0], usageFlags);
@@ -98,17 +114,33 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
         const auto &position =
             get_or_create_image(ColorPassSlot::Position, width, height,
                                 frame_index, m_color_formats[4], usageFlags);
+        const auto &indirect_ray =
+            get_or_create_image(ColorPassSlot::IndirectRay, width, height,
+                                frame_index, m_color_formats[5], usageFlags);
 
         vk::Extent2D extent{static_cast<uint32_t>(width),
                             static_cast<uint32_t>(height)};
 
-        // Create descriptor set with uniform buffer
+        // Create descriptor set with uniform buffer + random sampling
         vw::DescriptorAllocator descriptor_allocator;
         descriptor_allocator.add_uniform_buffer(
             0, uniform_buffer.handle(), 0, uniform_buffer.size_bytes(),
             vk::PipelineStageFlagBits2::eVertexShader |
                 vk::PipelineStageFlagBits2::eFragmentShader,
             vk::AccessFlagBits2::eUniformRead);
+
+        // binding 1: random samples SSBO
+        descriptor_allocator.add_storage_buffer(
+            1, m_samples_buffer.handle(), 0,
+            m_samples_buffer.size_bytes(),
+            vk::PipelineStageFlagBits2::eFragmentShader,
+            vk::AccessFlagBits2::eShaderRead);
+
+        // binding 2: noise texture
+        descriptor_allocator.add_combined_image(
+            2, m_noise_texture->combined_image(),
+            vk::PipelineStageFlagBits2::eFragmentShader,
+            vk::AccessFlagBits2::eShaderRead);
 
         auto descriptor_set =
             m_descriptor_pool.allocate_set(descriptor_allocator);
@@ -119,8 +151,9 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
         }
 
         // Request states for all output images
-        std::array<const vw::CachedImage *, 5> cached_images = {
-            &color, &normal, &tangent, &bitangent, &position};
+        std::array<const vw::CachedImage *, 6> cached_images = {
+            &color, &normal, &tangent, &bitangent, &position,
+            &indirect_ray};
 
         for (const auto *cached : cached_images) {
             tracker.request(vw::Barrier::ImageState{
@@ -150,15 +183,21 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
 
         // Setup rendering attachments
         std::vector<vk::RenderingAttachmentInfo> color_attachments;
-        for (const auto *cached : cached_images) {
+        for (size_t i = 0; i < cached_images.size(); ++i) {
+            const auto *cached = cached_images[i];
+            // IndirectRay (last) clears to (0,0,0,0) so w=0 marks
+            // invalid/sky pixels
+            auto clear_value =
+                (i == cached_images.size() - 1)
+                    ? vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f)
+                    : vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f);
             color_attachments.push_back(
                 vk::RenderingAttachmentInfo()
                     .setImageView(cached->view->handle())
                     .setImageLayout(vk::ImageLayout::eColorAttachmentOptimal)
                     .setLoadOp(vk::AttachmentLoadOp::eClear)
                     .setStoreOp(vk::AttachmentStoreOp::eStore)
-                    .setClearValue(
-                        vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f)));
+                    .setClearValue(clear_value));
         }
 
         vk::RenderingAttachmentInfo depth_attachment =
@@ -215,6 +254,14 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
                                                *ds, nullptr);
                     }
                 }
+
+                // Push frame_count for fragment shader
+                cmd.pushConstants(
+                    pipeline->layout().handle(),
+                    vk::ShaderStageFlagBits::eVertex |
+                        vk::ShaderStageFlagBits::eFragment,
+                    sizeof(vw::Model::MeshPushConstants),
+                    sizeof(uint32_t), &frame_count);
             }
 
             auto pipeline = m_mesh_renderer->pipeline_for(material_type);
@@ -229,16 +276,21 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
                                .normal = normal.view,
                                .tangent = tangent.view,
                                .bitangent = bitangent.view,
-                               .position = position.view};
+                               .position = position.view,
+                               .indirect_ray = indirect_ray.view};
     }
 
   private:
     vw::DescriptorPool create_descriptor_pool(vk::Format depth_format) {
-        // Create descriptor layout for uniform buffer
+        // Create descriptor layout for uniform buffer + random sampling
         m_descriptor_layout =
             vw::DescriptorSetLayoutBuilder(m_device)
                 .with_uniform_buffer(vk::ShaderStageFlagBits::eVertex |
                                          vk::ShaderStageFlagBits::eFragment,
+                                     1)
+                .with_storage_buffer(vk::ShaderStageFlagBits::eFragment,
+                                     1)
+                .with_combined_image(vk::ShaderStageFlagBits::eFragment,
                                      1)
                 .build();
 
@@ -257,7 +309,8 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
                 .setStageFlags(vk::ShaderStageFlagBits::eVertex |
                                vk::ShaderStageFlagBits::eFragment)
                 .setOffset(0)
-                .setSize(sizeof(vw::Model::MeshPushConstants));
+                .setSize(sizeof(vw::Model::MeshPushConstants) +
+                         sizeof(uint32_t));
 
         auto renderer = std::make_shared<vw::MeshRenderer>();
 
@@ -305,6 +358,10 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
     std::vector<vk::Format> m_color_formats;
     vw::Model::Material::BindlessMaterialManager &m_material_manager;
     FragmentShaderMap m_fragment_shaders;
+
+    // Random sampling resources
+    vw::DualRandomSampleBuffer m_samples_buffer;
+    std::unique_ptr<vw::NoiseTexture> m_noise_texture;
 
     // Resources (order matters!)
     std::shared_ptr<vw::DescriptorSetLayout> m_descriptor_layout;
