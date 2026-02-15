@@ -8,13 +8,7 @@ layout(set = 0, binding = 2) uniform sampler2D g_normal;
 layout(set = 0, binding = 3, rgba32f) coherent uniform image2D output_image;
 layout(set = 0, binding = 4) uniform sampler2D g_albedo;
 layout(set = 0, binding = 5) uniform sampler2D g_ao;
-layout(set = 0, binding = 6) uniform sampler2D g_tangent;
-layout(set = 0, binding = 7) uniform sampler2D g_bitangent;
-
-// Random sampling with Cranley-Patterson rotation
-#define RANDOM_XI_BUFFER_BINDING 8
-#define RANDOM_NOISE_TEXTURE_BINDING 9
-#include "random.glsl"
+layout(set = 0, binding = 6) uniform sampler2D g_indirect_ray;
 
 #include "atmosphere_params.glsl"
 
@@ -56,26 +50,19 @@ void main() {
     // Sample G-buffer
     vec3 position = texture(g_position, uv).rgb;
     vec3 normal = normalize(texture(g_normal, uv).rgb);
-    vec3 tangent = normalize(texture(g_tangent, uv).rgb);
-    vec3 bitangent = normalize(texture(g_bitangent, uv).rgb);
     vec3 albedo = texture(g_albedo, uv).rgb;
     float ao = texture(g_ao, uv).r;
 
-    // Skip pixels with invalid normals (e.g., sky pixels)
-    if (length(normal) < 0.5) {
-        // For invalid pixels, write zero on first frame, keep existing otherwise
+    // Read precomputed ray direction from GBuffer
+    vec4 indirect_ray_data = texture(g_indirect_ray, uv);
+    if (indirect_ray_data.w < 0.5) {
+        // w=0 means invalid/sky pixel
         if (frame_count == 0) {
             imageStore(output_image, pixel, vec4(0.0, 0.0, 0.0, 1.0));
         }
         return;
     }
-
-    // Get random sample using Cranley-Patterson rotation for per-pixel decorrelation
-    vec2 xi = get_sample(frame_count, pixel);
-
-    // Generate cosine-weighted direction in hemisphere around normal
-    // Use TBN from G-buffer for consistent tangent space
-    vec3 ray_dir = sample_hemisphere_cosine(normal, tangent, bitangent, xi);
+    vec3 ray_dir = normalize(indirect_ray_data.xyz);
 
     // Trace ray in all hemisphere directions (both upward and downward).
     // Upward rays may hit sky (miss shader returns sky radiance * albedo)
@@ -87,14 +74,6 @@ void main() {
     float t_max = 100000.0;
 
     uint flags = gl_RayFlagsOpaqueEXT;
-
-    // Pass albedo via payload for multiplication in hit/miss shaders.
-    // For Lambertian BRDF (f = albedo/PI) with cosine-weighted sampling:
-    // L_out = (1/N) * sum (albedo/PI) * L(wi) * cos(theta_i) / PDF(wi)
-    // With PDF = cos(theta) / PI, this simplifies to:
-    // L_out = (1/N) * sum albedo * L(wi)
-    // The PI factors cancel out completely.
-    payload = albedo;
 
     traceRayEXT(
         tlas,
@@ -113,7 +92,12 @@ void main() {
     // payload now contains either:
     // - albedo * bounce_radiance if we hit geometry (from closest hit shader)
     // - albedo * sky_radiance if we missed (from miss shader)
-    vec3 incoming_radiance = payload;
+    vec3 incoming_radiance = payload * albedo;
+    // For Lambertian BRDF (f = albedo/PI) with cosine-weighted sampling:
+    // L_out = (1/N) * sum (albedo/PI) * L(wi) * cos(theta_i) / PDF(wi)
+    // With PDF = cos(theta) / PI, this simplifies to:
+    // L_out = (1/N) * sum albedo * L(wi)
+    // The PI factors cancel out completely.
 
     // Sanitize NaN/Inf from ray tracing results. This can occur when
     // the miss shader computes sky radiance for rays that escape geometry

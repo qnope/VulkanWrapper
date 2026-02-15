@@ -7,7 +7,7 @@
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 #extension GL_GOOGLE_include_directive : require
 
-#define GEOMETRY_BUFFER_BINDING 10
+#define GEOMETRY_BUFFER_BINDING 7
 #include "geometry_access.glsl"
 
 #include "atmosphere_params.glsl"
@@ -59,9 +59,5 @@ void main() {
                          * luminance_from_sun(sky, world_hit_pos,
                                               world_normal, tlas);
 
-    // payload contains the shading point's albedo (from raygen shader).
-    // For cosine-weighted sampling, the PI factors cancel:
-    // L_out = (1/N) * sum albedo * L_bounce
-    vec3 shading_albedo = payload;
-    payload = shading_albedo * bounce_radiance;
+    payload = bounce_radiance;
 }

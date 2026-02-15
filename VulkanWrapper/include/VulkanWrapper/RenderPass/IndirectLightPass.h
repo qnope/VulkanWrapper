@@ -8,8 +8,6 @@
 #include "VulkanWrapper/Image/Sampler.h"
 #include "VulkanWrapper/Memory/Allocator.h"
 #include "VulkanWrapper/Model/Material/BindlessMaterialManager.h"
-#include "VulkanWrapper/Random/NoiseTexture.h"
-#include "VulkanWrapper/Random/RandomSamplingBuffer.h"
 #include "VulkanWrapper/RayTracing/GeometryReference.h"
 #include "VulkanWrapper/RayTracing/RayTracingPipeline.h"
 #include "VulkanWrapper/RayTracing/ShaderBindingTable.h"
@@ -47,7 +45,8 @@ static_assert(sizeof(IndirectLightPushConstants) <= 128,
  * @brief Ray Tracing Indirect Light pass with progressive accumulation
  *
  * This pass computes indirect sky lighting using a ray tracing pipeline.
- * It traces cosine-weighted rays from each surface point:
+ * It reads precomputed ray directions from the GBuffer indirect_ray
+ * attachment and traces rays from each surface point:
  * - Rays that escape to the sky contribute atmospheric radiance (miss shader)
  * - Rays that hit geometry contribute sun bounce with per-material albedo
  *   (closest hit shaders)
@@ -106,8 +105,7 @@ class IndirectLightPass : public Subpass<IndirectLightPassSlot> {
      * @param normal_view Normal G-Buffer view
      * @param albedo_view Albedo G-Buffer view (material color)
      * @param ao_view Ambient occlusion buffer view
-     * @param tangent_view Tangent G-Buffer view (for TBN)
-     * @param bitangent_view Bitangent G-Buffer view (for TBN)
+     * @param indirect_ray_view Indirect ray direction G-Buffer view
      * @param sky_params Sky and sun parameters
      * @return The output indirect light image view
      */
@@ -118,8 +116,7 @@ class IndirectLightPass : public Subpass<IndirectLightPassSlot> {
             std::shared_ptr<const ImageView> normal_view,
             std::shared_ptr<const ImageView> albedo_view,
             std::shared_ptr<const ImageView> ao_view,
-            std::shared_ptr<const ImageView> tangent_view,
-            std::shared_ptr<const ImageView> bitangent_view,
+            std::shared_ptr<const ImageView> indirect_ray_view,
             const SkyParameters &sky_params);
 
     /**
@@ -156,10 +153,6 @@ class IndirectLightPass : public Subpass<IndirectLightPassSlot> {
     // Texture descriptor resources for per-material hit shaders
     std::shared_ptr<DescriptorSetLayout> m_texture_descriptor_layout;
     DescriptorPool m_texture_descriptor_pool;
-
-    // Random sampling resources
-    DualRandomSampleBuffer m_samples_buffer;
-    std::unique_ptr<NoiseTexture> m_noise_texture;
 };
 
 } // namespace vw
