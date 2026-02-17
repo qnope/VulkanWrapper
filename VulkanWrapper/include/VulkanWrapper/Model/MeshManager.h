@@ -10,8 +10,6 @@
 namespace vw::Model {
 
 class MeshManager {
-    friend void import_model(const std::filesystem::path &, MeshManager &);
-
   public:
     MeshManager(std::shared_ptr<const Device> device,
                 std::shared_ptr<Allocator> allocator);

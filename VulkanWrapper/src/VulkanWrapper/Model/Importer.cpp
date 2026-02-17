@@ -41,35 +41,14 @@ void import_model(const std::filesystem::path &path,
     std::vector<Material::Material> real_material;
 
     for (const auto *mat : std::span(scene->mMaterials, scene->mNumMaterials)) {
-        auto material = mesh_manager.m_material_manager.create_material(
+        auto material = mesh_manager.material_manager().create_material(
             mat, directory_path);
         real_material.push_back(material);
     }
 
     for (const auto &mesh : meshes) {
-        auto [full_vertex_buffer, vertex_offset] =
-            mesh_manager.m_full_vertex_buffer.create_buffer(
-                mesh.full_vertices.size());
-        auto [index_buffer, first_index] =
-            mesh_manager.m_index_buffer.create_buffer(mesh.indices.size());
-
-        auto vertex_buffer = mesh_manager.m_vertex_buffer
-                                 .create_buffer(mesh.full_vertices.size())
-                                 .buffer;
-
-        mesh_manager.m_meshes.emplace_back(
-            vertex_buffer, full_vertex_buffer, index_buffer,
-            real_material[mesh.material_index], mesh.indices.size(),
-            vertex_offset, first_index, mesh.vertices.size());
-
-        mesh_manager.m_staging_buffer_manager->fill_buffer<Vertex3D>(
-            mesh.vertices, *vertex_buffer, vertex_offset);
-
-        mesh_manager.m_staging_buffer_manager->fill_buffer<FullVertex3D>(
-            mesh.full_vertices, *full_vertex_buffer, vertex_offset);
-
-        mesh_manager.m_staging_buffer_manager->fill_buffer<uint32_t>(
-            mesh.indices, *index_buffer, first_index);
+        mesh_manager.add_mesh(mesh.full_vertices, mesh.indices,
+                              real_material[mesh.material_index]);
     }
 }
 } // namespace vw::Model
