@@ -18,6 +18,10 @@ class MeshManager {
 
     void read_file(const std::filesystem::path &path);
 
+    const Mesh &add_mesh(std::span<const FullVertex3D> vertices,
+                         std::span<const uint32_t> indices,
+                         Material::Material material);
+
     [[nodiscard]] vk::CommandBuffer fill_command_buffer();
 
     [[nodiscard]] const std::vector<Mesh> &meshes() const noexcept;
