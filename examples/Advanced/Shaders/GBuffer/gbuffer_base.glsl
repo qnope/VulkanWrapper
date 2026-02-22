@@ -56,6 +56,7 @@ layout(push_constant, scalar) uniform PushConstants {
     mat4 model;
     uint64_t materialAddress;
     uint frame_count;
+    vec3 camera_pos;
 };
 
 // Forward declaration - implemented by material BRDF include
@@ -67,7 +68,13 @@ void main()
     _brdf_uv = texCoord;
 
     vec3 N = normalize(normal);
-    vec3 brdf = evaluate_brdf(N, materialAddress, vec3(0), vec3(0));
+
+    // wi = incoming light direction (towards the sun)
+    // wo = outgoing light direction (towards the camera)
+    vec3 wi = normalize(-atmo_star_direction(sky));
+    vec3 wo = normalize(camera_pos - worldPosition);
+
+    vec3 brdf = evaluate_brdf(N, materialAddress, wi, wo);
 
     outColor = vec4(brdf * ATMO_PI, 1.0);
     outNormal = normal;

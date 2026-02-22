@@ -102,7 +102,8 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
             const vw::Buffer<UBOType, true, vw::UniformBufferUsage>
                 &uniform_buffer,
             uint32_t frame_count,
-            const vw::SkyParameters &sky_params) {
+            const vw::SkyParameters &sky_params,
+            glm::vec3 camera_pos) {
 
         constexpr auto usageFlags = vk::ImageUsageFlagBits::eColorAttachment |
                                     vk::ImageUsageFlagBits::eInputAttachment |
@@ -289,13 +290,17 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
                                            *texture_ds, nullptr);
                 }
 
-                // Push frame_count for fragment shader
+                // Push frame_count and camera_pos for fragment shader
+                struct {
+                    uint32_t frame_count;
+                    glm::vec3 camera_pos;
+                } extra_push{frame_count, camera_pos};
                 cmd.pushConstants(
                     pipeline->layout().handle(),
                     vk::ShaderStageFlagBits::eVertex |
                         vk::ShaderStageFlagBits::eFragment,
                     sizeof(vw::Model::MeshPushConstants),
-                    sizeof(uint32_t), &frame_count);
+                    sizeof(extra_push), &extra_push);
             }
 
             auto pipeline = m_mesh_renderer->pipeline_for(material_type);
@@ -350,7 +355,7 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
                                vk::ShaderStageFlagBits::eFragment)
                 .setOffset(0)
                 .setSize(sizeof(vw::Model::MeshPushConstants) +
-                         sizeof(uint32_t));
+                         sizeof(uint32_t) + sizeof(glm::vec3));
 
         auto renderer = std::make_shared<vw::MeshRenderer>();
 

@@ -61,10 +61,14 @@ void main() {
 
     _brdf_uv = v.uv;
 
+    // wi = incoming light direction (towards the camera/ray origin)
+    // wo = outgoing light direction (towards the sun)
+    vec3 wi = -gl_WorldRayDirectionEXT;
+    vec3 wo = normalize(-atmo_star_direction(sky));
+
     // Lambertian BRDF at bounce surface
     vec3 bounce_radiance =
-        evaluate_brdf(world_normal, v.material_address,
-                      vec3(0), vec3(0))
+        evaluate_brdf(world_normal, v.material_address, wi, wo)
         * luminance_from_sun(sky, world_hit_pos, world_normal, tlas);
 
     payload = bounce_radiance;
