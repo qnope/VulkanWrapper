@@ -20,7 +20,8 @@ ToneMappingPass::ToneMappingPass(std::shared_ptr<Device> device,
 void ToneMappingPass::execute(vk::CommandBuffer cmd,
                               Barrier::ResourceTracker &tracker,
                               std::shared_ptr<const ImageView> output_view,
-                              std::shared_ptr<const ImageView> hdr_view,
+                              std::shared_ptr<const ImageView> sky_view,
+                              std::shared_ptr<const ImageView> direct_light_view,
                               std::shared_ptr<const ImageView> indirect_view,
                               float indirect_intensity,
                               ToneMappingOperator tone_operator, float exposure,
@@ -35,11 +36,15 @@ void ToneMappingPass::execute(vk::CommandBuffer cmd,
     // Create descriptor set with HDR input images
     DescriptorAllocator descriptor_allocator;
     descriptor_allocator.add_combined_image(
-        0, CombinedImage(hdr_view, m_sampler),
+        0, CombinedImage(sky_view, m_sampler),
         vk::PipelineStageFlagBits2::eFragmentShader,
         vk::AccessFlagBits2::eShaderRead);
     descriptor_allocator.add_combined_image(
-        1, CombinedImage(effective_indirect_view, m_sampler),
+        1, CombinedImage(direct_light_view, m_sampler),
+        vk::PipelineStageFlagBits2::eFragmentShader,
+        vk::AccessFlagBits2::eShaderRead);
+    descriptor_allocator.add_combined_image(
+        2, CombinedImage(effective_indirect_view, m_sampler),
         vk::PipelineStageFlagBits2::eFragmentShader,
         vk::AccessFlagBits2::eShaderRead);
 
@@ -85,7 +90,8 @@ std::shared_ptr<const ImageView>
 ToneMappingPass::execute(vk::CommandBuffer cmd,
                          Barrier::ResourceTracker &tracker, Width width,
                          Height height, size_t frame_index,
-                         std::shared_ptr<const ImageView> hdr_view,
+                         std::shared_ptr<const ImageView> sky_view,
+                         std::shared_ptr<const ImageView> direct_light_view,
                          std::shared_ptr<const ImageView> indirect_view,
                          float indirect_intensity,
                          ToneMappingOperator tone_operator, float exposure,
@@ -98,9 +104,9 @@ ToneMappingPass::execute(vk::CommandBuffer cmd,
             vk::ImageUsageFlagBits::eSampled |
             vk::ImageUsageFlagBits::eTransferSrc);
 
-    execute(cmd, tracker, cached.view, hdr_view, indirect_view,
-            indirect_intensity, tone_operator, exposure, white_point,
-            luminance_scale);
+    execute(cmd, tracker, cached.view, sky_view, direct_light_view,
+            indirect_view, indirect_intensity, tone_operator, exposure,
+            white_point, luminance_scale);
 
     return cached.view;
 }
@@ -117,13 +123,15 @@ ToneMappingPass::compile_shaders(const std::filesystem::path &shader_dir) {
 
 DescriptorPool
 ToneMappingPass::create_descriptor_pool(CompiledShaders shaders) {
-    // Create descriptor layout for HDR input textures (direct + indirect)
+    // Create descriptor layout for HDR input textures (sky + direct + indirect)
     m_descriptor_layout =
         DescriptorSetLayoutBuilder(m_device)
             .with_combined_image(vk::ShaderStageFlagBits::eFragment,
-                                 1) // binding 0: direct light (HDR buffer)
+                                 1) // binding 0: sky (from SkyPass)
             .with_combined_image(vk::ShaderStageFlagBits::eFragment,
-                                 1) // binding 1: indirect light
+                                 1) // binding 1: direct light
+            .with_combined_image(vk::ShaderStageFlagBits::eFragment,
+                                 1) // binding 2: indirect light
             .build();
 
     std::vector<vk::PushConstantRange> push_constants = {

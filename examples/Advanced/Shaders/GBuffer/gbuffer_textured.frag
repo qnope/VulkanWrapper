@@ -3,6 +3,7 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 #extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_ray_query : require
 #extension GL_GOOGLE_include_directive : require
 
 layout(location = 0) in vec3 normal;
@@ -16,12 +17,28 @@ layout(location = 1) out vec3 outNormal;
 layout(location = 2) out vec3 outTangeant;
 layout(location = 3) out vec3 outBiTangeant;
 layout(location = 4) out vec4 outPosition;
-layout(location = 5) out vec4 outIndirectRay;
+layout(location = 5) out vec4 outDirectLight;
+layout(location = 6) out vec4 outIndirectRay;
 
 // Random sampling with Cranley-Patterson rotation
 #define RANDOM_XI_BUFFER_BINDING 1
 #define RANDOM_NOISE_TEXTURE_BINDING 2
 #include "random.glsl"
+
+// Atmosphere parameters (must be before UBO declaration)
+#include "atmosphere_params.glsl"
+
+// Sky parameters UBO
+layout(set = 0, binding = 3, std140) uniform SkyParamsUBO {
+    SkyParameters sky;
+};
+
+// TLAS for shadow ray queries
+layout(set = 0, binding = 4) uniform accelerationStructureEXT topLevelAS;
+
+// Atmosphere scattering and sun lighting (must be after SkyParameters is accessible)
+#include "atmosphere_scattering.glsl"
+#include "sun_lighting_computation.glsl"
 
 // Buffer reference for textured material data
 layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer TexturedMaterialRef {
@@ -43,15 +60,20 @@ void main()
     TexturedMaterialRef mat = TexturedMaterialRef(materialAddress);
     uint texIdx = mat.diffuse_texture_index;
     float mipmapLevel = textureQueryLod(sampler2D(textures[nonuniformEXT(texIdx)], globalSampler), texCoord).x;
-    outColor = textureLod(sampler2D(textures[nonuniformEXT(texIdx)], globalSampler), texCoord, mipmapLevel);
+    vec4 texColor = textureLod(sampler2D(textures[nonuniformEXT(texIdx)], globalSampler), texCoord, mipmapLevel);
+    vec3 albedo = texColor.rgb;
+    outColor = texColor;
     outNormal = normal;
     outTangeant = tangeant;
     outBiTangeant = biTangeant;
     outPosition = vec4(worldPosition, 1.0);
 
+    // Compute direct sun lighting with shadow rays
+    vec3 N = normalize(normal);
+    outDirectLight = vec4((albedo / ATMO_PI) * luminance_from_sun(sky, worldPosition, N, topLevelAS), 1.0);
+
     ivec2 pixel = ivec2(gl_FragCoord.xy);
     vec2 xi = get_sample(frame_count, pixel);
-    vec3 N = normalize(normal);
     vec3 T = normalize(tangeant);
     vec3 B = normalize(biTangeant);
     vec3 ray_dir = sample_hemisphere_cosine(N, T, B, xi);

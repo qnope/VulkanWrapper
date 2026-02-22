@@ -3,6 +3,5 @@ target_sources(VulkanWrapperCoreLibrary PUBLIC
     SkyParameters.h
     SkyPass.h
     Subpass.h
-    SunLightPass.h
     ToneMappingPass.h
 )

@@ -90,7 +90,8 @@ class ToneMappingPass : public ScreenSpacePass<ToneMappingPassSlot> {
      * @param cmd Command buffer to record into
      * @param tracker Resource tracker for barrier management
      * @param output_view Output image view to render into
-     * @param hdr_view HDR radiance buffer (direct light from lighting passes)
+     * @param sky_view Sky radiance buffer (from SkyPass)
+     * @param direct_light_view Direct light buffer (from DirectLightPass)
      * @param indirect_view Optional indirect light buffer (nullptr = no indirect)
      * @param indirect_intensity Multiplier for indirect light (0.0 = disabled)
      * @param tone_operator Tone mapping operator to use
@@ -100,7 +101,8 @@ class ToneMappingPass : public ScreenSpacePass<ToneMappingPassSlot> {
      */
     void execute(vk::CommandBuffer cmd, Barrier::ResourceTracker &tracker,
                  std::shared_ptr<const ImageView> output_view,
-                 std::shared_ptr<const ImageView> hdr_view,
+                 std::shared_ptr<const ImageView> sky_view,
+                 std::shared_ptr<const ImageView> direct_light_view,
                  std::shared_ptr<const ImageView> indirect_view = nullptr,
                  float indirect_intensity = 0.0f,
                  ToneMappingOperator tone_operator = ToneMappingOperator::ACES,
@@ -115,7 +117,8 @@ class ToneMappingPass : public ScreenSpacePass<ToneMappingPassSlot> {
      * @param width Output width
      * @param height Output height
      * @param frame_index Frame index for multi-buffering
-     * @param hdr_view HDR radiance buffer (direct light)
+     * @param sky_view Sky radiance buffer (from SkyPass)
+     * @param direct_light_view Direct light buffer (from DirectLightPass)
      * @param indirect_view Optional indirect light buffer (nullptr = no indirect)
      * @param indirect_intensity Multiplier for indirect light (0.0 = disabled)
      * @param tone_operator Tone mapping operator
@@ -127,7 +130,8 @@ class ToneMappingPass : public ScreenSpacePass<ToneMappingPassSlot> {
     std::shared_ptr<const ImageView>
     execute(vk::CommandBuffer cmd, Barrier::ResourceTracker &tracker,
             Width width, Height height, size_t frame_index,
-            std::shared_ptr<const ImageView> hdr_view,
+            std::shared_ptr<const ImageView> sky_view,
+            std::shared_ptr<const ImageView> direct_light_view,
             std::shared_ptr<const ImageView> indirect_view = nullptr,
             float indirect_intensity = 0.0f,
             ToneMappingOperator tone_operator = ToneMappingOperator::ACES,
