@@ -40,11 +40,6 @@ layout(set = 0, binding = 4) uniform accelerationStructureEXT topLevelAS;
 #include "atmosphere_scattering.glsl"
 #include "sun_lighting_computation.glsl"
 
-// Buffer reference for textured material data
-layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer TexturedMaterialRef {
-    uint diffuse_texture_index;
-};
-
 layout(push_constant, scalar) uniform PushConstants {
     mat4 model;
     uint64_t materialAddress;
@@ -55,12 +50,15 @@ layout(push_constant, scalar) uniform PushConstants {
 layout(set = 1, binding = 0) uniform sampler globalSampler;
 layout(set = 1, binding = 1) uniform texture2D textures[];
 
+#define BRDF_SAMPLER globalSampler
+#define BRDF_HAS_QUERY_LOD
+vec2 _brdf_uv;
+#include "Material/brdf_textured.glsl"
+
 void main()
 {
-    TexturedMaterialRef mat = TexturedMaterialRef(materialAddress);
-    uint texIdx = mat.diffuse_texture_index;
-    float mipmapLevel = textureQueryLod(sampler2D(textures[nonuniformEXT(texIdx)], globalSampler), texCoord).x;
-    vec4 texColor = textureLod(sampler2D(textures[nonuniformEXT(texIdx)], globalSampler), texCoord, mipmapLevel);
+    _brdf_uv = texCoord;
+    vec4 texColor = brdf_get_albedo_alpha(materialAddress);
     vec3 albedo = texColor.rgb;
     outColor = texColor;
     outNormal = normal;
@@ -70,7 +68,7 @@ void main()
 
     // Compute direct sun lighting with shadow rays
     vec3 N = normalize(normal);
-    outDirectLight = vec4((albedo / ATMO_PI) * luminance_from_sun(sky, worldPosition, N, topLevelAS), 1.0);
+    outDirectLight = vec4(evaluate_brdf(N, materialAddress, vec3(0), vec3(0)) * luminance_from_sun(sky, worldPosition, N, topLevelAS), 1.0);
 
     ivec2 pixel = ivec2(gl_FragCoord.xy);
     vec2 xi = get_sample(frame_count, pixel);
