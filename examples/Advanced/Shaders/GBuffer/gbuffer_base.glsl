@@ -7,9 +7,7 @@
 #extension GL_EXT_ray_query : require
 #extension GL_GOOGLE_include_directive : require
 
-#ifdef GBUFFER_TEXTURED
 #extension GL_EXT_nonuniform_qualifier : require
-#endif
 
 layout(location = 0) in vec3 normal;
 layout(location = 1) in vec3 tangeant;
@@ -46,7 +44,6 @@ layout(set = 0, binding = 4) uniform accelerationStructureEXT topLevelAS;
 #include "atmosphere_scattering.glsl"
 #include "sun_lighting_computation.glsl"
 
-#ifdef GBUFFER_TEXTURED
 // Bindless texture descriptor set
 layout(set = 1, binding = 0) uniform sampler globalSampler;
 layout(set = 1, binding = 1) uniform texture2D textures[];
@@ -54,7 +51,6 @@ layout(set = 1, binding = 1) uniform texture2D textures[];
 #define BRDF_SAMPLER globalSampler
 #define BRDF_HAS_QUERY_LOD
 vec2 _brdf_uv;
-#endif
 
 layout(push_constant, scalar) uniform PushConstants {
     mat4 model;
@@ -68,9 +64,7 @@ vec3 evaluate_brdf(vec3 normal, uint64_t material_address,
 
 void main()
 {
-#ifdef GBUFFER_TEXTURED
     _brdf_uv = texCoord;
-#endif
 
     vec3 N = normalize(normal);
     vec3 brdf = evaluate_brdf(N, materialAddress, vec3(0), vec3(0));
