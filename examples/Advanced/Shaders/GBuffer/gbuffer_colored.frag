@@ -39,10 +39,7 @@ layout(set = 0, binding = 4) uniform accelerationStructureEXT topLevelAS;
 #include "atmosphere_scattering.glsl"
 #include "sun_lighting_computation.glsl"
 
-// Buffer reference for colored material data
-layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer ColoredMaterialRef {
-    vec3 color;
-};
+#include "Material/brdf_colored.glsl"
 
 layout(push_constant, scalar) uniform PushConstants {
     mat4 model;
@@ -52,8 +49,7 @@ layout(push_constant, scalar) uniform PushConstants {
 
 void main()
 {
-    ColoredMaterialRef mat = ColoredMaterialRef(materialAddress);
-    vec3 albedo = mat.color;
+    vec3 albedo = brdf_get_albedo(materialAddress);
     outColor = vec4(albedo, 1.0);
     outNormal = normal;
     outTangeant = tangeant;
@@ -62,7 +58,7 @@ void main()
 
     // Compute direct sun lighting with shadow rays
     vec3 N = normalize(normal);
-    outDirectLight = vec4((albedo / ATMO_PI) * luminance_from_sun(sky, worldPosition, N, topLevelAS), 1.0);
+    outDirectLight = vec4(evaluate_brdf(N, materialAddress, vec3(0), vec3(0)) * luminance_from_sun(sky, worldPosition, N, topLevelAS), 1.0);
 
     ivec2 pixel = ivec2(gl_FragCoord.xy);
     vec2 xi = get_sample(frame_count, pixel);

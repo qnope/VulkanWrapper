@@ -24,13 +24,10 @@ layout(push_constant) uniform PushConstants {
 
 layout(set = 0, binding = 0) uniform accelerationStructureEXT tlas;
 
+#include "Material/brdf_colored.glsl"
+
 layout(location = 0) rayPayloadInEXT vec3 payload;
 hitAttributeEXT vec2 bary;
-
-// Buffer reference for colored material data
-layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer ColoredMaterialRef {
-    vec3 color;
-};
 
 void main() {
     // Interpolate vertex attributes at the hit point
@@ -50,14 +47,11 @@ void main() {
     }
     vec3 world_normal = raw_normal / normal_len;
 
-    // Read albedo from colored material buffer reference
-    vec3 hit_albedo = ColoredMaterialRef(v.material_address).color;
-
-    // Lambertian BRDF at bounce surface:
-    // L_bounce = (hit_albedo / PI) * L_sun * solid_angle * NdotL
-    vec3 bounce_radiance = (hit_albedo / ATMO_PI)
-                         * luminance_from_sun(sky, world_hit_pos,
-                                              world_normal, tlas);
+    // Lambertian BRDF at bounce surface
+    vec3 bounce_radiance =
+        evaluate_brdf(world_normal, v.material_address,
+                      vec3(0), vec3(0))
+        * luminance_from_sun(sky, world_hit_pos, world_normal, tlas);
 
     payload = bounce_radiance;
 }

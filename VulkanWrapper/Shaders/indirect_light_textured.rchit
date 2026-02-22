@@ -29,13 +29,12 @@ layout(set = 0, binding = 0) uniform accelerationStructureEXT tlas;
 layout(set = 1, binding = 0) uniform sampler tex_sampler;
 layout(set = 1, binding = 1) uniform texture2D textures[];
 
+#define BRDF_SAMPLER tex_sampler
+vec2 _brdf_uv;
+#include "Material/brdf_textured.glsl"
+
 layout(location = 0) rayPayloadInEXT vec3 payload;
 hitAttributeEXT vec2 bary;
-
-// Buffer reference for textured material data
-layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer TexturedMaterialRef {
-    uint diffuse_texture_index;
-};
 
 void main() {
     // Interpolate vertex attributes at the hit point
@@ -55,17 +54,13 @@ void main() {
     }
     vec3 world_normal = raw_normal / normal_len;
 
-    uint tex_idx =
-        TexturedMaterialRef(v.material_address).diffuse_texture_index;
-    // lod level can be replaced later by bounce number
-    vec3 hit_albedo = textureLod(
-        sampler2D(textures[nonuniformEXT(tex_idx)], tex_sampler), v.uv, 1).rgb;
+    _brdf_uv = v.uv;
 
-    // Lambertian BRDF at bounce surface:
-    // L_bounce = (hit_albedo / PI) * L_sun * solid_angle * NdotL
-    vec3 bounce_radiance = (hit_albedo / ATMO_PI)
-                         * luminance_from_sun(sky, world_hit_pos,
-                                              world_normal, tlas);
+    // Lambertian BRDF at bounce surface
+    vec3 bounce_radiance =
+        evaluate_brdf(world_normal, v.material_address,
+                      vec3(0), vec3(0))
+        * luminance_from_sun(sky, world_hit_pos, world_normal, tlas);
 
     payload = bounce_radiance;
 }
