@@ -2,7 +2,7 @@
 add_executable(Main main.cpp
     RenderPassInformation.h
     ZPass.h
-    ColorPass.h
+    DirectLightPass.h
     AmbientOcclusionPass.h
     DeferredRenderingManager.h
 )
@@ -11,8 +11,8 @@ target_link_libraries(Main PRIVATE App)
 target_precompile_headers(Main REUSE_FROM VulkanWrapperCoreLibrary)
 
 VwCompileShader(Main Shaders/GBuffer/gbuffer.vert Shaders/GBuffer/gbuffer.spv)
-VwCompileShader(Main Shaders/GBuffer/gbuffer_colored.frag Shaders/GBuffer/gbuffer_colored.spv -I${CMAKE_CURRENT_SOURCE_DIR}/../../VulkanWrapper/Shaders/include)
-VwCompileShader(Main Shaders/GBuffer/gbuffer_textured.frag Shaders/GBuffer/gbuffer_textured.spv -I${CMAKE_CURRENT_SOURCE_DIR}/../../VulkanWrapper/Shaders/include)
+VwCompileShader(Main Shaders/GBuffer/gbuffer_colored.frag Shaders/GBuffer/gbuffer_colored.spv --target-env vulkan1.2 -I${CMAKE_CURRENT_SOURCE_DIR}/../../VulkanWrapper/Shaders/include)
+VwCompileShader(Main Shaders/GBuffer/gbuffer_textured.frag Shaders/GBuffer/gbuffer_textured.spv --target-env vulkan1.2 -I${CMAKE_CURRENT_SOURCE_DIR}/../../VulkanWrapper/Shaders/include)
 VwCompileShader(Main Shaders/GBuffer/zpass.vert Shaders/GBuffer/zpass.spv)
 VwCompileShader(Main Shaders/quad.vert Shaders/quad.spv)
 

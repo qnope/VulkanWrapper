@@ -120,7 +120,6 @@ add_executable(RenderPassTests
     RenderPass/ScreenSpacePassTests.cpp
     RenderPass/ToneMappingPassTests.cpp
     RenderPass/SkyPassTests.cpp
-    RenderPass/SunLightPassTests.cpp
     RenderPass/IndirectLightPassTests.cpp
     RenderPass/IndirectLightPassSunBounceTests.cpp
 )

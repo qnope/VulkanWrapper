@@ -1,7 +1,8 @@
 #version 450
 
-layout(set = 0, binding = 0) uniform sampler2D hdr_buffer;      // direct light
-layout(set = 0, binding = 1) uniform sampler2D indirect_buffer; // indirect light
+layout(set = 0, binding = 0) uniform sampler2D sky_buffer;          // sky radiance
+layout(set = 0, binding = 1) uniform sampler2D direct_light_buffer; // direct light
+layout(set = 0, binding = 2) uniform sampler2D indirect_buffer;     // indirect light
 
 layout(location = 0) in vec2 in_uv;
 layout(location = 0) out vec4 out_color;
@@ -95,12 +96,15 @@ void main() {
     // UVs are already in [0, 1] from fullscreen vertex shader
     vec2 uv = in_uv;
 
-    // Sample HDR buffer (direct light)
-    vec3 hdr_color = texture(hdr_buffer, uv).rgb;
+    // Sample sky radiance buffer
+    vec3 sky_color = texture(sky_buffer, uv).rgb;
+
+    // Sample direct light buffer
+    vec3 direct_light_color = texture(direct_light_buffer, uv).rgb;
 
     // Sample indirect light buffer and add with intensity multiplier
     vec3 indirect_color = texture(indirect_buffer, uv).rgb;
-    vec3 combined = hdr_color + indirect_color * push.indirect_intensity;
+    vec3 combined = sky_color + direct_light_color + indirect_color * push.indirect_intensity;
 
     combined /= push.luminance_scale;
 

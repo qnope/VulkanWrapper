@@ -6,6 +6,7 @@
 #include "VulkanWrapper/Descriptors/DescriptorSet.h"
 #include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
 #include "VulkanWrapper/Image/ImageView.h"
+#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
 #include "VulkanWrapper/Memory/Allocator.h"
 #include "VulkanWrapper/Memory/Buffer.h"
 #include "VulkanWrapper/Model/Material/BindlessMaterialManager.h"
@@ -16,64 +17,73 @@
 #include "VulkanWrapper/Pipeline/ShaderModule.h"
 #include "VulkanWrapper/Random/NoiseTexture.h"
 #include "VulkanWrapper/Random/RandomSamplingBuffer.h"
+#include "VulkanWrapper/RenderPass/SkyParameters.h"
 #include "VulkanWrapper/RenderPass/Subpass.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include "VulkanWrapper/Utils/Error.h"
 #include <span>
 
-enum class ColorPassSlot {
-    Color,
+enum class DirectLightPassSlot {
+    Albedo,
     Normal,
     Tangent,
     Bitangent,
     Position,
+    DirectLight,
     IndirectRay
 };
 
 /**
- * @brief Output structure for the ColorPass G-Buffer
+ * @brief Output structure for the DirectLightPass G-Buffer
  */
-struct ColorPassOutput {
-    std::shared_ptr<const vw::ImageView> color;
+struct DirectLightPassOutput {
+    std::shared_ptr<const vw::ImageView> albedo;
     std::shared_ptr<const vw::ImageView> normal;
     std::shared_ptr<const vw::ImageView> tangent;
     std::shared_ptr<const vw::ImageView> bitangent;
     std::shared_ptr<const vw::ImageView> position;
+    std::shared_ptr<const vw::ImageView> direct_light;
     std::shared_ptr<const vw::ImageView> indirect_ray;
 };
 
 /**
- * @brief Functional G-Buffer fill pass with lazy image allocation and buffer
- * reference materials
+ * @brief G-Buffer fill pass with per-fragment direct sun lighting
  *
  * This pass lazily allocates its G-Buffer images on first execute() call.
- * Images are cached by (width, height, frame_index) and reused on subsequent
- * calls.
+ * It computes direct sun lighting per-fragment using ray queries for shadows,
+ * producing a DirectLight attachment as part of the G-Buffer.
  */
-class ColorPass : public vw::Subpass<ColorPassSlot> {
+class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
   public:
-    static constexpr std::array<vk::Format, 6> default_color_formats = {
-        vk::Format::eR8G8B8A8Unorm,      // color
+    static constexpr std::array<vk::Format, 7> default_color_formats = {
+        vk::Format::eR8G8B8A8Unorm,      // albedo
         vk::Format::eR32G32B32A32Sfloat,  // normal
         vk::Format::eR32G32B32A32Sfloat,  // tangent
         vk::Format::eR32G32B32A32Sfloat,  // bitangent
         vk::Format::eR32G32B32A32Sfloat,  // position
+        vk::Format::eR16G16B16A16Sfloat,  // direct_light
         vk::Format::eR32G32B32A32Sfloat   // indirect_ray
     };
 
     using FragmentShaderMap =
         std::unordered_map<vw::Model::Material::MaterialTypeTag, std::string>;
 
-    ColorPass(std::shared_ptr<vw::Device> device,
-              std::shared_ptr<vw::Allocator> allocator,
-              vw::Model::Material::BindlessMaterialManager &material_manager,
-              FragmentShaderMap fragment_shaders,
-              vk::Format depth_format = vk::Format::eD32Sfloat,
-              std::span<const vk::Format> color_formats = default_color_formats)
+    DirectLightPass(
+        std::shared_ptr<vw::Device> device,
+        std::shared_ptr<vw::Allocator> allocator,
+        vw::Model::Material::BindlessMaterialManager &material_manager,
+        FragmentShaderMap fragment_shaders,
+        vk::AccelerationStructureKHR tlas,
+        vk::Format depth_format = vk::Format::eD32Sfloat,
+        std::span<const vk::Format> color_formats = default_color_formats)
         : Subpass(std::move(device), std::move(allocator))
         , m_color_formats(color_formats.begin(), color_formats.end())
         , m_material_manager(material_manager)
         , m_fragment_shaders(std::move(fragment_shaders))
+        , m_tlas(tlas)
+        , m_sky_params_buffer(vw::create_buffer<vw::SkyParametersGPU, true,
+                                                vw::UniformBufferUsage>(
+              *m_allocator, 1))
         , m_samples_buffer(
               vw::create_hemisphere_samples_buffer(*m_allocator))
         , m_noise_texture(std::make_unique<vw::NoiseTexture>(
@@ -81,47 +91,56 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
         , m_descriptor_pool(create_descriptor_pool(depth_format)) {}
 
     /**
-     * @brief Execute the G-Buffer fill pass
+     * @brief Execute the G-Buffer fill pass with direct sun lighting
      */
     template <typename UBOType>
-    ColorPassOutput
+    DirectLightPassOutput
     execute(vk::CommandBuffer cmd, vw::Barrier::ResourceTracker &tracker,
             vw::Width width, vw::Height height, size_t frame_index,
             const vw::Model::Scene &scene,
             std::shared_ptr<const vw::ImageView> depth_view,
             const vw::Buffer<UBOType, true, vw::UniformBufferUsage>
                 &uniform_buffer,
-            uint32_t frame_count) {
+            uint32_t frame_count,
+            const vw::SkyParameters &sky_params) {
 
         constexpr auto usageFlags = vk::ImageUsageFlagBits::eColorAttachment |
                                     vk::ImageUsageFlagBits::eInputAttachment |
                                     vk::ImageUsageFlagBits::eSampled |
                                     vk::ImageUsageFlagBits::eTransferSrc;
 
-        // Lazy allocation of 6 G-Buffer images
-        const auto &color =
-            get_or_create_image(ColorPassSlot::Color, width, height,
+        // Lazy allocation of 7 G-Buffer images
+        const auto &albedo =
+            get_or_create_image(DirectLightPassSlot::Albedo, width, height,
                                 frame_index, m_color_formats[0], usageFlags);
         const auto &normal =
-            get_or_create_image(ColorPassSlot::Normal, width, height,
+            get_or_create_image(DirectLightPassSlot::Normal, width, height,
                                 frame_index, m_color_formats[1], usageFlags);
         const auto &tangent =
-            get_or_create_image(ColorPassSlot::Tangent, width, height,
+            get_or_create_image(DirectLightPassSlot::Tangent, width, height,
                                 frame_index, m_color_formats[2], usageFlags);
         const auto &bitangent =
-            get_or_create_image(ColorPassSlot::Bitangent, width, height,
+            get_or_create_image(DirectLightPassSlot::Bitangent, width, height,
                                 frame_index, m_color_formats[3], usageFlags);
         const auto &position =
-            get_or_create_image(ColorPassSlot::Position, width, height,
+            get_or_create_image(DirectLightPassSlot::Position, width, height,
                                 frame_index, m_color_formats[4], usageFlags);
-        const auto &indirect_ray =
-            get_or_create_image(ColorPassSlot::IndirectRay, width, height,
+        const auto &direct_light =
+            get_or_create_image(DirectLightPassSlot::DirectLight, width, height,
                                 frame_index, m_color_formats[5], usageFlags);
+        const auto &indirect_ray =
+            get_or_create_image(DirectLightPassSlot::IndirectRay, width, height,
+                                frame_index, m_color_formats[6], usageFlags);
 
         vk::Extent2D extent{static_cast<uint32_t>(width),
                             static_cast<uint32_t>(height)};
 
-        // Create descriptor set with uniform buffer + random sampling
+        // Write sky parameters to UBO
+        auto sky_gpu = sky_params.to_gpu();
+        m_sky_params_buffer.write(std::span(&sky_gpu, 1), 0);
+
+        // Create descriptor set with uniform buffer + random sampling +
+        // sky UBO + TLAS
         vw::DescriptorAllocator descriptor_allocator;
         descriptor_allocator.add_uniform_buffer(
             0, uniform_buffer.handle(), 0, uniform_buffer.size_bytes(),
@@ -142,6 +161,18 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
             vk::PipelineStageFlagBits2::eFragmentShader,
             vk::AccessFlagBits2::eShaderRead);
 
+        // binding 3: sky parameters UBO
+        descriptor_allocator.add_uniform_buffer(
+            3, m_sky_params_buffer.handle(), 0,
+            m_sky_params_buffer.size_bytes(),
+            vk::PipelineStageFlagBits2::eFragmentShader,
+            vk::AccessFlagBits2::eUniformRead);
+
+        // binding 4: TLAS for shadow ray queries
+        descriptor_allocator.add_acceleration_structure(
+            4, m_tlas, vk::PipelineStageFlagBits2::eFragmentShader,
+            vk::AccessFlagBits2::eAccelerationStructureReadKHR);
+
         auto descriptor_set =
             m_descriptor_pool.allocate_set(descriptor_allocator);
 
@@ -151,9 +182,9 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
         }
 
         // Request states for all output images
-        std::array<const vw::CachedImage *, 6> cached_images = {
-            &color, &normal, &tangent, &bitangent, &position,
-            &indirect_ray};
+        std::array<const vw::CachedImage *, 7> cached_images = {
+            &albedo, &normal, &tangent, &bitangent, &position,
+            &direct_light, &indirect_ray};
 
         for (const auto *cached : cached_images) {
             tracker.request(vw::Barrier::ImageState{
@@ -185,10 +216,9 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
         std::vector<vk::RenderingAttachmentInfo> color_attachments;
         for (size_t i = 0; i < cached_images.size(); ++i) {
             const auto *cached = cached_images[i];
-            // IndirectRay (last) clears to (0,0,0,0) so w=0 marks
-            // invalid/sky pixels
+            // DirectLight and IndirectRay clear to (0,0,0,0)
             auto clear_value =
-                (i == cached_images.size() - 1)
+                (i >= 5)
                     ? vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f)
                     : vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f);
             color_attachments.push_back(
@@ -272,26 +302,32 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
 
         cmd.endRendering();
 
-        return ColorPassOutput{.color = color.view,
-                               .normal = normal.view,
-                               .tangent = tangent.view,
-                               .bitangent = bitangent.view,
-                               .position = position.view,
-                               .indirect_ray = indirect_ray.view};
+        return DirectLightPassOutput{.albedo = albedo.view,
+                                     .normal = normal.view,
+                                     .tangent = tangent.view,
+                                     .bitangent = bitangent.view,
+                                     .position = position.view,
+                                     .direct_light = direct_light.view,
+                                     .indirect_ray = indirect_ray.view};
     }
 
   private:
     vw::DescriptorPool create_descriptor_pool(vk::Format depth_format) {
-        // Create descriptor layout for uniform buffer + random sampling
+        // Create descriptor layout for uniform buffer + random sampling +
+        // sky UBO + TLAS
         m_descriptor_layout =
             vw::DescriptorSetLayoutBuilder(m_device)
                 .with_uniform_buffer(vk::ShaderStageFlagBits::eVertex |
                                          vk::ShaderStageFlagBits::eFragment,
-                                     1)
+                                     1) // binding 0: MVP UBO
                 .with_storage_buffer(vk::ShaderStageFlagBits::eFragment,
-                                     1)
+                                     1) // binding 1: random samples
                 .with_combined_image(vk::ShaderStageFlagBits::eFragment,
-                                     1)
+                                     1) // binding 2: noise texture
+                .with_uniform_buffer(vk::ShaderStageFlagBits::eFragment,
+                                     1) // binding 3: sky params UBO
+                .with_acceleration_structure(
+                    vk::ShaderStageFlagBits::eFragment) // binding 4: TLAS
                 .build();
 
         // Create mesh renderer with pipelines
@@ -358,6 +394,11 @@ class ColorPass : public vw::Subpass<ColorPassSlot> {
     std::vector<vk::Format> m_color_formats;
     vw::Model::Material::BindlessMaterialManager &m_material_manager;
     FragmentShaderMap m_fragment_shaders;
+    vk::AccelerationStructureKHR m_tlas;
+
+    // Sky parameters UBO
+    vw::Buffer<vw::SkyParametersGPU, true, vw::UniformBufferUsage>
+        m_sky_params_buffer;
 
     // Random sampling resources
     vw::DualRandomSampleBuffer m_samples_buffer;
