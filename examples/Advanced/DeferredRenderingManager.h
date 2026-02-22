@@ -110,6 +110,7 @@ class DeferredRenderingManager {
 
         // Read UBO data for matrices
         auto ubo_data = uniform_buffer.read_as_vector(0, 1)[0];
+        glm::vec3 camera_pos = glm::vec3(glm::inverse(ubo_data.view)[3]);
 
         // 1. Z-Pass: depth prepass
         auto depth_view = m_zpass->execute(cmd, tracker, width, height,
@@ -119,7 +120,7 @@ class DeferredRenderingManager {
         auto gbuffer = m_direct_light_pass->execute(
             cmd, tracker, width, height, frame_index, scene, depth_view,
             uniform_buffer, m_indirect_light_pass->get_frame_count(),
-            sky_params);
+            sky_params, camera_pos);
 
         // 3. AO Pass: progressive ambient occlusion (1 sample per frame)
         auto ao_view = m_ao_pass->execute(
