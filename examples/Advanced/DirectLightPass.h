@@ -256,6 +256,13 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
         // Bind uniform buffer descriptor set (set 0)
         auto uniform_descriptor_handle = descriptor_set.handle();
 
+        // Find the texture descriptor set to bind for all materials
+        std::optional<vk::DescriptorSet> texture_ds;
+        for (const auto &[tag, handler] : m_material_manager.handlers()) {
+            texture_ds = handler->additional_descriptor_set();
+            if (texture_ds) break;
+        }
+
         // Draw all mesh instances grouped by material type
         vw::Model::Material::MaterialTypeTag current_tag{0xFFFFFFFF};
 
@@ -275,14 +282,11 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
                                        pipeline->layout().handle(), 0,
                                        uniform_descriptor_handle, nullptr);
 
-                // Bind additional descriptor set if handler provides one
-                auto *h = m_material_manager.handler(material_type);
-                if (h) {
-                    if (auto ds = h->additional_descriptor_set()) {
-                        cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-                                               pipeline->layout().handle(), 1,
-                                               *ds, nullptr);
-                    }
+                // Always bind textures/sampler descriptor set (set 1)
+                if (texture_ds) {
+                    cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+                                           pipeline->layout().handle(), 1,
+                                           *texture_ds, nullptr);
                 }
 
                 // Push frame_count for fragment shader
@@ -350,6 +354,13 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
 
         auto renderer = std::make_shared<vw::MeshRenderer>();
 
+        // Find the shared texture descriptor set layout
+        std::shared_ptr<const vw::DescriptorSetLayout> texture_layout;
+        for (auto [tag, handler] : m_material_manager.handlers()) {
+            texture_layout = handler->additional_descriptor_set_layout();
+            if (texture_layout) break;
+        }
+
         for (auto [tag, handler] : m_material_manager.handlers()) {
             auto it = m_fragment_shaders.find(tag);
 
@@ -366,10 +377,9 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
                     .with_descriptor_set_layout(m_descriptor_layout)
                     .with_push_constant_range(push_constant_range);
 
-            auto extra_layout = handler->additional_descriptor_set_layout();
-            if (extra_layout) {
+            if (texture_layout) {
                 layout_builder.with_descriptor_set_layout(
-                    std::move(extra_layout));
+                    texture_layout);
             }
 
             vw::GraphicsPipelineBuilder builder(m_device,
