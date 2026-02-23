@@ -5,10 +5,11 @@
 #include "ZPass.h"
 #include <filesystem>
 #include <memory>
-#include <VulkanWrapper/Model/Material/ColoredMaterialHandler.h>
-#include <VulkanWrapper/Model/Material/TexturedMaterialHandler.h>
 #include <VulkanWrapper/Memory/Buffer.h>
 #include <VulkanWrapper/Model/Material/BindlessMaterialManager.h>
+#include <VulkanWrapper/Model/Material/ColoredMaterialHandler.h>
+#include <VulkanWrapper/Model/Material/EmissiveTexturedMaterialHandler.h>
+#include <VulkanWrapper/Model/Material/TexturedMaterialHandler.h>
 #include <VulkanWrapper/Model/Scene.h>
 #include <VulkanWrapper/RayTracing/RayTracedScene.h>
 #include <VulkanWrapper/RenderPass/IndirectLightPass.h>
@@ -56,6 +57,8 @@ class DeferredRenderingManager {
         DirectLightPass::FragmentShaderMap fragment_shaders{
             {vw::Model::Material::textured_material_tag,
              "Shaders/GBuffer/gbuffer_textured.spv"},
+            {vw::Model::Material::emissive_textured_material_tag,
+             "Shaders/GBuffer/gbuffer_emissive_textured.spv"},
             {vw::Model::Material::colored_material_tag,
              "Shaders/GBuffer/gbuffer_colored.spv"}};
         m_direct_light_pass = std::make_unique<DirectLightPass>(
@@ -71,8 +74,7 @@ class DeferredRenderingManager {
 
         m_indirect_light_pass = std::make_unique<vw::IndirectLightPass>(
             m_device, m_allocator, shader_dir, ray_traced_scene.tlas(),
-            ray_traced_scene.geometry_buffer(), material_manager,
-            light_format);
+            ray_traced_scene.geometry_buffer(), material_manager, light_format);
 
         m_tone_mapping_pass = std::make_unique<vw::ToneMappingPass>(
             m_device, m_allocator, shader_dir);
@@ -128,9 +130,9 @@ class DeferredRenderingManager {
             gbuffer.normal, gbuffer.tangent, gbuffer.bitangent, ao_radius);
 
         // 4. Sky Pass: render sky where depth == 1.0 (far plane)
-        auto sky_view = m_sky_pass->execute(
-            cmd, tracker, width, height, frame_index, depth_view, sky_params,
-            ubo_data.inverseViewProj);
+        auto sky_view = m_sky_pass->execute(cmd, tracker, width, height,
+                                            frame_index, depth_view, sky_params,
+                                            ubo_data.inverseViewProj);
 
         // 5. Indirect Light Pass: progressive indirect sky lighting with AO
         auto indirect_light_view = m_indirect_light_pass->execute(
@@ -140,9 +142,9 @@ class DeferredRenderingManager {
         // 6. Tone Mapping Pass: combine sky + direct + indirect, HDR to LDR
         return m_tone_mapping_pass->execute(
             cmd, tracker, width, height, frame_index,
-            sky_view,                // sky radiance (from SkyPass)
-            gbuffer.direct_light,    // direct sun light (from DirectLightPass)
-            indirect_light_view,     // indirect light
+            sky_view,             // sky radiance (from SkyPass)
+            gbuffer.direct_light, // direct sun light (from DirectLightPass)
+            indirect_light_view,  // indirect light
             1.0f, // indirect_intensity - physically correct addition
             vw::ToneMappingOperator::ACES,
             1.0f,      // exposure
@@ -169,8 +171,12 @@ class DeferredRenderingManager {
     const vw::SkyPass &sky_pass() const { return *m_sky_pass; }
 
     /** @brief Access the Indirect Light Pass for custom usage */
-    vw::IndirectLightPass &indirect_light_pass() { return *m_indirect_light_pass; }
-    const vw::IndirectLightPass &indirect_light_pass() const { return *m_indirect_light_pass; }
+    vw::IndirectLightPass &indirect_light_pass() {
+        return *m_indirect_light_pass;
+    }
+    const vw::IndirectLightPass &indirect_light_pass() const {
+        return *m_indirect_light_pass;
+    }
 
     /** @brief Access the Tone Mapping Pass for custom usage */
     vw::ToneMappingPass &tone_mapping_pass() { return *m_tone_mapping_pass; }
