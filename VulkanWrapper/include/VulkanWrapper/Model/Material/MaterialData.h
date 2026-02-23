@@ -14,4 +14,10 @@ struct ColoredMaterialData {
 };
 static_assert(sizeof(ColoredMaterialData) == 12);
 
+struct EmissiveTexturedMaterialData {
+    uint32_t diffuse_texture_index;
+    float intensity; // lumen / m2
+};
+static_assert(sizeof(EmissiveTexturedMaterialData) == 8);
+
 } // namespace vw::Model::Material

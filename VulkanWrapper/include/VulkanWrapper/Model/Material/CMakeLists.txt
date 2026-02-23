@@ -8,5 +8,6 @@ target_sources(VulkanWrapperCoreLibrary PUBLIC
     BindlessTextureManager.h
     BindlessMaterialManager.h
     TexturedMaterialHandler.h
+    EmissiveTexturedMaterialHandler.h
     ColoredMaterialHandler.h
 )

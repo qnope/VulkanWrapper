@@ -2,6 +2,7 @@
 
 #include "VulkanWrapper/Model/Importer.h"
 #include "VulkanWrapper/Model/Material/ColoredMaterialHandler.h"
+#include "VulkanWrapper/Model/Material/EmissiveTexturedMaterialHandler.h"
 #include "VulkanWrapper/Model/Material/TexturedMaterialHandler.h"
 
 namespace vw::Model {
@@ -16,6 +17,9 @@ MeshManager::MeshManager(std::shared_ptr<const Device> device,
     , m_material_manager{device, allocator, m_staging_buffer_manager} {
     m_material_manager.register_handler<Material::TexturedMaterialHandler>(
         m_material_manager.texture_manager());
+    m_material_manager
+        .register_handler<Material::EmissiveTexturedMaterialHandler>(
+            m_material_manager.texture_manager());
     m_material_manager.register_handler<Material::ColoredMaterialHandler>();
 }
 
