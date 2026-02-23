@@ -5,16 +5,19 @@
 #include "VulkanWrapper/Memory/BufferList.h"
 #include "VulkanWrapper/Memory/StagingBufferManager.h"
 #include "VulkanWrapper/Model/Material/BindlessMaterialManager.h"
+#include "VulkanWrapper/Model/Material/Material.h"
 #include "VulkanWrapper/Model/Mesh.h"
 
 namespace vw::Model {
 
 class MeshManager {
-    friend void import_model(const std::filesystem::path &, MeshManager &);
-
   public:
     MeshManager(std::shared_ptr<const Device> device,
                 std::shared_ptr<Allocator> allocator);
+
+    void add_mesh(std::vector<FullVertex3D> vertices,
+                  std::vector<uint32_t> indices,
+                  Material::Material material);
 
     void read_file(const std::filesystem::path &path);
 
