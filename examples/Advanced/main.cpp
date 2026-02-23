@@ -185,7 +185,7 @@ int main() {
                 std::cout << "Iteration: " << i++ << std::endl;
 
                 // Take screenshot after 32 samples and exit
-                if (renderingManager.ao_pass().get_frame_count() == 512) {
+                if (renderingManager.ao_pass().get_frame_count() == 32) {
                     // Record a new command buffer just for the screenshot
                     // Note: saveToFile ends the command buffer internally,
                     // so we don't use CommandBufferRecorder here
