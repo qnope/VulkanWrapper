@@ -167,3 +167,18 @@ target_link_libraries(RandomTests
 )
 
 gtest_discover_tests(RandomTests)
+
+# Model tests
+add_executable(MeshManagerTests
+    Model/MeshManagerTests.cpp
+)
+
+target_link_libraries(MeshManagerTests
+    PRIVATE
+    TestUtils
+    VulkanWrapperCoreLibrary
+    GTest::gtest
+    GTest::gtest_main
+)
+
+gtest_discover_tests(MeshManagerTests)
