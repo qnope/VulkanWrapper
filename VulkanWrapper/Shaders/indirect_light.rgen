@@ -62,6 +62,13 @@ void main() {
         }
         return;
     }
+    // Skip surfaces that don't generate indirect rays (e.g. emissive)
+    if (length(indirect_ray_data.xyz) < 0.5) {
+        if (frame_count == 0) {
+            imageStore(output_image, pixel, vec4(0.0, 0.0, 0.0, 1.0));
+        }
+        return;
+    }
     vec3 ray_dir = normalize(indirect_ray_data.xyz);
 
     // Trace ray in all hemisphere directions (both upward and downward).
