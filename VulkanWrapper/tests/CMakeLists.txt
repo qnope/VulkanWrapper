@@ -141,6 +141,7 @@ add_executable(MaterialTests
     Material/TexturedMaterialHandlerTests.cpp
     Material/BindlessTextureManagerTests.cpp
     Material/BindlessMaterialManagerTests.cpp
+    Material/EmissiveTexturedMaterialHandlerTests.cpp
 )
 
 target_link_libraries(MaterialTests

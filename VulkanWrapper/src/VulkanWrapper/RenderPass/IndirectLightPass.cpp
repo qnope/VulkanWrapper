@@ -81,6 +81,9 @@ void IndirectLightPass::create_pipeline_and_sbt(
         m_device, shader_dir / "indirect_light_colored.rchit");
     auto textured_hit = compiler.compile_file_to_module(
         m_device, shader_dir / "indirect_light_textured.rchit");
+    auto emissive_textured_hit = compiler.compile_file_to_module(
+        m_device,
+        shader_dir / "indirect_light_emissive_textured.rchit");
 
     // Build RT pipeline with per-material closest hit shaders
     m_pipeline = std::make_unique<rt::RayTracingPipeline>(
@@ -90,6 +93,7 @@ void IndirectLightPass::create_pipeline_and_sbt(
             .add_miss_shader(miss_shader)
             .add_closest_hit_shader(colored_hit)
             .add_closest_hit_shader(textured_hit)
+            .add_closest_hit_shader(emissive_textured_hit)
             .build());
 
     // Create shader binding table

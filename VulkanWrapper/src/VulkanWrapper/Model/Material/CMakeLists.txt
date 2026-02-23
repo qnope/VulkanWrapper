@@ -3,5 +3,6 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     BindlessTextureManager.cpp
     BindlessMaterialManager.cpp
     TexturedMaterialHandler.cpp
+    EmissiveTexturedMaterialHandler.cpp
     ColoredMaterialHandler.cpp
 )
