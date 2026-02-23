@@ -2,6 +2,7 @@
 
 #include <VulkanWrapper/3rd_party.h>
 #include <VulkanWrapper/Model/MeshManager.h>
+#include <VulkanWrapper/Model/Material/TexturedMaterialHandler.h>
 #include <VulkanWrapper/RayTracing/RayTracedScene.h>
 #include <vector>
 
@@ -63,7 +64,50 @@ load_plane_with_cube_scene(vw::Model::MeshManager &mesh_manager) {
     return config;
 }
 
-/// Load meshes for the Sponza scene with a cube in the courtyard.
+/// Add a single-sided textured quad in the Sponza corridor using
+/// stained.png.
+inline size_t
+add_stained_glass_quad(vw::Model::MeshManager &mesh_manager) {
+    using namespace vw::Model::Material;
+
+    auto *handler = static_cast<TexturedMaterialHandler *>(
+        mesh_manager.material_manager().handler(textured_material_tag));
+
+    auto material =
+        handler->create_material("../../../Images/stained.png");
+
+    // Single-sided quad at x=0, facing -X (toward camera)
+    std::vector<vw::FullVertex3D> vertices{
+        {{0.0f, 100.0f, -200.0f},
+         {-1.0f, 0.0f, 0.0f},
+         {0.0f, 0.0f, 1.0f},
+         {0.0f, 1.0f, 0.0f},
+         {0.0f, 0.0f}},
+        {{0.0f, 100.0f, 200.0f},
+         {-1.0f, 0.0f, 0.0f},
+         {0.0f, 0.0f, 1.0f},
+         {0.0f, 1.0f, 0.0f},
+         {1.0f, 0.0f}},
+        {{0.0f, 500.0f, 200.0f},
+         {-1.0f, 0.0f, 0.0f},
+         {0.0f, 0.0f, 1.0f},
+         {0.0f, 1.0f, 0.0f},
+         {1.0f, 1.0f}},
+        {{0.0f, 500.0f, -200.0f},
+         {-1.0f, 0.0f, 0.0f},
+         {0.0f, 0.0f, 1.0f},
+         {0.0f, 1.0f, 0.0f},
+         {0.0f, 1.0f}},
+    };
+
+    std::vector<uint32_t> indices{0, 1, 2, 0, 2, 3};
+
+    mesh_manager.add_mesh(std::move(vertices), std::move(indices),
+                          material);
+    return mesh_manager.meshes().size() - 1;
+}
+
+/// Load meshes for the Sponza scene with a stained-glass quad.
 /// Returns camera config and pending instances to be added after upload.
 inline SceneConfig
 load_sponza_scene(vw::Model::MeshManager &mesh_manager) {
@@ -78,20 +122,9 @@ load_sponza_scene(vw::Model::MeshManager &mesh_manager) {
         config.instances.push_back({i, glm::mat4(1.0f)});
     }
 
-    // Load the cube
-    mesh_manager.read_file("../../../Models/cube.obj");
-
-    // Create transform: scale by 200 and position in the center of Sponza
-    glm::mat4 cube_transform = glm::mat4(1.0f);
-    cube_transform =
-        glm::translate(cube_transform, glm::vec3(0.0f, 200.0f, 50.0f));
-    cube_transform = glm::scale(cube_transform, glm::vec3(200.0f));
-
-    // Record cube instances
-    for (size_t i = sponza_mesh_count; i < mesh_manager.meshes().size();
-         ++i) {
-        config.instances.push_back({i, cube_transform});
-    }
+    // Add stained-glass quad (geometry already in world space)
+    auto quad_index = add_stained_glass_quad(mesh_manager);
+    config.instances.push_back({quad_index, glm::mat4(1.0f)});
 
     // Camera positioned to view curtains and lion head in Sponza
     config.camera = CameraConfig{
