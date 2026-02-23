@@ -1,10 +1,11 @@
 #pragma once
 
-#include <VulkanWrapper/3rd_party.h>
-#include <VulkanWrapper/Model/MeshManager.h>
-#include <VulkanWrapper/Model/Material/TexturedMaterialHandler.h>
-#include <VulkanWrapper/RayTracing/RayTracedScene.h>
 #include <vector>
+#include <VulkanWrapper/3rd_party.h>
+#include <VulkanWrapper/Model/Material/EmissiveTexturedMaterialHandler.h>
+#include <VulkanWrapper/Model/Material/TexturedMaterialHandler.h>
+#include <VulkanWrapper/Model/MeshManager.h>
+#include <VulkanWrapper/RayTracing/RayTracedScene.h>
 
 struct CameraConfig {
     glm::vec3 eye;
@@ -51,8 +52,7 @@ load_plane_with_cube_scene(vw::Model::MeshManager &mesh_manager) {
     cube_transform = glm::scale(cube_transform, glm::vec3(30.0f));
 
     // Record cube instances
-    for (size_t i = plane_mesh_count; i < mesh_manager.meshes().size();
-         ++i) {
+    for (size_t i = plane_mesh_count; i < mesh_manager.meshes().size(); ++i) {
         config.instances.push_back({i, cube_transform});
     }
 
@@ -64,36 +64,36 @@ load_plane_with_cube_scene(vw::Model::MeshManager &mesh_manager) {
     return config;
 }
 
-/// Add a single-sided textured quad in the Sponza corridor using
+/// Add a single-sided emissive textured quad in the Sponza corridor using
 /// stained.png.
-inline size_t
-add_stained_glass_quad(vw::Model::MeshManager &mesh_manager) {
+inline size_t add_stained_glass_quad(vw::Model::MeshManager &mesh_manager) {
     using namespace vw::Model::Material;
 
-    auto *handler = static_cast<TexturedMaterialHandler *>(
-        mesh_manager.material_manager().handler(textured_material_tag));
+    auto *handler = static_cast<EmissiveTexturedMaterialHandler *>(
+        mesh_manager.material_manager().handler(
+            emissive_textured_material_tag));
 
     auto material =
-        handler->create_material("../../../Images/stained.png");
+        handler->create_material("../../../Images/stained.png", 300000.0f);
 
     // Single-sided quad at x=0, facing -X (toward camera)
     std::vector<vw::FullVertex3D> vertices{
-        {{0.0f, 100.0f, -200.0f},
+        {{300.0f, 100.0f, -100.0f},
          {-1.0f, 0.0f, 0.0f},
          {0.0f, 0.0f, 1.0f},
          {0.0f, 1.0f, 0.0f},
          {0.0f, 0.0f}},
-        {{0.0f, 100.0f, 200.0f},
+        {{300.0f, 100.0f, 100.0f},
          {-1.0f, 0.0f, 0.0f},
          {0.0f, 0.0f, 1.0f},
          {0.0f, 1.0f, 0.0f},
          {1.0f, 0.0f}},
-        {{0.0f, 500.0f, 200.0f},
+        {{300.0f, 500.0f, 100.0f},
          {-1.0f, 0.0f, 0.0f},
          {0.0f, 0.0f, 1.0f},
          {0.0f, 1.0f, 0.0f},
          {1.0f, 1.0f}},
-        {{0.0f, 500.0f, -200.0f},
+        {{300.0f, 500.0f, -100.0f},
          {-1.0f, 0.0f, 0.0f},
          {0.0f, 0.0f, 1.0f},
          {0.0f, 1.0f, 0.0f},
@@ -102,15 +102,13 @@ add_stained_glass_quad(vw::Model::MeshManager &mesh_manager) {
 
     std::vector<uint32_t> indices{0, 1, 2, 0, 2, 3};
 
-    mesh_manager.add_mesh(std::move(vertices), std::move(indices),
-                          material);
+    mesh_manager.add_mesh(std::move(vertices), std::move(indices), material);
     return mesh_manager.meshes().size() - 1;
 }
 
 /// Load meshes for the Sponza scene with a stained-glass quad.
 /// Returns camera config and pending instances to be added after upload.
-inline SceneConfig
-load_sponza_scene(vw::Model::MeshManager &mesh_manager) {
+inline SceneConfig load_sponza_scene(vw::Model::MeshManager &mesh_manager) {
     SceneConfig config;
 
     // Load Sponza

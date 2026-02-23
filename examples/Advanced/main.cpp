@@ -8,6 +8,7 @@
 #include <VulkanWrapper/Image/ImageView.h>
 #include <VulkanWrapper/Memory/Barrier.h>
 #include <VulkanWrapper/Memory/Transfer.h>
+#include <VulkanWrapper/Model/Material/EmissiveTexturedMaterialHandler.h>
 #include <VulkanWrapper/Model/MeshManager.h>
 #include <VulkanWrapper/RayTracing/RayTracedScene.h>
 #include <VulkanWrapper/RenderPass/SkyParameters.h>
@@ -64,7 +65,8 @@ int main() {
         // Set per-material SBT offsets for indirect light hit shaders
         rayTracedScene.set_material_sbt_mapping(
             {{vw::Model::Material::colored_material_tag, 0},
-             {vw::Model::Material::textured_material_tag, 1}});
+             {vw::Model::Material::textured_material_tag, 1},
+             {vw::Model::Material::emissive_textured_material_tag, 2}});
 
         // Build acceleration structures
         rayTracedScene.build();
@@ -136,7 +138,7 @@ int main() {
                     vw::CommandBufferRecorder recorder(commandBuffers[index]);
 
                     // Create sky parameters for sun at zenith
-                    auto sky_params = vw::SkyParameters::create_earth_sun(72.f);
+                    auto sky_params = vw::SkyParameters::create_earth_sun(0.f);
 
                     // Execute deferred rendering pipeline with progressive AO
                     // Returns tone-mapped LDR output (direct + indirect light)
@@ -183,7 +185,7 @@ int main() {
                 std::cout << "Iteration: " << i++ << std::endl;
 
                 // Take screenshot after 32 samples and exit
-                if (renderingManager.ao_pass().get_frame_count() == 32) {
+                if (renderingManager.ao_pass().get_frame_count() == 512) {
                     // Record a new command buffer just for the screenshot
                     // Note: saveToFile ends the command buffer internally,
                     // so we don't use CommandBufferRecorder here
