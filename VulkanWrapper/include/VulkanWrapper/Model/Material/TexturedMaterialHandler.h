@@ -26,6 +26,9 @@ class TexturedMaterialHandler
     [[nodiscard]] std::shared_ptr<const DescriptorSetLayout>
     additional_descriptor_set_layout() const override;
 
+    [[nodiscard]] Material
+    create_material(const std::filesystem::path &texture_path);
+
   protected:
     [[nodiscard]] std::optional<TexturedMaterialData>
     try_create_gpu_data(const aiMaterial *mat,

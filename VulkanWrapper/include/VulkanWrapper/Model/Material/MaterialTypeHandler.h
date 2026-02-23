@@ -40,6 +40,15 @@ class MaterialTypeHandler : public IMaterialTypeHandler {
                             index * sizeof(GpuData)};
     }
 
+    [[nodiscard]] Material create_material(GpuData data) {
+        uint32_t index = static_cast<uint32_t>(m_material_data.size());
+        m_material_data.push_back(std::move(data));
+        m_dirty = true;
+        return Material{tag(),
+                        m_ssbo.device_address() +
+                            index * sizeof(GpuData)};
+    }
+
     [[nodiscard]] vk::DeviceAddress buffer_address() const final {
         return m_ssbo.device_address();
     }
