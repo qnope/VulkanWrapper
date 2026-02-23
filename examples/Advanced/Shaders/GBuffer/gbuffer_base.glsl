@@ -50,6 +50,7 @@ layout(set = 1, binding = 1) uniform texture2D textures[];
 
 #define BRDF_SAMPLER globalSampler
 #define BRDF_HAS_QUERY_LOD
+#define BRDF_HAS_GENERATE_RAY
 vec2 _brdf_uv;
 
 layout(push_constant, scalar) uniform PushConstants {
@@ -59,9 +60,12 @@ layout(push_constant, scalar) uniform PushConstants {
     vec3 camera_pos;
 };
 
-// Forward declaration - implemented by material BRDF include
+// Forward declarations - implemented by material BRDF include
 vec3 evaluate_brdf(vec3 normal, uint64_t material_address,
                    vec3 wi, vec3 wo);
+vec3 emissive_light(uint64_t material_address);
+vec3 generate_ray(uint sample_index, vec2 xi, uint64_t material_address,
+                  vec3 normal, vec3 tangeant, vec3 bitangeant);
 
 void main()
 {
@@ -85,13 +89,15 @@ void main()
     // Compute direct sun lighting with shadow rays
     vec3 sun = luminance_from_sun(sky, worldPosition, N,
                                    topLevelAS);
-    outDirectLight = vec4(brdf * sun, 1.0);
+    outDirectLight = vec4(brdf * sun
+                          + emissive_light(materialAddress), 1.0);
 
     ivec2 pixel = ivec2(gl_FragCoord.xy);
     vec2 xi = get_sample(frame_count, pixel);
     vec3 T = normalize(tangeant);
     vec3 B = normalize(biTangeant);
-    vec3 ray_dir = sample_hemisphere_cosine(N, T, B, xi);
+    vec3 ray_dir = generate_ray(frame_count, xi,
+                                 materialAddress, N, T, B);
     outIndirectRay = vec4(ray_dir, 1.0);
 }
 

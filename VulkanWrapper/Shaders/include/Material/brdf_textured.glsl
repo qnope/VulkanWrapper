@@ -2,7 +2,8 @@
 #define BRDF_TEXTURED_GLSL
 
 // Lambertian BRDF for textured materials.
-// Provides: brdf_get_albedo, brdf_get_albedo_alpha, evaluate_brdf
+// Provides: brdf_get_albedo, brdf_get_albedo_alpha, evaluate_brdf,
+//           emissive_light, generate_ray
 //
 // Requires before #include:
 //   - ATMO_PI defined (from atmosphere_params.glsl)
@@ -35,9 +36,18 @@ vec3 brdf_get_albedo(uint64_t material_address) {
     return brdf_get_albedo_alpha(material_address).rgb;
 }
 
+vec3 emissive_light(uint64_t material_address) { return vec3(0.0); }
+
 vec3 evaluate_brdf(vec3 normal, uint64_t material_address,
                    vec3 wi, vec3 wo) {
     return brdf_get_albedo(material_address) / ATMO_PI;
 }
+
+#ifdef BRDF_HAS_GENERATE_RAY
+vec3 generate_ray(uint sample_index, vec2 xi, uint64_t material_address,
+                  vec3 normal, vec3 tangeant, vec3 bitangeant) {
+    return sample_hemisphere_cosine(normal, tangeant, bitangeant, xi);
+}
+#endif
 
 #endif // BRDF_TEXTURED_GLSL

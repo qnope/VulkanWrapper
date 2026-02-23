@@ -34,9 +34,10 @@ layout(set = 1, binding = 1) uniform texture2D textures[];
 #define BRDF_SAMPLER tex_sampler
 vec2 _brdf_uv;
 
-// Forward declaration - implemented by material BRDF include
+// Forward declarations - implemented by material BRDF include
 vec3 evaluate_brdf(vec3 normal, uint64_t material_address,
                    vec3 wi, vec3 wo);
+vec3 emissive_light(uint64_t material_address);
 
 layout(location = 0) rayPayloadInEXT vec3 payload;
 hitAttributeEXT vec2 bary;
@@ -66,12 +67,12 @@ void main() {
     vec3 wi = -gl_WorldRayDirectionEXT;
     vec3 wo = normalize(-atmo_star_direction(sky));
 
-    // Lambertian BRDF at bounce surface
-    vec3 bounce_radiance =
-        evaluate_brdf(world_normal, v.material_address, wi, wo)
-        * luminance_from_sun(sky, world_hit_pos, world_normal, tlas);
+    vec3 brdf = evaluate_brdf(world_normal, v.material_address,
+                              wi, wo);
 
-    payload = bounce_radiance;
+    payload = emissive_light(v.material_address)
+            + brdf * luminance_from_sun(sky, world_hit_pos,
+                                        world_normal, tlas);
 }
 
 #endif // INDIRECT_LIGHT_BASE_GLSL
