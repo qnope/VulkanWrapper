@@ -43,6 +43,14 @@ TexturedMaterialHandler::TexturedMaterialHandler(
     : Base{std::move(device), std::move(allocator)}
     , m_texture_manager{texture_manager} {}
 
+Material TexturedMaterialHandler::create_material(
+    const std::filesystem::path &texture_path) {
+    uint32_t texture_index =
+        m_texture_manager.register_texture(texture_path);
+    return Base::create_material(
+        TexturedMaterialData{.diffuse_texture_index = texture_index});
+}
+
 std::optional<TexturedMaterialData>
 TexturedMaterialHandler::try_create_gpu_data(
     const aiMaterial *mat, const std::filesystem::path &base_path) {
