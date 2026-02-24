@@ -16,6 +16,11 @@ class ColoredMaterialHandlerTest : public ::testing::Test {
     std::unique_ptr<ColoredMaterialHandler> m_handler;
 };
 
+TEST_F(ColoredMaterialHandlerTest, BrdfPathIsCorrect) {
+    EXPECT_EQ(m_handler->brdf_path(),
+              "Material/brdf_colored.glsl");
+}
+
 TEST_F(ColoredMaterialHandlerTest, HandlerHasCorrectTag) {
     EXPECT_EQ(m_handler->tag(), colored_material_tag);
 }

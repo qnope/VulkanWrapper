@@ -25,6 +25,11 @@ class TexturedMaterialHandlerTest : public ::testing::Test {
     std::unique_ptr<TexturedMaterialHandler> m_handler;
 };
 
+TEST_F(TexturedMaterialHandlerTest, BrdfPathIsCorrect) {
+    EXPECT_EQ(m_handler->brdf_path(),
+              "Material/brdf_textured.glsl");
+}
+
 TEST_F(TexturedMaterialHandlerTest, HandlerHasCorrectTag) {
     EXPECT_EQ(m_handler->tag(), textured_material_tag);
 }

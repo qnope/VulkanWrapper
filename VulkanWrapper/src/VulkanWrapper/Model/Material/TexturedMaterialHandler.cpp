@@ -38,9 +38,11 @@ TexturedMaterialHandler::additional_descriptor_set_layout() const {
 }
 
 TexturedMaterialHandler::TexturedMaterialHandler(
-    std::shared_ptr<const Device> device, std::shared_ptr<Allocator> allocator,
+    std::shared_ptr<const Device> device,
+    std::shared_ptr<Allocator> allocator,
     BindlessTextureManager &texture_manager)
-    : Base{std::move(device), std::move(allocator)}
+    : Base{std::move(device), std::move(allocator),
+           "Material/brdf_textured.glsl"}
     , m_texture_manager{texture_manager} {}
 
 Material TexturedMaterialHandler::create_material(
