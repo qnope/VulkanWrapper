@@ -64,9 +64,7 @@ int main() {
 
         // Set per-material SBT offsets for indirect light hit shaders
         rayTracedScene.set_material_sbt_mapping(
-            {{vw::Model::Material::colored_material_tag, 0},
-             {vw::Model::Material::textured_material_tag, 1},
-             {vw::Model::Material::emissive_textured_material_tag, 2}});
+            mesh_manager.material_manager().sbt_mapping());
 
         // Build acceleration structures
         rayTracedScene.build();

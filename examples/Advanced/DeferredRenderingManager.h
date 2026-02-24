@@ -59,16 +59,9 @@ class DeferredRenderingManager {
         m_zpass = std::make_unique<ZPass>(
             m_device, m_allocator, gbuffer_dir, depth_format);
 
-        DirectLightPass::FragmentShaderMap fragment_shaders{
-            {vw::Model::Material::textured_material_tag,
-             "gbuffer_textured.frag"},
-            {vw::Model::Material::emissive_textured_material_tag,
-             "gbuffer_emissive_textured.frag"},
-            {vw::Model::Material::colored_material_tag,
-             "gbuffer_colored.frag"}};
         m_direct_light_pass = std::make_unique<DirectLightPass>(
             m_device, m_allocator, material_manager,
-            std::move(fragment_shaders), ray_traced_scene.tlas_handle(),
+            ray_traced_scene.tlas_handle(),
             std::move(gbuffer_dir), include_dir, depth_format);
 
         m_ao_pass = std::make_unique<AmbientOcclusionPass>(
