@@ -77,24 +77,32 @@ void IndirectLightPass::create_pipeline_and_sbt(
         m_device, shader_dir / "indirect_light.rgen");
     auto miss_shader = compiler.compile_file_to_module(
         m_device, shader_dir / "indirect_light.rmiss");
-    auto colored_hit = compiler.compile_file_to_module(
-        m_device, shader_dir / "indirect_light_colored.rchit");
-    auto textured_hit = compiler.compile_file_to_module(
-        m_device, shader_dir / "indirect_light_textured.rchit");
-    auto emissive_textured_hit = compiler.compile_file_to_module(
-        m_device,
-        shader_dir / "indirect_light_emissive_textured.rchit");
 
     // Build RT pipeline with per-material closest hit shaders
+    auto builder = rt::RayTracingPipelineBuilder(
+        m_device, m_allocator, std::move(pipeline_layout));
+    builder.set_ray_generation_shader(raygen_shader)
+        .add_miss_shader(miss_shader);
+
+    for (auto [tag, handler] :
+         m_material_manager->ordered_handlers()) {
+        auto source =
+            "#version 460\n"
+            "#extension GL_GOOGLE_include_directive"
+            " : require\n"
+            "#include \"indirect_light_base.glsl\"\n"
+            "#include \""
+            + handler->brdf_path().string() + "\"\n";
+
+        auto hit_module = compiler.compile_to_module(
+            m_device, source,
+            vk::ShaderStageFlagBits::eClosestHitKHR,
+            "indirect_light_dynamic.rchit");
+        builder.add_closest_hit_shader(hit_module);
+    }
+
     m_pipeline = std::make_unique<rt::RayTracingPipeline>(
-        rt::RayTracingPipelineBuilder(m_device, m_allocator,
-                                      std::move(pipeline_layout))
-            .set_ray_generation_shader(raygen_shader)
-            .add_miss_shader(miss_shader)
-            .add_closest_hit_shader(colored_hit)
-            .add_closest_hit_shader(textured_hit)
-            .add_closest_hit_shader(emissive_textured_hit)
-            .build());
+        builder.build());
 
     // Create shader binding table
     m_sbt = std::make_unique<rt::ShaderBindingTable>(

@@ -366,6 +366,8 @@ TEST_F(IndirectLightSunBounceTest,
         glm::translate(glm::mat4(1.0f), glm::vec3(0, -5, 0)),
         glm::vec3(100.0f, 1.0f, 100.0f));
     std::ignore = scene.add_instance(plane, floor_transform);
+    scene.set_material_sbt_mapping(
+        gpu->material_manager->sbt_mapping());
     scene.build();
 
     auto gb = create_gbuffer(width, height);
@@ -402,6 +404,8 @@ TEST_F(IndirectLightSunBounceTest,
         glm::translate(glm::mat4(1.0f), glm::vec3(0, -5, 0)),
         glm::vec3(100.0f, 1.0f, 100.0f));
     std::ignore = scene.add_instance(plane, floor_transform);
+    scene.set_material_sbt_mapping(
+        gpu->material_manager->sbt_mapping());
     scene.build();
 
     auto gb = create_gbuffer(width, height);
@@ -449,6 +453,8 @@ TEST_F(IndirectLightSunBounceTest,
             glm::translate(glm::mat4(1.0f), glm::vec3(0, -5, 0)),
             glm::vec3(100.0f, 1.0f, 100.0f));
         std::ignore = scene.add_instance(plane, floor_transform);
+        scene.set_material_sbt_mapping(
+            gpu->material_manager->sbt_mapping());
         scene.build();
 
         color_unoccluded =
@@ -469,6 +475,8 @@ TEST_F(IndirectLightSunBounceTest,
             glm::translate(glm::mat4(1.0f), glm::vec3(0, 50, 0)),
             glm::vec3(200.0f, 1.0f, 200.0f));
         std::ignore = scene.add_instance(cube, occluder_transform);
+        scene.set_material_sbt_mapping(
+            gpu->material_manager->sbt_mapping());
         scene.build();
 
         color_occluded =

@@ -66,14 +66,10 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
         vk::Format::eR32G32B32A32Sfloat   // indirect_ray
     };
 
-    using FragmentShaderMap =
-        std::unordered_map<vw::Model::Material::MaterialTypeTag, std::string>;
-
     DirectLightPass(
         std::shared_ptr<vw::Device> device,
         std::shared_ptr<vw::Allocator> allocator,
         vw::Model::Material::BindlessMaterialManager &material_manager,
-        FragmentShaderMap fragment_shaders,
         vk::AccelerationStructureKHR tlas,
         std::filesystem::path gbuffer_shader_dir,
         std::filesystem::path shader_include_dir,
@@ -82,7 +78,6 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
         : Subpass(std::move(device), std::move(allocator))
         , m_color_formats(color_formats.begin(), color_formats.end())
         , m_material_manager(material_manager)
-        , m_fragment_shaders(std::move(fragment_shaders))
         , m_gbuffer_shader_dir(std::move(gbuffer_shader_dir))
         , m_shader_include_dir(std::move(shader_include_dir))
         , m_tlas(tlas)
@@ -375,16 +370,21 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
             if (texture_layout) break;
         }
 
+        compiler.add_include_path(m_gbuffer_shader_dir);
+
         for (auto [tag, handler] : m_material_manager.handlers()) {
-            auto it = m_fragment_shaders.find(tag);
+            auto source =
+                "#version 460\n"
+                "#extension GL_GOOGLE_include_directive"
+                " : require\n"
+                "#include \"gbuffer_base.glsl\"\n"
+                "#include \""
+                + handler->brdf_path().string() + "\"\n";
 
-            if (it == m_fragment_shaders.end()) {
-                throw vw::LogicException::invalid_state(
-                    "The tag has no fragment shader associated");
-            }
-
-            auto fragment = compiler.compile_file_to_module(
-                m_device, m_gbuffer_shader_dir / it->second);
+            auto fragment = compiler.compile_to_module(
+                m_device, source,
+                vk::ShaderStageFlagBits::eFragment,
+                "gbuffer_dynamic.frag");
 
             auto layout_builder =
                 vw::PipelineLayoutBuilder(m_device)
@@ -417,7 +417,6 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
 
     std::vector<vk::Format> m_color_formats;
     vw::Model::Material::BindlessMaterialManager &m_material_manager;
-    FragmentShaderMap m_fragment_shaders;
     std::filesystem::path m_gbuffer_shader_dir;
     std::filesystem::path m_shader_include_dir;
     vk::AccelerationStructureKHR m_tlas;

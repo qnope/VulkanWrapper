@@ -60,10 +60,8 @@ static_assert(sizeof(IndirectLightPushConstants) <= 128,
  * Shaders are compiled at runtime from GLSL source files using ShaderCompiler:
  * - indirect_light.rgen: Ray generation shader
  * - indirect_light.rmiss: Miss shader (computes atmosphere)
- * - indirect_light_colored.rchit: Closest hit shader for colored materials
- * - indirect_light_textured.rchit: Closest hit shader for textured materials
- * - include/indirect_light_base.glsl: Shared closest hit logic (vertex
- *   interpolation, sun bounce, payload write)
+ * - Per-material closest hit shaders generated dynamically from
+ *   indirect_light_base.glsl + handler brdf_path()
  */
 class IndirectLightPass : public Subpass<IndirectLightPassSlot> {
   public:

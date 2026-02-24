@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
+#include <format>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <gtest/gtest.h>
@@ -444,17 +445,11 @@ TEST_F(IndirectLightPassTest, ShaderFilesExistAndCompile) {
     auto shader_dir = get_shader_dir();
     auto raygen_path = shader_dir / "indirect_light.rgen";
     auto miss_path = shader_dir / "indirect_light.rmiss";
-    auto colored_chit_path = shader_dir / "indirect_light_colored.rchit";
-    auto textured_chit_path = shader_dir / "indirect_light_textured.rchit";
 
     ASSERT_TRUE(std::filesystem::exists(raygen_path))
         << "Ray generation shader not found: " << raygen_path;
     ASSERT_TRUE(std::filesystem::exists(miss_path))
         << "Miss shader not found: " << miss_path;
-    ASSERT_TRUE(std::filesystem::exists(colored_chit_path))
-        << "Colored closest hit shader not found: " << colored_chit_path;
-    ASSERT_TRUE(std::filesystem::exists(textured_chit_path))
-        << "Textured closest hit shader not found: " << textured_chit_path;
 
     ShaderCompiler compiler;
     compiler.set_target_vulkan_version(VK_API_VERSION_1_2);
@@ -462,16 +457,33 @@ TEST_F(IndirectLightPassTest, ShaderFilesExistAndCompile) {
 
     auto raygen_shader =
         compiler.compile_file_to_module(gpu->device, raygen_path);
-    auto miss_shader = compiler.compile_file_to_module(gpu->device, miss_path);
-    auto colored_chit_shader =
-        compiler.compile_file_to_module(gpu->device, colored_chit_path);
-    auto textured_chit_shader =
-        compiler.compile_file_to_module(gpu->device, textured_chit_path);
+    auto miss_shader =
+        compiler.compile_file_to_module(gpu->device, miss_path);
 
-    ASSERT_NE(raygen_shader, nullptr);
-    ASSERT_NE(miss_shader, nullptr);
-    ASSERT_NE(colored_chit_shader, nullptr);
-    ASSERT_NE(textured_chit_shader, nullptr);
+    EXPECT_NE(raygen_shader, nullptr)
+        << "Ray generation shader failed to compile";
+    EXPECT_NE(miss_shader, nullptr)
+        << "Miss shader failed to compile";
+
+    // Closest-hit shaders are now generated dynamically from
+    // handler brdf_path(); verify they compile for each handler
+    for (auto [tag, handler] :
+         gpu->material_manager->ordered_handlers()) {
+        auto source = std::format(
+            "#version 460\n"
+            "#extension GL_GOOGLE_include_directive"
+            " : require\n"
+            "#include \"indirect_light_base.glsl\"\n"
+            "#include \"{}\"\n",
+            handler->brdf_path().string());
+        auto chit_shader = compiler.compile_to_module(
+            gpu->device, source,
+            vk::ShaderStageFlagBits::eClosestHitKHR,
+            "dynamic_chit");
+        EXPECT_NE(chit_shader, nullptr)
+            << "Closest-hit shader failed to compile for tag "
+            << tag.id();
+    }
 }
 
 // =============================================================================
@@ -964,6 +976,8 @@ TEST_F(IndirectLightPassTest, SurfaceFacingDown_ReceivesDifferentLight) {
     const auto &plane = gpu->get_plane_mesh();
     std::ignore = scene.add_instance(
         plane, glm::translate(glm::mat4(1.0f), glm::vec3(0, -1000, 0)));
+    scene.set_material_sbt_mapping(
+        gpu->material_manager->sbt_mapping());
     scene.build();
 
     auto gb = create_gbuffer(width, height);
@@ -1044,40 +1058,40 @@ TEST_F(IndirectLightPassTest, SurfaceFacingDown_ReceivesDifferentLight) {
 // Material-Aware Shader Tests
 // =============================================================================
 
-TEST_F(IndirectLightPassTest, PerMaterialShaderFilesExist) {
+TEST_F(IndirectLightPassTest, BrdfIncludeFilesExist) {
     auto shader_dir = get_shader_dir();
-    auto colored_chit_path = shader_dir / "indirect_light_colored.rchit";
-    auto textured_chit_path = shader_dir / "indirect_light_textured.rchit";
-
-    EXPECT_TRUE(std::filesystem::exists(colored_chit_path))
-        << "Colored closest hit shader not found: " << colored_chit_path;
-    EXPECT_TRUE(std::filesystem::exists(textured_chit_path))
-        << "Textured closest hit shader not found: " << textured_chit_path;
+    for (auto [tag, handler] :
+         gpu->material_manager->ordered_handlers()) {
+        auto brdf_file =
+            shader_dir / "include" / handler->brdf_path();
+        EXPECT_TRUE(std::filesystem::exists(brdf_file))
+            << "BRDF include not found: " << brdf_file;
+    }
 }
 
-TEST_F(IndirectLightPassTest, PerMaterialShadersCompile) {
+TEST_F(IndirectLightPassTest, DynamicClosestHitShadersCompile) {
     auto shader_dir = get_shader_dir();
-    auto colored_chit_path = shader_dir / "indirect_light_colored.rchit";
-    auto textured_chit_path = shader_dir / "indirect_light_textured.rchit";
-
-    if (!std::filesystem::exists(colored_chit_path) ||
-        !std::filesystem::exists(textured_chit_path)) {
-        GTEST_SKIP() << "Per-material shaders not yet created";
-    }
-
     ShaderCompiler compiler;
     compiler.set_target_vulkan_version(VK_API_VERSION_1_2);
     compiler.add_include_path(shader_dir / "include");
 
-    auto colored_shader =
-        compiler.compile_file_to_module(gpu->device, colored_chit_path);
-    auto textured_shader =
-        compiler.compile_file_to_module(gpu->device, textured_chit_path);
-
-    EXPECT_NE(colored_shader, nullptr)
-        << "Colored closest hit shader failed to compile";
-    EXPECT_NE(textured_shader, nullptr)
-        << "Textured closest hit shader failed to compile";
+    for (auto [tag, handler] :
+         gpu->material_manager->ordered_handlers()) {
+        auto source = std::format(
+            "#version 460\n"
+            "#extension GL_GOOGLE_include_directive"
+            " : require\n"
+            "#include \"indirect_light_base.glsl\"\n"
+            "#include \"{}\"\n",
+            handler->brdf_path().string());
+        auto shader = compiler.compile_to_module(
+            gpu->device, source,
+            vk::ShaderStageFlagBits::eClosestHitKHR,
+            "dynamic_chit");
+        EXPECT_NE(shader, nullptr)
+            << "Closest-hit shader failed for tag "
+            << tag.id();
+    }
 }
 
 TEST_F(IndirectLightPassTest, ConstructWithMaterialManager) {
@@ -1086,8 +1100,7 @@ TEST_F(IndirectLightPassTest, ConstructWithMaterialManager) {
     std::ignore = scene.add_instance(
         plane, glm::translate(glm::mat4(1.0f), glm::vec3(0, -100, 0)));
     scene.set_material_sbt_mapping(
-        {{Model::Material::colored_material_tag, 0},
-         {Model::Material::textured_material_tag, 1}});
+        gpu->material_manager->sbt_mapping());
     scene.build();
 
     auto pass = std::make_unique<IndirectLightPass>(
