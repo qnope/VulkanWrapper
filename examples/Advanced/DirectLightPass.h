@@ -14,13 +14,14 @@
 #include "VulkanWrapper/Model/Scene.h"
 #include "VulkanWrapper/Pipeline/MeshRenderer.h"
 #include "VulkanWrapper/Pipeline/Pipeline.h"
-#include "VulkanWrapper/Pipeline/ShaderModule.h"
 #include "VulkanWrapper/Random/NoiseTexture.h"
+#include "VulkanWrapper/Shader/ShaderCompiler.h"
 #include "VulkanWrapper/Random/RandomSamplingBuffer.h"
 #include "VulkanWrapper/RenderPass/SkyParameters.h"
 #include "VulkanWrapper/RenderPass/Subpass.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include "VulkanWrapper/Utils/Error.h"
+#include <filesystem>
 #include <span>
 
 enum class DirectLightPassSlot {
@@ -74,12 +75,16 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
         vw::Model::Material::BindlessMaterialManager &material_manager,
         FragmentShaderMap fragment_shaders,
         vk::AccelerationStructureKHR tlas,
+        std::filesystem::path gbuffer_shader_dir,
+        std::filesystem::path shader_include_dir,
         vk::Format depth_format = vk::Format::eD32Sfloat,
         std::span<const vk::Format> color_formats = default_color_formats)
         : Subpass(std::move(device), std::move(allocator))
         , m_color_formats(color_formats.begin(), color_formats.end())
         , m_material_manager(material_manager)
         , m_fragment_shaders(std::move(fragment_shaders))
+        , m_gbuffer_shader_dir(std::move(gbuffer_shader_dir))
+        , m_shader_include_dir(std::move(shader_include_dir))
         , m_tlas(tlas)
         , m_sky_params_buffer(vw::create_buffer<vw::SkyParametersGPU, true,
                                                 vw::UniformBufferUsage>(
@@ -346,8 +351,12 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
     }
 
     std::shared_ptr<vw::MeshRenderer> create_renderer(vk::Format depth_format) {
-        auto vertex_shader = vw::ShaderModule::create_from_spirv_file(
-            m_device, "Shaders/GBuffer/gbuffer.spv");
+        vw::ShaderCompiler compiler;
+        compiler.set_target_vulkan_version(VK_API_VERSION_1_2);
+        compiler.add_include_path(m_shader_include_dir);
+
+        auto vertex_shader = compiler.compile_file_to_module(
+            m_device, m_gbuffer_shader_dir / "gbuffer.vert");
 
         auto push_constant_range =
             vk::PushConstantRange()
@@ -374,8 +383,8 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
                     "The tag has no fragment shader associated");
             }
 
-            auto fragment =
-                vw::ShaderModule::create_from_spirv_file(m_device, it->second);
+            auto fragment = compiler.compile_file_to_module(
+                m_device, m_gbuffer_shader_dir / it->second);
 
             auto layout_builder =
                 vw::PipelineLayoutBuilder(m_device)
@@ -409,6 +418,8 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
     std::vector<vk::Format> m_color_formats;
     vw::Model::Material::BindlessMaterialManager &m_material_manager;
     FragmentShaderMap m_fragment_shaders;
+    std::filesystem::path m_gbuffer_shader_dir;
+    std::filesystem::path m_shader_include_dir;
     vk::AccelerationStructureKHR m_tlas;
 
     // Sky parameters UBO

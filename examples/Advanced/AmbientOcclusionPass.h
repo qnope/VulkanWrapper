@@ -8,12 +8,13 @@
 #include "VulkanWrapper/Image/Sampler.h"
 #include "VulkanWrapper/Memory/Allocator.h"
 #include "VulkanWrapper/Pipeline/Pipeline.h"
-#include "VulkanWrapper/Pipeline/ShaderModule.h"
 #include "VulkanWrapper/Random/NoiseTexture.h"
+#include "VulkanWrapper/Shader/ShaderCompiler.h"
 #include "VulkanWrapper/Random/RandomSamplingBuffer.h"
 #include "VulkanWrapper/RenderPass/ScreenSpacePass.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include "VulkanWrapper/Vulkan/Device.h"
+#include <filesystem>
 
 enum class AOPassSlot {
     Output // Single accumulation buffer (no ping-pong needed with blending)
@@ -37,9 +38,13 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
         std::shared_ptr<vw::Device> device,
         std::shared_ptr<vw::Allocator> allocator,
         vk::AccelerationStructureKHR tlas,
+        std::filesystem::path vw_shader_dir,
+        std::filesystem::path ao_shader_dir,
         vk::Format output_format = vk::Format::eR32G32B32A32Sfloat)
         : ScreenSpacePass(device, allocator)
         , m_tlas(tlas)
+        , m_vw_shader_dir(std::move(vw_shader_dir))
+        , m_ao_shader_dir(std::move(ao_shader_dir))
         , m_output_format(output_format)
         , m_sampler(create_default_sampler())
         , m_samples_buffer(vw::create_hemisphere_samples_buffer(*m_allocator))
@@ -234,10 +239,13 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
                 .build();
 
         // Create pipeline with blending for temporal accumulation
-        auto vertex_shader = vw::ShaderModule::create_from_spirv_file(
-            m_device, "Shaders/fullscreen.spv");
-        auto fragment_shader = vw::ShaderModule::create_from_spirv_file(
-            m_device, "Shaders/post-process/ambient_occlusion.spv");
+        vw::ShaderCompiler compiler;
+        compiler.set_target_vulkan_version(VK_API_VERSION_1_2);
+        compiler.add_include_path(m_vw_shader_dir / "include");
+        auto vertex_shader = compiler.compile_file_to_module(
+            m_device, m_vw_shader_dir / "fullscreen.vert");
+        auto fragment_shader = compiler.compile_file_to_module(
+            m_device, m_ao_shader_dir / "ambient_occlusion.frag");
 
         std::vector<vk::PushConstantRange> push_constants = {
             vk::PushConstantRange(vk::ShaderStageFlagBits::eFragment, 0,
@@ -252,6 +260,8 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
     }
 
     vk::AccelerationStructureKHR m_tlas;
+    std::filesystem::path m_vw_shader_dir;
+    std::filesystem::path m_ao_shader_dir;
     vk::Format m_output_format;
 
     // Progressive accumulation state

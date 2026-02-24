@@ -44,6 +44,7 @@ class DeferredRenderingManager {
         vw::Model::Material::BindlessMaterialManager &material_manager,
         const vw::rt::RayTracedScene &ray_traced_scene,
         const std::filesystem::path &shader_dir,
+        const std::filesystem::path &example_shader_dir,
         vk::Format depth_format = vk::Format::eD32Sfloat,
         vk::Format ao_format = vk::Format::eR32G32B32A32Sfloat,
         vk::Format light_format = vk::Format::eR32G32B32A32Sfloat)
@@ -51,23 +52,28 @@ class DeferredRenderingManager {
         , m_allocator(std::move(allocator))
         , m_ray_traced_scene(ray_traced_scene) {
 
+        auto gbuffer_dir = example_shader_dir / "GBuffer";
+        auto include_dir = shader_dir / "include";
+
         // Create functional passes - each owns its output images lazily
-        m_zpass = std::make_unique<ZPass>(m_device, m_allocator, depth_format);
+        m_zpass = std::make_unique<ZPass>(
+            m_device, m_allocator, gbuffer_dir, depth_format);
 
         DirectLightPass::FragmentShaderMap fragment_shaders{
             {vw::Model::Material::textured_material_tag,
-             "Shaders/GBuffer/gbuffer_textured.spv"},
+             "gbuffer_textured.frag"},
             {vw::Model::Material::emissive_textured_material_tag,
-             "Shaders/GBuffer/gbuffer_emissive_textured.spv"},
+             "gbuffer_emissive_textured.frag"},
             {vw::Model::Material::colored_material_tag,
-             "Shaders/GBuffer/gbuffer_colored.spv"}};
+             "gbuffer_colored.frag"}};
         m_direct_light_pass = std::make_unique<DirectLightPass>(
             m_device, m_allocator, material_manager,
             std::move(fragment_shaders), ray_traced_scene.tlas_handle(),
-            depth_format);
+            std::move(gbuffer_dir), include_dir, depth_format);
 
         m_ao_pass = std::make_unique<AmbientOcclusionPass>(
-            m_device, m_allocator, ray_traced_scene.tlas_handle(), ao_format);
+            m_device, m_allocator, ray_traced_scene.tlas_handle(),
+            shader_dir, example_shader_dir / "post-process", ao_format);
 
         m_sky_pass = std::make_unique<vw::SkyPass>(
             m_device, m_allocator, shader_dir, light_format, depth_format);

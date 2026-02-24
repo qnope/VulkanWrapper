@@ -11,8 +11,9 @@
 #include "VulkanWrapper/Model/MeshManager.h"
 #include "VulkanWrapper/Model/Scene.h"
 #include "VulkanWrapper/Pipeline/Pipeline.h"
-#include "VulkanWrapper/Pipeline/ShaderModule.h"
 #include "VulkanWrapper/RenderPass/Subpass.h"
+#include "VulkanWrapper/Shader/ShaderCompiler.h"
+#include <filesystem>
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
 
 enum class ZPassSlot { Depth };
@@ -28,8 +29,10 @@ class ZPass : public vw::Subpass<ZPassSlot> {
   public:
     ZPass(std::shared_ptr<vw::Device> device,
           std::shared_ptr<vw::Allocator> allocator,
+          std::filesystem::path gbuffer_shader_dir,
           vk::Format depth_format = vk::Format::eD32Sfloat)
         : Subpass(device, allocator)
+        , m_gbuffer_shader_dir(std::move(gbuffer_shader_dir))
         , m_depth_format(depth_format)
         , m_descriptor_pool(create_descriptor_pool()) {}
 
@@ -135,8 +138,9 @@ class ZPass : public vw::Subpass<ZPassSlot> {
                 .build();
 
         // Create pipeline
-        auto vertex_shader = vw::ShaderModule::create_from_spirv_file(
-            m_device, "Shaders/GBuffer/zpass.spv");
+        vw::ShaderCompiler compiler;
+        auto vertex_shader = compiler.compile_file_to_module(
+            m_device, m_gbuffer_shader_dir / "zpass.vert");
 
         auto pipeline_layout =
             vw::PipelineLayoutBuilder(m_device)
@@ -161,6 +165,7 @@ class ZPass : public vw::Subpass<ZPassSlot> {
         return vw::DescriptorPoolBuilder(m_device, m_descriptor_layout).build();
     }
 
+    std::filesystem::path m_gbuffer_shader_dir;
     vk::Format m_depth_format;
 
     // Resources (order matters! m_pipeline must be before m_descriptor_pool)
