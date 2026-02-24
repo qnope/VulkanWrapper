@@ -2,8 +2,7 @@
 #define BRDF_EMISSIVE_TEXTURED_GLSL
 
 // Emissive BRDF for textured materials with intensity.
-// Provides: brdf_get_albedo, brdf_get_albedo_alpha, evaluate_brdf,
-//           emissive_light, generate_ray
+// Provides: evaluate_brdf, emissive_light, generate_ray
 //
 // Requires before #include:
 //   - textures[] array declared
@@ -17,28 +16,6 @@ layout(buffer_reference, scalar, buffer_reference_align = 4)
     float intensity;
 };
 
-vec4 brdf_get_albedo_alpha(uint64_t material_address) {
-    EmissiveTexturedMaterialRef ref =
-        EmissiveTexturedMaterialRef(material_address);
-    uint tex_idx = ref.diffuse_texture_index;
-    float intensity = ref.intensity;
-#ifdef BRDF_HAS_QUERY_LOD
-    float lod = textureQueryLod(
-        sampler2D(textures[nonuniformEXT(tex_idx)], BRDF_SAMPLER),
-        _brdf_uv).x;
-#else
-    float lod = 1.0;
-#endif
-    vec4 tex_color = textureLod(
-        sampler2D(textures[nonuniformEXT(tex_idx)], BRDF_SAMPLER),
-        _brdf_uv, lod);
-    return vec4(tex_color.rgb * intensity, tex_color.a);
-}
-
-vec3 brdf_get_albedo(uint64_t material_address) {
-    return brdf_get_albedo_alpha(material_address).rgb;
-}
-
 vec3 emissive_light(uint64_t material_address) {
     EmissiveTexturedMaterialRef ref =
         EmissiveTexturedMaterialRef(material_address);
@@ -51,10 +28,9 @@ vec3 emissive_light(uint64_t material_address) {
 #else
     float lod = 1.0;
 #endif
-    vec4 tex_color = textureLod(
+    return textureLod(
         sampler2D(textures[nonuniformEXT(tex_idx)], BRDF_SAMPLER),
-        _brdf_uv, lod);
-    return tex_color.rgb * intensity;
+        _brdf_uv, lod).rgb * intensity;
 }
 
 vec3 evaluate_brdf(vec3 normal, uint64_t material_address,
