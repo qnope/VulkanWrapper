@@ -75,7 +75,8 @@ int main() {
         // No swapchain needed - dimensions are passed at execute time
         DeferredRenderingManager renderingManager(
             app.device, app.allocator, mesh_manager.material_manager(),
-            rayTracedScene, "../../../VulkanWrapper/Shaders");
+            rayTracedScene, "../../../VulkanWrapper/Shaders",
+            "../../../examples/Advanced/Shaders");
 
         // Command pool with reset support for per-frame recording
         auto commandPool = vw::CommandPoolBuilder(app.device)

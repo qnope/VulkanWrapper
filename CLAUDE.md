@@ -211,4 +211,3 @@ if (!gpu) GTEST_SKIP() << "Ray tracing unavailable";
 | Batch uploads | `StagingBufferManager::fill_buffer(data, dst, offset)` | `Memory/StagingBufferManager.h` |
 | Save image to disk | `transfer.saveToFile(cmd, allocator, queue, image, "out.png")` | `Memory/Transfer.h` |
 | DeviceFinder | `instance->findGpu().with_queue(eGraphics).with_ray_tracing().build()` | `Vulkan/DeviceFinder.h` |
-| Compile shader (CMake) | `VwCompileShader(TARGET "shader.frag" "output.spv")` | `VulkanWrapper/CMakeLists.txt` |
