@@ -40,7 +40,8 @@ EmissiveTexturedMaterialHandler::EmissiveTexturedMaterialHandler(
     std::shared_ptr<const Device> device,
     std::shared_ptr<Allocator> allocator,
     BindlessTextureManager &texture_manager)
-    : Base{std::move(device), std::move(allocator)}
+    : Base{std::move(device), std::move(allocator),
+           "Material/brdf_emissive_textured.glsl"}
     , m_texture_manager{texture_manager} {}
 
 Material EmissiveTexturedMaterialHandler::create_material(

@@ -32,6 +32,11 @@ class EmissiveTexturedMaterialHandlerTest : public ::testing::Test {
     std::filesystem::path m_test_image_path;
 };
 
+TEST_F(EmissiveTexturedMaterialHandlerTest, BrdfPathIsCorrect) {
+    EXPECT_EQ(m_handler->brdf_path(),
+              "Material/brdf_emissive_textured.glsl");
+}
+
 TEST_F(EmissiveTexturedMaterialHandlerTest, TagReturnsEmissiveTexturedTag) {
     EXPECT_EQ(m_handler->tag(), emissive_textured_material_tag);
 }

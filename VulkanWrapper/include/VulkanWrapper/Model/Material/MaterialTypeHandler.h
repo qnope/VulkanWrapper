@@ -85,8 +85,10 @@ class MaterialTypeHandler : public IMaterialTypeHandler {
 
   protected:
     MaterialTypeHandler(std::shared_ptr<const Device> device,
-                        std::shared_ptr<Allocator> allocator)
-        : m_device{std::move(device)}
+                        std::shared_ptr<Allocator> allocator,
+                        std::filesystem::path brdf_path)
+        : IMaterialTypeHandler(std::move(brdf_path))
+        , m_device{std::move(device)}
         , m_allocator{std::move(allocator)}
         , m_ssbo{create_buffer<SSBOType>(*m_allocator, 1024)} {}
 

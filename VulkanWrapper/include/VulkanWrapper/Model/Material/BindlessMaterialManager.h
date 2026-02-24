@@ -49,6 +49,26 @@ class BindlessMaterialManager {
                });
     }
 
+    [[nodiscard]] std::vector<
+        std::pair<MaterialTypeTag, const IMaterialTypeHandler *>>
+    ordered_handlers() const {
+        auto result = handlers() | std::ranges::to<std::vector>();
+        std::ranges::sort(result, [](const auto &a, const auto &b) {
+            return a.first < b.first;
+        });
+        return result;
+    }
+
+    [[nodiscard]] std::unordered_map<MaterialTypeTag, uint32_t>
+    sbt_mapping() const {
+        std::unordered_map<MaterialTypeTag, uint32_t> mapping;
+        uint32_t index = 0;
+        for (auto [tag, _] : ordered_handlers()) {
+            mapping[tag] = index++;
+        }
+        return mapping;
+    }
+
     [[nodiscard]] std::vector<Barrier::ResourceState> get_resources() const;
 
   private:

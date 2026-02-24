@@ -15,8 +15,10 @@ MaterialPriority ColoredMaterialHandler::priority() const {
 }
 
 ColoredMaterialHandler::ColoredMaterialHandler(
-    std::shared_ptr<const Device> device, std::shared_ptr<Allocator> allocator)
-    : Base{std::move(device), std::move(allocator)} {}
+    std::shared_ptr<const Device> device,
+    std::shared_ptr<Allocator> allocator)
+    : Base{std::move(device), std::move(allocator),
+           "Material/brdf_colored.glsl"} {}
 
 std::optional<ColoredMaterialData> ColoredMaterialHandler::try_create_gpu_data(
     const aiMaterial *mat, const std::filesystem::path & /*base_path*/) {

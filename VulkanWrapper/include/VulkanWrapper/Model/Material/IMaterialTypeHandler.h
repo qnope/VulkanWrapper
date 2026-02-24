@@ -16,6 +16,10 @@ class IMaterialTypeHandler {
   public:
     virtual ~IMaterialTypeHandler() = default;
 
+    [[nodiscard]] const std::filesystem::path &brdf_path() const {
+        return m_brdf_path;
+    }
+
     [[nodiscard]] virtual MaterialTypeTag tag() const = 0;
     [[nodiscard]] virtual MaterialPriority priority() const = 0;
 
@@ -40,6 +44,13 @@ class IMaterialTypeHandler {
     additional_descriptor_set_layout() const {
         return nullptr;
     }
+
+  protected:
+    explicit IMaterialTypeHandler(std::filesystem::path brdf_path)
+        : m_brdf_path(std::move(brdf_path)) {}
+
+  private:
+    std::filesystem::path m_brdf_path;
 };
 
 } // namespace vw::Model::Material
