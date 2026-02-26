@@ -1,8 +1,17 @@
-#include "VulkanWrapper/Utils/Error.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <cstddef>
+#include <exception>
+#include <filesystem>
 #include <format>
+#include <source_location>
+#include <string>
+#include <string_view>
 #include <SDL3/SDL_error.h>
+#include <vk_mem_alloc.h>
+#include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_to_string.hpp>
+module vw;
 
 namespace vw {
 

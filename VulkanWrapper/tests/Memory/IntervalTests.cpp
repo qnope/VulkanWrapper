@@ -1,4 +1,10 @@
-#include "VulkanWrapper/Memory/Interval.h"
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <filesystem>
+#include <memory>
+#include <vector>
+
+import vw;
 #include <gtest/gtest.h>
 
 using namespace vw;

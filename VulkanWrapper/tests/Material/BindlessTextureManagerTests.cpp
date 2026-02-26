@@ -1,6 +1,10 @@
 #include "utils/create_gpu.hpp"
-#include "VulkanWrapper/Memory/StagingBufferManager.h"
-#include "VulkanWrapper/Model/Material/BindlessTextureManager.h"
+#include <filesystem>
+#include <vulkan/vulkan.hpp>
+#include <memory>
+#include <vector>
+
+import vw;
 #include <gtest/gtest.h>
 
 using namespace vw::Model::Material;

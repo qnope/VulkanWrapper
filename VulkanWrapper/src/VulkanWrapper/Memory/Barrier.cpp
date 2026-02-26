@@ -1,7 +1,8 @@
-#include "VulkanWrapper/Memory/Barrier.h"
-
-#include "VulkanWrapper/Image/Image.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <memory>
+module vw;
 namespace vw {
 void executeMemoryBarrier(vk::CommandBuffer cmd_buffer,
                           const vk::ImageMemoryBarrier2 &barrier) {

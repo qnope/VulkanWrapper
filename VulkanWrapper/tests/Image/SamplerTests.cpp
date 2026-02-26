@@ -1,5 +1,4 @@
 #include "utils/create_gpu.hpp"
-#include "VulkanWrapper/Image/Sampler.h"
 #include <gtest/gtest.h>
 
 TEST(SamplerTest, CreateSampler) {

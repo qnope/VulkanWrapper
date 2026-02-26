@@ -1,8 +1,8 @@
-#include "VulkanWrapper/Synchronization/Semaphore.h"
-
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Device.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <memory>
+module vw;
 namespace vw {
 SemaphoreBuilder::SemaphoreBuilder(std::shared_ptr<const Device> device)
     : m_device{std::move(device)} {}

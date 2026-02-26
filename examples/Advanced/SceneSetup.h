@@ -1,11 +1,11 @@
 #pragma once
 
+#include "VulkanWrapper/3rd_party.h"
 #include <vector>
-#include <VulkanWrapper/3rd_party.h>
-#include <VulkanWrapper/Model/Material/EmissiveTexturedMaterialHandler.h>
-#include <VulkanWrapper/Model/Material/TexturedMaterialHandler.h>
-#include <VulkanWrapper/Model/MeshManager.h>
-#include <VulkanWrapper/RayTracing/RayTracedScene.h>
+#include <vulkan/vulkan.hpp>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+import vw;
 
 struct CameraConfig {
     glm::vec3 eye;

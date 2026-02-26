@@ -1,20 +1,10 @@
 #pragma once
 
 #include "VulkanWrapper/3rd_party.h"
-#include "VulkanWrapper/Descriptors/DescriptorAllocator.h"
-#include "VulkanWrapper/Descriptors/DescriptorPool.h"
-#include "VulkanWrapper/Descriptors/DescriptorSet.h"
-#include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
-#include "VulkanWrapper/Image/ImageView.h"
-#include "VulkanWrapper/Memory/Allocator.h"
-#include "VulkanWrapper/Memory/Buffer.h"
-#include "VulkanWrapper/Model/MeshManager.h"
-#include "VulkanWrapper/Model/Scene.h"
-#include "VulkanWrapper/Pipeline/Pipeline.h"
-#include "VulkanWrapper/RenderPass/Subpass.h"
-#include "VulkanWrapper/Shader/ShaderCompiler.h"
+#include <vulkan/vulkan.hpp>
+#include <glm/glm.hpp>
+import vw;
 #include <filesystem>
-#include "VulkanWrapper/Synchronization/ResourceTracker.h"
 
 enum class ZPassSlot { Depth };
 

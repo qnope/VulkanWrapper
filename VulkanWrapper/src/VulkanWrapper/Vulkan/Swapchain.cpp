@@ -1,10 +1,11 @@
-#include "VulkanWrapper/Vulkan/Swapchain.h"
-
-#include "VulkanWrapper/Image/ImageView.h"
-#include "VulkanWrapper/Synchronization/Semaphore.h"
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Device.h"
-#include "VulkanWrapper/Vulkan/PresentQueue.h"
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <cstdint>
+#include <memory>
+#include <span>
+#include <vector>
+#include <vulkan/vulkan.hpp>
+module vw;
 
 namespace vw {
 

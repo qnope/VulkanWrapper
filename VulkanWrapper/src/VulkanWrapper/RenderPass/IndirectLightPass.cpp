@@ -1,7 +1,13 @@
-#include "VulkanWrapper/RenderPass/IndirectLightPass.h"
-
-#include "VulkanWrapper/Pipeline/PipelineLayout.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <array>
+#include <cstdint>
+#include <filesystem>
+#include <memory>
+#include <string>
+#include <variant>
+module vw;
 namespace vw {
 
 IndirectLightPass::IndirectLightPass(

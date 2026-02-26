@@ -1,8 +1,10 @@
-#include "VulkanWrapper/Pipeline/MeshRenderer.h"
-
-#include "VulkanWrapper/Model/Mesh.h"
-#include "VulkanWrapper/Utils/Error.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <glm/glm.hpp>
+#include <memory>
+#include <unordered_map>
+module vw;
 namespace vw {
 
 void MeshRenderer::add_pipeline(Model::Material::MaterialTypeTag tag,

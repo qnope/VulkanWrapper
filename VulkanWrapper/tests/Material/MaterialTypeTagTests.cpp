@@ -1,5 +1,10 @@
-#include "VulkanWrapper/Model/Material/MaterialPriority.h"
-#include "VulkanWrapper/Model/Material/MaterialTypeTag.h"
+#include <vulkan/vulkan.hpp>
+#include <filesystem>
+#include <memory>
+#include <vector>
+
+import vw;
+#include "VulkanWrapper/3rd_party.h"
 #include <gtest/gtest.h>
 #include <unordered_set>
 

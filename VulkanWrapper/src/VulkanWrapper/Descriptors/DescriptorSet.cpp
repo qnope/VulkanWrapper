@@ -1,5 +1,8 @@
-#include "VulkanWrapper/Descriptors/DescriptorSet.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <vector>
+module vw;
 namespace vw {
 
 DescriptorSet::DescriptorSet(

@@ -1,4 +1,7 @@
-#include "VulkanWrapper/Vulkan/Surface.h"
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+module vw;
 
 namespace vw {
 Surface::Surface(vk::UniqueSurfaceKHR surface) noexcept

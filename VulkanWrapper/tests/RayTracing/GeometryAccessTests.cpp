@@ -1,17 +1,10 @@
 #include "utils/create_gpu.hpp"
-#include "VulkanWrapper/Command/CommandPool.h"
-#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
-#include "VulkanWrapper/Model/Mesh.h"
-#include "VulkanWrapper/Model/MeshManager.h"
-#include "VulkanWrapper/Pipeline/ComputePipeline.h"
-#include "VulkanWrapper/Pipeline/PipelineLayout.h"
-#include "VulkanWrapper/RayTracing/GeometryReference.h"
-#include "VulkanWrapper/RayTracing/RayTracedScene.h"
-#include "VulkanWrapper/Shader/ShaderCompiler.h"
-#include "VulkanWrapper/Synchronization/Fence.h"
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/DeviceFinder.h"
-#include "VulkanWrapper/Vulkan/Queue.h"
+#include <vulkan/vulkan.hpp>
+#include <filesystem>
+#include <memory>
+#include <vector>
+
+import vw;
 #include <glm/gtc/matrix_transform.hpp>
 #include <gtest/gtest.h>
 #include <optional>

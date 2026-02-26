@@ -1,10 +1,10 @@
-#include "VulkanWrapper/Pipeline/Pipeline.h"
-
-#include "VulkanWrapper/Pipeline/PipelineLayout.h"
-#include "VulkanWrapper/Pipeline/ShaderModule.h"
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Device.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <memory>
+#include <optional>
+#include <vector>
+module vw;
 namespace vw {
 
 Pipeline::Pipeline(vk::UniquePipeline pipeline,

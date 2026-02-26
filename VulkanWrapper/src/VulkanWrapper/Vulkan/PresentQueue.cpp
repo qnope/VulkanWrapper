@@ -1,8 +1,8 @@
-#include "VulkanWrapper/Vulkan/PresentQueue.h"
-
-#include "VulkanWrapper/Synchronization/Semaphore.h"
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Swapchain.h"
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <cstdint>
+#include <vulkan/vulkan.hpp>
+module vw;
 
 namespace vw {
 PresentQueue::PresentQueue(vk::Queue queue) noexcept

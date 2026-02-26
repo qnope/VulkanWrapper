@@ -1,17 +1,24 @@
-#include "VulkanWrapper/Vulkan/Instance.h"
-
-#include "VulkanWrapper/Utils/Algos.h"
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/DeviceFinder.h"
-#include "VulkanWrapper/Vulkan/PhysicalDevice.h"
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <iostream>
+#include <memory>
+#include <span>
+#include <string>
+#include <ranges>
+#include <vector>
+#include <vulkan/vulkan.hpp>
 
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
 namespace vw {
-
 const vk::detail::DispatchLoaderDynamic &DefaultDispatcher() {
     return VULKAN_HPP_DEFAULT_DISPATCHER;
 }
+} // namespace vw
+
+module vw;
+
+namespace vw {
 
 namespace {
 

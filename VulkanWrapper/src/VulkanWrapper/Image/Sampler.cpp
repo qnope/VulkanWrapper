@@ -1,8 +1,8 @@
-#include "VulkanWrapper/Image/Sampler.h"
-
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Device.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <memory>
+module vw;
 vw::SamplerBuilder::SamplerBuilder(std::shared_ptr<const Device> device)
     : m_device{std::move(device)} {
     m_info = vk::SamplerCreateInfo()

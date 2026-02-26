@@ -1,7 +1,9 @@
-#include "VulkanWrapper/Command/CommandBuffer.h"
-
-#include "VulkanWrapper/Pipeline/Pipeline.h"
-#include "VulkanWrapper/Pipeline/PipelineLayout.h"
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <cstdint>
+#include <tuple>
+#include <vulkan/vulkan.hpp>
+module vw;
 
 namespace vw {
 

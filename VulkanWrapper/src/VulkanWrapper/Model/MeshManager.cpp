@@ -1,10 +1,12 @@
-#include "VulkanWrapper/Model/MeshManager.h"
-
-#include "VulkanWrapper/Model/Importer.h"
-#include "VulkanWrapper/Model/Material/ColoredMaterialHandler.h"
-#include "VulkanWrapper/Model/Material/EmissiveTexturedMaterialHandler.h"
-#include "VulkanWrapper/Model/Material/TexturedMaterialHandler.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <cstdint>
+#include <filesystem>
+#include <memory>
+#include <ranges>
+#include <vector>
+module vw;
 namespace vw::Model {
 
 MeshManager::MeshManager(std::shared_ptr<const Device> device,

@@ -1,5 +1,10 @@
-#include "VulkanWrapper/Memory/Interval.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <cstdint>
+#include <optional>
+#include <vector>
+module vw;
 namespace vw {
 
 // ============================================================================

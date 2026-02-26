@@ -1,13 +1,12 @@
-#include "VulkanWrapper/Memory/Allocator.h"
-
-#include "VulkanWrapper/Image/Image.h"
-#include "VulkanWrapper/Memory/Buffer.h"
-#include "VulkanWrapper/Utils/Alignment.h"
-#include "VulkanWrapper/Vulkan/Device.h"
-#include "VulkanWrapper/Vulkan/Instance.h"
-#include <exception>
+module;
+#include "VulkanWrapper/3rd_party.h"
 #include <vk_mem_alloc.h>
-
+#include <vulkan/vulkan.hpp>
+#include <cmath>
+#include <cstdint>
+#include <exception>
+#include <memory>
+module vw;
 namespace vw {
 namespace {
 MipLevel mip_level_from_size(Width width, Height height, Depth depth) {

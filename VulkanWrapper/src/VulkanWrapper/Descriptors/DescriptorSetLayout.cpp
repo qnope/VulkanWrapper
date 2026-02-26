@@ -1,8 +1,11 @@
-#include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
-
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Device.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <vector>
+module vw;
 namespace vw {
 
 DescriptorSetLayout::DescriptorSetLayout(

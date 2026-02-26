@@ -1,7 +1,4 @@
 #include "utils/create_gpu.hpp"
-#include "VulkanWrapper/Image/Image.h"
-#include "VulkanWrapper/Image/ImageView.h"
-#include "VulkanWrapper/Memory/Allocator.h"
 #include <gtest/gtest.h>
 
 TEST(ImageViewTest, CreateImageView) {

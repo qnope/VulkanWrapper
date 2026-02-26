@@ -1,5 +1,9 @@
-#include "VulkanWrapper/RenderPass/SkyParameters.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <glm/glm.hpp>
+#include <cmath>
+module vw;
 namespace vw {
 
 glm::vec3 SkyParameters::angle_to_direction(float angle_deg) {

@@ -1,9 +1,8 @@
-#include "VulkanWrapper/Image/ImageView.h"
-
-#include "VulkanWrapper/Image/Image.h"
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Device.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <memory>
+module vw;
 namespace vw {
 
 ImageView::ImageView(const std::shared_ptr<const Image> &image,

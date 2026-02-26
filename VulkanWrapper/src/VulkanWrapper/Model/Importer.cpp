@@ -1,15 +1,14 @@
-#include "VulkanWrapper/Model/Importer.h"
-
-#include "VulkanWrapper/Model/Internal/MeshInfo.h"
-#include "VulkanWrapper/Model/Material/BindlessMaterialManager.h"
-#include "VulkanWrapper/Model/Material/Material.h"
-#include "VulkanWrapper/Model/MeshManager.h"
-#include "VulkanWrapper/Utils/Algos.h"
-#include "VulkanWrapper/Utils/Error.h"
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
-
+#include <filesystem>
+#include <ranges>
+#include <span>
+#include <vector>
+module vw;
 namespace vw::Model {
 
 void import_model(const std::filesystem::path &path,

@@ -1,7 +1,12 @@
-#include "VulkanWrapper/Memory/UniformBufferAllocator.h"
-
-#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <optional>
+module vw;
 namespace vw {
 
 UniformBufferAllocator::UniformBufferAllocator(

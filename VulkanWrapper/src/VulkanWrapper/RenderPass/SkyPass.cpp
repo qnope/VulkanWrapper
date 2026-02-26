@@ -1,5 +1,12 @@
-#include "VulkanWrapper/RenderPass/SkyPass.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <glm/glm.hpp>
+#include <cstdint>
+#include <filesystem>
+#include <memory>
+#include <vector>
+module vw;
 namespace vw {
 
 SkyPass::SkyPass(std::shared_ptr<Device> device,

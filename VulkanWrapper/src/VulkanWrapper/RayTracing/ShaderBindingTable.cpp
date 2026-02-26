@@ -1,7 +1,8 @@
-#include "VulkanWrapper/RayTracing/ShaderBindingTable.h"
-
-#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <memory>
+module vw;
 namespace vw::rt {
 
 ShaderBindingTable::ShaderBindingTable(

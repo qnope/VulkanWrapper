@@ -1,9 +1,10 @@
-#include "VulkanWrapper/Descriptors/DescriptorAllocator.h"
-
-#include "VulkanWrapper/Image/CombinedImage.h"
-#include "VulkanWrapper/Image/ImageView.h"
-#include "VulkanWrapper/Image/Sampler.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <cstdint>
+#include <memory>
+#include <vector>
+module vw;
 constexpr int DESCRIPTOR_ALLOCATOR_RESERVE_SIZE = 20;
 
 namespace vw {

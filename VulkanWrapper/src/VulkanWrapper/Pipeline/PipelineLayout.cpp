@@ -1,10 +1,10 @@
-#include "VulkanWrapper/Pipeline/PipelineLayout.h"
-
-#include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
-#include "VulkanWrapper/Utils/Algos.h"
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Device.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <memory>
+#include <ranges>
+#include <vector>
+module vw;
 namespace vw {
 PipelineLayoutBuilder::PipelineLayoutBuilder(
     std::shared_ptr<const Device> device)
@@ -24,7 +24,11 @@ PipelineLayoutBuilder::with_push_constant_range(vk::PushConstantRange range) {
 }
 
 PipelineLayout PipelineLayoutBuilder::build() {
-    auto layouts = m_descriptorSetLayouts | to_handle | to<std::vector>;
+    std::vector<vk::DescriptorSetLayout> layouts;
+    layouts.reserve(m_descriptorSetLayouts.size());
+    for (const auto &dsl : m_descriptorSetLayouts) {
+        layouts.push_back(dsl->handle());
+    }
 
     const auto info = vk::PipelineLayoutCreateInfo()
                           .setSetLayouts(layouts)

@@ -1,9 +1,8 @@
-#include "VulkanWrapper/Image/CombinedImage.h"
-
-#include "VulkanWrapper/Image/Image.h"
-#include "VulkanWrapper/Image/ImageView.h"
-#include "VulkanWrapper/Image/Sampler.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <memory>
+module vw;
 namespace vw {
 
 CombinedImage::CombinedImage(std::shared_ptr<const ImageView> image_view,

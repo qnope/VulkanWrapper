@@ -1,13 +1,11 @@
-#include "VulkanWrapper/Memory/StagingBufferManager.h"
-
-#include "VulkanWrapper/Command/CommandPool.h"
-#include "VulkanWrapper/Image/CombinedImage.h"
-#include "VulkanWrapper/Image/ImageLoader.h"
-#include "VulkanWrapper/Image/ImageView.h"
-#include "VulkanWrapper/Image/Mipmap.h"
-#include "VulkanWrapper/Image/Sampler.h"
-#include "VulkanWrapper/Memory/Barrier.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <cmath>
+#include <filesystem>
+#include <memory>
+#include <tuple>
+module vw;
 constexpr auto STAGING_BUFFER_SIZE = 1 << 22;
 
 namespace vw {

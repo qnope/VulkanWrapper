@@ -1,7 +1,10 @@
-#include "VulkanWrapper/Vulkan/Device.h"
-
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Queue.h"
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <memory>
+#include <optional>
+#include <vector>
+#include <vulkan/vulkan.hpp>
+module vw;
 
 namespace vw {
 

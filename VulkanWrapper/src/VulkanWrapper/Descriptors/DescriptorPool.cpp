@@ -1,9 +1,10 @@
-#include "VulkanWrapper/Descriptors/DescriptorPool.h"
-
-#include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Device.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <memory>
+#include <optional>
+#include <vector>
+module vw;
 namespace vw {
 
 constexpr auto MAX_DESCRIPTOR_SET_BY_POOL = 16;

@@ -1,12 +1,13 @@
-#include "VulkanWrapper/Window/Window.h"
-
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Instance.h"
-#include "VulkanWrapper/Vulkan/Surface.h"
-#include "VulkanWrapper/Vulkan/Swapchain.h"
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
-
+#include <memory>
+#include <span>
+#include <string>
+#include <vector>
+module vw;
 namespace vw {
 void Window::WindowDeleter::operator()(SDL_Window *window) const noexcept {
     SDL_DestroyWindow(window);

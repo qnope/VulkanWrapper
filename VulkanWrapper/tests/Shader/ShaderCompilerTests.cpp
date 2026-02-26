@@ -1,5 +1,10 @@
-#include "VulkanWrapper/Shader/ShaderCompiler.h"
-#include "VulkanWrapper/Utils/Error.h"
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <filesystem>
+#include <memory>
+#include <vector>
+
+import vw;
 #include <fstream>
 #include <gtest/gtest.h>
 

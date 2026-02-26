@@ -1,23 +1,14 @@
 #pragma once
 
+#include "VulkanWrapper/3rd_party.h"
 #include "AmbientOcclusionPass.h"
 #include "DirectLightPass.h"
 #include "ZPass.h"
 #include <filesystem>
 #include <memory>
-#include <VulkanWrapper/Memory/Buffer.h>
-#include <VulkanWrapper/Model/Material/BindlessMaterialManager.h>
-#include <VulkanWrapper/Model/Material/ColoredMaterialHandler.h>
-#include <VulkanWrapper/Model/Material/EmissiveTexturedMaterialHandler.h>
-#include <VulkanWrapper/Model/Material/TexturedMaterialHandler.h>
-#include <VulkanWrapper/Model/Scene.h>
-#include <VulkanWrapper/RayTracing/RayTracedScene.h>
-#include <VulkanWrapper/RenderPass/IndirectLightPass.h>
-#include <VulkanWrapper/RenderPass/SkyParameters.h>
-#include <VulkanWrapper/RenderPass/SkyPass.h>
-#include <VulkanWrapper/RenderPass/ToneMappingPass.h>
-#include <VulkanWrapper/Synchronization/ResourceTracker.h>
-#include <VulkanWrapper/Vulkan/Device.h>
+#include <vulkan/vulkan.hpp>
+#include <glm/glm.hpp>
+import vw;
 
 /**
  * @brief Manages deferred rendering passes with functional API and lazy

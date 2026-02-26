@@ -1,9 +1,10 @@
 #include "utils/create_gpu.hpp"
-#include "VulkanWrapper/Memory/StagingBufferManager.h"
-#include "VulkanWrapper/Model/Material/BindlessMaterialManager.h"
-#include "VulkanWrapper/Model/Material/ColoredMaterialHandler.h"
-#include "VulkanWrapper/Model/Material/TexturedMaterialHandler.h"
-#include "VulkanWrapper/Utils/Error.h"
+#include <filesystem>
+#include <vulkan/vulkan.hpp>
+#include <memory>
+#include <vector>
+
+import vw;
 #include <assimp/material.h>
 #include <gtest/gtest.h>
 

@@ -1,6 +1,10 @@
-#include "VulkanWrapper/Vulkan/Queue.h"
-
-#include "VulkanWrapper/Synchronization/Fence.h"
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <span>
+#include <utility>
+#include <vector>
+#include <vulkan/vulkan.hpp>
+module vw;
 
 namespace vw {
 

@@ -1,7 +1,12 @@
 #include "utils/create_gpu.hpp"
 
-#include "VulkanWrapper/Random/NoiseTexture.h"
-#include "VulkanWrapper/Random/RandomSamplingBuffer.h"
+#include <glm/glm.hpp>
+#include <vulkan/vulkan.hpp>
+#include <filesystem>
+#include <memory>
+#include <vector>
+
+import vw;
 
 #include <gtest/gtest.h>
 

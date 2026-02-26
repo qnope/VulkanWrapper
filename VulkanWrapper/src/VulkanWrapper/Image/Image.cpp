@@ -1,8 +1,11 @@
-#include "VulkanWrapper/Image/Image.h"
-
-#include "VulkanWrapper/Memory/Allocator.h"
-#include "VulkanWrapper/Utils/Error.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vk_mem_alloc.h>
+#include <vulkan/vulkan.hpp>
+#include <array>
+#include <cstdint>
+#include <memory>
+module vw;
 namespace vw {
 
 namespace {

@@ -1,6 +1,4 @@
 #include "utils/create_gpu.hpp"
-#include "VulkanWrapper/Memory/Allocator.h"
-#include "VulkanWrapper/Memory/UniformBufferAllocator.h"
 #include <cstring>
 #include <glm/glm.hpp>
 #include <gtest/gtest.h>

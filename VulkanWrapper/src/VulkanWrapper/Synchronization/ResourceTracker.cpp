@@ -1,5 +1,9 @@
-#include "VulkanWrapper/Synchronization/ResourceTracker.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <variant>
+#include <vector>
+module vw;
 namespace vw::Barrier {
 
 void ResourceTracker::track(const ResourceState &state) {
@@ -354,6 +358,42 @@ void ResourceTracker::flush(vk::CommandBuffer commandBuffer) {
     m_pending_image_barriers.clear();
     m_pending_buffer_barriers.clear();
     m_pending_memory_barriers.clear();
+}
+
+std::vector<ResourceTracker::BufferStateInfo>
+ResourceTracker::buffer_states_for(vk::Buffer buffer) const {
+    std::vector<BufferStateInfo> result;
+    auto it = m_buffer_states.find(buffer);
+    if (it == m_buffer_states.end()) {
+        return result;
+    }
+    for (const auto &stateSet : it->second) {
+        for (const auto &interval : stateSet.intervals.intervals()) {
+            result.push_back(
+                {interval, stateSet.state.stage, stateSet.state.access});
+        }
+    }
+    std::sort(result.begin(), result.end(),
+              [](const BufferStateInfo &a, const BufferStateInfo &b) {
+                  return a.interval.offset < b.interval.offset;
+              });
+    return result;
+}
+
+std::vector<ResourceTracker::ImageStateInfo>
+ResourceTracker::image_states_for(vk::Image image) const {
+    std::vector<ImageStateInfo> result;
+    auto it = m_image_states.find(image);
+    if (it == m_image_states.end()) {
+        return result;
+    }
+    for (const auto &stateSet : it->second) {
+        for (const auto &interval : stateSet.intervals.intervals()) {
+            result.push_back({interval, stateSet.state.layout,
+                              stateSet.state.stage, stateSet.state.access});
+        }
+    }
+    return result;
 }
 
 } // namespace vw::Barrier

@@ -1,4 +1,12 @@
-#include "VulkanWrapper/Vulkan/PhysicalDevice.h"
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <ranges>
+#include <set>
+#include <string>
+#include <string_view>
+#include <vector>
+#include <vulkan/vulkan.hpp>
+module vw;
 
 namespace vw {
 namespace {

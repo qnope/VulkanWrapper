@@ -1,14 +1,16 @@
-#include "VulkanWrapper/RayTracing/RayTracedScene.h"
-
-#include "VulkanWrapper/Command/CommandPool.h"
-#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
-#include "VulkanWrapper/Model/Mesh.h"
-#include "VulkanWrapper/Synchronization/Fence.h"
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Device.h"
-#include "VulkanWrapper/Vulkan/Queue.h"
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <glm/glm.hpp>
 #include <algorithm>
-
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <ranges>
+#include <tuple>
+#include <unordered_map>
+#include <vector>
+module vw;
 namespace vw::rt {
 
 RayTracedScene::RayTracedScene(std::shared_ptr<const Device> device,

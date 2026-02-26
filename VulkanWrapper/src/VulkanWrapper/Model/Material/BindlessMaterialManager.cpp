@@ -1,9 +1,14 @@
-#include "VulkanWrapper/Model/Material/BindlessMaterialManager.h"
-
-#include "VulkanWrapper/Utils/Error.h"
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <assimp/material.h>
 #include <algorithm>
+#include <filesystem>
+#include <memory>
 #include <ranges>
-
+#include <variant>
+#include <vector>
+module vw;
 namespace vw::Model::Material {
 
 BindlessMaterialManager::BindlessMaterialManager(
