@@ -1,13 +1,8 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <vulkan/vulkan.hpp>
-#include <cstdint>
-#include <filesystem>
 #include <fstream>
-#include <memory>
-#include <span>
-#include <vector>
 module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 static std::vector<uint32_t> readSpirVFile(const std::filesystem::path &path) {

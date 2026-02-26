@@ -1,14 +1,10 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <vulkan/vulkan.hpp>
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
-#include <filesystem>
-#include <ranges>
-#include <span>
-#include <vector>
 module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw::Model {
 
 void import_model(const std::filesystem::path &path,

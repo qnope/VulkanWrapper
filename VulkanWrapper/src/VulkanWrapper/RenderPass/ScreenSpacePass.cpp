@@ -1,10 +1,7 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <vulkan/vulkan.hpp>
-#include <memory>
-#include <optional>
-#include <vector>
 module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 std::shared_ptr<const Pipeline> create_screen_space_pipeline(

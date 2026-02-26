@@ -1,11 +1,7 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <vulkan/vulkan.hpp>
-#include <cstdint>
-#include <map>
-#include <memory>
-#include <vector>
 module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 DescriptorSetLayout::DescriptorSetLayout(

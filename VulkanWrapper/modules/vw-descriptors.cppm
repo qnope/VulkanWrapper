@@ -1,17 +1,8 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <algorithm>
-#include <functional>
-#include <glm/glm.hpp>
-#include <memory>
-#include <numeric>
-#include <optional>
-#include <unordered_map>
-#include <variant>
-#include <vector>
-#include <vulkan/vulkan.hpp>
 
 export module vw:descriptors;
+import "VulkanWrapper/vw_vulkan.h";
 import :core;
 import :utils;
 import :vulkan;

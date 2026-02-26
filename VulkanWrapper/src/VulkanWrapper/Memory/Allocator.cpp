@@ -1,12 +1,8 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <vk_mem_alloc.h>
-#include <vulkan/vulkan.hpp>
 #include <cmath>
-#include <cstdint>
-#include <exception>
-#include <memory>
 module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 namespace {
 MipLevel mip_level_from_size(Width width, Height height, Depth depth) {

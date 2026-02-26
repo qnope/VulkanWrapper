@@ -1,10 +1,7 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <vulkan/vulkan.hpp>
-#include <memory>
-#include <optional>
-#include <vector>
 module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 Pipeline::Pipeline(vk::UniquePipeline pipeline,

@@ -1,10 +1,7 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <vulkan/vulkan.hpp>
-#include <cstdint>
-#include <memory>
-#include <vector>
 module vw;
+import "VulkanWrapper/vw_vulkan.h";
 constexpr int DESCRIPTOR_ALLOCATOR_RESERVE_SIZE = 20;
 
 namespace vw {

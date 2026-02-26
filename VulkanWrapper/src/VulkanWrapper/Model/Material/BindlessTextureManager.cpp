@@ -1,11 +1,7 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <vulkan/vulkan.hpp>
-#include <cstdint>
-#include <filesystem>
-#include <memory>
-#include <vector>
 module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw::Model::Material {
 
 BindlessTextureManager::BindlessTextureManager(

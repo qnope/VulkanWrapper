@@ -1,16 +1,8 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <vulkan/vulkan.hpp>
-#include <algorithm>
 #include <assimp/material.h>
-#include <cstdint>
-#include <filesystem>
-#include <memory>
-#include <optional>
-#include <ranges>
-#include <string>
-#include <vector>
 module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw::Model::Material {
 
 VW_DEFINE_MATERIAL_TYPE(emissive_textured_material_tag);

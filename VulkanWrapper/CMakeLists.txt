@@ -12,6 +12,15 @@ find_package(unofficial-shaderc CONFIG REQUIRED)
 
 add_library(VulkanWrapperCoreLibrary SHARED)
 
+# Header unit: compiled ONCE, then imported by all module interface and
+# implementation units.  Eliminates N×(vulkan.hpp + vk_mem_alloc.h + glm +
+# std-headers) cold parses – previously one full parse per translation unit.
+target_sources(VulkanWrapperCoreLibrary
+    PUBLIC FILE_SET CXX_MODULE_HEADER_UNITS
+    BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
+    FILES include/VulkanWrapper/vw_vulkan.h
+)
+
 # Module interface units (partitions + primary)
 target_sources(VulkanWrapperCoreLibrary
     PUBLIC FILE_SET CXX_MODULES FILES
@@ -38,6 +47,9 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     # Utils
     src/VulkanWrapper/Utils/Error.cpp
     # Vulkan
+    # DispatchLoaderStorage is a plain (non-module) TU: the sole file that
+    # must include vulkan.hpp directly to instantiate the dynamic dispatcher.
+    src/VulkanWrapper/Vulkan/DispatchLoaderStorage.cpp
     src/VulkanWrapper/Vulkan/Instance.cpp
     src/VulkanWrapper/Vulkan/Device.cpp
     src/VulkanWrapper/Vulkan/Queue.cpp

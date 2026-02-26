@@ -1,12 +1,7 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <vulkan/vulkan.hpp>
-#include <cstddef>
-#include <cstdint>
-#include <memory>
-#include <span>
-#include <vector>
 module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw::rt {
 
 RayTracingPipeline::RayTracingPipeline(std::shared_ptr<const Device> device,

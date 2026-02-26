@@ -1,9 +1,9 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <vulkan/vulkan.hpp>
 
 export module vw:core;
 
+import "VulkanWrapper/vw_vulkan.h";
 export namespace vw {
 
 enum ApiVersion {

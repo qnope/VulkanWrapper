@@ -1,16 +1,8 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <cstdint>
-#include <filesystem>
-#include <map>
-#include <memory>
-#include <set>
-#include <string>
-#include <string_view>
-#include <vector>
-#include <vulkan/vulkan.hpp>
 
 export module vw:shader;
+import "VulkanWrapper/vw_vulkan.h";
 import :core;
 import :utils;
 import :vulkan;

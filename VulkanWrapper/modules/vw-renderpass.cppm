@@ -1,16 +1,8 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <cstdint>
-#include <filesystem>
-#include <glm/glm.hpp>
-#include <map>
-#include <memory>
-#include <optional>
-#include <unordered_map>
-#include <vector>
-#include <vulkan/vulkan.hpp>
 
 export module vw:renderpass;
+import "VulkanWrapper/vw_vulkan.h";
 import :core;
 import :utils;
 import :vulkan;

@@ -2,6 +2,7 @@ module;
 #include "VulkanWrapper/3rd_party.h"
 #include <SDL3/SDL.h>
 module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 SDL_Initializer::SDL_Initializer() {

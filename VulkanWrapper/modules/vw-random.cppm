@@ -1,12 +1,8 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <array>
-#include <cstdint>
-#include <memory>
-#include <glm/glm.hpp>
-#include <vulkan/vulkan.hpp>
 
 export module vw:random;
+import "VulkanWrapper/vw_vulkan.h";
 import :core;
 import :utils;
 import :vulkan;

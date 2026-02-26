@@ -1,11 +1,8 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <vulkan/vulkan.hpp>
 #include <cmath>
-#include <filesystem>
-#include <memory>
-#include <tuple>
 module vw;
+import "VulkanWrapper/vw_vulkan.h";
 constexpr auto STAGING_BUFFER_SIZE = 1 << 22;
 
 namespace vw {

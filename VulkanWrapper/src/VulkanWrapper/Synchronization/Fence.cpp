@@ -1,10 +1,8 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <vulkan/vulkan.hpp>
-#include <cstdint>
 #include <limits>
-#include <tuple>
 module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 Fence::Fence(vk::Device device, vk::UniqueFence fence)

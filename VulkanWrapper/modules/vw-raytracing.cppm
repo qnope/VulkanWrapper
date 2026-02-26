@@ -1,18 +1,8 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <array>
-#include <cstdint>
-#include <cstring>
-#include <memory>
-#include <optional>
-#include <ranges>
-#include <span>
-#include <unordered_map>
-#include <vector>
-#include <glm/glm.hpp>
-#include <vulkan/vulkan.hpp>
 
 export module vw:raytracing;
+import "VulkanWrapper/vw_vulkan.h";
 import :core;
 import :utils;
 import :vulkan;

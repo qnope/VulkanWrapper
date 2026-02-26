@@ -1,11 +1,9 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <span>
 #include <utility>
-#include <vector>
-#include <vulkan/vulkan.hpp>
 module vw;
 
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 Queue::Queue(vk::Queue queue, vk::QueueFlags type) noexcept

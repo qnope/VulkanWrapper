@@ -1,9 +1,8 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <cstdint>
-#include <vulkan/vulkan.hpp>
 module vw;
 
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 PresentQueue::PresentQueue(vk::Queue queue) noexcept
     : m_queue{queue} {}

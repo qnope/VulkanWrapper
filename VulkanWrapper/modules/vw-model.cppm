@@ -1,19 +1,11 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <filesystem>
-#include <functional>
-#include <glm/glm.hpp>
-#include <memory>
-#include <optional>
-#include <ranges>
-#include <unordered_map>
-#include <vector>
-#include <vulkan/vulkan.hpp>
 
 struct aiMaterial;
 struct aiMesh;
 
 export module vw:model;
+import "VulkanWrapper/vw_vulkan.h";
 import :core;
 import :utils;
 import :vulkan;

@@ -1,10 +1,7 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <vulkan/vulkan.hpp>
-#include <cstdint>
-#include <glm/glm.hpp>
-#include <random>
 module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 DualRandomSample generate_hemisphere_samples() {

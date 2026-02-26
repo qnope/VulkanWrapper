@@ -1,11 +1,7 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <vk_mem_alloc.h>
-#include <vulkan/vulkan.hpp>
-#include <cstddef>
-#include <memory>
-#include <vector>
 module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 BufferBase::BufferBase(std::shared_ptr<const Device> device,
                        std::shared_ptr<const Allocator> allocator,

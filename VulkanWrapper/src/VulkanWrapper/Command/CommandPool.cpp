@@ -1,11 +1,8 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <cstddef>
-#include <memory>
-#include <vector>
-#include <vulkan/vulkan.hpp>
 module vw;
 
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 CommandPool::CommandPool(std::shared_ptr<const Device> device,
                          vk::UniqueCommandPool pool)

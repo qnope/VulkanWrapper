@@ -1,11 +1,8 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <memory>
-#include <optional>
-#include <vector>
-#include <vulkan/vulkan.hpp>
 module vw;
 
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 struct DeviceImpl {

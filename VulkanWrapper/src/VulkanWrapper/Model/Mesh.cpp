@@ -1,10 +1,7 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <vulkan/vulkan.hpp>
-#include <glm/glm.hpp>
-#include <cstdint>
-#include <memory>
 module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw ::Model {
 Mesh::Mesh(std::shared_ptr<const Vertex3DBuffer> vertex_buffer,
            std::shared_ptr<const FullVertex3DBuffer> full_vertex_buffer,

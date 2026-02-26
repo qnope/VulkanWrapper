@@ -1,14 +1,8 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <array>
-#include <filesystem>
-#include <memory>
-#include <span>
-#include <vector>
-#include <vulkan/vulkan.hpp>
-#include <vk_mem_alloc.h>
 
 export module vw:image;
+import "VulkanWrapper/vw_vulkan.h";
 import :core;
 import :utils;
 import :vulkan;

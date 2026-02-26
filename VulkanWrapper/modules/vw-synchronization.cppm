@@ -1,13 +1,8 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <memory>
-#include <optional>
-#include <unordered_map>
-#include <variant>
-#include <vector>
-#include <vulkan/vulkan.hpp>
 
 export module vw:synchronization;
+import "VulkanWrapper/vw_vulkan.h";
 import :core;
 import :utils;
 import :vulkan;

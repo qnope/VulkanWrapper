@@ -1,13 +1,7 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <vulkan/vulkan.hpp>
-#include <array>
-#include <cstdint>
-#include <filesystem>
-#include <memory>
-#include <string>
-#include <variant>
 module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 IndirectLightPass::IndirectLightPass(

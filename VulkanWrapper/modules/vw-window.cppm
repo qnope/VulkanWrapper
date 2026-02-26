@@ -1,13 +1,10 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <memory>
-#include <span>
-#include <string_view>
-#include <vulkan/vulkan.hpp>
 
 struct SDL_Window;
 
 export module vw:window;
+import "VulkanWrapper/vw_vulkan.h";
 import :core;
 import :utils;
 import :vulkan;

@@ -1,16 +1,7 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <vulkan/vulkan.hpp>
-#include <glm/glm.hpp>
-#include <algorithm>
-#include <cstdint>
-#include <memory>
-#include <optional>
-#include <ranges>
-#include <tuple>
-#include <unordered_map>
-#include <vector>
 module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw::rt {
 
 RayTracedScene::RayTracedScene(std::shared_ptr<const Device> device,

@@ -1,10 +1,8 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <cstdint>
-#include <tuple>
-#include <vulkan/vulkan.hpp>
 module vw;
 
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 CommandBufferRecorder::CommandBufferRecorder(vk::CommandBuffer commandBuffer)

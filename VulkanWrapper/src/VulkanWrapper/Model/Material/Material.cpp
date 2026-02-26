@@ -1,4 +1,4 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <vulkan/vulkan.hpp>
 module vw;
+import "VulkanWrapper/vw_vulkan.h";

@@ -1,5 +1,6 @@
 export module vw;
 
+import "VulkanWrapper/vw_vulkan.h";
 export import :core;
 export import :utils;
 export import :vulkan;

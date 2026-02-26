@@ -1,19 +1,8 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <algorithm>
-#include <array>
-#include <iostream>
-#include <map>
-#include <memory>
-#include <optional>
-#include <ranges>
-#include <set>
-#include <span>
-#include <string>
-#include <vector>
-#include <vulkan/vulkan.hpp>
 module vw;
 
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 DeviceFinder::DeviceFinder(std::span<PhysicalDevice> physicalDevices) noexcept {

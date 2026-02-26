@@ -1,12 +1,7 @@
 module;
 #include "VulkanWrapper/3rd_party.h"
-#include <vulkan/vulkan.hpp>
-#include <cstdint>
-#include <filesystem>
-#include <memory>
-#include <ranges>
-#include <vector>
 module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw::Model {
 
 MeshManager::MeshManager(std::shared_ptr<const Device> device,
