@@ -1,12 +1,8 @@
-#include "VulkanWrapper/Vulkan/DeviceFinder.h"
+module;
+#include "VulkanWrapper/3rd_party.h"
+module vw;
 
-#include "VulkanWrapper/Utils/Algos.h"
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Device.h"
-#include "VulkanWrapper/Vulkan/PhysicalDevice.h"
-#include "VulkanWrapper/Vulkan/PresentQueue.h"
-#include "VulkanWrapper/Vulkan/Queue.h"
-
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 DeviceFinder::DeviceFinder(std::span<PhysicalDevice> physicalDevices) noexcept {
@@ -147,19 +143,10 @@ DeviceFinder &DeviceFinder::with_descriptor_indexing() noexcept {
     auto &vulkan12Features =
         m_features.get<vk::PhysicalDeviceVulkan12Features>();
 
-    // Enable non-uniform indexing for sampled image arrays (textures)
     vulkan12Features.setShaderSampledImageArrayNonUniformIndexing(1U);
-
-    // Enable runtime descriptor arrays (variable size arrays)
     vulkan12Features.setRuntimeDescriptorArray(1U);
-
-    // Enable partially bound descriptors (not all slots need to be filled)
     vulkan12Features.setDescriptorBindingPartiallyBound(1U);
-
-    // Enable variable descriptor count (unbounded arrays)
     vulkan12Features.setDescriptorBindingVariableDescriptorCount(1U);
-
-    // Enable update after bind for sampled images
     vulkan12Features.setDescriptorBindingSampledImageUpdateAfterBind(1U);
 
     return *this;
@@ -241,9 +228,6 @@ std::shared_ptr<Device> DeviceFinder::build() {
     m_features.get<vk::PhysicalDeviceVulkan12Features>().setBufferDeviceAddress(
         1U);
 
-    // Unlink ray tracing feature structures if ray tracing wasn't requested
-    // This prevents validation errors about features in pNext without
-    // extensions
     auto &accelFeatures =
         m_features.get<vk::PhysicalDeviceAccelerationStructureFeaturesKHR>();
     auto &rayQueryFeatures =

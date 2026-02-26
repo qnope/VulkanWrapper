@@ -1,26 +1,9 @@
 #pragma once
 
 #include "VulkanWrapper/3rd_party.h"
-#include "VulkanWrapper/Descriptors/DescriptorAllocator.h"
-#include "VulkanWrapper/Descriptors/DescriptorPool.h"
-#include "VulkanWrapper/Descriptors/DescriptorSet.h"
-#include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
-#include "VulkanWrapper/Image/ImageView.h"
-#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
-#include "VulkanWrapper/Memory/Allocator.h"
-#include "VulkanWrapper/Memory/Buffer.h"
-#include "VulkanWrapper/Model/Material/BindlessMaterialManager.h"
-#include "VulkanWrapper/Model/Mesh.h"
-#include "VulkanWrapper/Model/Scene.h"
-#include "VulkanWrapper/Pipeline/MeshRenderer.h"
-#include "VulkanWrapper/Pipeline/Pipeline.h"
-#include "VulkanWrapper/Random/NoiseTexture.h"
-#include "VulkanWrapper/Shader/ShaderCompiler.h"
-#include "VulkanWrapper/Random/RandomSamplingBuffer.h"
-#include "VulkanWrapper/RenderPass/SkyParameters.h"
-#include "VulkanWrapper/RenderPass/Subpass.h"
-#include "VulkanWrapper/Synchronization/ResourceTracker.h"
-#include "VulkanWrapper/Utils/Error.h"
+#include <vulkan/vulkan.hpp>
+#include <glm/glm.hpp>
+import vw;
 #include <filesystem>
 #include <span>
 

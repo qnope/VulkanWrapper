@@ -1,10 +1,9 @@
-#include "VulkanWrapper/Image/ImageLoader.h"
-
-#include "VulkanWrapper/Utils/Algos.h"
-#include "VulkanWrapper/Utils/Error.h"
+module;
+#include "VulkanWrapper/3rd_party.h"
 #include <SDL3/SDL.h>
 #include <SDL3_image/SDL_image.h>
-
+module vw;
+import "VulkanWrapper/vw_vulkan.h";
 template <auto f>
 using static_function = std::integral_constant<decltype(f), f>;
 

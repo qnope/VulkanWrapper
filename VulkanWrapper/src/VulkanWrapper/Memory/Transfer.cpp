@@ -1,13 +1,8 @@
-#include "VulkanWrapper/Memory/Transfer.h"
-
-#include "VulkanWrapper/Command/CommandPool.h"
-#include "VulkanWrapper/Image/Image.h"
-#include "VulkanWrapper/Image/ImageLoader.h"
-#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
-#include "VulkanWrapper/Memory/Allocator.h"
-#include "VulkanWrapper/Synchronization/Fence.h"
-#include "VulkanWrapper/Vulkan/Queue.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <utility>
+module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 void Transfer::blit(vk::CommandBuffer cmd,

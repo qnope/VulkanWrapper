@@ -1,7 +1,9 @@
-#include "VulkanWrapper/Vulkan/Queue.h"
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <utility>
+module vw;
 
-#include "VulkanWrapper/Synchronization/Fence.h"
-
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 Queue::Queue(vk::Queue queue, vk::QueueFlags type) noexcept

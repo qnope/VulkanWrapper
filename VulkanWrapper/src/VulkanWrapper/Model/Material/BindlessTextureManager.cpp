@@ -1,12 +1,7 @@
-#include "VulkanWrapper/Model/Material/BindlessTextureManager.h"
-
-#include "VulkanWrapper/Descriptors/DescriptorAllocator.h"
-#include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
-#include "VulkanWrapper/Image/Sampler.h"
-#include "VulkanWrapper/Memory/StagingBufferManager.h"
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Device.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw::Model::Material {
 
 BindlessTextureManager::BindlessTextureManager(

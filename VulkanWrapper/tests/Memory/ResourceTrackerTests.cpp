@@ -1,4 +1,10 @@
-#include "VulkanWrapper/Synchronization/ResourceTracker.h"
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+#include <filesystem>
+#include <memory>
+#include <vector>
+
+import vw;
 #include <gtest/gtest.h>
 
 using namespace vw;
@@ -10,83 +16,31 @@ class ResourceTrackerTest : public ::testing::Test {
   protected:
     ResourceTracker tracker;
 
-    // Helper methods to access private members
     const std::vector<vk::BufferMemoryBarrier2> &
     getPendingBufferBarriers() const {
-        return tracker.m_pending_buffer_barriers;
+        return tracker.pending_buffer_barriers();
     }
 
     const std::vector<vk::ImageMemoryBarrier2> &
     getPendingImageBarriers() const {
-        return tracker.m_pending_image_barriers;
+        return tracker.pending_image_barriers();
     }
 
     const std::vector<vk::MemoryBarrier2> &getPendingMemoryBarriers() const {
-        return tracker.m_pending_memory_barriers;
+        return tracker.pending_memory_barriers();
     }
 
-    // Helper to inspect buffer state
-    // Returns a list of (Interval, State) for a given buffer
-    struct BufferStateInfo {
-        BufferInterval interval;
-        vk::PipelineStageFlags2 stage;
-        vk::AccessFlags2 access;
-    };
-
+    using BufferStateInfo = ResourceTracker::BufferStateInfo;
     std::vector<BufferStateInfo> getBufferStates(vk::Buffer buffer) {
-        std::vector<BufferStateInfo> result;
-        if (tracker.m_buffer_states.find(buffer) ==
-            tracker.m_buffer_states.end()) {
-            return result;
-        }
-
-        const auto &stateSets = tracker.m_buffer_states[buffer];
-        for (const auto &stateSet : stateSets) {
-            for (const auto &interval : stateSet.intervals.intervals()) {
-                result.push_back(
-                    {interval, stateSet.state.stage, stateSet.state.access});
-            }
-        }
-        // Sort by offset for easier testing
-        std::sort(result.begin(), result.end(),
-                  [](const BufferStateInfo &a, const BufferStateInfo &b) {
-                      return a.interval.offset < b.interval.offset;
-                  });
-        return result;
+        return tracker.buffer_states_for(buffer);
     }
 
-    // Helper to inspect image state
-    struct ImageStateInfo {
-        ImageInterval interval;
-        vk::ImageLayout layout;
-        vk::PipelineStageFlags2 stage;
-        vk::AccessFlags2 access;
-    };
-
+    using ImageStateInfo = ResourceTracker::ImageStateInfo;
     std::vector<ImageStateInfo> getImageStates(vk::Image image) {
-        std::vector<ImageStateInfo> result;
-        if (tracker.m_image_states.find(image) ==
-            tracker.m_image_states.end()) {
-            return result;
-        }
-
-        const auto &stateSets = tracker.m_image_states[image];
-        for (const auto &stateSet : stateSets) {
-            for (const auto &interval : stateSet.intervals.intervals()) {
-                result.push_back({interval, stateSet.state.layout,
-                                  stateSet.state.stage, stateSet.state.access});
-            }
-        }
-        // No simple sort for multi-dimensional image intervals, but we can rely
-        // on insertion order or just check existence
-        return result;
+        return tracker.image_states_for(image);
     }
 
-    void clearPendingBarriers() {
-        tracker.m_pending_buffer_barriers.clear();
-        tracker.m_pending_image_barriers.clear();
-        tracker.m_pending_memory_barriers.clear();
-    }
+    void clearPendingBarriers() { tracker.clear_pending_barriers(); }
 };
 
 // =================================================================================================
@@ -144,10 +98,6 @@ TEST_F(ResourceTrackerTest, Buffer_RAR_NoBarrier) {
     // RAR should not generate a barrier
     EXPECT_TRUE(getPendingBufferBarriers().empty());
 
-    // State should be updated (or merged/kept? Actually request updates state
-    // to new usage) Wait, if we request new state, the tracker updates the
-    // state to the NEW usage. So subsequent barriers will transition FROM this
-    // new state.
     auto states = getBufferStates(buffer);
     ASSERT_EQ(states.size(), 1);
     EXPECT_EQ(states[0].stage, vk::PipelineStageFlagBits2::eVertexShader);
@@ -386,10 +336,7 @@ TEST_F(ResourceTrackerTest, Image_SameLayout_DifferentAccess_GeneratesBarrier) {
     tracker.request(ImageState{
         .image = image,
         .subresourceRange = range,
-        .layout =
-            vk::ImageLayout::eColorAttachmentOptimal, // Keeping same layout for
-                                                      // read (e.g. input
-                                                      // attachment)
+        .layout = vk::ImageLayout::eColorAttachmentOptimal,
         .stage = vk::PipelineStageFlagBits2::eFragmentShader,
         .access = vk::AccessFlagBits2::eInputAttachmentRead});
 
@@ -432,21 +379,8 @@ TEST_F(ResourceTrackerTest, Image_SubresourceOverlap_SplitsState) {
     EXPECT_EQ(barriers[0].subresourceRange.levelCount, 1);
     EXPECT_EQ(barriers[0].newLayout, vk::ImageLayout::eShaderReadOnlyOptimal);
 
-    // States should be split:
-    // Mip 0: TransferDst
-    // Mip 1: ShaderRead
-    // Mip 2: TransferDst
     auto states = getImageStates(image);
-    // Note: IntervalSet might merge Mip 0 and Mip 2 if they are not adjacent in
-    // the set logic? Actually Mip 0 and Mip 2 are NOT adjacent (Mip 1 is in
-    // between). So we expect 3 intervals if we iterate them. However, they
-    // share the same state object in our implementation
-    // (vector<pair<IntervalSet, State>>). So we might have 2 entries in the
-    // vector:
-    // 1. State=TransferDst, Intervals={Mip0, Mip2}
-    // 2. State=ShaderRead, Intervals={Mip1}
 
-    // Let's verify we have coverage for all mips
     bool hasMip0 = false;
     bool hasMip1 = false;
     bool hasMip2 = false;

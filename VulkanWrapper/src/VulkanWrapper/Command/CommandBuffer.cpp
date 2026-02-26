@@ -1,8 +1,8 @@
-#include "VulkanWrapper/Command/CommandBuffer.h"
+module;
+#include "VulkanWrapper/3rd_party.h"
+module vw;
 
-#include "VulkanWrapper/Pipeline/Pipeline.h"
-#include "VulkanWrapper/Pipeline/PipelineLayout.h"
-
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 CommandBufferRecorder::CommandBufferRecorder(vk::CommandBuffer commandBuffer)

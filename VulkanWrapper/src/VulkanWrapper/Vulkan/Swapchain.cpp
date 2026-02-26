@@ -1,11 +1,8 @@
-#include "VulkanWrapper/Vulkan/Swapchain.h"
+module;
+#include "VulkanWrapper/3rd_party.h"
+module vw;
 
-#include "VulkanWrapper/Image/ImageView.h"
-#include "VulkanWrapper/Synchronization/Semaphore.h"
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Device.h"
-#include "VulkanWrapper/Vulkan/PresentQueue.h"
-
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 Swapchain::Swapchain(std::shared_ptr<const Device> device,

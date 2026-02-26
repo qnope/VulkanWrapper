@@ -1,7 +1,8 @@
-#include "VulkanWrapper/Model/Material/ColoredMaterialHandler.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
 #include <assimp/material.h>
-
+module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw::Model::Material {
 
 VW_DEFINE_MATERIAL_TYPE(colored_material_tag);

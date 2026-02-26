@@ -1,7 +1,8 @@
-#include "VulkanWrapper/Synchronization/Fence.h"
-
-#include "VulkanWrapper/Vulkan/Device.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+#include <limits>
+module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 Fence::Fence(vk::Device device, vk::UniqueFence fence)

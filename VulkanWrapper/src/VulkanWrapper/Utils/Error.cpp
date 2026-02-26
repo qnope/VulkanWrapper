@@ -1,9 +1,11 @@
-#include "VulkanWrapper/Utils/Error.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
 #include <format>
 #include <SDL3/SDL_error.h>
 #include <vulkan/vulkan_to_string.hpp>
+module vw;
 
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 namespace {

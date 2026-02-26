@@ -1,9 +1,7 @@
-#include "VulkanWrapper/Memory/Buffer.h"
-
-#include "VulkanWrapper/Memory/Allocator.h"
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Device.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 BufferBase::BufferBase(std::shared_ptr<const Device> device,
                        std::shared_ptr<const Allocator> allocator,

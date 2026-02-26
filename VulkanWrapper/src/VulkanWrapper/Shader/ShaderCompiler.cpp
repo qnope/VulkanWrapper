@@ -1,13 +1,10 @@
-#include "VulkanWrapper/Shader/ShaderCompiler.h"
-
-#include "VulkanWrapper/Pipeline/ShaderModule.h"
-#include "VulkanWrapper/Utils/Error.h"
+module;
+#include "VulkanWrapper/3rd_party.h"
 #include <fstream>
-#include <map>
-#include <set>
 #include <shaderc/shaderc.hpp>
 #include <sstream>
-
+module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 namespace {

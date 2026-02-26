@@ -1,5 +1,6 @@
 #pragma once
 
+// ---- Vulkan HPP configuration macros ----
 namespace vk::detail {
 class DispatchLoaderDynamic;
 }
@@ -16,39 +17,47 @@ const vk::detail::DispatchLoaderDynamic &DefaultDispatcher();
 #define VULKAN_HPP_DEFAULT_DISPATCHER vw::DefaultDispatcher()
 #endif
 
+// ---- GLM configuration macros ----
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <algorithm>
-#include <concepts>
-#include <filesystem>
+
+// ---- Material type macros (cannot be exported from modules) ----
+#include <cstdint>
 #include <functional>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <iostream>
-#include <map>
-#include <memory>
-#include <numeric>
-#include <random>
-#include <ranges>
-#include <set>
-#include <variant>
-#include <vector>
-#include <vulkan/vulkan.hpp>
 
-template <typename... Fs> struct overloaded : Fs... {
-    using Fs::operator()...;
+namespace vw::Model::Material {
+using MaterialTypeId = uint32_t;
+namespace detail {
+inline MaterialTypeId g_next_material_type_id = 0;
+} // namespace detail
+
+class MaterialTypeTag {
+  public:
+    constexpr explicit MaterialTypeTag(MaterialTypeId id) noexcept
+        : m_id{id} {}
+
+    [[nodiscard]] constexpr MaterialTypeId id() const noexcept { return m_id; }
+
+    auto operator<=>(const MaterialTypeTag &) const = default;
+
+  private:
+    MaterialTypeId m_id;
+};
+} // namespace vw::Model::Material
+
+template <> struct std::hash<vw::Model::Material::MaterialTypeTag> {
+    [[nodiscard]] std::size_t
+    operator()(vw::Model::Material::MaterialTypeTag tag) const noexcept {
+        return std::hash<vw::Model::Material::MaterialTypeId>{}(tag.id());
+    }
 };
 
-namespace vw {
-enum ApiVersion {
-    e10 = vk::ApiVersion10,
-    e11 = vk::ApiVersion11,
-    e12 = vk::ApiVersion12,
-    e13 = vk::ApiVersion13
-};
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
+#define VW_DECLARE_MATERIAL_TYPE(Name)                                         \
+    extern const ::vw::Model::Material::MaterialTypeTag Name
 
-enum class Width {};
-enum class Height {};
-enum class Depth {};
-enum class MipLevel {};
-} // namespace vw
+#define VW_DEFINE_MATERIAL_TYPE(Name)                                          \
+    const ::vw::Model::Material::MaterialTypeTag Name {                        \
+        ::vw::Model::Material::detail::g_next_material_type_id++               \
+    }
+// NOLINTEND(cppcoreguidelines-macro-usage)

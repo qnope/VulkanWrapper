@@ -1,7 +1,8 @@
-#include "VulkanWrapper/Model/Internal/MaterialInfo.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
 #include <assimp/material.h>
-
+module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw::Model::Internal {
 MaterialInfo::MaterialInfo(const aiMaterial *material,
                            const std::filesystem::path &directory_path) {

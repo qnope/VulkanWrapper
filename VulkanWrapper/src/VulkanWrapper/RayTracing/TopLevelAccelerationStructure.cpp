@@ -1,8 +1,7 @@
-#include "VulkanWrapper/RayTracing/TopLevelAccelerationStructure.h"
-
-#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
-#include "VulkanWrapper/Vulkan/Device.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw::rt::as {
 
 TopLevelAccelerationStructure::TopLevelAccelerationStructure(

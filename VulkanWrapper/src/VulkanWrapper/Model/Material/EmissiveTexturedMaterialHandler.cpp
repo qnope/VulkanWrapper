@@ -1,10 +1,8 @@
-#include "VulkanWrapper/Model/Material/EmissiveTexturedMaterialHandler.h"
-
-#include "VulkanWrapper/Model/Material/BindlessTextureManager.h"
-
-#include <algorithm>
+module;
+#include "VulkanWrapper/3rd_party.h"
 #include <assimp/material.h>
-
+module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw::Model::Material {
 
 VW_DEFINE_MATERIAL_TYPE(emissive_textured_material_tag);

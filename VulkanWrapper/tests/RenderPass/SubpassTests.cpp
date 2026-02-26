@@ -1,5 +1,4 @@
 #include "utils/create_gpu.hpp"
-#include "VulkanWrapper/RenderPass/Subpass.h"
 #include <gtest/gtest.h>
 
 // Test enum with single slot

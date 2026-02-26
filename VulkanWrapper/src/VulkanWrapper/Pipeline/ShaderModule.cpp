@@ -1,9 +1,8 @@
-#include "VulkanWrapper/Pipeline/ShaderModule.h"
-
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Device.h"
+module;
+#include "VulkanWrapper/3rd_party.h"
 #include <fstream>
-
+module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 static std::vector<uint32_t> readSpirVFile(const std::filesystem::path &path) {

@@ -1,16 +1,7 @@
-#include "VulkanWrapper/Random/NoiseTexture.h"
-
-#include "VulkanWrapper/Command/CommandPool.h"
-#include "VulkanWrapper/Image/ImageView.h"
-#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
-#include "VulkanWrapper/Memory/Transfer.h"
-#include "VulkanWrapper/Synchronization/Fence.h"
-#include "VulkanWrapper/Synchronization/ResourceTracker.h"
-#include "VulkanWrapper/Vulkan/Device.h"
-
-#include <random>
-#include <vector>
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 NoiseTexture::NoiseTexture(std::shared_ptr<Device> device,

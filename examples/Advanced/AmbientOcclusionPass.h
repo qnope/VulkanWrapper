@@ -1,19 +1,8 @@
 #pragma once
 
-#include "VulkanWrapper/Descriptors/DescriptorAllocator.h"
-#include "VulkanWrapper/Descriptors/DescriptorPool.h"
-#include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
-#include "VulkanWrapper/Image/CombinedImage.h"
-#include "VulkanWrapper/Image/ImageView.h"
-#include "VulkanWrapper/Image/Sampler.h"
-#include "VulkanWrapper/Memory/Allocator.h"
-#include "VulkanWrapper/Pipeline/Pipeline.h"
-#include "VulkanWrapper/Random/NoiseTexture.h"
-#include "VulkanWrapper/Shader/ShaderCompiler.h"
-#include "VulkanWrapper/Random/RandomSamplingBuffer.h"
-#include "VulkanWrapper/RenderPass/ScreenSpacePass.h"
-#include "VulkanWrapper/Synchronization/ResourceTracker.h"
-#include "VulkanWrapper/Vulkan/Device.h"
+#include "VulkanWrapper/3rd_party.h"
+#include <vulkan/vulkan.hpp>
+import vw;
 #include <filesystem>
 
 enum class AOPassSlot {

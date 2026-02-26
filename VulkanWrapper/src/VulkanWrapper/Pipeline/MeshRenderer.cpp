@@ -1,8 +1,7 @@
-#include "VulkanWrapper/Pipeline/MeshRenderer.h"
-
-#include "VulkanWrapper/Model/Mesh.h"
-#include "VulkanWrapper/Utils/Error.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 void MeshRenderer::add_pipeline(Model::Material::MaterialTypeTag tag,

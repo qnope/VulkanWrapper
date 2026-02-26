@@ -1,7 +1,8 @@
-#include "VulkanWrapper/Model/Internal/MeshInfo.h"
-
-#include "VulkanWrapper/Utils/Algos.h"
+module;
+#include "VulkanWrapper/3rd_party.h"
 #include <assimp/mesh.h>
+module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw::Model::Internal {
 MeshInfo::MeshInfo(const aiMesh *mesh)
     : material_index{mesh->mMaterialIndex} {

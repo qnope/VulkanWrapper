@@ -1,10 +1,12 @@
 #pragma once
 
+#include "VulkanWrapper/3rd_party.h"
 #include <memory>
 #include <vector>
-#include <VulkanWrapper/fwd.h>
-#include <VulkanWrapper/Image/CombinedImage.h>
-#include <VulkanWrapper/Image/ImageView.h>
+#include <vulkan/vulkan.hpp>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+import vw;
 
 struct GBuffer {
     std::shared_ptr<const vw::ImageView> color;

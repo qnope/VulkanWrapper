@@ -1,12 +1,4 @@
 #include "utils/create_gpu.hpp"
-#include "VulkanWrapper/Command/CommandPool.h"
-#include "VulkanWrapper/Image/Image.h"
-#include "VulkanWrapper/Image/ImageLoader.h"
-#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
-#include "VulkanWrapper/Memory/Buffer.h"
-#include "VulkanWrapper/Memory/Transfer.h"
-#include "VulkanWrapper/Synchronization/Fence.h"
-#include "VulkanWrapper/Vulkan/Queue.h"
 #include <cstring>
 #include <filesystem>
 #include <gtest/gtest.h>

@@ -1,7 +1,7 @@
-#include "VulkanWrapper/Random/RandomSamplingBuffer.h"
-
-#include <random>
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 DualRandomSample generate_hemisphere_samples() {

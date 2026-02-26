@@ -1,9 +1,9 @@
 #pragma once
 
-#include "VulkanWrapper/Memory/Allocator.h"
-#include "VulkanWrapper/Vulkan/Device.h"
-#include "VulkanWrapper/Vulkan/Instance.h"
+#include "VulkanWrapper/3rd_party.h"
 #include <memory>
+#include <vulkan/vulkan.hpp>
+import vw;
 
 namespace vw::tests {
 

@@ -1,8 +1,8 @@
-#include "VulkanWrapper/Vulkan/Device.h"
+module;
+#include "VulkanWrapper/3rd_party.h"
+module vw;
 
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Queue.h"
-
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 struct DeviceImpl {

@@ -1,9 +1,7 @@
-#include "VulkanWrapper/RenderPass/ScreenSpacePass.h"
-
-#include "VulkanWrapper/Pipeline/PipelineLayout.h"
-#include "VulkanWrapper/Pipeline/ShaderModule.h"
-#include "VulkanWrapper/Vulkan/Device.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 std::shared_ptr<const Pipeline> create_screen_space_pipeline(

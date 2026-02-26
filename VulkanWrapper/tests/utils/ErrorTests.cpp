@@ -1,4 +1,10 @@
-#include "VulkanWrapper/Utils/Error.h"
+#include "VulkanWrapper/3rd_party.h"
+#include <filesystem>
+#include <vulkan/vulkan.hpp>
+#include <memory>
+#include <vector>
+
+import vw;
 #include <gtest/gtest.h>
 
 // Test base Exception class

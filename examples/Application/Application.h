@@ -1,14 +1,7 @@
 #pragma once
 
-#include "VulkanWrapper/3rd_party.h"
-#include "VulkanWrapper/Memory/Allocator.h"
-#include "VulkanWrapper/Vulkan/Device.h"
-#include "VulkanWrapper/Vulkan/DeviceFinder.h"
-#include "VulkanWrapper/Vulkan/Instance.h"
-#include "VulkanWrapper/Vulkan/Surface.h"
-#include "VulkanWrapper/Vulkan/Swapchain.h"
-#include "VulkanWrapper/Window/SDL_Initializer.h"
-#include "VulkanWrapper/Window/Window.h"
+#include <vulkan/vulkan.hpp>
+import vw;
 #include <memory>
 
 class App {

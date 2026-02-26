@@ -1,6 +1,4 @@
 #include "utils/create_gpu.hpp"
-#include "VulkanWrapper/Image/Image.h"
-#include "VulkanWrapper/Memory/Allocator.h"
 #include <gtest/gtest.h>
 
 TEST(ImageTest, CreateImage2D) {

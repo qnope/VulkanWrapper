@@ -1,9 +1,7 @@
-#include "VulkanWrapper/RenderPass/ToneMappingPass.h"
-
-#include "VulkanWrapper/Command/CommandPool.h"
-#include "VulkanWrapper/Synchronization/Fence.h"
-#include "VulkanWrapper/Vulkan/Queue.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 
 ToneMappingPass::ToneMappingPass(std::shared_ptr<Device> device,

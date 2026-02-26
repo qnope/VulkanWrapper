@@ -1,12 +1,7 @@
-#include "VulkanWrapper/RayTracing/BottomLevelAccelerationStructure.h"
-
-#include "VulkanWrapper/Command/CommandPool.h"
-#include "VulkanWrapper/Memory/Allocator.h"
-#include "VulkanWrapper/Model/Mesh.h"
-#include "VulkanWrapper/Synchronization/Fence.h"
-#include "VulkanWrapper/Vulkan/Device.h"
-#include "VulkanWrapper/Vulkan/Queue.h"
-
+module;
+#include "VulkanWrapper/3rd_party.h"
+module vw;
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw::rt::as {
 
 BottomLevelAccelerationStructure::BottomLevelAccelerationStructure(

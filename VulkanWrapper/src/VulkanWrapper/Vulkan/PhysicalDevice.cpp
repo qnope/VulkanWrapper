@@ -1,5 +1,8 @@
-#include "VulkanWrapper/Vulkan/PhysicalDevice.h"
+module;
+#include "VulkanWrapper/3rd_party.h"
+module vw;
 
+import "VulkanWrapper/vw_vulkan.h";
 namespace vw {
 namespace {
 PhysicalDeviceType

@@ -1,5 +1,10 @@
 #include "utils/create_gpu.hpp"
-#include "VulkanWrapper/Model/Material/ColoredMaterialHandler.h"
+#include <vulkan/vulkan.hpp>
+#include <filesystem>
+#include <memory>
+#include <vector>
+
+import vw;
 #include <assimp/material.h>
 #include <gtest/gtest.h>
 
