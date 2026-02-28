@@ -1,0 +1,51 @@
+export module vw.vulkan:image_view;
+import std3rd;
+import vulkan3rd;
+import vw.utils;
+import :image;
+
+import :device;
+
+export namespace vw {
+
+class ImageView : public ObjectWithUniqueHandle<vk::UniqueImageView> {
+  public:
+    ImageView(const std::shared_ptr<const Image> &image,
+              vk::UniqueImageView imageView,
+              vk::ImageSubresourceRange subresource_range);
+
+    std::shared_ptr<const Image> image() const noexcept;
+
+    vk::ImageSubresourceRange subresource_range() const noexcept;
+
+  private:
+    std::shared_ptr<const Image> m_image;
+    vk::ImageSubresourceRange m_subresource_range;
+};
+
+class ImageViewBuilder {
+  public:
+    ImageViewBuilder(std::shared_ptr<const Device> device,
+                     std::shared_ptr<const Image> image);
+
+    ImageViewBuilder &setImageType(vk::ImageViewType imageViewType);
+
+    std::shared_ptr<const ImageView> build();
+
+  private:
+    std::shared_ptr<const Device> m_device;
+    std::shared_ptr<const Image> m_image;
+
+    vk::ImageViewType m_type = vk::ImageViewType::e2D;
+
+    vk::ImageSubresourceRange m_subResourceRange;
+
+    vk::ComponentMapping m_componentMapping =
+        vk::ComponentMapping()
+            .setA(vk::ComponentSwizzle::eIdentity)
+            .setR(vk::ComponentSwizzle::eIdentity)
+            .setG(vk::ComponentSwizzle::eIdentity)
+            .setB(vk::ComponentSwizzle::eIdentity);
+};
+
+} // namespace vw

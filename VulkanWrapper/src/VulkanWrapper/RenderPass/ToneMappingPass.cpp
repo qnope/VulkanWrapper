@@ -1,8 +1,16 @@
-#include "VulkanWrapper/RenderPass/ToneMappingPass.h"
-
-#include "VulkanWrapper/Command/CommandPool.h"
-#include "VulkanWrapper/Synchronization/Fence.h"
-#include "VulkanWrapper/Vulkan/Queue.h"
+module vw.renderpass;
+import std3rd;
+import vulkan3rd;
+import glm3rd;
+import vw.vulkan;
+import vw.memory;
+import vw.sync;
+import vw.command;
+import vw.descriptors;
+import vw.pipeline;
+import vw.raytracing;
+import vw.shader;
+import vw.model;
 
 namespace vw {
 

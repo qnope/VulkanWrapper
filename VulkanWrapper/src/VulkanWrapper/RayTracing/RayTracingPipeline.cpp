@@ -1,9 +1,11 @@
-#include "VulkanWrapper/RayTracing/RayTracingPipeline.h"
-
-#include "VulkanWrapper/Memory/Allocator.h"
-#include "VulkanWrapper/Pipeline/ShaderModule.h"
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Device.h"
+module vw.raytracing;
+import std3rd;
+import vulkan3rd;
+import vw.utils;
+import vw.vulkan;
+import vw.memory;
+import vw.pipeline;
+import vw.model;
 
 namespace vw::rt {
 

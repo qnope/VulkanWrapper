@@ -1,6 +1,8 @@
-#include "VulkanWrapper/Random/RandomSamplingBuffer.h"
-
-#include <random>
+module vw.random;
+import std3rd;
+import glm3rd;
+import vw.vulkan;
+import vw.memory;
 
 namespace vw {
 

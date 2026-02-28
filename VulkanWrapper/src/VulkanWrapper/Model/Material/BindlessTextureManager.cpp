@@ -1,11 +1,12 @@
-#include "VulkanWrapper/Model/Material/BindlessTextureManager.h"
-
-#include "VulkanWrapper/Descriptors/DescriptorAllocator.h"
-#include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
-#include "VulkanWrapper/Image/Sampler.h"
-#include "VulkanWrapper/Memory/StagingBufferManager.h"
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Device.h"
+module vw.model;
+import std3rd;
+import vulkan3rd;
+import vw.utils;
+import vw.vulkan;
+import vw.memory;
+import vw.sync;
+import vw.descriptors;
+import vw.pipeline;
 
 namespace vw::Model::Material {
 
@@ -78,9 +79,6 @@ BindlessTextureManager::get_resources() const {
         Barrier::ImageState state;
         state.image = combined.image();
         state.subresourceRange = combined.subresource_range();
-        // Use eReadOnlyOptimal to match the layout after staging
-        // (execute_image_barrier_transfer_dst_to_sampled and
-        // execute_image_barrier_transfer_src_to_dst both use eReadOnlyOptimal)
         state.layout = vk::ImageLayout::eReadOnlyOptimal;
         state.stage = vk::PipelineStageFlagBits2::eFragmentShader;
         state.access = vk::AccessFlagBits2::eShaderSampledRead;

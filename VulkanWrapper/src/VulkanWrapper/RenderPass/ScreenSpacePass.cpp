@@ -1,8 +1,13 @@
-#include "VulkanWrapper/RenderPass/ScreenSpacePass.h"
-
-#include "VulkanWrapper/Pipeline/PipelineLayout.h"
-#include "VulkanWrapper/Pipeline/ShaderModule.h"
-#include "VulkanWrapper/Vulkan/Device.h"
+module vw.renderpass;
+import std3rd;
+import vulkan3rd;
+import vw.vulkan;
+import vw.memory;
+import vw.descriptors;
+import vw.pipeline;
+import vw.raytracing;
+import vw.shader;
+import vw.model;
 
 namespace vw {
 

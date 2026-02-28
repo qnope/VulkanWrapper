@@ -1,6 +1,16 @@
-#include "VulkanWrapper/Model/Material/ColoredMaterialHandler.h"
+module;
+#include <VulkanWrapper/macros.h>
 
-#include <assimp/material.h>
+module vw.model;
+import std3rd;
+import vulkan3rd;
+import glm3rd;
+import assimp3rd;
+import vw.utils;
+import vw.vulkan;
+import vw.memory;
+import vw.descriptors;
+import vw.pipeline;
 
 namespace vw::Model::Material {
 
@@ -22,7 +32,7 @@ ColoredMaterialHandler::ColoredMaterialHandler(
 std::optional<ColoredMaterialData> ColoredMaterialHandler::try_create_gpu_data(
     const aiMaterial *mat, const std::filesystem::path & /*base_path*/) {
     aiColor4D diffuse_color(0.5f, 0.5f, 0.5f, 1.0f);
-    mat->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse_color);
+    mat->Get("$clr.diffuse", 0, 0, diffuse_color);
 
     return ColoredMaterialData{
         .color = glm::vec3(diffuse_color.r, diffuse_color.g, diffuse_color.b)};

@@ -1,8 +1,15 @@
-#include "VulkanWrapper/Model/Internal/MaterialInfo.h"
-
-#include <assimp/material.h>
+module vw.model;
+import std3rd;
+import glm3rd;
+import assimp3rd;
+import vw.utils;
+import vw.vulkan;
+import vw.memory;
+import vw.descriptors;
+import vw.pipeline;
 
 namespace vw::Model::Internal {
+
 MaterialInfo::MaterialInfo(const aiMaterial *material,
                            const std::filesystem::path &directory_path) {
     decode_diffuse_texture(material, directory_path);
@@ -25,9 +32,10 @@ void MaterialInfo::decode_diffuse_texture(
 
 void MaterialInfo::decode_diffuse_color(const aiMaterial *material) {
     aiColor4D color;
-    if (material->Get(AI_MATKEY_BASE_COLOR, color) == aiReturn_SUCCESS ||
-        (material->Get(AI_MATKEY_COLOR_DIFFUSE, color) == aiReturn_SUCCESS)) {
+    if (material->Get("$clr.base", 0, 0, color) == aiReturn_SUCCESS ||
+        (material->Get("$clr.diffuse", 0, 0, color) == aiReturn_SUCCESS)) {
         diffuse_color.emplace(color.r, color.g, color.b, color.a);
     }
 }
+
 } // namespace vw::Model::Internal

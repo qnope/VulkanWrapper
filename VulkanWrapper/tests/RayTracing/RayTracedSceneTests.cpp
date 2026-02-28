@@ -1,16 +1,5 @@
-#include "utils/create_gpu.hpp"
-#include "VulkanWrapper/Model/Mesh.h"
-#include "VulkanWrapper/Model/MeshManager.h"
-#include "VulkanWrapper/RayTracing/RayTracedScene.h"
-#include "VulkanWrapper/Synchronization/Fence.h"
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/DeviceFinder.h"
-#include "VulkanWrapper/Vulkan/Queue.h"
-#include <cmath>
-#include <glm/gtc/matrix_transform.hpp>
 #include <gtest/gtest.h>
-#include <optional>
-#include <set>
+import vw.test;
 
 namespace {
 

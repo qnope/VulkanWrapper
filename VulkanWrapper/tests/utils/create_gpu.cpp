@@ -1,6 +1,4 @@
-#include "create_gpu.hpp"
-
-#include "VulkanWrapper/Vulkan/DeviceFinder.h"
+module vw.test;
 
 namespace vw::tests {
 

@@ -1,8 +1,13 @@
-#include "VulkanWrapper/Model/Material/BindlessMaterialManager.h"
-
-#include "VulkanWrapper/Utils/Error.h"
-#include <algorithm>
-#include <ranges>
+module vw.model;
+import std3rd;
+import assimp3rd;
+import vulkan3rd;
+import vw.utils;
+import vw.vulkan;
+import vw.memory;
+import vw.sync;
+import vw.descriptors;
+import vw.pipeline;
 
 namespace vw::Model::Material {
 
@@ -25,7 +30,8 @@ Material BindlessMaterialManager::create_material(
     }
 
     throw LogicException::invalid_state(
-        "No material handler can create material from the given data");
+        "No material handler can create material from the given "
+        "data");
 }
 
 BindlessTextureManager &BindlessMaterialManager::texture_manager() noexcept {

@@ -1,8 +1,15 @@
-#include "VulkanWrapper/Model/Mesh.h"
+module vw.model;
+import std3rd;
+import vulkan3rd;
+import glm3rd;
+import vw.utils;
+import vw.vulkan;
+import vw.memory;
+import vw.descriptors;
+import vw.pipeline;
 
-#include "VulkanWrapper/Pipeline/PipelineLayout.h"
+namespace vw::Model {
 
-namespace vw ::Model {
 Mesh::Mesh(std::shared_ptr<const Vertex3DBuffer> vertex_buffer,
            std::shared_ptr<const FullVertex3DBuffer> full_vertex_buffer,
            std::shared_ptr<const IndexBuffer> index_buffer,

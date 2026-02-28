@@ -1,8 +1,8 @@
-#include "VulkanWrapper/Descriptors/DescriptorPool.h"
-
-#include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Device.h"
+module vw.descriptors;
+import std3rd;
+import vulkan3rd;
+import vw.utils;
+import vw.vulkan;
 
 namespace vw {
 

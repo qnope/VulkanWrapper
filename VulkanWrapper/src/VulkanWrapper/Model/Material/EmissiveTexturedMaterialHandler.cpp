@@ -1,8 +1,17 @@
-#include "VulkanWrapper/Model/Material/EmissiveTexturedMaterialHandler.h"
+module;
+#include <VulkanWrapper/macros.h>
 
-#include "VulkanWrapper/Model/Material/BindlessTextureManager.h"
-#include <algorithm>
-#include <assimp/material.h>
+module vw.model;
+import std3rd;
+import vulkan3rd;
+import glm3rd;
+import assimp3rd;
+import vw.utils;
+import vw.vulkan;
+import vw.memory;
+import vw.sync;
+import vw.descriptors;
+import vw.pipeline;
 
 namespace vw::Model::Material {
 
@@ -53,7 +62,7 @@ EmissiveTexturedMaterialHandler::try_create_gpu_data(
     const aiMaterial *mat, const std::filesystem::path &base_path) {
     aiString texture_path;
     if (mat->GetTexture(aiTextureType_EMISSIVE, 0, &texture_path) !=
-        AI_SUCCESS) {
+        aiReturn_SUCCESS) {
         return std::nullopt;
     }
 
@@ -65,7 +74,7 @@ EmissiveTexturedMaterialHandler::try_create_gpu_data(
     uint32_t texture_index = m_texture_manager.register_texture(full_path);
 
     float intensity = 1.0f;
-    mat->Get(AI_MATKEY_EMISSIVE_INTENSITY, intensity);
+    mat->Get("$mat.emissiveIntensity", 0, 0, intensity);
 
     return EmissiveTexturedMaterialData{.diffuse_texture_index = texture_index,
                                         .intensity = intensity};

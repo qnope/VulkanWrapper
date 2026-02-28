@@ -1,9 +1,9 @@
-#include "VulkanWrapper/Pipeline/PipelineLayout.h"
-
-#include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
-#include "VulkanWrapper/Utils/Algos.h"
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Device.h"
+module vw.pipeline;
+import std3rd;
+import vulkan3rd;
+import vw.utils;
+import vw.vulkan;
+import vw.descriptors;
 
 namespace vw {
 PipelineLayoutBuilder::PipelineLayoutBuilder(
@@ -24,7 +24,13 @@ PipelineLayoutBuilder::with_push_constant_range(vk::PushConstantRange range) {
 }
 
 PipelineLayout PipelineLayoutBuilder::build() {
-    auto layouts = m_descriptorSetLayouts | to_handle | to<std::vector>;
+    // Rewrite to_handle pipe as explicit loop to avoid ADL issues in module
+    // implementation units
+    std::vector<vk::DescriptorSetLayout> layouts;
+    layouts.reserve(m_descriptorSetLayouts.size());
+    for (const auto &layout : m_descriptorSetLayouts) {
+        layouts.push_back(layout->handle());
+    }
 
     const auto info = vk::PipelineLayoutCreateInfo()
                           .setSetLayouts(layouts)

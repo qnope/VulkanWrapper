@@ -1,11 +1,12 @@
-#include "VulkanWrapper/RayTracing/BottomLevelAccelerationStructure.h"
-
-#include "VulkanWrapper/Command/CommandPool.h"
-#include "VulkanWrapper/Memory/Allocator.h"
-#include "VulkanWrapper/Model/Mesh.h"
-#include "VulkanWrapper/Synchronization/Fence.h"
-#include "VulkanWrapper/Vulkan/Device.h"
-#include "VulkanWrapper/Vulkan/Queue.h"
+module vw.raytracing;
+import std3rd;
+import vulkan3rd;
+import vw.utils;
+import vw.vulkan;
+import vw.memory;
+import vw.command;
+import vw.pipeline;
+import vw.model;
 
 namespace vw::rt::as {
 

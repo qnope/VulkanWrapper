@@ -1,8 +1,9 @@
-#include "VulkanWrapper/Descriptors/DescriptorAllocator.h"
-
-#include "VulkanWrapper/Image/CombinedImage.h"
-#include "VulkanWrapper/Image/ImageView.h"
-#include "VulkanWrapper/Image/Sampler.h"
+module vw.descriptors;
+import std3rd;
+import vulkan3rd;
+import vw.utils;
+import vw.vulkan;
+import vw.sync;
 
 constexpr int DESCRIPTOR_ALLOCATOR_RESERVE_SIZE = 20;
 

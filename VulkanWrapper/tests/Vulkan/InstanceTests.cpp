@@ -1,8 +1,5 @@
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Device.h"
-#include "VulkanWrapper/Vulkan/DeviceFinder.h"
-#include "VulkanWrapper/Vulkan/Instance.h"
 #include <gtest/gtest.h>
+import vw;
 
 TEST(InstanceTest, CreateInstance) {
     auto instance = vw::InstanceBuilder()

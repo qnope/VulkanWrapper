@@ -1,6 +1,5 @@
-#include "utils/create_gpu.hpp"
-#include "VulkanWrapper/Image/Sampler.h"
 #include <gtest/gtest.h>
+import vw.test;
 
 TEST(SamplerTest, CreateSampler) {
     auto &gpu = vw::tests::create_gpu();

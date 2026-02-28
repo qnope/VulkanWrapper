@@ -1,10 +1,6 @@
-#include "utils/create_gpu.hpp"
-#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
-#include "VulkanWrapper/Memory/Buffer.h"
-#include "VulkanWrapper/Memory/BufferList.h"
-#include <cstring>
 #include <gtest/gtest.h>
-#include <vector>
+
+import vw.test;
 
 TEST(BufferTest, CreateUniformBuffer) {
     auto &gpu = vw::tests::create_gpu();

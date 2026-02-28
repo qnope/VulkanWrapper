@@ -1,11 +1,12 @@
-#include <SDL3/SDL.h>
-#include <VulkanWrapper/Utils/Error.h>
-#include <VulkanWrapper/Window/SDL_Initializer.h>
+module vw.window;
+import sdl3rd;
+import vw.vulkan;
+import vw.utils;
 
 namespace vw {
 
 SDL_Initializer::SDL_Initializer() {
-    check_sdl(SDL_InitSubSystem(SDL_INIT_EVENTS | SDL_INIT_VIDEO),
+    check_sdl(SDL_InitSubSystem(vw_SDL_INIT_EVENTS | vw_SDL_INIT_VIDEO),
               "Failed to initialize SDL subsystem");
 }
 

@@ -1,5 +1,5 @@
-#include "VulkanWrapper/Memory/IntervalSet.h"
 #include <gtest/gtest.h>
+import vw;
 
 using namespace vw;
 

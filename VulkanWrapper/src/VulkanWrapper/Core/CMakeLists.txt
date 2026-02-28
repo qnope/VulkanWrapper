@@ -1,0 +1,31 @@
+set_source_files_properties(vma.cpp PROPERTIES CXX_SCAN_FOR_MODULES OFF)
+target_sources(VulkanWrapperCoreLibrary PRIVATE
+    CommandPool.cpp
+    CommandBuffer.cpp
+    Fence.cpp
+    Semaphore.cpp
+    Interval.cpp
+    IntervalSet.cpp
+    ResourceTracker.cpp
+    Instance.cpp
+    Device.cpp
+    Queue.cpp
+    Swapchain.cpp
+    PresentQueue.cpp
+    DeviceFinder.cpp
+    PhysicalDevice.cpp
+    Surface.cpp
+    vma.cpp
+    Allocator.cpp
+    Buffer.cpp
+    StagingBufferManager.cpp
+    Barrier.cpp
+    Transfer.cpp
+    UniformBufferAllocator.cpp
+    Image.cpp
+    ImageView.cpp
+    ImageLoader.cpp
+    Sampler.cpp
+    CombinedImage.cpp
+    Mipmap.cpp
+)

@@ -1,6 +1,11 @@
-#include "VulkanWrapper/RayTracing/ShaderBindingTable.h"
-
-#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
+module vw.raytracing;
+import std3rd;
+import vulkan3rd;
+import vw.utils;
+import vw.vulkan;
+import vw.memory;
+import vw.pipeline;
+import vw.model;
 
 namespace vw::rt {
 
