@@ -1,8 +1,6 @@
 #include "utils/create_gpu.hpp"
-
 #include "VulkanWrapper/Random/NoiseTexture.h"
 #include "VulkanWrapper/Random/RandomSamplingBuffer.h"
-
 #include <gtest/gtest.h>
 
 // ============================================================================

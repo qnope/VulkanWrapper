@@ -56,17 +56,17 @@ class DeferredRenderingManager {
         auto include_dir = shader_dir / "include";
 
         // Create functional passes - each owns its output images lazily
-        m_zpass = std::make_unique<ZPass>(
-            m_device, m_allocator, gbuffer_dir, depth_format);
+        m_zpass = std::make_unique<ZPass>(m_device, m_allocator, gbuffer_dir,
+                                          depth_format);
 
         m_direct_light_pass = std::make_unique<DirectLightPass>(
             m_device, m_allocator, material_manager,
-            ray_traced_scene.tlas_handle(),
-            std::move(gbuffer_dir), include_dir, depth_format);
+            ray_traced_scene.tlas_handle(), std::move(gbuffer_dir), include_dir,
+            depth_format);
 
         m_ao_pass = std::make_unique<AmbientOcclusionPass>(
-            m_device, m_allocator, ray_traced_scene.tlas_handle(),
-            shader_dir, example_shader_dir / "post-process", ao_format);
+            m_device, m_allocator, ray_traced_scene.tlas_handle(), shader_dir,
+            example_shader_dir / "post-process", ao_format);
 
         m_sky_pass = std::make_unique<vw::SkyPass>(
             m_device, m_allocator, shader_dir, light_format, depth_format);

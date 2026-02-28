@@ -220,8 +220,7 @@ TEST_F(BindlessMaterialManagerTest, CreateMultipleMaterialsOfSameType) {
     auto *handler = m_manager->handler(colored_material_tag);
     auto stride = handler->stride();
     for (int i = 1; i < 10; ++i) {
-        EXPECT_EQ(materials[i].buffer_address -
-                      materials[i - 1].buffer_address,
+        EXPECT_EQ(materials[i].buffer_address - materials[i - 1].buffer_address,
                   stride)
             << "Material " << i << " address not spaced by stride";
     }
@@ -310,8 +309,7 @@ TEST_F(BindlessMaterialManagerTest, MaterialAddressMultipleMaterials) {
 
     // Verify addresses are evenly spaced
     for (int i = 1; i < count; ++i) {
-        EXPECT_EQ(materials[i].buffer_address -
-                      materials[i - 1].buffer_address,
+        EXPECT_EQ(materials[i].buffer_address - materials[i - 1].buffer_address,
                   stride);
     }
 }

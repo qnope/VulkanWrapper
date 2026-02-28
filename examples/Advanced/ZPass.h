@@ -13,8 +13,8 @@
 #include "VulkanWrapper/Pipeline/Pipeline.h"
 #include "VulkanWrapper/RenderPass/Subpass.h"
 #include "VulkanWrapper/Shader/ShaderCompiler.h"
-#include <filesystem>
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
+#include <filesystem>
 
 enum class ZPassSlot { Depth };
 

@@ -121,8 +121,7 @@ DeviceFinder &DeviceFinder::with_ray_tracing() noexcept {
     m_features.get<vk::PhysicalDeviceRayQueryFeaturesKHR>().setRayQuery(1u);
     m_features.get<vk::PhysicalDeviceRayTracingPipelineFeaturesKHR>()
         .setRayTracingPipeline(1U);
-    m_features.get<vk::PhysicalDeviceFeatures2>()
-        .features.setShaderInt64(1U);
+    m_features.get<vk::PhysicalDeviceFeatures2>().features.setShaderInt64(1U);
 
     with_scalar_block_layout();
 

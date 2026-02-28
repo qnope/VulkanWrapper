@@ -1,7 +1,6 @@
 #include "VulkanWrapper/Model/Material/EmissiveTexturedMaterialHandler.h"
 
 #include "VulkanWrapper/Model/Material/BindlessTextureManager.h"
-
 #include <algorithm>
 #include <assimp/material.h>
 
@@ -31,14 +30,12 @@ EmissiveTexturedMaterialHandler::additional_descriptor_set() const {
 }
 
 std::shared_ptr<const DescriptorSetLayout>
-EmissiveTexturedMaterialHandler::additional_descriptor_set_layout()
-    const {
+EmissiveTexturedMaterialHandler::additional_descriptor_set_layout() const {
     return m_texture_manager.layout();
 }
 
 EmissiveTexturedMaterialHandler::EmissiveTexturedMaterialHandler(
-    std::shared_ptr<const Device> device,
-    std::shared_ptr<Allocator> allocator,
+    std::shared_ptr<const Device> device, std::shared_ptr<Allocator> allocator,
     BindlessTextureManager &texture_manager)
     : Base{std::move(device), std::move(allocator),
            "Material/brdf_emissive_textured.glsl"}
@@ -46,11 +43,9 @@ EmissiveTexturedMaterialHandler::EmissiveTexturedMaterialHandler(
 
 Material EmissiveTexturedMaterialHandler::create_material(
     const std::filesystem::path &texture_path, float intensity) {
-    uint32_t texture_index =
-        m_texture_manager.register_texture(texture_path);
+    uint32_t texture_index = m_texture_manager.register_texture(texture_path);
     return Base::create_material(EmissiveTexturedMaterialData{
-        .diffuse_texture_index = texture_index,
-        .intensity = intensity});
+        .diffuse_texture_index = texture_index, .intensity = intensity});
 }
 
 std::optional<EmissiveTexturedMaterialData>
@@ -62,21 +57,18 @@ EmissiveTexturedMaterialHandler::try_create_gpu_data(
         return std::nullopt;
     }
 
-    auto full_path =
-        base_path / normalize_texture_path(texture_path.C_Str());
+    auto full_path = base_path / normalize_texture_path(texture_path.C_Str());
     if (!std::filesystem::exists(full_path)) {
         return std::nullopt;
     }
 
-    uint32_t texture_index =
-        m_texture_manager.register_texture(full_path);
+    uint32_t texture_index = m_texture_manager.register_texture(full_path);
 
     float intensity = 1.0f;
     mat->Get(AI_MATKEY_EMISSIVE_INTENSITY, intensity);
 
-    return EmissiveTexturedMaterialData{
-        .diffuse_texture_index = texture_index,
-        .intensity = intensity};
+    return EmissiveTexturedMaterialData{.diffuse_texture_index = texture_index,
+                                        .intensity = intensity};
 }
 
 std::vector<Barrier::ResourceState>

@@ -4,7 +4,6 @@
 #include "VulkanWrapper/Memory/AllocateBufferUtils.h"
 #include "VulkanWrapper/Memory/Buffer.h"
 #include "VulkanWrapper/Memory/BufferUsage.h"
-
 #include <array>
 #include <cstdint>
 

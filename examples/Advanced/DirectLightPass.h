@@ -15,10 +15,10 @@
 #include "VulkanWrapper/Pipeline/MeshRenderer.h"
 #include "VulkanWrapper/Pipeline/Pipeline.h"
 #include "VulkanWrapper/Random/NoiseTexture.h"
-#include "VulkanWrapper/Shader/ShaderCompiler.h"
 #include "VulkanWrapper/Random/RandomSamplingBuffer.h"
 #include "VulkanWrapper/RenderPass/SkyParameters.h"
 #include "VulkanWrapper/RenderPass/Subpass.h"
+#include "VulkanWrapper/Shader/ShaderCompiler.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include "VulkanWrapper/Utils/Error.h"
 #include <filesystem>
@@ -58,12 +58,12 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
   public:
     static constexpr std::array<vk::Format, 7> default_color_formats = {
         vk::Format::eR8G8B8A8Unorm,      // albedo
-        vk::Format::eR32G32B32A32Sfloat,  // normal
-        vk::Format::eR32G32B32A32Sfloat,  // tangent
-        vk::Format::eR32G32B32A32Sfloat,  // bitangent
-        vk::Format::eR32G32B32A32Sfloat,  // position
-        vk::Format::eR16G16B16A16Sfloat,  // direct_light
-        vk::Format::eR32G32B32A32Sfloat   // indirect_ray
+        vk::Format::eR32G32B32A32Sfloat, // normal
+        vk::Format::eR32G32B32A32Sfloat, // tangent
+        vk::Format::eR32G32B32A32Sfloat, // bitangent
+        vk::Format::eR32G32B32A32Sfloat, // position
+        vk::Format::eR16G16B16A16Sfloat, // direct_light
+        vk::Format::eR32G32B32A32Sfloat  // indirect_ray
     };
 
     DirectLightPass(
@@ -81,11 +81,10 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
         , m_gbuffer_shader_dir(std::move(gbuffer_shader_dir))
         , m_shader_include_dir(std::move(shader_include_dir))
         , m_tlas(tlas)
-        , m_sky_params_buffer(vw::create_buffer<vw::SkyParametersGPU, true,
-                                                vw::UniformBufferUsage>(
-              *m_allocator, 1))
-        , m_samples_buffer(
-              vw::create_hemisphere_samples_buffer(*m_allocator))
+        , m_sky_params_buffer(
+              vw::create_buffer<vw::SkyParametersGPU, true,
+                                vw::UniformBufferUsage>(*m_allocator, 1))
+        , m_samples_buffer(vw::create_hemisphere_samples_buffer(*m_allocator))
         , m_noise_texture(std::make_unique<vw::NoiseTexture>(
               m_device, m_allocator, m_device->graphicsQueue()))
         , m_descriptor_pool(create_descriptor_pool(depth_format)) {}
@@ -94,16 +93,14 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
      * @brief Execute the G-Buffer fill pass with direct sun lighting
      */
     template <typename UBOType>
-    DirectLightPassOutput
-    execute(vk::CommandBuffer cmd, vw::Barrier::ResourceTracker &tracker,
-            vw::Width width, vw::Height height, size_t frame_index,
-            const vw::Model::Scene &scene,
-            std::shared_ptr<const vw::ImageView> depth_view,
-            const vw::Buffer<UBOType, true, vw::UniformBufferUsage>
-                &uniform_buffer,
-            uint32_t frame_count,
-            const vw::SkyParameters &sky_params,
-            glm::vec3 camera_pos) {
+    DirectLightPassOutput execute(
+        vk::CommandBuffer cmd, vw::Barrier::ResourceTracker &tracker,
+        vw::Width width, vw::Height height, size_t frame_index,
+        const vw::Model::Scene &scene,
+        std::shared_ptr<const vw::ImageView> depth_view,
+        const vw::Buffer<UBOType, true, vw::UniformBufferUsage> &uniform_buffer,
+        uint32_t frame_count, const vw::SkyParameters &sky_params,
+        glm::vec3 camera_pos) {
 
         constexpr auto usageFlags = vk::ImageUsageFlagBits::eColorAttachment |
                                     vk::ImageUsageFlagBits::eInputAttachment |
@@ -151,8 +148,7 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
 
         // binding 1: random samples SSBO
         descriptor_allocator.add_storage_buffer(
-            1, m_samples_buffer.handle(), 0,
-            m_samples_buffer.size_bytes(),
+            1, m_samples_buffer.handle(), 0, m_samples_buffer.size_bytes(),
             vk::PipelineStageFlagBits2::eFragmentShader,
             vk::AccessFlagBits2::eShaderRead);
 
@@ -184,8 +180,8 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
 
         // Request states for all output images
         std::array<const vw::CachedImage *, 7> cached_images = {
-            &albedo, &normal, &tangent, &bitangent, &position,
-            &direct_light, &indirect_ray};
+            &albedo,   &normal,       &tangent,     &bitangent,
+            &position, &direct_light, &indirect_ray};
 
         for (const auto *cached : cached_images) {
             tracker.request(vw::Barrier::ImageState{
@@ -219,9 +215,8 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
             const auto *cached = cached_images[i];
             // DirectLight and IndirectRay clear to (0,0,0,0)
             auto clear_value =
-                (i >= 5)
-                    ? vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f)
-                    : vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f);
+                (i >= 5) ? vk::ClearColorValue(0.0f, 0.0f, 0.0f, 0.0f)
+                         : vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f);
             color_attachments.push_back(
                 vk::RenderingAttachmentInfo()
                     .setImageView(cached->view->handle())
@@ -261,7 +256,8 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
         std::optional<vk::DescriptorSet> texture_ds;
         for (const auto &[tag, handler] : m_material_manager.handlers()) {
             texture_ds = handler->additional_descriptor_set();
-            if (texture_ds) break;
+            if (texture_ds)
+                break;
         }
 
         // Draw all mesh instances grouped by material type
@@ -295,12 +291,11 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
                     uint32_t frame_count;
                     glm::vec3 camera_pos;
                 } extra_push{frame_count, camera_pos};
-                cmd.pushConstants(
-                    pipeline->layout().handle(),
-                    vk::ShaderStageFlagBits::eVertex |
-                        vk::ShaderStageFlagBits::eFragment,
-                    sizeof(vw::Model::MeshPushConstants),
-                    sizeof(extra_push), &extra_push);
+                cmd.pushConstants(pipeline->layout().handle(),
+                                  vk::ShaderStageFlagBits::eVertex |
+                                      vk::ShaderStageFlagBits::eFragment,
+                                  sizeof(vw::Model::MeshPushConstants),
+                                  sizeof(extra_push), &extra_push);
             }
 
             auto pipeline = m_mesh_renderer->pipeline_for(material_type);
@@ -367,23 +362,22 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
         std::shared_ptr<const vw::DescriptorSetLayout> texture_layout;
         for (auto [tag, handler] : m_material_manager.handlers()) {
             texture_layout = handler->additional_descriptor_set_layout();
-            if (texture_layout) break;
+            if (texture_layout)
+                break;
         }
 
         compiler.add_include_path(m_gbuffer_shader_dir);
 
         for (auto [tag, handler] : m_material_manager.handlers()) {
-            auto source =
-                "#version 460\n"
-                "#extension GL_GOOGLE_include_directive"
-                " : require\n"
-                "#include \"gbuffer_base.glsl\"\n"
-                "#include \""
-                + handler->brdf_path().string() + "\"\n";
+            auto source = "#version 460\n"
+                          "#extension GL_GOOGLE_include_directive"
+                          " : require\n"
+                          "#include \"gbuffer_base.glsl\"\n"
+                          "#include \"" +
+                          handler->brdf_path().string() + "\"\n";
 
             auto fragment = compiler.compile_to_module(
-                m_device, source,
-                vk::ShaderStageFlagBits::eFragment,
+                m_device, source, vk::ShaderStageFlagBits::eFragment,
                 "gbuffer_dynamic.frag");
 
             auto layout_builder =
@@ -392,8 +386,7 @@ class DirectLightPass : public vw::Subpass<DirectLightPassSlot> {
                     .with_push_constant_range(push_constant_range);
 
             if (texture_layout) {
-                layout_builder.with_descriptor_set_layout(
-                    texture_layout);
+                layout_builder.with_descriptor_set_layout(texture_layout);
             }
 
             vw::GraphicsPipelineBuilder builder(m_device,

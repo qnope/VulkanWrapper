@@ -99,8 +99,7 @@ TEST_F(MeshManagerTest, InitiallyEmpty) {
 }
 
 TEST_F(MeshManagerTest, AddSingleMeshIncreasesSize) {
-    m_mesh_manager->add_mesh(make_triangle_vertices(),
-                             make_triangle_indices(),
+    m_mesh_manager->add_mesh(make_triangle_vertices(), make_triangle_indices(),
                              make_dummy_material());
 
     EXPECT_EQ(m_mesh_manager->meshes().size(), 1);
@@ -115,8 +114,7 @@ TEST_F(MeshManagerTest, AddedMeshHasCorrectIndexCount) {
 }
 
 TEST_F(MeshManagerTest, AddMultipleMeshes) {
-    m_mesh_manager->add_mesh(make_triangle_vertices(),
-                             make_triangle_indices(),
+    m_mesh_manager->add_mesh(make_triangle_vertices(), make_triangle_indices(),
                              make_dummy_material());
     m_mesh_manager->add_mesh(make_quad_vertices(), make_quad_indices(),
                              make_dummy_material());
@@ -125,8 +123,7 @@ TEST_F(MeshManagerTest, AddMultipleMeshes) {
 }
 
 TEST_F(MeshManagerTest, MultipleMeshesHaveCorrectIndexCounts) {
-    m_mesh_manager->add_mesh(make_triangle_vertices(),
-                             make_triangle_indices(),
+    m_mesh_manager->add_mesh(make_triangle_vertices(), make_triangle_indices(),
                              make_dummy_material());
     m_mesh_manager->add_mesh(make_quad_vertices(), make_quad_indices(),
                              make_dummy_material());
@@ -136,8 +133,7 @@ TEST_F(MeshManagerTest, MultipleMeshesHaveCorrectIndexCounts) {
 }
 
 TEST_F(MeshManagerTest, AddedMeshHasCorrectMaterialType) {
-    m_mesh_manager->add_mesh(make_triangle_vertices(),
-                             make_triangle_indices(),
+    m_mesh_manager->add_mesh(make_triangle_vertices(), make_triangle_indices(),
                              make_dummy_material());
 
     EXPECT_EQ(m_mesh_manager->meshes()[0].material_type_tag(),
@@ -145,8 +141,7 @@ TEST_F(MeshManagerTest, AddedMeshHasCorrectMaterialType) {
 }
 
 TEST_F(MeshManagerTest, FillCommandBufferAfterAddMesh) {
-    m_mesh_manager->add_mesh(make_triangle_vertices(),
-                             make_triangle_indices(),
+    m_mesh_manager->add_mesh(make_triangle_vertices(), make_triangle_indices(),
                              make_dummy_material());
 
     auto cmd = m_mesh_manager->fill_command_buffer();
@@ -154,8 +149,7 @@ TEST_F(MeshManagerTest, FillCommandBufferAfterAddMesh) {
 }
 
 TEST_F(MeshManagerTest, FillCommandBufferWithMultipleMeshes) {
-    m_mesh_manager->add_mesh(make_triangle_vertices(),
-                             make_triangle_indices(),
+    m_mesh_manager->add_mesh(make_triangle_vertices(), make_triangle_indices(),
                              make_dummy_material());
     m_mesh_manager->add_mesh(make_quad_vertices(), make_quad_indices(),
                              make_dummy_material());

@@ -395,8 +395,8 @@ TEST_F(ToneMappingPassTest, Verify_NeutralOperatorPassesThrough) {
     // Use luminance_scale=1.0 for backward-compatible behavior
     // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
     pass->execute(cmd, tracker, output_view, hdr_view, small_black_view(),
-                  nullptr, 0.0f,
-                  ToneMappingOperator::Neutral, 1.0f, 4.0f, 1.0f);
+                  nullptr, 0.0f, ToneMappingOperator::Neutral, 1.0f, 4.0f,
+                  1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -438,8 +438,7 @@ TEST_F(ToneMappingPassTest, Verify_ZeroExposureProducesBlack) {
     // Use luminance_scale=1.0 for backward-compatible behavior
     // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
     pass->execute(cmd, tracker, output_view, hdr_view, small_black_view(),
-                  nullptr, 0.0f,
-                  ToneMappingOperator::ACES, 0.0f, 4.0f, 1.0f);
+                  nullptr, 0.0f, ToneMappingOperator::ACES, 0.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -482,8 +481,7 @@ TEST_F(ToneMappingPassTest, Verify_ACESMatchesCPU) {
     // Use luminance_scale=1.0 for backward-compatible behavior
     // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
     pass->execute(cmd, tracker, output_view, hdr_view, small_black_view(),
-                  nullptr, 0.0f,
-                  ToneMappingOperator::ACES, 1.0f, 4.0f, 1.0f);
+                  nullptr, 0.0f, ToneMappingOperator::ACES, 1.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -528,8 +526,8 @@ TEST_F(ToneMappingPassTest, Verify_ReinhardMatchesCPU) {
     // Use luminance_scale=1.0 for backward-compatible behavior
     // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
     pass->execute(cmd, tracker, output_view, hdr_view, small_black_view(),
-                  nullptr, 0.0f,
-                  ToneMappingOperator::Reinhard, 1.0f, 4.0f, 1.0f);
+                  nullptr, 0.0f, ToneMappingOperator::Reinhard, 1.0f, 4.0f,
+                  1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -573,8 +571,8 @@ TEST_F(ToneMappingPassTest, Verify_Uncharted2MatchesCPU) {
     // Use luminance_scale=1.0 for backward-compatible behavior
     // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
     pass->execute(cmd, tracker, output_view, hdr_view, small_black_view(),
-                  nullptr, 0.0f,
-                  ToneMappingOperator::Uncharted2, 1.0f, 4.0f, 1.0f);
+                  nullptr, 0.0f, ToneMappingOperator::Uncharted2, 1.0f, 4.0f,
+                  1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -620,8 +618,8 @@ TEST_F(ToneMappingPassTest, Verify_ExposureScalesInput) {
     // Use luminance_scale=1.0 for backward-compatible behavior
     // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
     pass->execute(cmd, tracker, output_view, hdr_view, small_black_view(),
-                  nullptr, 0.0f,
-                  ToneMappingOperator::Reinhard, exposure, 4.0f, 1.0f);
+                  nullptr, 0.0f, ToneMappingOperator::Reinhard, exposure, 4.0f,
+                  1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -669,8 +667,8 @@ TEST_F(ToneMappingPassTest, Verify_ReinhardExtendedWhitePointAffectsResult) {
         // Use luminance_scale=1.0 for backward-compatible behavior
         // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
         pass->execute(cmd, tracker, output_view, hdr_view, small_black_view(),
-                  nullptr, 0.0f,
-                      ToneMappingOperator::ReinhardExtended, 1.0f, 4.0f, 1.0f);
+                      nullptr, 0.0f, ToneMappingOperator::ReinhardExtended,
+                      1.0f, 4.0f, 1.0f);
 
         std::ignore = cmd.end();
         queue->enqueue_command_buffer(cmd);
@@ -694,8 +692,8 @@ TEST_F(ToneMappingPassTest, Verify_ReinhardExtendedWhitePointAffectsResult) {
         // Use luminance_scale=1.0 for backward-compatible behavior
         // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
         pass->execute(cmd, tracker, output_view, hdr_view, small_black_view(),
-                  nullptr, 0.0f,
-                      ToneMappingOperator::ReinhardExtended, 1.0f, 8.0f, 1.0f);
+                      nullptr, 0.0f, ToneMappingOperator::ReinhardExtended,
+                      1.0f, 8.0f, 1.0f);
 
         std::ignore = cmd.end();
         queue->enqueue_command_buffer(cmd);
@@ -739,8 +737,7 @@ TEST_F(ToneMappingPassTest, Verify_BrightHDRClipsToWhite) {
     // Use luminance_scale=1.0 for backward-compatible behavior
     // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
     pass->execute(cmd, tracker, output_view, hdr_view, small_black_view(),
-                  nullptr, 0.0f,
-                  ToneMappingOperator::ACES, 1.0f, 4.0f, 1.0f);
+                  nullptr, 0.0f, ToneMappingOperator::ACES, 1.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -793,8 +790,8 @@ TEST_F(ToneMappingPassTest, Verify_IndirectLightAddsToDirectLight) {
     Barrier::ResourceTracker tracker;
     // Combined: 0.25 + 0.25 * 1.0 = 0.5 -> Neutral passes through
     pass->execute(cmd, tracker, output_view, direct_view, small_black_view(),
-                  indirect_view, 1.0f, ToneMappingOperator::Neutral, 1.0f,
-                  4.0f, 1.0f);
+                  indirect_view, 1.0f, ToneMappingOperator::Neutral, 1.0f, 4.0f,
+                  1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -844,8 +841,8 @@ TEST_F(ToneMappingPassTest, Verify_IndirectIntensityScalesIndirectLight) {
     Barrier::ResourceTracker tracker;
     // Combined: 0.2 + 0.4 * 0.5 = 0.4 -> Neutral passes through
     pass->execute(cmd, tracker, output_view, direct_view, small_black_view(),
-                  indirect_view, 0.5f, ToneMappingOperator::Neutral, 1.0f,
-                  4.0f, 1.0f);
+                  indirect_view, 0.5f, ToneMappingOperator::Neutral, 1.0f, 4.0f,
+                  1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -895,8 +892,8 @@ TEST_F(ToneMappingPassTest, Verify_ZeroIndirectIntensityIgnoresIndirectLight) {
     Barrier::ResourceTracker tracker;
     // Combined: 0.3 + 0.7 * 0.0 = 0.3 -> Neutral passes through
     pass->execute(cmd, tracker, output_view, direct_view, small_black_view(),
-                  indirect_view, 0.0f, ToneMappingOperator::Neutral, 1.0f,
-                  4.0f, 1.0f);
+                  indirect_view, 0.0f, ToneMappingOperator::Neutral, 1.0f, 4.0f,
+                  1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);

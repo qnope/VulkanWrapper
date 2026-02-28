@@ -79,30 +79,26 @@ void IndirectLightPass::create_pipeline_and_sbt(
         m_device, shader_dir / "indirect_light.rmiss");
 
     // Build RT pipeline with per-material closest hit shaders
-    auto builder = rt::RayTracingPipelineBuilder(
-        m_device, m_allocator, std::move(pipeline_layout));
+    auto builder = rt::RayTracingPipelineBuilder(m_device, m_allocator,
+                                                 std::move(pipeline_layout));
     builder.set_ray_generation_shader(raygen_shader)
         .add_miss_shader(miss_shader);
 
-    for (auto [tag, handler] :
-         m_material_manager->ordered_handlers()) {
-        auto source =
-            "#version 460\n"
-            "#extension GL_GOOGLE_include_directive"
-            " : require\n"
-            "#include \"indirect_light_base.glsl\"\n"
-            "#include \""
-            + handler->brdf_path().string() + "\"\n";
+    for (auto [tag, handler] : m_material_manager->ordered_handlers()) {
+        auto source = "#version 460\n"
+                      "#extension GL_GOOGLE_include_directive"
+                      " : require\n"
+                      "#include \"indirect_light_base.glsl\"\n"
+                      "#include \"" +
+                      handler->brdf_path().string() + "\"\n";
 
         auto hit_module = compiler.compile_to_module(
-            m_device, source,
-            vk::ShaderStageFlagBits::eClosestHitKHR,
+            m_device, source, vk::ShaderStageFlagBits::eClosestHitKHR,
             "indirect_light_dynamic.rchit");
         builder.add_closest_hit_shader(hit_module);
     }
 
-    m_pipeline = std::make_unique<rt::RayTracingPipeline>(
-        builder.build());
+    m_pipeline = std::make_unique<rt::RayTracingPipeline>(builder.build());
 
     // Create shader binding table
     m_sbt = std::make_unique<rt::ShaderBindingTable>(
@@ -129,28 +125,25 @@ void IndirectLightPass::create_pipeline_and_sbt(
             .build();
 }
 
-std::shared_ptr<const ImageView>
-IndirectLightPass::execute(vk::CommandBuffer cmd,
-                           Barrier::ResourceTracker &tracker, Width width,
-                           Height height,
-                           std::shared_ptr<const ImageView> position_view,
-                           std::shared_ptr<const ImageView> normal_view,
-                           std::shared_ptr<const ImageView> albedo_view,
-                           std::shared_ptr<const ImageView> ao_view,
-                           std::shared_ptr<const ImageView> indirect_ray_view,
-                           const SkyParameters &sky_params) {
+std::shared_ptr<const ImageView> IndirectLightPass::execute(
+    vk::CommandBuffer cmd, Barrier::ResourceTracker &tracker, Width width,
+    Height height, std::shared_ptr<const ImageView> position_view,
+    std::shared_ptr<const ImageView> normal_view,
+    std::shared_ptr<const ImageView> albedo_view,
+    std::shared_ptr<const ImageView> ao_view,
+    std::shared_ptr<const ImageView> indirect_ray_view,
+    const SkyParameters &sky_params) {
 
     // Use fixed frame_index=0 so the image is shared across all swapchain
     // frames. This is required for progressive accumulation to work correctly.
     constexpr size_t indirect_light_frame_index = 0;
 
     // Single accumulation buffer (storage image for RT)
-    const auto &output =
-        get_or_create_image(IndirectLightPassSlot::Output, width, height,
-                            indirect_light_frame_index, m_output_format,
-                            vk::ImageUsageFlagBits::eStorage |
-                                vk::ImageUsageFlagBits::eSampled |
-                                vk::ImageUsageFlagBits::eTransferSrc);
+    const auto &output = get_or_create_image(
+        IndirectLightPassSlot::Output, width, height,
+        indirect_light_frame_index, m_output_format,
+        vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eTransferSrc);
 
     // Create descriptor set with current input images
     DescriptorAllocator descriptor_allocator;
@@ -197,8 +190,7 @@ IndirectLightPass::execute(vk::CommandBuffer cmd,
 
     // binding 7: Geometry reference buffer (for closest hit shader)
     descriptor_allocator.add_storage_buffer(
-        7, m_geometry_buffer->handle(), 0,
-        m_geometry_buffer->size_bytes(),
+        7, m_geometry_buffer->handle(), 0, m_geometry_buffer->size_bytes(),
         vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
         vk::AccessFlagBits2::eShaderRead);
 
@@ -208,8 +200,8 @@ IndirectLightPass::execute(vk::CommandBuffer cmd,
     auto tex_desc_set = m_texture_descriptor_pool.allocate_set();
     {
         DescriptorAllocator tex_alloc;
-        tex_alloc.add_sampler(
-            0, m_material_manager->texture_manager().sampler());
+        tex_alloc.add_sampler(0,
+                              m_material_manager->texture_manager().sampler());
         m_texture_descriptor_pool.update_set(tex_desc_set.handle(), tex_alloc);
     }
     m_material_manager->texture_manager().write_image_descriptors(
@@ -224,8 +216,7 @@ IndirectLightPass::execute(vk::CommandBuffer cmd,
     for (const auto &resource :
          m_material_manager->texture_manager().get_resources()) {
         auto image_state = std::get<Barrier::ImageState>(resource);
-        image_state.stage =
-            vk::PipelineStageFlagBits2::eRayTracingShaderKHR;
+        image_state.stage = vk::PipelineStageFlagBits2::eRayTracingShaderKHR;
         tracker.request(image_state);
     }
 
@@ -250,14 +241,14 @@ IndirectLightPass::execute(vk::CommandBuffer cmd,
     auto tex_descriptor_handle = tex_desc_set.handle();
     std::array desc_sets = {descriptor_handle, tex_descriptor_handle};
     cmd.bindDescriptorSets(vk::PipelineBindPoint::eRayTracingKHR,
-                           m_pipeline->handle_layout(), 0, desc_sets,
-                           {});
+                           m_pipeline->handle_layout(), 0, desc_sets, {});
 
     // Push constants
     IndirectLightPushConstants constants{.sky = sky_params.to_gpu(),
                                          .frame_count = m_frame_count,
                                          .width = static_cast<uint32_t>(width),
-                                         .height = static_cast<uint32_t>(height)};
+                                         .height =
+                                             static_cast<uint32_t>(height)};
 
     constexpr auto rt_stages = vk::ShaderStageFlagBits::eRaygenKHR |
                                vk::ShaderStageFlagBits::eMissKHR |
@@ -267,11 +258,10 @@ IndirectLightPass::execute(vk::CommandBuffer cmd,
                       sizeof(IndirectLightPushConstants), &constants);
 
     // Trace rays
-    cmd.traceRaysKHR(m_sbt->raygen_region(), m_sbt->miss_region(),
-                     m_sbt->hit_region(),
-                     vk::StridedDeviceAddressRegionKHR(), // callable (unused)
-                     static_cast<uint32_t>(width), static_cast<uint32_t>(height),
-                     1);
+    cmd.traceRaysKHR(
+        m_sbt->raygen_region(), m_sbt->miss_region(), m_sbt->hit_region(),
+        vk::StridedDeviceAddressRegionKHR(), // callable (unused)
+        static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1);
 
     // Increment frame count AFTER tracing (so first frame is 0)
     m_frame_count++;

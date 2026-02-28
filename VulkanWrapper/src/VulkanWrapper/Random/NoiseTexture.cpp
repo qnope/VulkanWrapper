@@ -7,15 +7,13 @@
 #include "VulkanWrapper/Synchronization/Fence.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include "VulkanWrapper/Vulkan/Device.h"
-
 #include <random>
 #include <vector>
 
 namespace vw {
 
 NoiseTexture::NoiseTexture(std::shared_ptr<Device> device,
-                           std::shared_ptr<Allocator> allocator,
-                           Queue &queue) {
+                           std::shared_ptr<Allocator> allocator, Queue &queue) {
     std::random_device rd;
     initialize(std::move(device), std::move(allocator), queue, rd());
 }
@@ -34,7 +32,8 @@ void NoiseTexture::initialize(std::shared_ptr<Device> device,
         Width{NOISE_TEXTURE_SIZE}, Height{NOISE_TEXTURE_SIZE},
         false, // no mipmaps
         vk::Format::eR32G32Sfloat,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst);
+        vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eTransferDst);
 
     // Create image view
     m_view = ImageViewBuilder(device, m_image).build();
@@ -73,12 +72,12 @@ void NoiseTexture::initialize(std::shared_ptr<Device> device,
     // Transition to shader read optimal for sampling
     // Use AllCommands stage to be generic - actual usage determines final stage
     auto &tracker = transfer.resourceTracker();
-    tracker.request(Barrier::ImageState{
-        .image = m_image->handle(),
-        .subresourceRange = m_image->full_range(),
-        .layout = vk::ImageLayout::eShaderReadOnlyOptimal,
-        .stage = vk::PipelineStageFlagBits2::eAllCommands,
-        .access = vk::AccessFlagBits2::eShaderRead});
+    tracker.request(
+        Barrier::ImageState{.image = m_image->handle(),
+                            .subresourceRange = m_image->full_range(),
+                            .layout = vk::ImageLayout::eShaderReadOnlyOptimal,
+                            .stage = vk::PipelineStageFlagBits2::eAllCommands,
+                            .access = vk::AccessFlagBits2::eShaderRead});
     tracker.flush(cmd);
 
     std::ignore = cmd.end();

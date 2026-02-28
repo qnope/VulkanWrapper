@@ -27,8 +27,7 @@ class EmissiveTexturedMaterialHandler
     additional_descriptor_set_layout() const override;
 
     [[nodiscard]] Material
-    create_material(const std::filesystem::path &texture_path,
-                    float intensity);
+    create_material(const std::filesystem::path &texture_path, float intensity);
 
   protected:
     [[nodiscard]] std::optional<EmissiveTexturedMaterialData>
@@ -39,10 +38,9 @@ class EmissiveTexturedMaterialHandler
     get_texture_resources() const override;
 
   private:
-    EmissiveTexturedMaterialHandler(
-        std::shared_ptr<const Device> device,
-        std::shared_ptr<Allocator> allocator,
-        BindlessTextureManager &texture_manager);
+    EmissiveTexturedMaterialHandler(std::shared_ptr<const Device> device,
+                                    std::shared_ptr<Allocator> allocator,
+                                    BindlessTextureManager &texture_manager);
 
     BindlessTextureManager &m_texture_manager;
 };

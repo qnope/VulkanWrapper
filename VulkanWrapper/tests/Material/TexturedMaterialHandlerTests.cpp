@@ -26,8 +26,7 @@ class TexturedMaterialHandlerTest : public ::testing::Test {
 };
 
 TEST_F(TexturedMaterialHandlerTest, BrdfPathIsCorrect) {
-    EXPECT_EQ(m_handler->brdf_path(),
-              "Material/brdf_textured.glsl");
+    EXPECT_EQ(m_handler->brdf_path(), "Material/brdf_textured.glsl");
 }
 
 TEST_F(TexturedMaterialHandlerTest, HandlerHasCorrectTag) {

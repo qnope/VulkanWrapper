@@ -184,10 +184,9 @@ class IndirectLightPassTest : public ::testing::Test {
             width, height, false, vk::Format::eR32G32B32A32Sfloat,
             vk::ImageUsageFlagBits::eSampled |
                 vk::ImageUsageFlagBits::eTransferDst);
-        gb.indirect_ray_view =
-            ImageViewBuilder(gpu->device, gb.indirect_ray)
-                .setImageType(vk::ImageViewType::e2D)
-                .build();
+        gb.indirect_ray_view = ImageViewBuilder(gpu->device, gb.indirect_ray)
+                                   .setImageType(vk::ImageViewType::e2D)
+                                   .build();
 
         return gb;
     }
@@ -254,8 +253,7 @@ class IndirectLightPassTest : public ::testing::Test {
         }
         indirect_ray_staging.write(
             std::span<const std::byte>(
-                reinterpret_cast<const std::byte *>(
-                    indirect_ray_data.data()),
+                reinterpret_cast<const std::byte *>(indirect_ray_data.data()),
                 float4_size),
             0);
 
@@ -457,32 +455,26 @@ TEST_F(IndirectLightPassTest, ShaderFilesExistAndCompile) {
 
     auto raygen_shader =
         compiler.compile_file_to_module(gpu->device, raygen_path);
-    auto miss_shader =
-        compiler.compile_file_to_module(gpu->device, miss_path);
+    auto miss_shader = compiler.compile_file_to_module(gpu->device, miss_path);
 
     EXPECT_NE(raygen_shader, nullptr)
         << "Ray generation shader failed to compile";
-    EXPECT_NE(miss_shader, nullptr)
-        << "Miss shader failed to compile";
+    EXPECT_NE(miss_shader, nullptr) << "Miss shader failed to compile";
 
     // Closest-hit shaders are now generated dynamically from
     // handler brdf_path(); verify they compile for each handler
-    for (auto [tag, handler] :
-         gpu->material_manager->ordered_handlers()) {
-        auto source = std::format(
-            "#version 460\n"
-            "#extension GL_GOOGLE_include_directive"
-            " : require\n"
-            "#include \"indirect_light_base.glsl\"\n"
-            "#include \"{}\"\n",
-            handler->brdf_path().string());
+    for (auto [tag, handler] : gpu->material_manager->ordered_handlers()) {
+        auto source = std::format("#version 460\n"
+                                  "#extension GL_GOOGLE_include_directive"
+                                  " : require\n"
+                                  "#include \"indirect_light_base.glsl\"\n"
+                                  "#include \"{}\"\n",
+                                  handler->brdf_path().string());
         auto chit_shader = compiler.compile_to_module(
-            gpu->device, source,
-            vk::ShaderStageFlagBits::eClosestHitKHR,
+            gpu->device, source, vk::ShaderStageFlagBits::eClosestHitKHR,
             "dynamic_chit");
         EXPECT_NE(chit_shader, nullptr)
-            << "Closest-hit shader failed to compile for tag "
-            << tag.id();
+            << "Closest-hit shader failed to compile for tag " << tag.id();
     }
 }
 
@@ -577,10 +569,9 @@ TEST_F(IndirectLightPassTest, FrameCountIncrements_AfterExecute) {
         std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
             vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
         Barrier::ResourceTracker tracker;
-        std::ignore = pass->execute(cmd, tracker, width, height,
-                                    gb.position_view, gb.normal_view,
-                                    gb.albedo_view, gb.ao_view,
-                                    gb.indirect_ray_view, sky_params);
+        std::ignore = pass->execute(
+            cmd, tracker, width, height, gb.position_view, gb.normal_view,
+            gb.albedo_view, gb.ao_view, gb.indirect_ray_view, sky_params);
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
         gpu->queue().submit({}, {}, {}).wait();
@@ -594,10 +585,9 @@ TEST_F(IndirectLightPassTest, FrameCountIncrements_AfterExecute) {
         std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
             vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
         Barrier::ResourceTracker tracker;
-        std::ignore = pass->execute(cmd, tracker, width, height,
-                                    gb.position_view, gb.normal_view,
-                                    gb.albedo_view, gb.ao_view,
-                                    gb.indirect_ray_view, sky_params);
+        std::ignore = pass->execute(
+            cmd, tracker, width, height, gb.position_view, gb.normal_view,
+            gb.albedo_view, gb.ao_view, gb.indirect_ray_view, sky_params);
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
         gpu->queue().submit({}, {}, {}).wait();
@@ -632,10 +622,9 @@ TEST_F(IndirectLightPassTest, ResetAccumulation_ResetsFrameCountToZero) {
         std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
             vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
         Barrier::ResourceTracker tracker;
-        std::ignore = pass->execute(cmd, tracker, width, height,
-                                    gb.position_view, gb.normal_view,
-                                    gb.albedo_view, gb.ao_view,
-                                    gb.indirect_ray_view, sky_params);
+        std::ignore = pass->execute(
+            cmd, tracker, width, height, gb.position_view, gb.normal_view,
+            gb.albedo_view, gb.ao_view, gb.indirect_ray_view, sky_params);
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
         gpu->queue().submit({}, {}, {}).wait();
@@ -796,9 +785,9 @@ TEST_F(IndirectLightPassTest, ChromaticShift_ZenithVsHorizon) {
             std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
                 vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
             Barrier::ResourceTracker tracker;
-            result = pass->execute(cmd, tracker, width, height, gb.position_view,
-                                   gb.normal_view, gb.albedo_view, gb.ao_view,
-                                   gb.indirect_ray_view, sky_params);
+            result = pass->execute(
+                cmd, tracker, width, height, gb.position_view, gb.normal_view,
+                gb.albedo_view, gb.ao_view, gb.indirect_ray_view, sky_params);
             std::ignore = cmd.end();
             gpu->queue().enqueue_command_buffer(cmd);
             gpu->queue().submit({}, {}, {}).wait();
@@ -822,9 +811,9 @@ TEST_F(IndirectLightPassTest, ChromaticShift_ZenithVsHorizon) {
             std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
                 vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
             Barrier::ResourceTracker tracker;
-            result = pass->execute(cmd, tracker, width, height, gb.position_view,
-                                   gb.normal_view, gb.albedo_view, gb.ao_view,
-                                   gb.indirect_ray_view, sky_params);
+            result = pass->execute(
+                cmd, tracker, width, height, gb.position_view, gb.normal_view,
+                gb.albedo_view, gb.ao_view, gb.indirect_ray_view, sky_params);
             std::ignore = cmd.end();
             gpu->queue().enqueue_command_buffer(cmd);
             gpu->queue().submit({}, {}, {}).wait();
@@ -880,10 +869,9 @@ TEST_F(IndirectLightPassTest, AccumulationConverges_VarianceDecreases) {
         std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
             vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
         Barrier::ResourceTracker tracker;
-        auto result =
-            pass->execute(cmd, tracker, width, height, gb.position_view,
-                          gb.normal_view, gb.albedo_view, gb.ao_view,
-                          gb.indirect_ray_view, sky_params);
+        auto result = pass->execute(
+            cmd, tracker, width, height, gb.position_view, gb.normal_view,
+            gb.albedo_view, gb.ao_view, gb.indirect_ray_view, sky_params);
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
         gpu->queue().submit({}, {}, {}).wait();
@@ -976,8 +964,7 @@ TEST_F(IndirectLightPassTest, SurfaceFacingDown_ReceivesDifferentLight) {
     const auto &plane = gpu->get_plane_mesh();
     std::ignore = scene.add_instance(
         plane, glm::translate(glm::mat4(1.0f), glm::vec3(0, -1000, 0)));
-    scene.set_material_sbt_mapping(
-        gpu->material_manager->sbt_mapping());
+    scene.set_material_sbt_mapping(gpu->material_manager->sbt_mapping());
     scene.build();
 
     auto gb = create_gbuffer(width, height);
@@ -999,9 +986,9 @@ TEST_F(IndirectLightPassTest, SurfaceFacingDown_ReceivesDifferentLight) {
             std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
                 vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
             Barrier::ResourceTracker tracker;
-            result = pass->execute(cmd, tracker, width, height, gb.position_view,
-                                   gb.normal_view, gb.albedo_view, gb.ao_view,
-                                   gb.indirect_ray_view, sky_params);
+            result = pass->execute(
+                cmd, tracker, width, height, gb.position_view, gb.normal_view,
+                gb.albedo_view, gb.ao_view, gb.indirect_ray_view, sky_params);
             std::ignore = cmd.end();
             gpu->queue().enqueue_command_buffer(cmd);
             gpu->queue().submit({}, {}, {}).wait();
@@ -1025,9 +1012,9 @@ TEST_F(IndirectLightPassTest, SurfaceFacingDown_ReceivesDifferentLight) {
             std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
                 vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
             Barrier::ResourceTracker tracker;
-            result = pass->execute(cmd, tracker, width, height, gb.position_view,
-                                   gb.normal_view, gb.albedo_view, gb.ao_view,
-                                   gb.indirect_ray_view, sky_params);
+            result = pass->execute(
+                cmd, tracker, width, height, gb.position_view, gb.normal_view,
+                gb.albedo_view, gb.ao_view, gb.indirect_ray_view, sky_params);
             std::ignore = cmd.end();
             gpu->queue().enqueue_command_buffer(cmd);
             gpu->queue().submit({}, {}, {}).wait();
@@ -1060,10 +1047,8 @@ TEST_F(IndirectLightPassTest, SurfaceFacingDown_ReceivesDifferentLight) {
 
 TEST_F(IndirectLightPassTest, BrdfIncludeFilesExist) {
     auto shader_dir = get_shader_dir();
-    for (auto [tag, handler] :
-         gpu->material_manager->ordered_handlers()) {
-        auto brdf_file =
-            shader_dir / "include" / handler->brdf_path();
+    for (auto [tag, handler] : gpu->material_manager->ordered_handlers()) {
+        auto brdf_file = shader_dir / "include" / handler->brdf_path();
         EXPECT_TRUE(std::filesystem::exists(brdf_file))
             << "BRDF include not found: " << brdf_file;
     }
@@ -1075,22 +1060,18 @@ TEST_F(IndirectLightPassTest, DynamicClosestHitShadersCompile) {
     compiler.set_target_vulkan_version(VK_API_VERSION_1_2);
     compiler.add_include_path(shader_dir / "include");
 
-    for (auto [tag, handler] :
-         gpu->material_manager->ordered_handlers()) {
-        auto source = std::format(
-            "#version 460\n"
-            "#extension GL_GOOGLE_include_directive"
-            " : require\n"
-            "#include \"indirect_light_base.glsl\"\n"
-            "#include \"{}\"\n",
-            handler->brdf_path().string());
+    for (auto [tag, handler] : gpu->material_manager->ordered_handlers()) {
+        auto source = std::format("#version 460\n"
+                                  "#extension GL_GOOGLE_include_directive"
+                                  " : require\n"
+                                  "#include \"indirect_light_base.glsl\"\n"
+                                  "#include \"{}\"\n",
+                                  handler->brdf_path().string());
         auto shader = compiler.compile_to_module(
-            gpu->device, source,
-            vk::ShaderStageFlagBits::eClosestHitKHR,
+            gpu->device, source, vk::ShaderStageFlagBits::eClosestHitKHR,
             "dynamic_chit");
         EXPECT_NE(shader, nullptr)
-            << "Closest-hit shader failed for tag "
-            << tag.id();
+            << "Closest-hit shader failed for tag " << tag.id();
     }
 }
 
@@ -1099,8 +1080,7 @@ TEST_F(IndirectLightPassTest, ConstructWithMaterialManager) {
     const auto &plane = gpu->get_plane_mesh();
     std::ignore = scene.add_instance(
         plane, glm::translate(glm::mat4(1.0f), glm::vec3(0, -100, 0)));
-    scene.set_material_sbt_mapping(
-        gpu->material_manager->sbt_mapping());
+    scene.set_material_sbt_mapping(gpu->material_manager->sbt_mapping());
     scene.build();
 
     auto pass = std::make_unique<IndirectLightPass>(

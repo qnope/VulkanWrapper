@@ -87,9 +87,8 @@ SkyPass::create_pipeline(const std::filesystem::path &shader_dir) {
     auto fragment_shader =
         compiler.compile_file_to_module(m_device, shader_dir / "sky.frag");
 
-    std::vector<vk::PushConstantRange> push_constants = {
-        vk::PushConstantRange(vk::ShaderStageFlagBits::eFragment, 0,
-                              sizeof(PushConstants))};
+    std::vector<vk::PushConstantRange> push_constants = {vk::PushConstantRange(
+        vk::ShaderStageFlagBits::eFragment, 0, sizeof(PushConstants))};
 
     return create_screen_space_pipeline(
         m_device, vertex_shader, fragment_shader, nullptr, m_light_format,

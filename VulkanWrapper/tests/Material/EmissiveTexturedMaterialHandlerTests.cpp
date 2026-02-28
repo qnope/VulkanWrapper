@@ -11,8 +11,8 @@ class EmissiveTexturedMaterialHandlerTest : public ::testing::Test {
   protected:
     void SetUp() override {
         auto &gpu = vw::tests::create_gpu();
-        m_staging = std::make_shared<vw::StagingBufferManager>(
-            gpu.device, gpu.allocator);
+        m_staging = std::make_shared<vw::StagingBufferManager>(gpu.device,
+                                                               gpu.allocator);
         m_texture_manager = std::make_unique<BindlessTextureManager>(
             gpu.device, gpu.allocator, m_staging);
         m_handler = EmissiveTexturedMaterialHandler::Base::create<
@@ -33,8 +33,7 @@ class EmissiveTexturedMaterialHandlerTest : public ::testing::Test {
 };
 
 TEST_F(EmissiveTexturedMaterialHandlerTest, BrdfPathIsCorrect) {
-    EXPECT_EQ(m_handler->brdf_path(),
-              "Material/brdf_emissive_textured.glsl");
+    EXPECT_EQ(m_handler->brdf_path(), "Material/brdf_emissive_textured.glsl");
 }
 
 TEST_F(EmissiveTexturedMaterialHandlerTest, TagReturnsEmissiveTexturedTag) {
@@ -43,13 +42,11 @@ TEST_F(EmissiveTexturedMaterialHandlerTest, TagReturnsEmissiveTexturedTag) {
 
 TEST_F(EmissiveTexturedMaterialHandlerTest,
        PriorityReturnsEmissiveTexturedPriority) {
-    EXPECT_EQ(m_handler->priority(),
-              emissive_textured_material_priority);
+    EXPECT_EQ(m_handler->priority(), emissive_textured_material_priority);
 }
 
 TEST_F(EmissiveTexturedMaterialHandlerTest, StrideMatchesDataSize) {
-    EXPECT_EQ(m_handler->stride(),
-              sizeof(EmissiveTexturedMaterialData));
+    EXPECT_EQ(m_handler->stride(), sizeof(EmissiveTexturedMaterialData));
 }
 
 TEST_F(EmissiveTexturedMaterialHandlerTest,
@@ -78,8 +75,7 @@ TEST_F(EmissiveTexturedMaterialHandlerTest,
               sizeof(EmissiveTexturedMaterialData));
 }
 
-TEST_F(EmissiveTexturedMaterialHandlerTest,
-       AdditionalDescriptorSetIsPresent) {
+TEST_F(EmissiveTexturedMaterialHandlerTest, AdditionalDescriptorSetIsPresent) {
     auto texture = m_test_image_path / "image_test.png";
     std::ignore = m_handler->create_material(texture, 100.0f);
     m_handler->upload();
@@ -95,15 +91,13 @@ TEST_F(EmissiveTexturedMaterialHandlerTest,
     EXPECT_NE(layout, nullptr);
 }
 
-TEST_F(EmissiveTexturedMaterialHandlerTest,
-       TryCreateWithEmissiveTexture) {
+TEST_F(EmissiveTexturedMaterialHandlerTest, TryCreateWithEmissiveTexture) {
     aiMaterial material;
     aiString texture_path("image_test.png");
     material.AddProperty(&texture_path,
                          AI_MATKEY_TEXTURE(aiTextureType_EMISSIVE, 0));
 
-    auto result =
-        m_handler->try_create(&material, m_test_image_path);
+    auto result = m_handler->try_create(&material, m_test_image_path);
 
     ASSERT_TRUE(result.has_value());
     EXPECT_EQ(result->material_type, emissive_textured_material_tag);
@@ -132,24 +126,20 @@ TEST_F(EmissiveTexturedMaterialHandlerTest,
     EXPECT_FALSE(result.has_value());
 }
 
-TEST_F(EmissiveTexturedMaterialHandlerTest,
-       TryCreateWithCustomIntensity) {
+TEST_F(EmissiveTexturedMaterialHandlerTest, TryCreateWithCustomIntensity) {
     aiMaterial material;
     aiString texture_path("image_test.png");
     material.AddProperty(&texture_path,
                          AI_MATKEY_TEXTURE(aiTextureType_EMISSIVE, 0));
     float intensity = 50.0f;
-    material.AddProperty(&intensity, 1,
-                         AI_MATKEY_EMISSIVE_INTENSITY);
+    material.AddProperty(&intensity, 1, AI_MATKEY_EMISSIVE_INTENSITY);
 
-    auto result =
-        m_handler->try_create(&material, m_test_image_path);
+    auto result = m_handler->try_create(&material, m_test_image_path);
 
     ASSERT_TRUE(result.has_value());
 }
 
-TEST_F(EmissiveTexturedMaterialHandlerTest,
-       UploadAfterMaterialCreation) {
+TEST_F(EmissiveTexturedMaterialHandlerTest, UploadAfterMaterialCreation) {
     auto texture = m_test_image_path / "image_test.png";
     std::ignore = m_handler->create_material(texture, 100.0f);
     m_handler->upload();
@@ -158,8 +148,7 @@ TEST_F(EmissiveTexturedMaterialHandlerTest,
     EXPECT_FALSE(resources.empty());
 }
 
-TEST_F(EmissiveTexturedMaterialHandlerTest,
-       BufferAddressAfterUpload) {
+TEST_F(EmissiveTexturedMaterialHandlerTest, BufferAddressAfterUpload) {
     auto texture = m_test_image_path / "image_test.png";
     std::ignore = m_handler->create_material(texture, 100.0f);
     m_handler->upload();

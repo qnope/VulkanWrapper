@@ -7,7 +7,6 @@
 #include "VulkanWrapper/Image/Sampler.h"
 #include "VulkanWrapper/Memory/Allocator.h"
 #include "VulkanWrapper/Vulkan/Queue.h"
-
 #include <cstdint>
 #include <memory>
 

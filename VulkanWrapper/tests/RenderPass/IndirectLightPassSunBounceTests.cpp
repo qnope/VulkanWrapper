@@ -150,43 +150,41 @@ class IndirectLightSunBounceTest : public ::testing::Test {
         auto usage = vk::ImageUsageFlagBits::eSampled |
                      vk::ImageUsageFlagBits::eTransferDst;
 
-        gb.position = gpu->allocator->create_image_2D(width, height, false,
-                                                       fmt, usage);
+        gb.position =
+            gpu->allocator->create_image_2D(width, height, false, fmt, usage);
         gb.position_view = ImageViewBuilder(gpu->device, gb.position)
                                .setImageType(vk::ImageViewType::e2D)
                                .build();
 
-        gb.normal = gpu->allocator->create_image_2D(width, height, false,
-                                                     fmt, usage);
+        gb.normal =
+            gpu->allocator->create_image_2D(width, height, false, fmt, usage);
         gb.normal_view = ImageViewBuilder(gpu->device, gb.normal)
                              .setImageType(vk::ImageViewType::e2D)
                              .build();
 
-        gb.albedo = gpu->allocator->create_image_2D(width, height, false,
-                                                     fmt, usage);
+        gb.albedo =
+            gpu->allocator->create_image_2D(width, height, false, fmt, usage);
         gb.albedo_view = ImageViewBuilder(gpu->device, gb.albedo)
                              .setImageType(vk::ImageViewType::e2D)
                              .build();
 
-        gb.ao = gpu->allocator->create_image_2D(width, height, false,
-                                                 fmt, usage);
+        gb.ao =
+            gpu->allocator->create_image_2D(width, height, false, fmt, usage);
         gb.ao_view = ImageViewBuilder(gpu->device, gb.ao)
                          .setImageType(vk::ImageViewType::e2D)
                          .build();
 
-        gb.indirect_ray = gpu->allocator->create_image_2D(
-            width, height, false, fmt, usage);
-        gb.indirect_ray_view =
-            ImageViewBuilder(gpu->device, gb.indirect_ray)
-                .setImageType(vk::ImageViewType::e2D)
-                .build();
+        gb.indirect_ray =
+            gpu->allocator->create_image_2D(width, height, false, fmt, usage);
+        gb.indirect_ray_view = ImageViewBuilder(gpu->device, gb.indirect_ray)
+                                   .setImageType(vk::ImageViewType::e2D)
+                                   .build();
 
         return gb;
     }
 
     // Fill G-buffer with uniform values across all pixels
-    void fill_gbuffer_uniform(GBuffer &gb, glm::vec3 position,
-                              glm::vec3 normal,
+    void fill_gbuffer_uniform(GBuffer &gb, glm::vec3 position, glm::vec3 normal,
                               glm::vec3 albedo = glm::vec3(1.0f),
                               float ao = 1.0f) {
         uint32_t width = gb.position->extent2D().width;
@@ -243,11 +241,10 @@ class IndirectLightSunBounceTest : public ::testing::Test {
         }
 
         auto write_staging = [&](auto &staging, const auto &data) {
-            staging.write(
-                std::span<const std::byte>(
-                    reinterpret_cast<const std::byte *>(data.data()),
-                    float4_size),
-                0);
+            staging.write(std::span<const std::byte>(
+                              reinterpret_cast<const std::byte *>(data.data()),
+                              float4_size),
+                          0);
         };
 
         write_staging(position_staging, pos_data);
@@ -261,12 +258,10 @@ class IndirectLightSunBounceTest : public ::testing::Test {
             vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
         Transfer transfer;
-        transfer.copyBufferToImage(cmd, position_staging.handle(),
-                                   gb.position, 0);
-        transfer.copyBufferToImage(cmd, normal_staging.handle(),
-                                   gb.normal, 0);
-        transfer.copyBufferToImage(cmd, albedo_staging.handle(),
-                                   gb.albedo, 0);
+        transfer.copyBufferToImage(cmd, position_staging.handle(), gb.position,
+                                   0);
+        transfer.copyBufferToImage(cmd, normal_staging.handle(), gb.normal, 0);
+        transfer.copyBufferToImage(cmd, albedo_staging.handle(), gb.albedo, 0);
         transfer.copyBufferToImage(cmd, ao_staging.handle(), gb.ao, 0);
         transfer.copyBufferToImage(cmd, indirect_ray_staging.handle(),
                                    gb.indirect_ray, 0);
@@ -328,10 +323,9 @@ class IndirectLightSunBounceTest : public ::testing::Test {
             std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
                 vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
             Barrier::ResourceTracker tracker;
-            result = pass->execute(cmd, tracker, width, height,
-                                   gb.position_view, gb.normal_view,
-                                   gb.albedo_view, gb.ao_view,
-                                   gb.indirect_ray_view, sky_params);
+            result = pass->execute(
+                cmd, tracker, width, height, gb.position_view, gb.normal_view,
+                gb.albedo_view, gb.ao_view, gb.indirect_ray_view, sky_params);
             std::ignore = cmd.end();
             gpu->queue().enqueue_command_buffer(cmd);
             gpu->queue().submit({}, {}, {}).wait();
@@ -362,12 +356,11 @@ TEST_F(IndirectLightSunBounceTest,
 
     // Place a large floor below the shading point. The plane mesh is
     // centered at origin; scale it up and place at y=-5.
-    auto floor_transform = glm::scale(
-        glm::translate(glm::mat4(1.0f), glm::vec3(0, -5, 0)),
-        glm::vec3(100.0f, 1.0f, 100.0f));
+    auto floor_transform =
+        glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0, -5, 0)),
+                   glm::vec3(100.0f, 1.0f, 100.0f));
     std::ignore = scene.add_instance(plane, floor_transform);
-    scene.set_material_sbt_mapping(
-        gpu->material_manager->sbt_mapping());
+    scene.set_material_sbt_mapping(gpu->material_manager->sbt_mapping());
     scene.build();
 
     auto gb = create_gbuffer(width, height);
@@ -385,8 +378,7 @@ TEST_F(IndirectLightSunBounceTest,
     // light bounced from the sun-lit floor
     EXPECT_GT(luminance, 0.0f)
         << "Floor below shading point should produce non-zero bounce light"
-        << " (R=" << color.r << ", G=" << color.g << ", B=" << color.b
-        << ")";
+        << " (R=" << color.r << ", G=" << color.g << ", B=" << color.b << ")";
 }
 
 TEST_F(IndirectLightSunBounceTest,
@@ -400,12 +392,11 @@ TEST_F(IndirectLightSunBounceTest,
     rt::RayTracedScene scene(gpu->device, gpu->allocator);
     const auto &plane = gpu->get_plane_mesh();
 
-    auto floor_transform = glm::scale(
-        glm::translate(glm::mat4(1.0f), glm::vec3(0, -5, 0)),
-        glm::vec3(100.0f, 1.0f, 100.0f));
+    auto floor_transform =
+        glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0, -5, 0)),
+                   glm::vec3(100.0f, 1.0f, 100.0f));
     std::ignore = scene.add_instance(plane, floor_transform);
-    scene.set_material_sbt_mapping(
-        gpu->material_manager->sbt_mapping());
+    scene.set_material_sbt_mapping(gpu->material_manager->sbt_mapping());
     scene.build();
 
     auto gb = create_gbuffer(width, height);
@@ -427,8 +418,7 @@ TEST_F(IndirectLightSunBounceTest,
         << " (high=" << lum_high << ", low=" << lum_low << ")";
 }
 
-TEST_F(IndirectLightSunBounceTest,
-       SunBounce_OccludedFloor_ProducesLessLight) {
+TEST_F(IndirectLightSunBounceTest, SunBounce_OccludedFloor_ProducesLessLight) {
     // When a large occluder blocks the sun from reaching the floor,
     // the bounce contribution from the floor should be significantly
     // reduced compared to the unoccluded case.
@@ -449,50 +439,45 @@ TEST_F(IndirectLightSunBounceTest,
     glm::vec4 color_unoccluded;
     {
         rt::RayTracedScene scene(gpu->device, gpu->allocator);
-        auto floor_transform = glm::scale(
-            glm::translate(glm::mat4(1.0f), glm::vec3(0, -5, 0)),
-            glm::vec3(100.0f, 1.0f, 100.0f));
+        auto floor_transform =
+            glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0, -5, 0)),
+                       glm::vec3(100.0f, 1.0f, 100.0f));
         std::ignore = scene.add_instance(plane, floor_transform);
-        scene.set_material_sbt_mapping(
-            gpu->material_manager->sbt_mapping());
+        scene.set_material_sbt_mapping(gpu->material_manager->sbt_mapping());
         scene.build();
 
-        color_unoccluded =
-            run_pass(scene, gb, sky_params, width, height, 16);
+        color_unoccluded = run_pass(scene, gb, sky_params, width, height, 16);
     }
 
     // Scene WITH large occluder between sun and floor
     glm::vec4 color_occluded;
     {
         rt::RayTracedScene scene(gpu->device, gpu->allocator);
-        auto floor_transform = glm::scale(
-            glm::translate(glm::mat4(1.0f), glm::vec3(0, -5, 0)),
-            glm::vec3(100.0f, 1.0f, 100.0f));
+        auto floor_transform =
+            glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0, -5, 0)),
+                       glm::vec3(100.0f, 1.0f, 100.0f));
         std::ignore = scene.add_instance(plane, floor_transform);
 
         // Large occluder above the floor, blocking sunlight
-        auto occluder_transform = glm::scale(
-            glm::translate(glm::mat4(1.0f), glm::vec3(0, 50, 0)),
-            glm::vec3(200.0f, 1.0f, 200.0f));
+        auto occluder_transform =
+            glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(0, 50, 0)),
+                       glm::vec3(200.0f, 1.0f, 200.0f));
         std::ignore = scene.add_instance(cube, occluder_transform);
-        scene.set_material_sbt_mapping(
-            gpu->material_manager->sbt_mapping());
+        scene.set_material_sbt_mapping(gpu->material_manager->sbt_mapping());
         scene.build();
 
-        color_occluded =
-            run_pass(scene, gb, sky_params, width, height, 16);
+        color_occluded = run_pass(scene, gb, sky_params, width, height, 16);
     }
 
     float lum_unoccluded =
         color_unoccluded.r + color_unoccluded.g + color_unoccluded.b;
-    float lum_occluded =
-        color_occluded.r + color_occluded.g + color_occluded.b;
+    float lum_occluded = color_occluded.r + color_occluded.g + color_occluded.b;
 
     EXPECT_GT(lum_unoccluded, lum_occluded)
         << "Unoccluded floor should produce more bounce light than "
            "occluded floor"
-        << " (unoccluded=" << lum_unoccluded
-        << ", occluded=" << lum_occluded << ")";
+        << " (unoccluded=" << lum_unoccluded << ", occluded=" << lum_occluded
+        << ")";
 }
 
 } // namespace vw::tests

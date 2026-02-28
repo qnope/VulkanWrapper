@@ -53,9 +53,11 @@ static_assert(sizeof(IndirectLightPushConstants) <= 128,
  *
  * The pass uses progressive accumulation: each frame computes 1 sample per
  * pixel and blends it with the accumulated history using imageLoad/imageStore.
- * This produces clean results over time while maintaining real-time performance.
+ * This produces clean results over time while maintaining real-time
+ * performance.
  *
- * Output is written to an independent storage image (not additive to light_view).
+ * Output is written to an independent storage image (not additive to
+ * light_view).
  *
  * Shaders are compiled at runtime from GLSL source files using ShaderCompiler:
  * - indirect_light.rgen: Ray generation shader
@@ -78,13 +80,13 @@ class IndirectLightPass : public Subpass<IndirectLightPassSlot> {
      *        texture access in closest hit shaders
      * @param output_format Output buffer format (default: R32G32B32A32Sfloat)
      */
-    IndirectLightPass(std::shared_ptr<Device> device,
-                      std::shared_ptr<Allocator> allocator,
-                      const std::filesystem::path &shader_dir,
-                      const rt::as::TopLevelAccelerationStructure &tlas,
-                      const rt::GeometryReferenceBuffer &geometry_buffer,
-                      Model::Material::BindlessMaterialManager &material_manager,
-                      vk::Format output_format = vk::Format::eR32G32B32A32Sfloat);
+    IndirectLightPass(
+        std::shared_ptr<Device> device, std::shared_ptr<Allocator> allocator,
+        const std::filesystem::path &shader_dir,
+        const rt::as::TopLevelAccelerationStructure &tlas,
+        const rt::GeometryReferenceBuffer &geometry_buffer,
+        Model::Material::BindlessMaterialManager &material_manager,
+        vk::Format output_format = vk::Format::eR32G32B32A32Sfloat);
 
     /**
      * @brief Execute the indirect light pass with progressive accumulation

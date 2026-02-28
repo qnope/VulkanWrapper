@@ -17,15 +17,14 @@ ToneMappingPass::ToneMappingPass(std::shared_ptr<Device> device,
     create_black_fallback_image();
 }
 
-void ToneMappingPass::execute(vk::CommandBuffer cmd,
-                              Barrier::ResourceTracker &tracker,
-                              std::shared_ptr<const ImageView> output_view,
-                              std::shared_ptr<const ImageView> sky_view,
-                              std::shared_ptr<const ImageView> direct_light_view,
-                              std::shared_ptr<const ImageView> indirect_view,
-                              float indirect_intensity,
-                              ToneMappingOperator tone_operator, float exposure,
-                              float white_point, float luminance_scale) {
+void ToneMappingPass::execute(
+    vk::CommandBuffer cmd, Barrier::ResourceTracker &tracker,
+    std::shared_ptr<const ImageView> output_view,
+    std::shared_ptr<const ImageView> sky_view,
+    std::shared_ptr<const ImageView> direct_light_view,
+    std::shared_ptr<const ImageView> indirect_view, float indirect_intensity,
+    ToneMappingOperator tone_operator, float exposure, float white_point,
+    float luminance_scale) {
 
     vk::Extent2D extent = output_view->image()->extent2D();
 
@@ -86,16 +85,14 @@ void ToneMappingPass::execute(vk::CommandBuffer cmd,
                       descriptor_set, &constants, sizeof(constants));
 }
 
-std::shared_ptr<const ImageView>
-ToneMappingPass::execute(vk::CommandBuffer cmd,
-                         Barrier::ResourceTracker &tracker, Width width,
-                         Height height, size_t frame_index,
-                         std::shared_ptr<const ImageView> sky_view,
-                         std::shared_ptr<const ImageView> direct_light_view,
-                         std::shared_ptr<const ImageView> indirect_view,
-                         float indirect_intensity,
-                         ToneMappingOperator tone_operator, float exposure,
-                         float white_point, float luminance_scale) {
+std::shared_ptr<const ImageView> ToneMappingPass::execute(
+    vk::CommandBuffer cmd, Barrier::ResourceTracker &tracker, Width width,
+    Height height, size_t frame_index,
+    std::shared_ptr<const ImageView> sky_view,
+    std::shared_ptr<const ImageView> direct_light_view,
+    std::shared_ptr<const ImageView> indirect_view, float indirect_intensity,
+    ToneMappingOperator tone_operator, float exposure, float white_point,
+    float luminance_scale) {
 
     // Get or create cached output image
     auto &cached = get_or_create_image(
@@ -114,11 +111,10 @@ ToneMappingPass::execute(vk::CommandBuffer cmd,
 ToneMappingPass::CompiledShaders
 ToneMappingPass::compile_shaders(const std::filesystem::path &shader_dir) {
     ShaderCompiler compiler;
-    return CompiledShaders{
-        .vertex = compiler.compile_file_to_module(m_device,
-                                                  shader_dir / "fullscreen.vert"),
-        .fragment = compiler.compile_file_to_module(m_device,
-                                                    shader_dir / "tonemap.frag")};
+    return CompiledShaders{.vertex = compiler.compile_file_to_module(
+                               m_device, shader_dir / "fullscreen.vert"),
+                           .fragment = compiler.compile_file_to_module(
+                               m_device, shader_dir / "tonemap.frag")};
 }
 
 DescriptorPool
@@ -134,9 +130,8 @@ ToneMappingPass::create_descriptor_pool(CompiledShaders shaders) {
                                  1) // binding 2: indirect light
             .build();
 
-    std::vector<vk::PushConstantRange> push_constants = {
-        vk::PushConstantRange(vk::ShaderStageFlagBits::eFragment, 0,
-                              sizeof(PushConstants))};
+    std::vector<vk::PushConstantRange> push_constants = {vk::PushConstantRange(
+        vk::ShaderStageFlagBits::eFragment, 0, sizeof(PushConstants))};
 
     // No depth testing needed for tone mapping
     m_pipeline = create_screen_space_pipeline(
@@ -151,7 +146,8 @@ void ToneMappingPass::create_black_fallback_image() {
     // Create a 1x1 black image for when indirect_view is not provided
     m_black_image = m_allocator->create_image_2D(
         Width{1}, Height{1}, false, vk::Format::eR16G16B16A16Sfloat,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst);
+        vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eTransferDst);
 
     m_black_image_view = ImageViewBuilder(m_device, m_black_image)
                              .setImageType(vk::ImageViewType::e2D)
@@ -176,8 +172,8 @@ void ToneMappingPass::create_black_fallback_image() {
             .setImage(m_black_image->handle())
             .setSubresourceRange(m_black_image->full_range());
 
-    cmd.pipelineBarrier2(vk::DependencyInfo().setImageMemoryBarriers(
-        barrier_to_transfer));
+    cmd.pipelineBarrier2(
+        vk::DependencyInfo().setImageMemoryBarriers(barrier_to_transfer));
 
     // Clear the image to black
     vk::ClearColorValue clear_color(0.0f, 0.0f, 0.0f, 0.0f);

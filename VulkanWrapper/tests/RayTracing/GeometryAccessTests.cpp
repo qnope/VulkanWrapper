@@ -465,18 +465,16 @@ void main() {
             .build();
 
     // Build compute pipeline
-    auto pipeline = vw::ComputePipelineBuilder(gpu->device,
-                                               std::move(pipeline_layout))
-                        .set_shader(shader_module)
-                        .build();
+    auto pipeline =
+        vw::ComputePipelineBuilder(gpu->device, std::move(pipeline_layout))
+            .set_shader(shader_module)
+            .build();
 
     // Create input/output buffers
-    auto input_buffer =
-        vw::create_buffer<float, true, vw::StorageBufferUsage>(
-            *gpu->allocator, element_count);
-    auto output_buffer =
-        vw::create_buffer<float, true, vw::StorageBufferUsage>(
-            *gpu->allocator, element_count);
+    auto input_buffer = vw::create_buffer<float, true, vw::StorageBufferUsage>(
+        *gpu->allocator, element_count);
+    auto output_buffer = vw::create_buffer<float, true, vw::StorageBufferUsage>(
+        *gpu->allocator, element_count);
 
     // Fill input buffer
     std::vector<float> input_data(element_count);
@@ -494,9 +492,8 @@ void main() {
     auto cmds = cmd_pool.allocate(1);
     auto cmd = cmds[0];
 
-    std::ignore =
-        cmd.begin(vk::CommandBufferBeginInfo().setFlags(
-            vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+    std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
+        vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     cmd.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline->handle());
 

@@ -25,8 +25,7 @@ DualRandomSample generate_hemisphere_samples(std::uint32_t seed) {
 DualRandomSampleBuffer
 create_hemisphere_samples_buffer(const Allocator &allocator) {
     auto buffer =
-        create_buffer<DualRandomSample, true, StorageBufferUsage>(allocator,
-                                                                   1);
+        create_buffer<DualRandomSample, true, StorageBufferUsage>(allocator, 1);
     buffer.write(generate_hemisphere_samples(), 0);
     return buffer;
 }
@@ -35,8 +34,7 @@ DualRandomSampleBuffer
 create_hemisphere_samples_buffer(const Allocator &allocator,
                                  std::uint32_t seed) {
     auto buffer =
-        create_buffer<DualRandomSample, true, StorageBufferUsage>(allocator,
-                                                                   1);
+        create_buffer<DualRandomSample, true, StorageBufferUsage>(allocator, 1);
     buffer.write(generate_hemisphere_samples(seed), 0);
     return buffer;
 }

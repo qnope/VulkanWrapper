@@ -16,8 +16,7 @@ class MeshManager {
                 std::shared_ptr<Allocator> allocator);
 
     void add_mesh(std::vector<FullVertex3D> vertices,
-                  std::vector<uint32_t> indices,
-                  Material::Material material);
+                  std::vector<uint32_t> indices, Material::Material material);
 
     void read_file(const std::filesystem::path &path);
 

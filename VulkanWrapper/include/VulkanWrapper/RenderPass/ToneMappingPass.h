@@ -92,7 +92,8 @@ class ToneMappingPass : public ScreenSpacePass<ToneMappingPassSlot> {
      * @param output_view Output image view to render into
      * @param sky_view Sky radiance buffer (from SkyPass)
      * @param direct_light_view Direct light buffer (from DirectLightPass)
-     * @param indirect_view Optional indirect light buffer (nullptr = no indirect)
+     * @param indirect_view Optional indirect light buffer (nullptr = no
+     * indirect)
      * @param indirect_intensity Multiplier for indirect light (0.0 = disabled)
      * @param tone_operator Tone mapping operator to use
      * @param exposure Exposure multiplier (EV)
@@ -119,7 +120,8 @@ class ToneMappingPass : public ScreenSpacePass<ToneMappingPassSlot> {
      * @param frame_index Frame index for multi-buffering
      * @param sky_view Sky radiance buffer (from SkyPass)
      * @param direct_light_view Direct light buffer (from DirectLightPass)
-     * @param indirect_view Optional indirect light buffer (nullptr = no indirect)
+     * @param indirect_view Optional indirect light buffer (nullptr = no
+     * indirect)
      * @param indirect_intensity Multiplier for indirect light (0.0 = disabled)
      * @param tone_operator Tone mapping operator
      * @param exposure Exposure multiplier

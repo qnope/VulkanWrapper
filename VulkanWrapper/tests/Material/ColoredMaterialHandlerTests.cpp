@@ -17,8 +17,7 @@ class ColoredMaterialHandlerTest : public ::testing::Test {
 };
 
 TEST_F(ColoredMaterialHandlerTest, BrdfPathIsCorrect) {
-    EXPECT_EQ(m_handler->brdf_path(),
-              "Material/brdf_colored.glsl");
+    EXPECT_EQ(m_handler->brdf_path(), "Material/brdf_colored.glsl");
 }
 
 TEST_F(ColoredMaterialHandlerTest, HandlerHasCorrectTag) {
@@ -107,7 +106,8 @@ TEST_F(ColoredMaterialHandlerTest, BufferAddressAvailableWithoutUpload) {
 
     m_handler->try_create(&material, "");
 
-    // SSBO is pre-allocated at construction, buffer_address works without upload
+    // SSBO is pre-allocated at construction, buffer_address works without
+    // upload
     EXPECT_NE(m_handler->buffer_address(), vk::DeviceAddress{0});
 }
 

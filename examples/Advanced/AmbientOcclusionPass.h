@@ -9,9 +9,9 @@
 #include "VulkanWrapper/Memory/Allocator.h"
 #include "VulkanWrapper/Pipeline/Pipeline.h"
 #include "VulkanWrapper/Random/NoiseTexture.h"
-#include "VulkanWrapper/Shader/ShaderCompiler.h"
 #include "VulkanWrapper/Random/RandomSamplingBuffer.h"
 #include "VulkanWrapper/RenderPass/ScreenSpacePass.h"
+#include "VulkanWrapper/Shader/ShaderCompiler.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include "VulkanWrapper/Vulkan/Device.h"
 #include <filesystem>
@@ -31,14 +31,14 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
   public:
     struct PushConstants {
         float aoRadius;
-        int32_t sampleIndex; // Which sample to use (for progressive accumulation)
+        int32_t
+            sampleIndex; // Which sample to use (for progressive accumulation)
     };
 
     AmbientOcclusionPass(
         std::shared_ptr<vw::Device> device,
         std::shared_ptr<vw::Allocator> allocator,
-        vk::AccelerationStructureKHR tlas,
-        std::filesystem::path vw_shader_dir,
+        vk::AccelerationStructureKHR tlas, std::filesystem::path vw_shader_dir,
         std::filesystem::path ao_shader_dir,
         vk::Format output_format = vk::Format::eR32G32B32A32Sfloat)
         : ScreenSpacePass(device, allocator)
@@ -50,8 +50,7 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
         , m_samples_buffer(vw::create_hemisphere_samples_buffer(*m_allocator))
         , m_noise_texture(std::make_unique<vw::NoiseTexture>(
               m_device, m_allocator, m_device->graphicsQueue()))
-        , m_descriptor_pool(create_descriptor_pool()) {
-    }
+        , m_descriptor_pool(create_descriptor_pool()) {}
 
     /**
      * @brief Execute the ambient occlusion pass with progressive accumulation
@@ -180,8 +179,8 @@ class AmbientOcclusionPass : public vw::ScreenSpacePass<AOPassSlot> {
         // Push constants
         PushConstants constants{
             .aoRadius = ao_radius,
-            .sampleIndex = static_cast<int32_t>(
-                m_total_frame_count % vw::DUAL_SAMPLE_COUNT)};
+            .sampleIndex = static_cast<int32_t>(m_total_frame_count %
+                                                vw::DUAL_SAMPLE_COUNT)};
 
         // Set blend constants for progressive accumulation
         // blend_factor = 1/(frameCount+1) gives equal weight to all samples

@@ -91,8 +91,7 @@ class RayTracedScene {
     [[nodiscard]] Model::Scene &scene() noexcept { return m_scene; }
 
     void set_material_sbt_mapping(
-        std::unordered_map<Model::Material::MaterialTypeTag, uint32_t>
-            mapping);
+        std::unordered_map<Model::Material::MaterialTypeTag, uint32_t> mapping);
 
   private:
     struct Instance {

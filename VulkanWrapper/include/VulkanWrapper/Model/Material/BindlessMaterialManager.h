@@ -41,12 +41,12 @@ class BindlessMaterialManager {
     void upload_all();
 
     [[nodiscard]] auto handlers() const {
-        return m_handlers
-               | std::views::transform([](const auto &pair)
-                     -> std::pair<MaterialTypeTag,
-                                  const IMaterialTypeHandler *> {
-                   return {pair.first, pair.second.get()};
-               });
+        return m_handlers | std::views::transform(
+                                [](const auto &pair)
+                                    -> std::pair<MaterialTypeTag,
+                                                 const IMaterialTypeHandler *> {
+                                    return {pair.first, pair.second.get()};
+                                });
     }
 
     [[nodiscard]] std::vector<

@@ -1,7 +1,6 @@
 #include "VulkanWrapper/Model/Material/TexturedMaterialHandler.h"
 
 #include "VulkanWrapper/Model/Material/BindlessTextureManager.h"
-
 #include <algorithm>
 #include <assimp/material.h>
 
@@ -38,8 +37,7 @@ TexturedMaterialHandler::additional_descriptor_set_layout() const {
 }
 
 TexturedMaterialHandler::TexturedMaterialHandler(
-    std::shared_ptr<const Device> device,
-    std::shared_ptr<Allocator> allocator,
+    std::shared_ptr<const Device> device, std::shared_ptr<Allocator> allocator,
     BindlessTextureManager &texture_manager)
     : Base{std::move(device), std::move(allocator),
            "Material/brdf_textured.glsl"}
@@ -47,8 +45,7 @@ TexturedMaterialHandler::TexturedMaterialHandler(
 
 Material TexturedMaterialHandler::create_material(
     const std::filesystem::path &texture_path) {
-    uint32_t texture_index =
-        m_texture_manager.register_texture(texture_path);
+    uint32_t texture_index = m_texture_manager.register_texture(texture_path);
     return Base::create_material(
         TexturedMaterialData{.diffuse_texture_index = texture_index});
 }

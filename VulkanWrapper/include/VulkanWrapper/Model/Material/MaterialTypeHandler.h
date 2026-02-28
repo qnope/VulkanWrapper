@@ -36,8 +36,7 @@ class MaterialTypeHandler : public IMaterialTypeHandler {
         m_material_data.push_back(*data);
         m_dirty = true;
         return Material{tag(),
-                        m_ssbo.device_address() +
-                            index * sizeof(GpuData)};
+                        m_ssbo.device_address() + index * sizeof(GpuData)};
     }
 
     [[nodiscard]] Material create_material(GpuData data) {
@@ -45,8 +44,7 @@ class MaterialTypeHandler : public IMaterialTypeHandler {
         m_material_data.push_back(std::move(data));
         m_dirty = true;
         return Material{tag(),
-                        m_ssbo.device_address() +
-                            index * sizeof(GpuData)};
+                        m_ssbo.device_address() + index * sizeof(GpuData)};
     }
 
     [[nodiscard]] vk::DeviceAddress buffer_address() const final {

@@ -40,11 +40,9 @@ void import_model(const std::filesystem::path &path,
 
     std::vector<Material::Material> real_material;
 
-    for (const auto *mat :
-         std::span(scene->mMaterials, scene->mNumMaterials)) {
-        real_material.push_back(
-            mesh_manager.material_manager().create_material(
-                mat, directory_path));
+    for (const auto *mat : std::span(scene->mMaterials, scene->mNumMaterials)) {
+        real_material.push_back(mesh_manager.material_manager().create_material(
+            mat, directory_path));
     }
 
     for (const auto &mesh : meshes) {
