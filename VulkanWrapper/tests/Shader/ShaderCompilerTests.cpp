@@ -1,7 +1,5 @@
-#include "VulkanWrapper/Shader/ShaderCompiler.h"
-#include "VulkanWrapper/Utils/Error.h"
-#include <fstream>
 #include <gtest/gtest.h>
+import vw;
 
 namespace {
 
@@ -403,7 +401,7 @@ TEST(ShaderCompilerTest, NonExistentFileThrows) {
 TEST(ShaderCompilerTest, FluentAPILValue) {
     vw::ShaderCompiler compiler;
     compiler.add_include_path("/some/path")
-        .set_target_vulkan_version(VK_API_VERSION_1_2)
+        .set_target_vulkan_version(vw_VK_API_VERSION_1_2)
         .add_macro("TEST")
         .set_generate_debug_info(true)
         .set_optimize(false);
@@ -416,7 +414,7 @@ TEST(ShaderCompilerTest, FluentAPILValue) {
 TEST(ShaderCompilerTest, FluentAPIRValue) {
     auto result = vw::ShaderCompiler()
                       .add_include_path("/some/path")
-                      .set_target_vulkan_version(VK_API_VERSION_1_3)
+                      .set_target_vulkan_version(vw_VK_API_VERSION_1_3)
                       .add_macro("TEST", "1")
                       .compile(SIMPLE_FRAGMENT_SHADER,
                                vk::ShaderStageFlagBits::eFragment);
@@ -427,7 +425,7 @@ TEST(ShaderCompilerTest, FluentAPIRValue) {
 // Vulkan version tests
 TEST(ShaderCompilerTest, CompileForVulkan10) {
     vw::ShaderCompiler compiler;
-    compiler.set_target_vulkan_version(VK_API_VERSION_1_0);
+    compiler.set_target_vulkan_version(vw_VK_API_VERSION_1_0);
 
     auto result = compiler.compile(SIMPLE_VERTEX_SHADER,
                                    vk::ShaderStageFlagBits::eVertex);
@@ -436,7 +434,7 @@ TEST(ShaderCompilerTest, CompileForVulkan10) {
 
 TEST(ShaderCompilerTest, CompileForVulkan11) {
     vw::ShaderCompiler compiler;
-    compiler.set_target_vulkan_version(VK_API_VERSION_1_1);
+    compiler.set_target_vulkan_version(vw_VK_API_VERSION_1_1);
 
     auto result = compiler.compile(SIMPLE_VERTEX_SHADER,
                                    vk::ShaderStageFlagBits::eVertex);
@@ -445,7 +443,7 @@ TEST(ShaderCompilerTest, CompileForVulkan11) {
 
 TEST(ShaderCompilerTest, CompileForVulkan12) {
     vw::ShaderCompiler compiler;
-    compiler.set_target_vulkan_version(VK_API_VERSION_1_2);
+    compiler.set_target_vulkan_version(vw_VK_API_VERSION_1_2);
 
     auto result = compiler.compile(SIMPLE_VERTEX_SHADER,
                                    vk::ShaderStageFlagBits::eVertex);
@@ -454,7 +452,7 @@ TEST(ShaderCompilerTest, CompileForVulkan12) {
 
 TEST(ShaderCompilerTest, CompileForVulkan13) {
     vw::ShaderCompiler compiler;
-    compiler.set_target_vulkan_version(VK_API_VERSION_1_3);
+    compiler.set_target_vulkan_version(vw_VK_API_VERSION_1_3);
 
     auto result = compiler.compile(SIMPLE_VERTEX_SHADER,
                                    vk::ShaderStageFlagBits::eVertex);

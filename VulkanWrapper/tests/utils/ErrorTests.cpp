@@ -1,5 +1,5 @@
-#include "VulkanWrapper/Utils/Error.h"
 #include <gtest/gtest.h>
+import vw;
 
 // Test base Exception class
 TEST(ExceptionTest, BasicException) {

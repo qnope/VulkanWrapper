@@ -1,7 +1,6 @@
-#include "utils/create_gpu.hpp"
-#include "VulkanWrapper/Model/Material/ColoredMaterialHandler.h"
 #include <assimp/material.h>
 #include <gtest/gtest.h>
+import vw.test;
 
 using namespace vw::Model::Material;
 

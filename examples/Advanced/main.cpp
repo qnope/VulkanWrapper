@@ -1,22 +1,5 @@
-#include "Application.h"
-#include "DeferredRenderingManager.h"
-#include "RenderPassInformation.h"
-#include "SceneSetup.h"
-#include <VulkanWrapper/3rd_party.h>
-#include <VulkanWrapper/Command/CommandBuffer.h>
-#include <VulkanWrapper/Command/CommandPool.h>
-#include <VulkanWrapper/Image/ImageView.h>
-#include <VulkanWrapper/Memory/Barrier.h>
-#include <VulkanWrapper/Memory/Transfer.h>
-#include <VulkanWrapper/Model/Material/EmissiveTexturedMaterialHandler.h>
-#include <VulkanWrapper/Model/MeshManager.h>
-#include <VulkanWrapper/RayTracing/RayTracedScene.h>
-#include <VulkanWrapper/RenderPass/SkyParameters.h>
-#include <VulkanWrapper/Synchronization/Fence.h>
-#include <VulkanWrapper/Synchronization/ResourceTracker.h>
-#include <VulkanWrapper/Synchronization/Semaphore.h>
-#include <VulkanWrapper/Utils/Error.h>
-#include <VulkanWrapper/Vulkan/Queue.h>
+import app;
+import advanced;
 
 vw::Buffer<UBOData, true, vw::UniformBufferUsage>
 createUbo(const vw::Allocator &allocator, float aspect_ratio,

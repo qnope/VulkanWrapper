@@ -1,4 +1,9 @@
-#include "VulkanWrapper/Descriptors/DescriptorSet.h"
+module vw.descriptors;
+import std3rd;
+import vulkan3rd;
+import vw.utils;
+import vw.vulkan;
+import vw.sync;
 
 namespace vw {
 

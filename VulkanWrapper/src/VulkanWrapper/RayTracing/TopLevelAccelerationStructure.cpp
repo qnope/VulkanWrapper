@@ -1,7 +1,12 @@
-#include "VulkanWrapper/RayTracing/TopLevelAccelerationStructure.h"
-
-#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
-#include "VulkanWrapper/Vulkan/Device.h"
+module vw.raytracing;
+import std3rd;
+import vulkan3rd;
+import glm3rd;
+import vw.utils;
+import vw.vulkan;
+import vw.memory;
+import vw.pipeline;
+import vw.model;
 
 namespace vw::rt::as {
 

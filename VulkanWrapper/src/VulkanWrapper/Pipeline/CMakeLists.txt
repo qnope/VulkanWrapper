@@ -3,5 +3,4 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     Pipeline.cpp
     ComputePipeline.cpp
     PipelineLayout.cpp
-    MeshRenderer.cpp
 )

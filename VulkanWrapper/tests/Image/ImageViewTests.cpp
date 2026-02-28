@@ -1,8 +1,5 @@
-#include "utils/create_gpu.hpp"
-#include "VulkanWrapper/Image/Image.h"
-#include "VulkanWrapper/Image/ImageView.h"
-#include "VulkanWrapper/Memory/Allocator.h"
 #include <gtest/gtest.h>
+import vw.test;
 
 TEST(ImageViewTest, CreateImageView) {
     auto &gpu = vw::tests::create_gpu();

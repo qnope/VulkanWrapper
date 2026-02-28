@@ -1,10 +1,5 @@
-#include "utils/create_gpu.hpp"
-#include "VulkanWrapper/Memory/Allocator.h"
-#include "VulkanWrapper/Model/Material/ColoredMaterialHandler.h"
-#include "VulkanWrapper/Model/Material/Material.h"
-#include "VulkanWrapper/Model/MeshManager.h"
-#include "VulkanWrapper/Vulkan/DeviceFinder.h"
 #include <gtest/gtest.h>
+import vw.test;
 
 using namespace vw::Model;
 

@@ -1,0 +1,42 @@
+export module app;
+export import vw;
+
+export class App {
+  public:
+    App() = default;
+
+  public:
+    std::shared_ptr<vw::SDL_Initializer> initializer =
+        std::make_shared<vw::SDL_Initializer>();
+    vw::Window window = vw::WindowBuilder(initializer)
+                            .with_title("Vulkan Wrapper")
+                            .sized(vw::Width(1024), vw::Height(768))
+                            .build();
+
+    std::shared_ptr<vw::Instance> instance =
+        vw::InstanceBuilder()
+            .addPortability()
+            .addExtensions(window.get_required_instance_extensions())
+            .setApiVersion(vw::ApiVersion::e13)
+            .setDebug()
+            .build();
+
+    vw::Surface surface = window.create_surface(*instance);
+
+    std::shared_ptr<vw::Device> device =
+        instance->findGpu()
+            .with_queue(vk::QueueFlagBits::eGraphics |
+                        vk::QueueFlagBits::eCompute |
+                        vk::QueueFlagBits::eTransfer)
+            .with_presentation(surface.handle())
+            .with_synchronization_2()
+            .with_ray_tracing()
+            .with_dynamic_rendering()
+            .with_descriptor_indexing()
+            .build();
+
+    std::shared_ptr<vw::Allocator> allocator =
+        vw::AllocatorBuilder(instance, device).build();
+
+    vw::Swapchain swapchain = window.create_swapchain(device, surface.handle());
+};

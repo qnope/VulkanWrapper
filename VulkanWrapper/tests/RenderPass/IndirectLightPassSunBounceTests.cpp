@@ -1,30 +1,5 @@
-#include "utils/create_gpu.hpp"
-#include "VulkanWrapper/Command/CommandPool.h"
-#include "VulkanWrapper/Image/Image.h"
-#include "VulkanWrapper/Image/ImageView.h"
-#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
-#include "VulkanWrapper/Memory/Buffer.h"
-#include "VulkanWrapper/Memory/StagingBufferManager.h"
-#include "VulkanWrapper/Memory/Transfer.h"
-#include "VulkanWrapper/Model/Material/BindlessMaterialManager.h"
-#include "VulkanWrapper/Model/Material/ColoredMaterialHandler.h"
-#include "VulkanWrapper/Model/Material/TexturedMaterialHandler.h"
-#include "VulkanWrapper/Model/Mesh.h"
-#include "VulkanWrapper/Model/MeshManager.h"
-#include "VulkanWrapper/RayTracing/RayTracedScene.h"
-#include "VulkanWrapper/RenderPass/IndirectLightPass.h"
-#include "VulkanWrapper/Shader/ShaderCompiler.h"
-#include "VulkanWrapper/Synchronization/Fence.h"
-#include "VulkanWrapper/Synchronization/ResourceTracker.h"
-#include "VulkanWrapper/Vulkan/DeviceFinder.h"
-#include "VulkanWrapper/Vulkan/Queue.h"
-#include <algorithm>
-#include <cmath>
-#include <filesystem>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 #include <gtest/gtest.h>
-#include <optional>
+import vw.test;
 
 namespace vw::tests {
 

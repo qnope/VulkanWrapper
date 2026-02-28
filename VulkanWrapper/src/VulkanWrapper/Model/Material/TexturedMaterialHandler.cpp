@@ -1,8 +1,17 @@
-#include "VulkanWrapper/Model/Material/TexturedMaterialHandler.h"
+module;
+#include <VulkanWrapper/macros.h>
 
-#include "VulkanWrapper/Model/Material/BindlessTextureManager.h"
-#include <algorithm>
-#include <assimp/material.h>
+module vw.model;
+import std3rd;
+import vulkan3rd;
+import glm3rd;
+import assimp3rd;
+import vw.utils;
+import vw.vulkan;
+import vw.memory;
+import vw.sync;
+import vw.descriptors;
+import vw.pipeline;
 
 namespace vw::Model::Material {
 
@@ -17,8 +26,8 @@ MaterialPriority TexturedMaterialHandler::priority() const {
 }
 
 namespace {
-// Convert Windows-style backslashes to forward slashes for cross-platform
-// texture path compatibility
+// Convert Windows-style backslashes to forward slashes for
+// cross-platform texture path compatibility
 std::filesystem::path normalize_texture_path(const char *path) {
     std::string normalized{path};
     std::ranges::replace(normalized, '\\', '/');
@@ -55,7 +64,7 @@ TexturedMaterialHandler::try_create_gpu_data(
     const aiMaterial *mat, const std::filesystem::path &base_path) {
     aiString texture_path;
     if (mat->GetTexture(aiTextureType_DIFFUSE, 0, &texture_path) !=
-        AI_SUCCESS) {
+        aiReturn_SUCCESS) {
         return std::nullopt;
     }
 

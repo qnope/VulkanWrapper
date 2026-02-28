@@ -2,16 +2,9 @@ cmake_minimum_required(VERSION 3.20)
 
 find_package(GTest CONFIG REQUIRED)
 
-add_library(TestUtils STATIC
-    utils/create_gpu.cpp
-)
-
-target_link_libraries(TestUtils
-    PUBLIC
-    VulkanWrapperCoreLibrary
-)
-
-target_include_directories(TestUtils PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+add_library(TestUtils STATIC utils/create_gpu.cpp)
+target_sources(TestUtils PUBLIC FILE_SET CXX_MODULES FILES utils/test.cppm)
+target_link_libraries(TestUtils PUBLIC VulkanWrapperCoreLibrary)
 
 # Memory tests
 add_executable(MemoryTests

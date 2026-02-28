@@ -1,11 +1,9 @@
-#include "VulkanWrapper/Window/Window.h"
-
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Instance.h"
-#include "VulkanWrapper/Vulkan/Surface.h"
-#include "VulkanWrapper/Vulkan/Swapchain.h"
-#include <SDL3/SDL.h>
-#include <SDL3/SDL_vulkan.h>
+module vw.window;
+import std3rd;
+import vulkan3rd;
+import sdl3rd;
+import vw.utils;
+import vw.vulkan;
 
 namespace vw {
 void Window::WindowDeleter::operator()(SDL_Window *window) const noexcept {
@@ -17,10 +15,10 @@ Window::Window(std::shared_ptr<const SDL_Initializer> initializer,
     : m_initializer{std::move(initializer)}
     , m_width{width}
     , m_height{height} {
-    auto *window =
-        check_sdl(SDL_CreateWindow(name.data(), int(width), int(height),
-                                   SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE),
-                  "Failed to create SDL window");
+    auto *window = check_sdl(
+        SDL_CreateWindow(name.data(), int(width), int(height),
+                         vw_SDL_WINDOW_VULKAN | vw_SDL_WINDOW_RESIZABLE),
+        "Failed to create SDL window");
 
     m_window.reset(window);
 }

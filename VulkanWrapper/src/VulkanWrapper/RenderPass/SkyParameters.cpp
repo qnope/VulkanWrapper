@@ -1,4 +1,13 @@
-#include "VulkanWrapper/RenderPass/SkyParameters.h"
+module vw.renderpass;
+import std3rd;
+import glm3rd;
+import vw.vulkan;
+import vw.memory;
+import vw.descriptors;
+import vw.pipeline;
+import vw.raytracing;
+import vw.shader;
+import vw.model;
 
 namespace vw {
 

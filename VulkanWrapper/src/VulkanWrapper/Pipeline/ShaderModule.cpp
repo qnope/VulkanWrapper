@@ -1,8 +1,9 @@
-#include "VulkanWrapper/Pipeline/ShaderModule.h"
-
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/Device.h"
-#include <fstream>
+module vw.pipeline;
+import std3rd;
+import vulkan3rd;
+import vw.utils;
+import vw.vulkan;
+import vw.descriptors;
 
 namespace vw {
 

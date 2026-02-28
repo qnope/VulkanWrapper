@@ -1,6 +1,9 @@
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.31)
 
 project(VulkanWrapper)
+
+# Scan all CXX sources for C++20 module imports (not just .cppm files)
+set(CMAKE_CXX_SCAN_FOR_MODULES ON)
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS True)
 

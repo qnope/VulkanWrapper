@@ -1,7 +1,8 @@
-#include "VulkanWrapper/Model/Material/MaterialPriority.h"
-#include "VulkanWrapper/Model/Material/MaterialTypeTag.h"
+#include <assimp/material.h>
 #include <gtest/gtest.h>
-#include <unordered_set>
+#include <VulkanWrapper/macros.h>
+
+import vw;
 
 using namespace vw::Model::Material;
 

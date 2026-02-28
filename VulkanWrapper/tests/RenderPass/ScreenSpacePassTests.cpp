@@ -1,23 +1,5 @@
-#include "utils/create_gpu.hpp"
-#include "VulkanWrapper/Command/CommandPool.h"
-#include "VulkanWrapper/Descriptors/DescriptorAllocator.h"
-#include "VulkanWrapper/Descriptors/DescriptorPool.h"
-#include "VulkanWrapper/Descriptors/DescriptorSetLayout.h"
-#include "VulkanWrapper/Image/CombinedImage.h"
-#include "VulkanWrapper/Image/Image.h"
-#include "VulkanWrapper/Image/ImageView.h"
-#include "VulkanWrapper/Image/Sampler.h"
-#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
-#include "VulkanWrapper/Memory/Buffer.h"
-#include "VulkanWrapper/Memory/Transfer.h"
-#include "VulkanWrapper/Pipeline/Pipeline.h"
-#include "VulkanWrapper/RenderPass/ScreenSpacePass.h"
-#include "VulkanWrapper/Shader/ShaderCompiler.h"
-#include "VulkanWrapper/Synchronization/Fence.h"
-#include "VulkanWrapper/Synchronization/ResourceTracker.h"
-#include "VulkanWrapper/Vulkan/Queue.h"
-#include <cstring>
 #include <gtest/gtest.h>
+import vw.test;
 
 namespace {
 

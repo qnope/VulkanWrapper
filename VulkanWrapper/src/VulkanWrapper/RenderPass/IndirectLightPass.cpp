@@ -1,6 +1,14 @@
-#include "VulkanWrapper/RenderPass/IndirectLightPass.h"
-
-#include "VulkanWrapper/Pipeline/PipelineLayout.h"
+module vw.renderpass;
+import std3rd;
+import vulkan3rd;
+import vw.vulkan;
+import vw.memory;
+import vw.sync;
+import vw.descriptors;
+import vw.pipeline;
+import vw.raytracing;
+import vw.shader;
+import vw.model;
 
 namespace vw {
 
@@ -70,7 +78,7 @@ void IndirectLightPass::create_pipeline_and_sbt(
 
     // Compile shaders with Vulkan 1.2 for ray tracing support
     ShaderCompiler compiler;
-    compiler.set_target_vulkan_version(VK_API_VERSION_1_2);
+    compiler.set_target_vulkan_version(vw_VK_API_VERSION_1_2);
     compiler.add_include_path(shader_dir / "include");
 
     auto raygen_shader = compiler.compile_file_to_module(

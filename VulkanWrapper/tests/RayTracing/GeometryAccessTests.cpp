@@ -1,20 +1,5 @@
-#include "utils/create_gpu.hpp"
-#include "VulkanWrapper/Command/CommandPool.h"
-#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
-#include "VulkanWrapper/Model/Mesh.h"
-#include "VulkanWrapper/Model/MeshManager.h"
-#include "VulkanWrapper/Pipeline/ComputePipeline.h"
-#include "VulkanWrapper/Pipeline/PipelineLayout.h"
-#include "VulkanWrapper/RayTracing/GeometryReference.h"
-#include "VulkanWrapper/RayTracing/RayTracedScene.h"
-#include "VulkanWrapper/Shader/ShaderCompiler.h"
-#include "VulkanWrapper/Synchronization/Fence.h"
-#include "VulkanWrapper/Utils/Error.h"
-#include "VulkanWrapper/Vulkan/DeviceFinder.h"
-#include "VulkanWrapper/Vulkan/Queue.h"
-#include <glm/gtc/matrix_transform.hpp>
 #include <gtest/gtest.h>
-#include <optional>
+import vw.test;
 
 namespace {
 
@@ -292,7 +277,7 @@ void main() {
 )";
 
     vw::ShaderCompiler compiler;
-    compiler.set_target_vulkan_version(VK_API_VERSION_1_3);
+    compiler.set_target_vulkan_version(vw_VK_API_VERSION_1_3);
     compiler.add_include_path("../../../VulkanWrapper/Shaders/include");
 
     auto result =
@@ -319,7 +304,7 @@ void main() {
 )";
 
     vw::ShaderCompiler compiler;
-    compiler.set_target_vulkan_version(VK_API_VERSION_1_3);
+    compiler.set_target_vulkan_version(vw_VK_API_VERSION_1_3);
     compiler.add_include_path("../../../VulkanWrapper/Shaders/include");
 
     auto result =
@@ -444,7 +429,7 @@ void main() {
 
     // Compile compute shader
     vw::ShaderCompiler compiler;
-    compiler.set_target_vulkan_version(VK_API_VERSION_1_3);
+    compiler.set_target_vulkan_version(vw_VK_API_VERSION_1_3);
     auto shader_module = compiler.compile_to_module(
         gpu->device, compute_source, vk::ShaderStageFlagBits::eCompute);
 

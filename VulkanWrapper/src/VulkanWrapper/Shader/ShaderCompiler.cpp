@@ -1,12 +1,10 @@
-#include "VulkanWrapper/Shader/ShaderCompiler.h"
-
-#include "VulkanWrapper/Pipeline/ShaderModule.h"
-#include "VulkanWrapper/Utils/Error.h"
-#include <fstream>
-#include <map>
-#include <set>
-#include <shaderc/shaderc.hpp>
-#include <sstream>
+module vw.shader;
+import std3rd;
+import vulkan3rd;
+import shaderc3rd;
+import vw.utils;
+import vw.vulkan;
+import vw.pipeline;
 
 namespace vw {
 
@@ -50,8 +48,8 @@ shaderc_shader_kind to_shaderc_kind(vk::ShaderStageFlagBits stage) {
 
 // Get shaderc target environment version for Vulkan API version
 shaderc_env_version to_shaderc_env_version(uint32_t vulkan_version) {
-    uint32_t major = VK_API_VERSION_MAJOR(vulkan_version);
-    uint32_t minor = VK_API_VERSION_MINOR(vulkan_version);
+    uint32_t major = vw_VK_API_VERSION_MAJOR(vulkan_version);
+    uint32_t minor = vw_VK_API_VERSION_MINOR(vulkan_version);
 
     if (major >= 1) {
         if (minor >= 3) {
@@ -69,8 +67,8 @@ shaderc_env_version to_shaderc_env_version(uint32_t vulkan_version) {
 
 // Get SPIR-V version for Vulkan API version
 shaderc_spirv_version to_spirv_version(uint32_t vulkan_version) {
-    uint32_t major = VK_API_VERSION_MAJOR(vulkan_version);
-    uint32_t minor = VK_API_VERSION_MINOR(vulkan_version);
+    uint32_t major = vw_VK_API_VERSION_MAJOR(vulkan_version);
+    uint32_t minor = vw_VK_API_VERSION_MINOR(vulkan_version);
 
     if (major >= 1) {
         if (minor >= 3) {
@@ -87,7 +85,7 @@ shaderc_spirv_version to_spirv_version(uint32_t vulkan_version) {
 }
 
 std::string read_file_contents(const std::filesystem::path &path) {
-    std::ifstream file(path, std::ios::in);
+    std::ifstream file(path, std::ios_base::in);
     if (!file) {
         throw FileException(path, "Failed to open file for reading");
     }
@@ -191,7 +189,7 @@ struct ShaderCompiler::Impl {
     shaderc::Compiler compiler;
     std::vector<std::filesystem::path> includePaths;
     IncludeMap virtualIncludes;
-    uint32_t vulkanVersion = VK_API_VERSION_1_3;
+    uint32_t vulkanVersion = vw_VK_API_VERSION_1_3;
     std::vector<std::pair<std::string, std::string>> macros;
     bool generateDebugInfo = false;
     bool optimize = false;

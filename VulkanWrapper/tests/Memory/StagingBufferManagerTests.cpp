@@ -1,12 +1,5 @@
-#include "utils/create_gpu.hpp"
-#include "VulkanWrapper/Command/CommandPool.h"
-#include "VulkanWrapper/Memory/AllocateBufferUtils.h"
-#include "VulkanWrapper/Memory/Buffer.h"
-#include "VulkanWrapper/Memory/StagingBufferManager.h"
-#include "VulkanWrapper/Synchronization/Fence.h"
-#include "VulkanWrapper/Vulkan/Queue.h"
 #include <gtest/gtest.h>
-#include <vector>
+import vw.test;
 
 TEST(StagingBufferManagerTest, CreateStagingBufferManager) {
     auto &gpu = vw::tests::create_gpu();

@@ -1,9 +1,11 @@
-#include "VulkanWrapper/Model/MeshManager.h"
-
-#include "VulkanWrapper/Model/Importer.h"
-#include "VulkanWrapper/Model/Material/ColoredMaterialHandler.h"
-#include "VulkanWrapper/Model/Material/EmissiveTexturedMaterialHandler.h"
-#include "VulkanWrapper/Model/Material/TexturedMaterialHandler.h"
+module vw.model;
+import std3rd;
+import vulkan3rd;
+import vw.utils;
+import vw.vulkan;
+import vw.memory;
+import vw.descriptors;
+import vw.pipeline;
 
 namespace vw::Model {
 
@@ -32,11 +34,11 @@ void MeshManager::add_mesh(std::vector<FullVertex3D> vertices,
         m_index_buffer.create_buffer(indices.size());
     auto vertex_buffer = m_vertex_buffer.create_buffer(vertices.size()).buffer;
 
-    auto position_vertices = vertices |
-                             std::views::transform([](const FullVertex3D &v) {
-                                 return Vertex3D{v.position};
-                             }) |
-                             std::ranges::to<std::vector>();
+    std::vector<Vertex3D> position_vertices;
+    position_vertices.reserve(vertices.size());
+    for (const auto &v : vertices) {
+        position_vertices.push_back(Vertex3D{v.position});
+    }
 
     m_meshes.emplace_back(vertex_buffer, full_vertex_buffer, index_buffer,
                           material, indices.size(), vertex_offset, first_index,
