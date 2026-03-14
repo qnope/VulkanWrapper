@@ -6,8 +6,9 @@ C++23 Vulkan 1.3 wrapper library providing RAII resource management, type safety
 
 ```
 Tier 6:  RayTracing                    RenderPass
-         (BLAS, TLAS, RayTracedScene,  (Subpass, ScreenSpacePass, SkyPass,
-          RayTracingPipeline, SBT)      ToneMappingPass, IndirectLightPass)
+         (BLAS, TLAS, RayTracedScene,  (RenderPass, ScreenSpacePass, RenderPipeline,
+          RayTracingPipeline, SBT)      Slot, ZPass, DirectLightPass, AmbientOcclusionPass,
+                                        SkyPass, IndirectLightPass, ToneMappingPass)
               |                              |
 Tier 5:  Model                         Random
          (Scene, Mesh, MeshManager,    (NoiseTexture,
@@ -62,10 +63,11 @@ tracker.request(ImageState{image, range, eColorAttachmentOptimal, eColorAttachme
 tracker.flush(cmd);
 ```
 
-**Subpass / ScreenSpacePass hierarchy** — lazy image allocation, fullscreen quad rendering:
+**RenderPass / ScreenSpacePass / RenderPipeline** — slot-based pass system with automatic wiring:
 ```cpp
-Subpass<SlotEnum>          // base: get_or_create_image() returns CachedImage
-ScreenSpacePass<SlotEnum>  // derived: render_fullscreen() for post-processing
+RenderPass             // base: declares input/output Slots, lazy image allocation
+ScreenSpacePass        // derived: render_fullscreen() for post-processing
+RenderPipeline         // orchestrator: validates slot dependencies, wires and executes passes
 ```
 
 ## Namespaces

@@ -27,7 +27,7 @@ if (!gpu) GTEST_SKIP() << "Ray tracing unavailable";
 | Model/ | MeshManagerTests | ModelTests |
 | Random/ | RandomSamplingTests | RandomTests |
 | RayTracing/ | GeometryAccessTests, RayTracedSceneTests | RayTracingTests |
-| RenderPass/ | IndirectLightPass, IndirectLightPassSunBounce, ScreenSpacePass, SkyPass, Subpass, ToneMappingPass | RenderPassTests |
+| RenderPass/ | AmbientOcclusionPass, DirectLightPass, IndirectLightPass, IndirectLightPassSunBounce, RenderPipeline, ScreenSpacePass, SkyPass, Subpass, ToneMappingPass, ZPass | RenderPassTests |
 | Shader/ | ShaderCompilerTests | ShaderTests |
 | Vulkan/ | InstanceTests | VulkanTests |
 
