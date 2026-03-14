@@ -1,30 +1,6 @@
 #pragma once
 
-#include <memory>
-#include <vector>
-#include <VulkanWrapper/fwd.h>
-#include <VulkanWrapper/Image/CombinedImage.h>
-#include <VulkanWrapper/Image/ImageView.h>
-
-struct GBuffer {
-    std::shared_ptr<const vw::ImageView> color;
-    std::shared_ptr<const vw::ImageView> normal;
-    std::shared_ptr<const vw::ImageView> tangeant;
-    std::shared_ptr<const vw::ImageView> biTangeant;
-    std::shared_ptr<const vw::ImageView> position;
-    std::shared_ptr<const vw::ImageView> light;
-    std::shared_ptr<const vw::ImageView> depth;
-    std::shared_ptr<const vw::ImageView> ao;
-};
-
-struct GBufferInformation {
-    const GBuffer *gbuffer;
-};
-
-struct TonemapInformation {
-    vw::CombinedImage color;
-    vw::CombinedImage light;
-};
+#include <VulkanWrapper/3rd_party.h>
 
 struct UBOData {
     glm::mat4 proj = glm::mat4(1.0f);

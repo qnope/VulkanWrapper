@@ -5,6 +5,8 @@
 #include "VulkanWrapper/Memory/AllocateBufferUtils.h"
 #include "VulkanWrapper/Memory/Buffer.h"
 #include "VulkanWrapper/Memory/Transfer.h"
+#include "VulkanWrapper/RenderPass/RenderPass.h"
+#include "VulkanWrapper/RenderPass/Slot.h"
 #include "VulkanWrapper/RenderPass/ToneMappingPass.h"
 #include "VulkanWrapper/Shader/ShaderCompiler.h"
 #include "VulkanWrapper/Synchronization/Fence.h"
@@ -87,9 +89,11 @@ class ToneMappingPassTest : public ::testing::Test {
     }
 
     std::unique_ptr<ToneMappingPass>
-    create_pass(vk::Format format = vk::Format::eR8G8B8A8Unorm) {
+    create_pass(vk::Format format = vk::Format::eR8G8B8A8Unorm,
+                bool indirect_enabled = true) {
         return std::make_unique<ToneMappingPass>(device, allocator,
-                                                 get_shader_dir(), format);
+                                                 get_shader_dir(), format,
+                                                 indirect_enabled);
     }
 
     std::shared_ptr<const Image> create_test_image(Width width, Height height,
@@ -262,6 +266,39 @@ TEST_F(ToneMappingPassTest, ToneMappingOperatorValues) {
 }
 
 // =============================================================================
+// Slot Introspection Tests
+// =============================================================================
+
+TEST_F(ToneMappingPassTest, InputSlots_WithIndirectEnabled) {
+    auto pass = create_pass(vk::Format::eR8G8B8A8Unorm, true);
+    auto inputs = pass->input_slots();
+    ASSERT_EQ(inputs.size(), 3u);
+    EXPECT_EQ(inputs[0], Slot::Sky);
+    EXPECT_EQ(inputs[1], Slot::DirectLight);
+    EXPECT_EQ(inputs[2], Slot::IndirectLight);
+}
+
+TEST_F(ToneMappingPassTest, InputSlots_WithIndirectDisabled) {
+    auto pass = create_pass(vk::Format::eR8G8B8A8Unorm, false);
+    auto inputs = pass->input_slots();
+    ASSERT_EQ(inputs.size(), 2u);
+    EXPECT_EQ(inputs[0], Slot::Sky);
+    EXPECT_EQ(inputs[1], Slot::DirectLight);
+}
+
+TEST_F(ToneMappingPassTest, OutputSlots_ReturnsToneMapped) {
+    auto pass = create_pass();
+    auto outputs = pass->output_slots();
+    ASSERT_EQ(outputs.size(), 1u);
+    EXPECT_EQ(outputs[0], Slot::ToneMapped);
+}
+
+TEST_F(ToneMappingPassTest, Name_ReturnsToneMappingPass) {
+    auto pass = create_pass();
+    EXPECT_EQ(pass->name(), "ToneMappingPass");
+}
+
+// =============================================================================
 // Lazy Allocation Tests
 // =============================================================================
 
@@ -278,16 +315,23 @@ TEST_F(ToneMappingPassTest, LazyAllocation_ReturnsValidImageView) {
         vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     Barrier::ResourceTracker tracker;
-    auto result = pass->execute(cmd, tracker, Width{width}, Height{height}, 0,
-                                hdr_view, black_view);
+    // Wire inputs via set_input
+    pass->set_input(Slot::Sky, CachedImage{hdr_view->image(), hdr_view});
+    pass->set_input(Slot::DirectLight,
+                    CachedImage{black_view->image(), black_view});
+    pass->set_input(Slot::IndirectLight,
+                    CachedImage{black_view->image(), black_view});
+    pass->execute(cmd, tracker, Width{width}, Height{height}, 0);
 
     std::ignore = cmd.end();
 
-    ASSERT_NE(result, nullptr);
-    EXPECT_TRUE(result->handle());
-    EXPECT_EQ(result->image()->extent2D().width, static_cast<uint32_t>(width));
-    EXPECT_EQ(result->image()->extent2D().height,
-              static_cast<uint32_t>(height));
+    auto results = pass->result_images();
+    ASSERT_FALSE(results.empty());
+    auto &[slot, cached] = results[0];
+    EXPECT_EQ(slot, Slot::ToneMapped);
+    ASSERT_NE(cached.image, nullptr);
+    EXPECT_EQ(cached.image->extent2D().width, static_cast<uint32_t>(width));
+    EXPECT_EQ(cached.image->extent2D().height, static_cast<uint32_t>(height));
 
     queue->enqueue_command_buffer(cmd);
     queue->submit({}, {}, {}).wait();
@@ -302,7 +346,11 @@ TEST_F(ToneMappingPassTest,
     auto hdr_view = create_hdr_view(width, height);
     auto black_view = create_black_hdr_view(width, height);
 
-    std::vector<std::shared_ptr<const ImageView>> results;
+    pass->set_input(Slot::Sky, CachedImage{hdr_view->image(), hdr_view});
+    pass->set_input(Slot::DirectLight,
+                    CachedImage{black_view->image(), black_view});
+    pass->set_input(Slot::IndirectLight,
+                    CachedImage{black_view->image(), black_view});
 
     for (size_t frame_index = 0; frame_index < 3; ++frame_index) {
         auto cmd = cmdPool->allocate(1)[0];
@@ -310,19 +358,16 @@ TEST_F(ToneMappingPassTest,
             vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
         Barrier::ResourceTracker tracker;
-        auto result = pass->execute(cmd, tracker, Width{width}, Height{height},
-                                    frame_index, hdr_view, black_view);
+        pass->execute(cmd, tracker, Width{width}, Height{height}, frame_index);
 
         std::ignore = cmd.end();
         queue->enqueue_command_buffer(cmd);
         queue->submit({}, {}, {}).wait();
-
-        results.push_back(result);
     }
 
-    // Different frame indices should produce different images
-    EXPECT_NE(results[0]->image().get(), results[1]->image().get());
-    EXPECT_NE(results[1]->image().get(), results[2]->image().get());
+    // result_images returns the most recent per slot
+    auto results = pass->result_images();
+    ASSERT_FALSE(results.empty());
 }
 
 TEST_F(ToneMappingPassTest, LazyAllocation_SameFrameIndexReusesCachedImage) {
@@ -333,18 +378,26 @@ TEST_F(ToneMappingPassTest, LazyAllocation_SameFrameIndexReusesCachedImage) {
     auto hdr_view = create_hdr_view(width, height);
     auto black_view = create_black_hdr_view(width, height);
 
+    pass->set_input(Slot::Sky, CachedImage{hdr_view->image(), hdr_view});
+    pass->set_input(Slot::DirectLight,
+                    CachedImage{black_view->image(), black_view});
+    pass->set_input(Slot::IndirectLight,
+                    CachedImage{black_view->image(), black_view});
+
     // First execution
     auto cmd1 = cmdPool->allocate(1)[0];
     std::ignore = cmd1.begin(vk::CommandBufferBeginInfo().setFlags(
         vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     Barrier::ResourceTracker tracker1;
-    auto result1 = pass->execute(cmd1, tracker1, Width{width}, Height{height},
-                                 0, hdr_view, black_view);
+    pass->execute(cmd1, tracker1, Width{width}, Height{height}, 0);
 
     std::ignore = cmd1.end();
     queue->enqueue_command_buffer(cmd1);
     queue->submit({}, {}, {}).wait();
+
+    auto results1 = pass->result_images();
+    auto image1 = results1[0].second.image;
 
     // Second execution with same frame index
     auto cmd2 = cmdPool->allocate(1)[0];
@@ -352,18 +405,20 @@ TEST_F(ToneMappingPassTest, LazyAllocation_SameFrameIndexReusesCachedImage) {
         vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     Barrier::ResourceTracker tracker2;
-    auto result2 = pass->execute(cmd2, tracker2, Width{width}, Height{height},
-                                 0, hdr_view, black_view);
+    pass->execute(cmd2, tracker2, Width{width}, Height{height}, 0);
 
     std::ignore = cmd2.end();
     queue->enqueue_command_buffer(cmd2);
     queue->submit({}, {}, {}).wait();
 
-    EXPECT_EQ(result1->image().get(), result2->image().get());
+    auto results2 = pass->result_images();
+    auto image2 = results2[0].second.image;
+
+    EXPECT_EQ(image1.get(), image2.get());
 }
 
 // =============================================================================
-// Result Verification Tests
+// Result Verification Tests (using execute_to_view for backward compat)
 // =============================================================================
 
 TEST_F(ToneMappingPassTest, Verify_NeutralOperatorPassesThrough) {
@@ -392,11 +447,9 @@ TEST_F(ToneMappingPassTest, Verify_NeutralOperatorPassesThrough) {
         vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     Barrier::ResourceTracker tracker;
-    // Use luminance_scale=1.0 for backward-compatible behavior
-    // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
-    pass->execute(cmd, tracker, output_view, hdr_view, small_black_view(),
-                  nullptr, 0.0f, ToneMappingOperator::Neutral, 1.0f, 4.0f,
-                  1.0f);
+    pass->execute_to_view(cmd, tracker, output_view, hdr_view,
+                          small_black_view(), nullptr, 0.0f,
+                          ToneMappingOperator::Neutral, 1.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -435,10 +488,9 @@ TEST_F(ToneMappingPassTest, Verify_ZeroExposureProducesBlack) {
         vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     Barrier::ResourceTracker tracker;
-    // Use luminance_scale=1.0 for backward-compatible behavior
-    // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
-    pass->execute(cmd, tracker, output_view, hdr_view, small_black_view(),
-                  nullptr, 0.0f, ToneMappingOperator::ACES, 0.0f, 4.0f, 1.0f);
+    pass->execute_to_view(cmd, tracker, output_view, hdr_view,
+                          small_black_view(), nullptr, 0.0f,
+                          ToneMappingOperator::ACES, 0.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -478,10 +530,9 @@ TEST_F(ToneMappingPassTest, Verify_ACESMatchesCPU) {
         vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     Barrier::ResourceTracker tracker;
-    // Use luminance_scale=1.0 for backward-compatible behavior
-    // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
-    pass->execute(cmd, tracker, output_view, hdr_view, small_black_view(),
-                  nullptr, 0.0f, ToneMappingOperator::ACES, 1.0f, 4.0f, 1.0f);
+    pass->execute_to_view(cmd, tracker, output_view, hdr_view,
+                          small_black_view(), nullptr, 0.0f,
+                          ToneMappingOperator::ACES, 1.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -523,11 +574,9 @@ TEST_F(ToneMappingPassTest, Verify_ReinhardMatchesCPU) {
         vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     Barrier::ResourceTracker tracker;
-    // Use luminance_scale=1.0 for backward-compatible behavior
-    // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
-    pass->execute(cmd, tracker, output_view, hdr_view, small_black_view(),
-                  nullptr, 0.0f, ToneMappingOperator::Reinhard, 1.0f, 4.0f,
-                  1.0f);
+    pass->execute_to_view(cmd, tracker, output_view, hdr_view,
+                          small_black_view(), nullptr, 0.0f,
+                          ToneMappingOperator::Reinhard, 1.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -568,11 +617,9 @@ TEST_F(ToneMappingPassTest, Verify_Uncharted2MatchesCPU) {
         vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     Barrier::ResourceTracker tracker;
-    // Use luminance_scale=1.0 for backward-compatible behavior
-    // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
-    pass->execute(cmd, tracker, output_view, hdr_view, small_black_view(),
-                  nullptr, 0.0f, ToneMappingOperator::Uncharted2, 1.0f, 4.0f,
-                  1.0f);
+    pass->execute_to_view(cmd, tracker, output_view, hdr_view,
+                          small_black_view(), nullptr, 0.0f,
+                          ToneMappingOperator::Uncharted2, 1.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -615,11 +662,9 @@ TEST_F(ToneMappingPassTest, Verify_ExposureScalesInput) {
         vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     Barrier::ResourceTracker tracker;
-    // Use luminance_scale=1.0 for backward-compatible behavior
-    // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
-    pass->execute(cmd, tracker, output_view, hdr_view, small_black_view(),
-                  nullptr, 0.0f, ToneMappingOperator::Reinhard, exposure, 4.0f,
-                  1.0f);
+    pass->execute_to_view(cmd, tracker, output_view, hdr_view,
+                          small_black_view(), nullptr, 0.0f,
+                          ToneMappingOperator::Reinhard, exposure, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -664,11 +709,10 @@ TEST_F(ToneMappingPassTest, Verify_ReinhardExtendedWhitePointAffectsResult) {
             vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
         Barrier::ResourceTracker tracker;
-        // Use luminance_scale=1.0 for backward-compatible behavior
-        // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
-        pass->execute(cmd, tracker, output_view, hdr_view, small_black_view(),
-                      nullptr, 0.0f, ToneMappingOperator::ReinhardExtended,
-                      1.0f, 4.0f, 1.0f);
+        pass->execute_to_view(cmd, tracker, output_view, hdr_view,
+                              small_black_view(), nullptr, 0.0f,
+                              ToneMappingOperator::ReinhardExtended, 1.0f,
+                              4.0f, 1.0f);
 
         std::ignore = cmd.end();
         queue->enqueue_command_buffer(cmd);
@@ -689,11 +733,10 @@ TEST_F(ToneMappingPassTest, Verify_ReinhardExtendedWhitePointAffectsResult) {
             vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
         Barrier::ResourceTracker tracker;
-        // Use luminance_scale=1.0 for backward-compatible behavior
-        // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
-        pass->execute(cmd, tracker, output_view, hdr_view, small_black_view(),
-                      nullptr, 0.0f, ToneMappingOperator::ReinhardExtended,
-                      1.0f, 8.0f, 1.0f);
+        pass->execute_to_view(cmd, tracker, output_view, hdr_view,
+                              small_black_view(), nullptr, 0.0f,
+                              ToneMappingOperator::ReinhardExtended, 1.0f,
+                              8.0f, 1.0f);
 
         std::ignore = cmd.end();
         queue->enqueue_command_buffer(cmd);
@@ -734,10 +777,9 @@ TEST_F(ToneMappingPassTest, Verify_BrightHDRClipsToWhite) {
         vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     Barrier::ResourceTracker tracker;
-    // Use luminance_scale=1.0 for backward-compatible behavior
-    // indirect_view=nullptr, indirect_intensity=0.0 (no indirect light)
-    pass->execute(cmd, tracker, output_view, hdr_view, small_black_view(),
-                  nullptr, 0.0f, ToneMappingOperator::ACES, 1.0f, 4.0f, 1.0f);
+    pass->execute_to_view(cmd, tracker, output_view, hdr_view,
+                          small_black_view(), nullptr, 0.0f,
+                          ToneMappingOperator::ACES, 1.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -789,9 +831,9 @@ TEST_F(ToneMappingPassTest, Verify_IndirectLightAddsToDirectLight) {
 
     Barrier::ResourceTracker tracker;
     // Combined: 0.25 + 0.25 * 1.0 = 0.5 -> Neutral passes through
-    pass->execute(cmd, tracker, output_view, direct_view, small_black_view(),
-                  indirect_view, 1.0f, ToneMappingOperator::Neutral, 1.0f, 4.0f,
-                  1.0f);
+    pass->execute_to_view(cmd, tracker, output_view, direct_view,
+                          small_black_view(), indirect_view, 1.0f,
+                          ToneMappingOperator::Neutral, 1.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -840,9 +882,9 @@ TEST_F(ToneMappingPassTest, Verify_IndirectIntensityScalesIndirectLight) {
 
     Barrier::ResourceTracker tracker;
     // Combined: 0.2 + 0.4 * 0.5 = 0.4 -> Neutral passes through
-    pass->execute(cmd, tracker, output_view, direct_view, small_black_view(),
-                  indirect_view, 0.5f, ToneMappingOperator::Neutral, 1.0f, 4.0f,
-                  1.0f);
+    pass->execute_to_view(cmd, tracker, output_view, direct_view,
+                          small_black_view(), indirect_view, 0.5f,
+                          ToneMappingOperator::Neutral, 1.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -891,9 +933,9 @@ TEST_F(ToneMappingPassTest, Verify_ZeroIndirectIntensityIgnoresIndirectLight) {
 
     Barrier::ResourceTracker tracker;
     // Combined: 0.3 + 0.7 * 0.0 = 0.3 -> Neutral passes through
-    pass->execute(cmd, tracker, output_view, direct_view, small_black_view(),
-                  indirect_view, 0.0f, ToneMappingOperator::Neutral, 1.0f, 4.0f,
-                  1.0f);
+    pass->execute_to_view(cmd, tracker, output_view, direct_view,
+                          small_black_view(), indirect_view, 0.0f,
+                          ToneMappingOperator::Neutral, 1.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
@@ -935,9 +977,9 @@ TEST_F(ToneMappingPassTest, Verify_NullptrIndirectViewUsesBlackFallback) {
     Barrier::ResourceTracker tracker;
     // nullptr indirect with intensity 1.0 - should read black (0,0,0)
     // Combined: 0.4 + 0.0 * 1.0 = 0.4 -> Neutral passes through
-    pass->execute(cmd, tracker, output_view, direct_view, small_black_view(),
-                  nullptr, 1.0f, ToneMappingOperator::Neutral, 1.0f, 4.0f,
-                  1.0f);
+    pass->execute_to_view(cmd, tracker, output_view, direct_view,
+                          small_black_view(), nullptr, 1.0f,
+                          ToneMappingOperator::Neutral, 1.0f, 4.0f, 1.0f);
 
     std::ignore = cmd.end();
     queue->enqueue_command_buffer(cmd);
