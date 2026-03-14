@@ -1,5 +1,4 @@
 #include "Application.h"
-#include "DeferredRenderingManager.h"
 #include "RenderPassInformation.h"
 #include "SceneSetup.h"
 #include <VulkanWrapper/3rd_party.h>
@@ -11,7 +10,15 @@
 #include <VulkanWrapper/Model/Material/EmissiveTexturedMaterialHandler.h>
 #include <VulkanWrapper/Model/MeshManager.h>
 #include <VulkanWrapper/RayTracing/RayTracedScene.h>
+#include <VulkanWrapper/RenderPass/AmbientOcclusionPass.h>
+#include <VulkanWrapper/RenderPass/DirectLightPass.h>
+#include <VulkanWrapper/RenderPass/IndirectLightPass.h>
+#include <VulkanWrapper/RenderPass/RenderPipeline.h>
+#include <VulkanWrapper/RenderPass/Slot.h>
 #include <VulkanWrapper/RenderPass/SkyParameters.h>
+#include <VulkanWrapper/RenderPass/SkyPass.h>
+#include <VulkanWrapper/RenderPass/ToneMappingPass.h>
+#include <VulkanWrapper/RenderPass/ZPass.h>
 #include <VulkanWrapper/Synchronization/Fence.h>
 #include <VulkanWrapper/Synchronization/ResourceTracker.h>
 #include <VulkanWrapper/Synchronization/Semaphore.h>
@@ -69,12 +76,47 @@ int main() {
         // Build acceleration structures
         rayTracedScene.build();
 
-        // Create the deferred rendering manager with functional passes
-        // No swapchain needed - dimensions are passed at execute time
-        DeferredRenderingManager renderingManager(
-            app.device, app.allocator, mesh_manager.material_manager(),
-            rayTracedScene, "../../../VulkanWrapper/Shaders",
-            "../../../examples/Advanced/Shaders");
+        // Create the render pipeline with library passes
+        const std::filesystem::path shader_dir =
+            "../../../VulkanWrapper/Shaders";
+
+        vw::RenderPipeline pipeline;
+
+        auto &zpass = pipeline.add(
+            std::make_unique<vw::ZPass>(app.device, app.allocator, shader_dir));
+
+        auto &directLight = pipeline.add(
+            std::make_unique<vw::DirectLightPass>(
+                app.device, app.allocator, shader_dir, rayTracedScene,
+                mesh_manager.material_manager()));
+
+        auto &aoPass = pipeline.add(
+            std::make_unique<vw::AmbientOcclusionPass>(
+                app.device, app.allocator, shader_dir,
+                rayTracedScene.tlas_handle()));
+
+        auto &skyPass = pipeline.add(
+            std::make_unique<vw::SkyPass>(app.device, app.allocator,
+                                          shader_dir));
+
+        auto &indirectLight = pipeline.add(
+            std::make_unique<vw::IndirectLightPass>(
+                app.device, app.allocator, shader_dir, rayTracedScene.tlas(),
+                rayTracedScene.geometry_buffer(),
+                mesh_manager.material_manager()));
+
+        auto &toneMapping = pipeline.add(
+            std::make_unique<vw::ToneMappingPass>(app.device, app.allocator,
+                                                  shader_dir));
+
+        auto result = pipeline.validate();
+        if (!result.valid) {
+            for (const auto &error : result.errors) {
+                std::cout << "Pipeline validation error: " << error
+                          << std::endl;
+            }
+            return 1;
+        }
 
         // Command pool with reset support for per-frame recording
         auto commandPool = vw::CommandPoolBuilder(app.device)
@@ -103,7 +145,7 @@ int main() {
 
             commandBuffers =
                 commandPool.allocate(app.swapchain.number_images());
-            renderingManager.reset();
+            pipeline.reset_accumulation();
 
             // Update projection matrix with new aspect ratio
             float aspect =
@@ -139,18 +181,53 @@ int main() {
                     // Create sky parameters for sun at zenith
                     auto sky_params = vw::SkyParameters::create_earth_sun(0.f);
 
-                    // Execute deferred rendering pipeline with progressive AO
-                    // Returns tone-mapped LDR output (direct + indirect light)
-                    auto ldr_view = renderingManager.execute(
-                        commandBuffers[index], transfer.resourceTracker(),
-                        app.swapchain.width(), app.swapchain.height(),
-                        index, // frame_index
-                        uniform_buffer, sky_params,
-                        200.0f // ao_radius
-                    );
+                    // Read UBO data for matrices
+                    auto ubo_data = uniform_buffer.read_as_vector(0, 1)[0];
+                    glm::vec3 camera_pos =
+                        glm::vec3(glm::inverse(ubo_data.view)[3]);
 
-                    // Blit the tone-mapped result to swapchain
-                    transfer.blit(commandBuffers[index], ldr_view->image(),
+                    // Configure passes for this frame
+                    zpass.set_uniform_buffer(uniform_buffer);
+                    zpass.set_scene(rayTracedScene);
+
+                    directLight.set_uniform_buffer(uniform_buffer);
+                    directLight.set_sky_parameters(sky_params);
+                    directLight.set_camera_position(camera_pos);
+                    directLight.set_frame_count(
+                        indirectLight.get_frame_count());
+
+                    aoPass.set_ao_radius(200.0f);
+
+                    skyPass.set_sky_parameters(sky_params);
+                    skyPass.set_inverse_view_proj(ubo_data.inverseViewProj);
+
+                    indirectLight.set_sky_parameters(sky_params);
+
+                    toneMapping.set_indirect_intensity(1.0f);
+                    toneMapping.set_operator(
+                        vw::ToneMappingOperator::ACES);
+                    toneMapping.set_exposure(1.0f);
+                    toneMapping.set_white_point(4.0f);
+                    toneMapping.set_luminance_scale(10000.0f);
+
+                    // Execute the full render pipeline
+                    pipeline.execute(commandBuffers[index],
+                                     transfer.resourceTracker(),
+                                     app.swapchain.width(),
+                                     app.swapchain.height(), index);
+
+                    // Blit tone-mapped output to swapchain
+                    auto tone_results = toneMapping.result_images();
+                    std::shared_ptr<const vw::ImageView> tone_mapped_view;
+                    for (const auto &[slot, cached] : tone_results) {
+                        if (slot == vw::Slot::ToneMapped) {
+                            tone_mapped_view = cached.view;
+                            break;
+                        }
+                    }
+
+                    transfer.blit(commandBuffers[index],
+                                  tone_mapped_view->image(),
                                   image_view->image());
 
                     // Transition swapchain image to present layout
@@ -184,7 +261,7 @@ int main() {
                 std::cout << "Iteration: " << i++ << std::endl;
 
                 // Take screenshot after 32 samples and exit
-                if (renderingManager.ao_pass().get_frame_count() == 32) {
+                if (aoPass.get_frame_count() == 32) {
                     // Record a new command buffer just for the screenshot
                     // Note: saveToFile ends the command buffer internally,
                     // so we don't use CommandBufferRecorder here

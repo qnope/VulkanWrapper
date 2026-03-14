@@ -12,8 +12,8 @@
 #include "VulkanWrapper/RayTracing/RayTracingPipeline.h"
 #include "VulkanWrapper/RayTracing/ShaderBindingTable.h"
 #include "VulkanWrapper/RayTracing/TopLevelAccelerationStructure.h"
+#include "VulkanWrapper/RenderPass/RenderPass.h"
 #include "VulkanWrapper/RenderPass/SkyParameters.h"
-#include "VulkanWrapper/RenderPass/Subpass.h"
 #include "VulkanWrapper/Shader/ShaderCompiler.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
 #include "VulkanWrapper/Vulkan/Device.h"
@@ -21,15 +21,12 @@
 
 namespace vw {
 
-enum class IndirectLightPassSlot {
-    Output // Single accumulation buffer (storage image for RT)
-};
-
 /**
  * @brief Push constants for IndirectLightPass
  *
- * Contains sky atmosphere parameters plus frame control for accumulation.
- * Shared between raygen, miss, and closest hit shaders.
+ * Contains sky atmosphere parameters plus frame control for
+ * accumulation. Shared between raygen, miss, and closest hit
+ * shaders.
  */
 struct IndirectLightPushConstants {
     SkyParametersGPU sky; // 96 bytes
@@ -39,103 +36,83 @@ struct IndirectLightPushConstants {
 }; // 108 bytes total
 
 static_assert(sizeof(IndirectLightPushConstants) <= 128,
-              "IndirectLightPushConstants must fit in push constant limit");
+              "IndirectLightPushConstants must fit in push "
+              "constant limit");
 
 /**
- * @brief Ray Tracing Indirect Light pass with progressive accumulation
+ * @brief Ray Tracing Indirect Light pass with progressive
+ *        accumulation
  *
- * This pass computes indirect sky lighting using a ray tracing pipeline.
- * It reads precomputed ray directions from the GBuffer indirect_ray
- * attachment and traces rays from each surface point:
- * - Rays that escape to the sky contribute atmospheric radiance (miss shader)
- * - Rays that hit geometry contribute sun bounce with per-material albedo
- *   (closest hit shaders)
+ * This pass computes indirect sky lighting using a ray tracing
+ * pipeline. It reads precomputed ray directions from the GBuffer
+ * indirect_ray attachment and traces rays from each surface point.
  *
- * The pass uses progressive accumulation: each frame computes 1 sample per
- * pixel and blends it with the accumulated history using imageLoad/imageStore.
- * This produces clean results over time while maintaining real-time
- * performance.
+ * Inputs: Slot::Position, Slot::Normal, Slot::Albedo,
+ *         Slot::AmbientOcclusion, Slot::IndirectRay
+ * Outputs: Slot::IndirectLight
  *
- * Output is written to an independent storage image (not additive to
- * light_view).
- *
- * Shaders are compiled at runtime from GLSL source files using ShaderCompiler:
- * - indirect_light.rgen: Ray generation shader
- * - indirect_light.rmiss: Miss shader (computes atmosphere)
- * - Per-material closest hit shaders generated dynamically from
- *   indirect_light_base.glsl + handler brdf_path()
+ * The pass uses progressive accumulation: each frame computes
+ * 1 sample per pixel and blends it with the accumulated history
+ * using imageLoad/imageStore.
  */
-class IndirectLightPass : public Subpass<IndirectLightPassSlot> {
+class IndirectLightPass : public RenderPass {
   public:
     /**
-     * @brief Construct an IndirectLightPass with shaders loaded from files
-     *
-     * @param device Vulkan device
-     * @param allocator Memory allocator
-     * @param shader_dir Path to the shader directory containing the RT shaders
-     * @param tlas Top-level acceleration structure for occlusion rays
-     * @param geometry_buffer Geometry reference buffer for vertex access
-     *        in closest hit shader (sun bounce)
-     * @param material_manager Bindless material manager for per-material
-     *        texture access in closest hit shaders
-     * @param output_format Output buffer format (default: R32G32B32A32Sfloat)
+     * @brief Construct an IndirectLightPass with shaders loaded
+     *        from files
      */
     IndirectLightPass(
-        std::shared_ptr<Device> device, std::shared_ptr<Allocator> allocator,
+        std::shared_ptr<Device> device,
+        std::shared_ptr<Allocator> allocator,
         const std::filesystem::path &shader_dir,
         const rt::as::TopLevelAccelerationStructure &tlas,
         const rt::GeometryReferenceBuffer &geometry_buffer,
-        Model::Material::BindlessMaterialManager &material_manager,
-        vk::Format output_format = vk::Format::eR32G32B32A32Sfloat);
+        Model::Material::BindlessMaterialManager
+            &material_manager,
+        vk::Format output_format =
+            vk::Format::eR32G32B32A32Sfloat);
 
-    /**
-     * @brief Execute the indirect light pass with progressive accumulation
-     *
-     * Uses imageLoad/imageStore for temporal accumulation: each frame computes
-     * 1 sample per pixel and blends it with the accumulated history.
-     * The longer the view stays static, the more accurate the lighting becomes.
-     *
-     * Combines indirect sky lighting with ambient contribution modulated by AO.
-     * Uses the same ambient formula as the direct sun lighting pass:
-     * ambient = (albedo/PI) * L_sun * solid_angle * 0.05 * ao
-     *
-     * @param cmd Command buffer to record into
-     * @param tracker Resource tracker for barrier management
-     * @param width Render width
-     * @param height Render height
-     * @param position_view Position G-Buffer view
-     * @param normal_view Normal G-Buffer view
-     * @param albedo_view Albedo G-Buffer view (material color)
-     * @param ao_view Ambient occlusion buffer view
-     * @param indirect_ray_view Indirect ray direction G-Buffer view
-     * @param sky_params Sky and sun parameters
-     * @return The output indirect light image view
-     */
-    std::shared_ptr<const ImageView>
-    execute(vk::CommandBuffer cmd, Barrier::ResourceTracker &tracker,
-            Width width, Height height,
-            std::shared_ptr<const ImageView> position_view,
-            std::shared_ptr<const ImageView> normal_view,
-            std::shared_ptr<const ImageView> albedo_view,
-            std::shared_ptr<const ImageView> ao_view,
-            std::shared_ptr<const ImageView> indirect_ray_view,
-            const SkyParameters &sky_params);
+    // -- Slot introspection --
+    std::vector<Slot> input_slots() const override {
+        return {Slot::Position, Slot::Normal, Slot::Albedo,
+                Slot::AmbientOcclusion, Slot::IndirectRay};
+    }
+    std::vector<Slot> output_slots() const override {
+        return {Slot::IndirectLight};
+    }
+
+    // -- Unified execute --
+    void execute(vk::CommandBuffer cmd,
+                 Barrier::ResourceTracker &tracker,
+                 Width width, Height height,
+                 size_t frame_index) override;
+
+    std::string_view name() const override {
+        return "IndirectLightPass";
+    }
+
+    // -- Setters for non-slot data --
+    void set_sky_parameters(const SkyParameters &params) {
+        m_sky_params = params;
+    }
 
     /**
      * @brief Reset progressive accumulation
      *
-     * Call this when the camera moves or any parameter changes that would
-     * invalidate the accumulated result.
+     * Call this when the camera moves or any parameter changes
+     * that would invalidate the accumulated result.
      */
-    void reset_accumulation() { m_frame_count = 0; }
+    void reset_accumulation() override { m_frame_count = 0; }
 
     /**
-     * @brief Get the current frame count for progressive accumulation
+     * @brief Get the current frame count for progressive
+     *        accumulation
      */
     uint32_t get_frame_count() const { return m_frame_count; }
 
   private:
-    void create_pipeline_and_sbt(const std::filesystem::path &shader_dir);
+    void create_pipeline_and_sbt(
+        const std::filesystem::path &shader_dir);
 
     const rt::as::TopLevelAccelerationStructure *m_tlas;
     const rt::GeometryReferenceBuffer *m_geometry_buffer;
@@ -145,6 +122,10 @@ class IndirectLightPass : public Subpass<IndirectLightPassSlot> {
     // Progressive accumulation state
     uint32_t m_frame_count = 0;
 
+    // Stored parameters
+    SkyParameters m_sky_params =
+        SkyParameters::create_earth_sun(45.0f);
+
     // Resources (order matters for destruction!)
     std::shared_ptr<const Sampler> m_sampler;
     std::shared_ptr<DescriptorSetLayout> m_descriptor_layout;
@@ -153,7 +134,8 @@ class IndirectLightPass : public Subpass<IndirectLightPassSlot> {
     DescriptorPool m_descriptor_pool;
 
     // Texture descriptor resources for per-material hit shaders
-    std::shared_ptr<DescriptorSetLayout> m_texture_descriptor_layout;
+    std::shared_ptr<DescriptorSetLayout>
+        m_texture_descriptor_layout;
     DescriptorPool m_texture_descriptor_pool;
 };
 

@@ -13,6 +13,7 @@
 #include "VulkanWrapper/Model/MeshManager.h"
 #include "VulkanWrapper/RayTracing/RayTracedScene.h"
 #include "VulkanWrapper/RenderPass/IndirectLightPass.h"
+#include "VulkanWrapper/RenderPass/Slot.h"
 #include "VulkanWrapper/Shader/ShaderCompiler.h"
 #include "VulkanWrapper/Synchronization/Fence.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
@@ -317,21 +318,40 @@ class IndirectLightSunBounceTest : public ::testing::Test {
             scene.geometry_buffer(), *gpu->material_manager,
             vk::Format::eR32G32B32A32Sfloat);
 
-        std::shared_ptr<const ImageView> result;
         for (int i = 0; i < num_frames; ++i) {
             auto cmd = cmdPool->allocate(1)[0];
             std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
                 vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
             Barrier::ResourceTracker tracker;
-            result = pass->execute(
-                cmd, tracker, width, height, gb.position_view, gb.normal_view,
-                gb.albedo_view, gb.ao_view, gb.indirect_ray_view, sky_params);
+            pass->set_input(
+                Slot::Position,
+                CachedImage{gb.position, gb.position_view});
+            pass->set_input(
+                Slot::Normal,
+                CachedImage{gb.normal, gb.normal_view});
+            pass->set_input(
+                Slot::Albedo,
+                CachedImage{gb.albedo, gb.albedo_view});
+            pass->set_input(
+                Slot::AmbientOcclusion,
+                CachedImage{gb.ao, gb.ao_view});
+            pass->set_input(
+                Slot::IndirectRay,
+                CachedImage{gb.indirect_ray, gb.indirect_ray_view});
+            pass->set_sky_parameters(sky_params);
+            pass->execute(cmd, tracker, width, height, 0);
             std::ignore = cmd.end();
             gpu->queue().enqueue_command_buffer(cmd);
             gpu->queue().submit({}, {}, {}).wait();
         }
 
-        return read_average_color_hdr(result->image());
+        auto results = pass->result_images();
+        for (auto &[slot, cached] : results) {
+            if (slot == Slot::IndirectLight) {
+                return read_average_color_hdr(cached.image);
+            }
+        }
+        return glm::vec4(0.0f);
     }
 
     RayTracingGPU *gpu = nullptr;

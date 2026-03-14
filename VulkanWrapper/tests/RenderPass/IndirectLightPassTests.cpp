@@ -13,6 +13,7 @@
 #include "VulkanWrapper/Model/MeshManager.h"
 #include "VulkanWrapper/RayTracing/RayTracedScene.h"
 #include "VulkanWrapper/RenderPass/IndirectLightPass.h"
+#include "VulkanWrapper/RenderPass/Slot.h"
 #include "VulkanWrapper/Shader/ShaderCompiler.h"
 #include "VulkanWrapper/Synchronization/Fence.h"
 #include "VulkanWrapper/Synchronization/ResourceTracker.h"
@@ -415,6 +416,49 @@ class IndirectLightPassTest : public ::testing::Test {
         return std::sqrt(sum_sq_diff / static_cast<float>(pixel_count * 4));
     }
 
+    // Wire G-buffer inputs and sky params, then execute
+    void wire_and_execute(IndirectLightPass &pass,
+                          vk::CommandBuffer cmd,
+                          Barrier::ResourceTracker &tracker,
+                          Width width, Height height,
+                          const GBuffer &gb,
+                          const SkyParameters &sky_params) {
+        pass.set_input(Slot::Position,
+                       CachedImage{gb.position, gb.position_view});
+        pass.set_input(Slot::Normal,
+                       CachedImage{gb.normal, gb.normal_view});
+        pass.set_input(Slot::Albedo,
+                       CachedImage{gb.albedo, gb.albedo_view});
+        pass.set_input(Slot::AmbientOcclusion,
+                       CachedImage{gb.ao, gb.ao_view});
+        pass.set_input(Slot::IndirectRay,
+                       CachedImage{gb.indirect_ray, gb.indirect_ray_view});
+        pass.set_sky_parameters(sky_params);
+        pass.execute(cmd, tracker, width, height, 0);
+    }
+
+    // Get the IndirectLight output image from result_images()
+    std::shared_ptr<const Image> get_output_image(IndirectLightPass &pass) {
+        auto results = pass.result_images();
+        for (auto &[slot, cached] : results) {
+            if (slot == Slot::IndirectLight) {
+                return cached.image;
+            }
+        }
+        return nullptr;
+    }
+
+    // Get the IndirectLight output view from result_images()
+    std::shared_ptr<const ImageView> get_output_view(IndirectLightPass &pass) {
+        auto results = pass.result_images();
+        for (auto &[slot, cached] : results) {
+            if (slot == Slot::IndirectLight) {
+                return cached.view;
+            }
+        }
+        return nullptr;
+    }
+
     RayTracingGPU *gpu = nullptr;
     std::unique_ptr<CommandPool> cmdPool;
 };
@@ -482,6 +526,63 @@ TEST_F(IndirectLightPassTest, ShaderFilesExistAndCompile) {
 // Execution Tests
 // =============================================================================
 
+// =============================================================================
+// Slot Introspection Tests
+// =============================================================================
+
+TEST_F(IndirectLightPassTest, InputSlots_ReturnsExpectedSlots) {
+    rt::RayTracedScene scene(gpu->device, gpu->allocator);
+    const auto &plane = gpu->get_plane_mesh();
+    std::ignore = scene.add_instance(
+        plane, glm::translate(glm::mat4(1.0f), glm::vec3(0, -100, 0)));
+    scene.build();
+
+    auto pass = std::make_unique<IndirectLightPass>(
+        gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
+        scene.geometry_buffer(), *gpu->material_manager,
+        vk::Format::eR32G32B32A32Sfloat);
+
+    auto inputs = pass->input_slots();
+    ASSERT_EQ(inputs.size(), 5u);
+    EXPECT_EQ(inputs[0], Slot::Position);
+    EXPECT_EQ(inputs[1], Slot::Normal);
+    EXPECT_EQ(inputs[2], Slot::Albedo);
+    EXPECT_EQ(inputs[3], Slot::AmbientOcclusion);
+    EXPECT_EQ(inputs[4], Slot::IndirectRay);
+}
+
+TEST_F(IndirectLightPassTest, OutputSlots_ReturnsIndirectLight) {
+    rt::RayTracedScene scene(gpu->device, gpu->allocator);
+    const auto &plane = gpu->get_plane_mesh();
+    std::ignore = scene.add_instance(
+        plane, glm::translate(glm::mat4(1.0f), glm::vec3(0, -100, 0)));
+    scene.build();
+
+    auto pass = std::make_unique<IndirectLightPass>(
+        gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
+        scene.geometry_buffer(), *gpu->material_manager,
+        vk::Format::eR32G32B32A32Sfloat);
+
+    auto outputs = pass->output_slots();
+    ASSERT_EQ(outputs.size(), 1u);
+    EXPECT_EQ(outputs[0], Slot::IndirectLight);
+}
+
+TEST_F(IndirectLightPassTest, Name_ReturnsIndirectLightPass) {
+    rt::RayTracedScene scene(gpu->device, gpu->allocator);
+    const auto &plane = gpu->get_plane_mesh();
+    std::ignore = scene.add_instance(
+        plane, glm::translate(glm::mat4(1.0f), glm::vec3(0, -100, 0)));
+    scene.build();
+
+    auto pass = std::make_unique<IndirectLightPass>(
+        gpu->device, gpu->allocator, get_shader_dir(), scene.tlas(),
+        scene.geometry_buffer(), *gpu->material_manager,
+        vk::Format::eR32G32B32A32Sfloat);
+
+    EXPECT_EQ(pass->name(), "IndirectLightPass");
+}
+
 TEST_F(IndirectLightPassTest, ExecuteReturnsValidImageView) {
     constexpr Width width{64};
     constexpr Height height{64};
@@ -507,19 +608,16 @@ TEST_F(IndirectLightPassTest, ExecuteReturnsValidImageView) {
         vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
     Barrier::ResourceTracker tracker;
-    auto result = pass->execute(cmd, tracker, width, height, gb.position_view,
-                                gb.normal_view, gb.albedo_view, gb.ao_view,
-                                gb.indirect_ray_view, sky_params);
+    wire_and_execute(*pass, cmd, tracker, width, height, gb, sky_params);
 
     std::ignore = cmd.end();
     gpu->queue().enqueue_command_buffer(cmd);
     gpu->queue().submit({}, {}, {}).wait();
 
+    auto result = get_output_image(*pass);
     ASSERT_NE(result, nullptr);
-    EXPECT_TRUE(result->handle());
-    EXPECT_EQ(result->image()->extent2D().width, static_cast<uint32_t>(width));
-    EXPECT_EQ(result->image()->extent2D().height,
-              static_cast<uint32_t>(height));
+    EXPECT_EQ(result->extent2D().width, static_cast<uint32_t>(width));
+    EXPECT_EQ(result->extent2D().height, static_cast<uint32_t>(height));
 }
 
 // =============================================================================
@@ -569,9 +667,7 @@ TEST_F(IndirectLightPassTest, FrameCountIncrements_AfterExecute) {
         std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
             vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
         Barrier::ResourceTracker tracker;
-        std::ignore = pass->execute(
-            cmd, tracker, width, height, gb.position_view, gb.normal_view,
-            gb.albedo_view, gb.ao_view, gb.indirect_ray_view, sky_params);
+        wire_and_execute(*pass, cmd, tracker, width, height, gb, sky_params);
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
         gpu->queue().submit({}, {}, {}).wait();
@@ -585,9 +681,7 @@ TEST_F(IndirectLightPassTest, FrameCountIncrements_AfterExecute) {
         std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
             vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
         Barrier::ResourceTracker tracker;
-        std::ignore = pass->execute(
-            cmd, tracker, width, height, gb.position_view, gb.normal_view,
-            gb.albedo_view, gb.ao_view, gb.indirect_ray_view, sky_params);
+        wire_and_execute(*pass, cmd, tracker, width, height, gb, sky_params);
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
         gpu->queue().submit({}, {}, {}).wait();
@@ -622,9 +716,7 @@ TEST_F(IndirectLightPassTest, ResetAccumulation_ResetsFrameCountToZero) {
         std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
             vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
         Barrier::ResourceTracker tracker;
-        std::ignore = pass->execute(
-            cmd, tracker, width, height, gb.position_view, gb.normal_view,
-            gb.albedo_view, gb.ao_view, gb.indirect_ray_view, sky_params);
+        wire_and_execute(*pass, cmd, tracker, width, height, gb, sky_params);
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
         gpu->queue().submit({}, {}, {}).wait();
@@ -669,21 +761,18 @@ TEST_F(IndirectLightPassTest, ZenithSun_ProducesBlueIndirectLight) {
     auto sky_params = SkyParameters::create_earth_sun(90.0f);
 
     // Execute multiple frames for stable accumulation
-    std::shared_ptr<const ImageView> result;
     for (int i = 0; i < 16; ++i) {
         auto cmd = cmdPool->allocate(1)[0];
         std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
             vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
         Barrier::ResourceTracker tracker;
-        result = pass->execute(cmd, tracker, width, height, gb.position_view,
-                               gb.normal_view, gb.albedo_view, gb.ao_view,
-                               gb.indirect_ray_view, sky_params);
+        wire_and_execute(*pass, cmd, tracker, width, height, gb, sky_params);
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
         gpu->queue().submit({}, {}, {}).wait();
     }
 
-    auto color = read_average_color_hdr(result->image());
+    auto color = read_average_color_hdr(get_output_image(*pass));
 
     // Verify non-zero luminance
     EXPECT_GT(color.r + color.g + color.b, 0.0f)
@@ -724,21 +813,18 @@ TEST_F(IndirectLightPassTest, HorizonSun_ProducesWarmIndirectLight) {
     auto sky_params = SkyParameters::create_earth_sun(5.0f);
 
     // Execute multiple frames
-    std::shared_ptr<const ImageView> result;
     for (int i = 0; i < 16; ++i) {
         auto cmd = cmdPool->allocate(1)[0];
         std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
             vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
         Barrier::ResourceTracker tracker;
-        result = pass->execute(cmd, tracker, width, height, gb.position_view,
-                               gb.normal_view, gb.albedo_view, gb.ao_view,
-                               gb.indirect_ray_view, sky_params);
+        wire_and_execute(*pass, cmd, tracker, width, height, gb, sky_params);
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
         gpu->queue().submit({}, {}, {}).wait();
     }
 
-    auto color = read_average_color_hdr(result->image());
+    auto color = read_average_color_hdr(get_output_image(*pass));
 
     // Verify non-zero luminance
     EXPECT_GT(color.r + color.g + color.b, 0.0f)
@@ -779,20 +865,17 @@ TEST_F(IndirectLightPassTest, ChromaticShift_ZenithVsHorizon) {
 
         auto sky_params = SkyParameters::create_earth_sun(90.0f);
 
-        std::shared_ptr<const ImageView> result;
         for (int i = 0; i < 16; ++i) {
             auto cmd = cmdPool->allocate(1)[0];
             std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
                 vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
             Barrier::ResourceTracker tracker;
-            result = pass->execute(
-                cmd, tracker, width, height, gb.position_view, gb.normal_view,
-                gb.albedo_view, gb.ao_view, gb.indirect_ray_view, sky_params);
+            wire_and_execute(*pass, cmd, tracker, width, height, gb, sky_params);
             std::ignore = cmd.end();
             gpu->queue().enqueue_command_buffer(cmd);
             gpu->queue().submit({}, {}, {}).wait();
         }
-        color_zenith = read_average_color_hdr(result->image());
+        color_zenith = read_average_color_hdr(get_output_image(*pass));
     }
 
     // Horizon sun
@@ -805,20 +888,17 @@ TEST_F(IndirectLightPassTest, ChromaticShift_ZenithVsHorizon) {
 
         auto sky_params = SkyParameters::create_earth_sun(5.0f);
 
-        std::shared_ptr<const ImageView> result;
         for (int i = 0; i < 16; ++i) {
             auto cmd = cmdPool->allocate(1)[0];
             std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
                 vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
             Barrier::ResourceTracker tracker;
-            result = pass->execute(
-                cmd, tracker, width, height, gb.position_view, gb.normal_view,
-                gb.albedo_view, gb.ao_view, gb.indirect_ray_view, sky_params);
+            wire_and_execute(*pass, cmd, tracker, width, height, gb, sky_params);
             std::ignore = cmd.end();
             gpu->queue().enqueue_command_buffer(cmd);
             gpu->queue().submit({}, {}, {}).wait();
         }
-        color_horizon = read_average_color_hdr(result->image());
+        color_horizon = read_average_color_hdr(get_output_image(*pass));
     }
 
     // Calculate red-to-blue ratios
@@ -869,14 +949,12 @@ TEST_F(IndirectLightPassTest, AccumulationConverges_VarianceDecreases) {
         std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
             vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
         Barrier::ResourceTracker tracker;
-        auto result = pass->execute(
-            cmd, tracker, width, height, gb.position_view, gb.normal_view,
-            gb.albedo_view, gb.ao_view, gb.indirect_ray_view, sky_params);
+        wire_and_execute(*pass, cmd, tracker, width, height, gb, sky_params);
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
         gpu->queue().submit({}, {}, {}).wait();
 
-        auto color = read_average_color_hdr(result->image());
+        auto color = read_average_color_hdr(get_output_image(*pass));
 
         if (frame > 0) {
             float diff = glm::length(color - prev_color);
@@ -931,21 +1009,18 @@ TEST_F(IndirectLightPassTest, SurfaceFacingUp_ReceivesSkyLight) {
 
     auto sky_params = SkyParameters::create_earth_sun(45.0f);
 
-    std::shared_ptr<const ImageView> result;
     for (int i = 0; i < 8; ++i) {
         auto cmd = cmdPool->allocate(1)[0];
         std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
             vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
         Barrier::ResourceTracker tracker;
-        result = pass->execute(cmd, tracker, width, height, gb.position_view,
-                               gb.normal_view, gb.albedo_view, gb.ao_view,
-                               gb.indirect_ray_view, sky_params);
+        wire_and_execute(*pass, cmd, tracker, width, height, gb, sky_params);
         std::ignore = cmd.end();
         gpu->queue().enqueue_command_buffer(cmd);
         gpu->queue().submit({}, {}, {}).wait();
     }
 
-    auto color = read_average_color_hdr(result->image());
+    auto color = read_average_color_hdr(get_output_image(*pass));
     float luminance = color.r + color.g + color.b;
 
     EXPECT_GT(luminance, 0.0f)
@@ -980,20 +1055,17 @@ TEST_F(IndirectLightPassTest, SurfaceFacingDown_ReceivesDifferentLight) {
 
         fill_gbuffer_uniform(gb, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
 
-        std::shared_ptr<const ImageView> result;
         for (int i = 0; i < 8; ++i) {
             auto cmd = cmdPool->allocate(1)[0];
             std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
                 vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
             Barrier::ResourceTracker tracker;
-            result = pass->execute(
-                cmd, tracker, width, height, gb.position_view, gb.normal_view,
-                gb.albedo_view, gb.ao_view, gb.indirect_ray_view, sky_params);
+            wire_and_execute(*pass, cmd, tracker, width, height, gb, sky_params);
             std::ignore = cmd.end();
             gpu->queue().enqueue_command_buffer(cmd);
             gpu->queue().submit({}, {}, {}).wait();
         }
-        color_up = read_average_color_hdr(result->image());
+        color_up = read_average_color_hdr(get_output_image(*pass));
     }
 
     // Surface facing down
@@ -1006,20 +1078,17 @@ TEST_F(IndirectLightPassTest, SurfaceFacingDown_ReceivesDifferentLight) {
 
         fill_gbuffer_uniform(gb, glm::vec3(0, 0, 0), glm::vec3(0, -1, 0));
 
-        std::shared_ptr<const ImageView> result;
         for (int i = 0; i < 8; ++i) {
             auto cmd = cmdPool->allocate(1)[0];
             std::ignore = cmd.begin(vk::CommandBufferBeginInfo().setFlags(
                 vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
             Barrier::ResourceTracker tracker;
-            result = pass->execute(
-                cmd, tracker, width, height, gb.position_view, gb.normal_view,
-                gb.albedo_view, gb.ao_view, gb.indirect_ray_view, sky_params);
+            wire_and_execute(*pass, cmd, tracker, width, height, gb, sky_params);
             std::ignore = cmd.end();
             gpu->queue().enqueue_command_buffer(cmd);
             gpu->queue().submit({}, {}, {}).wait();
         }
-        color_down = read_average_color_hdr(result->image());
+        color_down = read_average_color_hdr(get_output_image(*pass));
     }
 
     float luminance_up = color_up.r + color_up.g + color_up.b;
