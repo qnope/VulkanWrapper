@@ -6,32 +6,31 @@ Modern C++23 Vulkan 1.3 wrapper library with RAII, type safety, and ray tracing 
 
 ```bash
 # Configure (first time only — vcpkg is auto-detected via VCPKG_ROOT or CMAKE_TOOLCHAIN_FILE)
-cmake -B build-Clang20Debug -DCMAKE_BUILD_TYPE=Debug
+cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++ -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -G "Ninja"
 
 # Build
-cmake --build build-Clang20Debug
+cmake --build build
 
 # Build specific test target
-cmake --build build-Clang20Debug --target RenderPassTests
+cmake --build build --target RenderPassTests
 
 # Run all tests(ctest)
-cd build-Clang20Debug && DYLD_LIBRARY_PATH=vcpkg_installed/arm64-osx/lib ctest --stop-on-failure --output-on-failure -j8
+cd build && DYLD_LIBRARY_PATH=vcpkg_installed/arm64-osx/lib ctest --stop-on-failure --output-on-failure -j8
 
 # Run specific test suite
-cd build-Clang20Debug/VulkanWrapper/tests && DYLD_LIBRARY_PATH=../../vcpkg_installed/arm64-osx/lib ./RenderPassTests
+cd build/VulkanWrapper/tests && DYLD_LIBRARY_PATH=../../vcpkg_installed/arm64-osx/lib ./RenderPassTests
 
 # Run specific test from a test suite
-cd build-Clang20Debug/VulkanWrapper/tests && DYLD_LIBRARY_PATH=../../vcpkg_installed/arm64-osx/lib ./RenderPassTests --gtest_filter='*IndirectLight*'
+cd build/VulkanWrapper/tests && DYLD_LIBRARY_PATH=../../vcpkg_installed/arm64-osx/lib ./RenderPassTests --gtest_filter='*IndirectLight*'
 
 # Debug a specific test suite: if there is a crash for example.
-cd build-Clang20Debug/VulkanWrapper/tests && DYLD_LIBRARY_PATH=../../vcpkg_installed/arm64-osx/lib $(brew --prefix llvm)/bin/lldb ./RenderPassTests
+cd build/VulkanWrapper/tests && DYLD_LIBRARY_PATH=../../vcpkg_installed/arm64-osx/lib $(brew --prefix llvm)/bin/lldb ./RenderPassTests
 
 # Run main application which generate screenshot.png
-cd build-Clang20Debug/examples/Advanced && DYLD_LIBRARY_PATH=../../vcpkg_installed/arm64-osx/lib ./Main
+cd build/examples/Advanced && DYLD_LIBRARY_PATH=../../vcpkg_installed/arm64-osx/lib ./Main
 
 # Debug main application if there is a crash for example
-cd build-Clang20Debug/examples/Advanced && DYLD_LIBRARY_PATH=../../vcpkg_installed/arm64-osx/lib $(brew --prefix llvm)/bin/lldb ./Main
-
+cd build/examples/Advanced && DYLD_LIBRARY_PATH=../../vcpkg_installed/arm64-osx/lib $(brew --prefix llvm)/bin/lldb ./Main
 
 # Format changed files (staged only)
 git diff --cached --name-only -- '*.h' '*.cpp' | xargs -r clang-format -i
