@@ -2,51 +2,65 @@
 
 `vw` namespace · `RenderPass/` directory · Tier 6
 
-Composable render pass system using dynamic rendering (no `VkRenderPass`/`VkFramebuffer`). Passes form a functional pipeline where each takes input image views and returns output image views.
+Composable render pass system using dynamic rendering (no `VkRenderPass`/`VkFramebuffer`). Passes declare input/output slots and are wired together automatically by `RenderPipeline`.
 
-## Subpass\<SlotEnum\> (base template)
+## Slot (unified enum)
 
-Base class for all render passes with lazy image allocation:
+Global enum defining all image attachment points:
 
-- `SlotEnum` — enum defining output image slots
-- `get_or_create_image(slot, width, height, frame_index, format, usage)` → `CachedImage`
-- Images created on first use, cached by `(slot, width, height, frame_index)`
-- Auto-evicts images when dimensions change (resize-safe)
-- `CachedImage` = `{shared_ptr<Image>, shared_ptr<ImageView>}`
+| Category | Slots |
+|----------|-------|
+| Geometry | `Depth` |
+| G-Buffer | `Albedo`, `Normal`, `Tangent`, `Bitangent`, `Position`, `DirectLight`, `IndirectRay` |
+| Post-process | `AmbientOcclusion`, `Sky`, `IndirectLight` |
+| Final | `ToneMapped` |
+| Extension | `UserSlot = 1024` |
 
-## ScreenSpacePass\<SlotEnum\> (extends Subpass)
+## RenderPass (base class)
+
+Non-templated base class with lazy image allocation:
+
+- `input_slots()` / `output_slots()` — pure virtual, declare dependencies
+- `execute(cmd, tracker, width, height, frame_index)` — pure virtual
+- `get_or_create_image(slot, ...)` → `CachedImage` — cached by `(slot, width, height, frame_index)`, auto-evicts on resize
+- `get_input(slot)` / `set_input(slot, image)` — wiring mechanism used by `RenderPipeline`
+- `reset_accumulation()` — virtual, no-op by default (overridden by progressive passes)
+
+## ScreenSpacePass (extends RenderPass)
 
 Fullscreen quad rendering base for post-processing:
 
-- `render_fullscreen(cmd, extent, colorAttachment, depthAttachment, pipeline, descriptorSet, pushConstants)` — handles all boilerplate: `beginRendering`, viewport, scissor, bind, `draw(4, 1, 0, 0)` (triangle strip), `endRendering`
+- `render_fullscreen(cmd, extent, colorAttachment, depthAttachment, pipeline, descriptorSet, pushConstants)` — handles `beginRendering`, viewport, scissor, bind, `draw(4, 1, 0, 0)`, `endRendering`
 - `create_default_sampler()` — linear filtering, clamp-to-edge
 - Helper: `create_screen_space_pipeline(device, vert, frag, layout, format, ...)` factory
 
-## SkyPass (extends ScreenSpacePass)
+## RenderPipeline (orchestrator)
 
-Atmospheric sky rendering where depth == 1.0 (far plane):
-- Input: depth buffer view, `SkyParameters`, inverse view-projection matrix
-- Output: HDR sky radiance image
-- Push constants: `SkyParametersGPU` + `inverseViewProj`
+Container executing passes in insertion order with automatic slot wiring:
 
-## ToneMappingPass (extends ScreenSpacePass)
+```cpp
+vw::RenderPipeline pipeline;
+auto& zpass = pipeline.add(std::make_unique<vw::ZPass>(device, allocator, shader_dir));
+auto& directLight = pipeline.add(std::make_unique<vw::DirectLightPass>(...));
+pipeline.validate();  // checks all input slots are satisfied by predecessors
+pipeline.execute(cmd, tracker, width, height, frame_index);
+```
 
-HDR to LDR conversion with multiple operators:
-- Input: sky view, direct light view, optional indirect light view
-- Output: LDR tone-mapped image (or renders to external view like swapchain)
-- Operators: `ACES`, `Reinhard`, `ReinhardExtended`, `Uncharted2`, `Neutral`
-- Push constants: exposure, operator_id, white_point, luminance_scale, indirect_intensity
-- Gamma handled by sRGB output format, not the shader
+- `add<T>(unique_ptr<T>)` — returns typed reference
+- `validate()` — returns errors if any pass has unfulfilled input slots
+- `execute()` — wires predecessor outputs as inputs, executes all passes in order
+- `reset_accumulation()` — propagates to all passes
 
-## IndirectLightPass (extends Subpass, uses ray tracing)
+## Concrete Passes
 
-Progressive indirect sky lighting via ray tracing pipeline:
-- Input: position, normal, albedo, AO, indirect ray direction GBuffer views
-- Output: accumulated indirect light storage image
-- Per-material closest hit shaders generated dynamically from `indirect_light_base.glsl` + handler `brdf_path()`
-- Progressive accumulation: 1 sample/pixel/frame, blended with history via `imageLoad`/`imageStore`
-- `reset_accumulation()` — call on camera move or parameter change
-- `get_frame_count()` — current accumulation sample count
+| Pass | Inputs | Outputs | Notes |
+|------|--------|---------|-------|
+| `ZPass` | — | `Depth` | Depth prepass, renders scene geometry |
+| `DirectLightPass` | `Depth` | `Albedo`, `Normal`, `Tangent`, `Bitangent`, `Position`, `DirectLight`, `IndirectRay` | G-Buffer fill + per-fragment sun lighting via ray queries. Per-material fragment shaders from `gbuffer_base.glsl` + handler `brdf_path()` |
+| `AmbientOcclusionPass` | `Depth`, `Position`, `Normal`, `Tangent`, `Bitangent` | `AmbientOcclusion` | SSAO via ray queries, progressive (1 sample/pixel/frame) |
+| `SkyPass` | `Depth` | `Sky` | Atmospheric sky where depth == 1.0 |
+| `IndirectLightPass` | `Position`, `Normal`, `Albedo`, `AmbientOcclusion`, `IndirectRay` | `IndirectLight` | RT indirect sky lighting, progressive accumulation. Per-material closest hit shaders from `indirect_light_base.glsl` + handler `brdf_path()` |
+| `ToneMappingPass` | `Sky`, `DirectLight`, optionally `IndirectLight` | `ToneMapped` | HDR→LDR. Operators: `ACES`, `Reinhard`, `ReinhardExtended`, `Uncharted2`, `Neutral`. Also `execute_to_view()` for rendering to external image (swapchain) |
 
 ## SkyParameters / SkyParametersGPU
 
@@ -54,7 +68,7 @@ Sun and atmosphere configuration:
 - `SkyParameters::create_earth_sun(angle)` — factory for Earth-like atmosphere
 - `SkyParametersGPU` — GPU-layout struct for push constants (96 bytes)
 
-## Pipeline Flow (Advanced example)
+## Pipeline Flow
 
 ```
 ZPass → DirectLightPass → AO Pass → SkyPass → IndirectLightPass → ToneMappingPass → Swapchain
