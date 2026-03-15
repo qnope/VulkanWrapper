@@ -6,7 +6,7 @@
 
 From `specs/projects/$1/SPEC.md`, create detailed implementation plans for each major task or module. Each plan will be saved as `specs/projects/$1/tasks/<task_number>_<task_name>.md` and will include actionable steps, dependencies, and test plans.
 
-Each plan should be specific and small enough to be actionable by a single developer. If a task is too large, break it down into smaller sub-tasks with their own plans.
+Each plan should be specific and small enough to be actionable by a single developer. If a task is too large, break it down into smaller sub-tasks with their own plans. Ideally a task should be 5 minutes long.
 
 You can check in `specs/architecture/` for helping you to write the plan.
 
