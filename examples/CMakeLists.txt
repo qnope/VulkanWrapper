@@ -1,3 +1,7 @@
+add_subdirectory(Common)
 add_subdirectory(Application)
 add_subdirectory(Advanced)
-
+add_subdirectory(Triangle)
+add_subdirectory(AmbientOcclusion)
+add_subdirectory(CubeShadow)
+add_subdirectory(EmissiveCube)
