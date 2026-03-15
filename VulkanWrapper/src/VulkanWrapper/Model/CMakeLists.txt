@@ -2,6 +2,7 @@ target_sources(VulkanWrapperCoreLibrary PRIVATE
     Importer.cpp
     Mesh.cpp
     MeshManager.cpp
+    Primitive.cpp
 )
 
 add_subdirectory(Material)
