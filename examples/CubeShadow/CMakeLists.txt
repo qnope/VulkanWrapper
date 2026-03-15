@@ -1,3 +1,3 @@
 add_executable(CubeShadow main.cpp)
-target_link_libraries(CubeShadow PRIVATE App ExamplesCommon)
+target_link_libraries(CubeShadow PRIVATE ExamplesCommon)
 target_precompile_headers(CubeShadow REUSE_FROM VulkanWrapperCoreLibrary)
