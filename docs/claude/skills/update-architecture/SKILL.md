@@ -6,6 +6,8 @@
 
 This skill updates the project architecture documentation in `specs/architecture/`, `specs/architecture/tests/`,  `specs/architecture/performance/`  and `specs/architecture/examples/` based on recent commits to the codebase. It analyzes the commit history to identify changes that impact the architecture and updates the relevant documentation accordingly.
 
+First thing to do is to display "Architecture documentation update" in the console, so that the user knows what is going on.
+
 If an element is removed from the codebase, it should be removed from the architecture documentation. If an element is added, it should be added to the architecture documentation. If an element is modified, the architecture documentation should be updated to reflect the modification.
 You will not keep history of adding things or not, the specification should always reflect the current state of the codebase, not the history of how it evolved.
 
