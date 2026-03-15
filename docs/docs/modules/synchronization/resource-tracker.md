@@ -4,211 +4,376 @@ sidebar_position: 2
 
 # Resource Tracker
 
-The `ResourceTracker` system automatically manages resource state and generates optimal barriers.
+The `ResourceTracker` (in namespace `vw::Barrier`) automatically manages GPU
+resource state and emits optimal pipeline barriers. Instead of manually
+calling `vkCmdPipelineBarrier2`, you **track** the current state of each
+resource, **request** the state you need, and **flush** to generate the
+minimal set of barriers.
 
-## Overview
+## Why Use ResourceTracker?
+
+In Vulkan, you must insert barriers between operations that read and write the
+same resource. Getting barriers wrong causes data races, visual corruption, or
+validation errors. ResourceTracker solves this by:
+
+- Remembering the current state (layout, pipeline stage, access flags) of each
+  image, buffer, and acceleration structure.
+- Computing the minimal barrier when you request a new state.
+- Batching multiple barriers into a single `vkCmdPipelineBarrier2` call.
+- Tracking sub-resources independently (e.g., different mip levels can be in
+  different layouts).
+
+:::warning Anti-pattern
+**Never** use raw `vkCmdPipelineBarrier` or `cmd.pipelineBarrier()`. Always use
+`ResourceTracker` -- it is the only supported way to insert barriers in this
+library.
+:::
+
+## Core API
 
 ```cpp
 #include <VulkanWrapper/Synchronization/ResourceTracker.h>
 
-ResourceTracker tracker;
+namespace vw::Barrier {
 
-// Track current state
-tracker.track(ImageState{
-    .image = image->handle(),
-    .layout = vk::ImageLayout::eShaderReadOnlyOptimal,
-    .stage = vk::PipelineStageFlagBits2::eFragmentShader,
-    .access = vk::AccessFlagBits2::eShaderSampledRead
-});
+class ResourceTracker {
+  public:
+    void track(const ResourceState &state);
+    void request(const ResourceState &state);
+    void flush(vk::CommandBuffer commandBuffer);
+};
 
-// Request new state
-tracker.request(ImageState{
-    .image = image->handle(),
-    .layout = vk::ImageLayout::eColorAttachmentOptimal,
-    .stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-    .access = vk::AccessFlagBits2::eColorAttachmentWrite
-});
-
-// Generate barriers
-tracker.flush(commandBuffer);
+} // namespace vw::Barrier
 ```
 
-## Image State Tracking
+The three methods form a simple pattern:
+
+1. **`track(state)`** -- Tell the tracker what state a resource is currently
+   in. Call this when you first create or transition a resource.
+2. **`request(state)`** -- Tell the tracker what state you *need* the
+   resource to be in next. The tracker computes the barrier internally.
+3. **`flush(cmd)`** -- Record all pending barriers into the command buffer.
+   After flushing, the tracked states are updated to match the requested
+   states.
+
+## Resource States
+
+`ResourceState` is a `std::variant` of three concrete state types:
+
+```cpp
+using ResourceState =
+    std::variant<ImageState, BufferState, AccelerationStructureState>;
+```
 
 ### ImageState
 
 ```cpp
 struct ImageState {
-    vk::Image image;
-    vk::ImageLayout layout;
-    vk::PipelineStageFlags2 stage;
-    vk::AccessFlags2 access;
-    vk::ImageSubresourceRange subresourceRange = {
-        vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1
-    };
+    vk::Image                image;
+    vk::ImageSubresourceRange subresourceRange;
+    vk::ImageLayout          layout;
+    vk::PipelineStageFlags2  stage;
+    vk::AccessFlags2         access;
 };
 ```
 
-### Tracking Images
-
-```cpp
-// Track initial state (e.g., after transfer)
-tracker.track(ImageState{
-    .image = texture->handle(),
-    .layout = vk::ImageLayout::eTransferDstOptimal,
-    .stage = vk::PipelineStageFlagBits2::eTransfer,
-    .access = vk::AccessFlagBits2::eTransferWrite
-});
-
-// Request shader read state
-tracker.request(ImageState{
-    .image = texture->handle(),
-    .layout = vk::ImageLayout::eShaderReadOnlyOptimal,
-    .stage = vk::PipelineStageFlagBits2::eFragmentShader,
-    .access = vk::AccessFlagBits2::eShaderSampledRead
-});
-
-// Flush generates optimal barrier
-tracker.flush(cmd);
-```
-
-## Buffer State Tracking
+The `subresourceRange` identifies which mip levels and array layers this state
+applies to. Different sub-resources of the same image can be in different
+states simultaneously.
 
 ### BufferState
 
 ```cpp
 struct BufferState {
-    vk::Buffer buffer;
+    vk::Buffer              buffer;
+    vk::DeviceSize          offset;
+    vk::DeviceSize          size;
     vk::PipelineStageFlags2 stage;
-    vk::AccessFlags2 access;
-    vk::DeviceSize offset = 0;
-    vk::DeviceSize size = VK_WHOLE_SIZE;
+    vk::AccessFlags2        access;
 };
 ```
 
-### Tracking Buffers
+Like images, different byte ranges of the same buffer can be in different
+states.
+
+### AccelerationStructureState
 
 ```cpp
-// Track after CPU write
-tracker.track(BufferState{
-    .buffer = stagingBuffer->handle(),
-    .stage = vk::PipelineStageFlagBits2::eHost,
-    .access = vk::AccessFlagBits2::eHostWrite
-});
-
-// Request as vertex buffer
-tracker.request(BufferState{
-    .buffer = vertexBuffer->handle(),
-    .stage = vk::PipelineStageFlagBits2::eVertexInput,
-    .access = vk::AccessFlagBits2::eVertexAttributeRead
-});
+struct AccelerationStructureState {
+    vk::AccelerationStructureKHR handle;
+    vk::PipelineStageFlags2      stage;
+    vk::AccessFlags2             access;
+};
 ```
 
-## Subresource Tracking
+Used for ray tracing acceleration structures (BLAS / TLAS).
 
-Track individual mip levels or array layers:
+:::info Synchronization2 only
+All stage and access fields use the **Synchronization2** types
+(`vk::PipelineStageFlags2`, `vk::AccessFlags2`). Never use the legacy
+`vk::PipelineStageFlagBits` or `vk::AccessFlagBits` -- they are Vulkan 1.0
+types and are not supported.
+:::
 
-```cpp
-// Track specific mip level
-tracker.track(ImageState{
-    .image = texture->handle(),
-    .layout = vk::ImageLayout::eTransferDstOptimal,
-    .stage = vk::PipelineStageFlagBits2::eTransfer,
-    .access = vk::AccessFlagBits2::eTransferWrite,
-    .subresourceRange = {
-        vk::ImageAspectFlagBits::eColor,
-        0,   // baseMipLevel
-        1,   // levelCount
-        0,   // baseArrayLayer
-        1    // layerCount
-    }
-});
-```
+## The Track / Request / Flush Pattern
 
-## IntervalSet
+### Step-by-step Example
 
-Used internally for fine-grained buffer range tracking:
+Suppose you have a freshly created image and want to use it as a color
+attachment:
 
 ```cpp
-// Tracks non-overlapping intervals
-IntervalSet<uint64_t> ranges;
-ranges.insert({0, 100});
-ranges.insert({50, 150});  // Merged with previous
-// Result: single interval [0, 150)
-```
+vw::Barrier::ResourceTracker tracker;
 
-## Common Patterns
-
-### Texture Upload
-
-```cpp
-// After staging write
-tracker.track(ImageState{
-    .image = texture->handle(),
-    .layout = vk::ImageLayout::eUndefined,
-    .stage = vk::PipelineStageFlagBits2::eTopOfPipe,
-    .access = vk::AccessFlagBits2::eNone
+// 1. Tell the tracker: "this image is currently in eUndefined layout"
+tracker.track(vw::Barrier::ImageState{
+    .image            = myImage->handle(),
+    .subresourceRange = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1},
+    .layout           = vk::ImageLayout::eUndefined,
+    .stage            = vk::PipelineStageFlagBits2::eTopOfPipe,
+    .access           = vk::AccessFlagBits2::eNone
 });
 
-// Request transfer dst for copy
-tracker.request(ImageState{
-    .image = texture->handle(),
-    .layout = vk::ImageLayout::eTransferDstOptimal,
-    .stage = vk::PipelineStageFlagBits2::eTransfer,
-    .access = vk::AccessFlagBits2::eTransferWrite
+// 2. Tell the tracker: "I need it as a color attachment next"
+tracker.request(vw::Barrier::ImageState{
+    .image            = myImage->handle(),
+    .subresourceRange = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1},
+    .layout           = vk::ImageLayout::eColorAttachmentOptimal,
+    .stage            = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+    .access           = vk::AccessFlagBits2::eColorAttachmentWrite
 });
 
+// 3. Emit the barrier
 tracker.flush(cmd);
 
-// Copy operation...
-
-// Track new state
-tracker.track(ImageState{
-    .image = texture->handle(),
-    .layout = vk::ImageLayout::eTransferDstOptimal,
-    .stage = vk::PipelineStageFlagBits2::eTransfer,
-    .access = vk::AccessFlagBits2::eTransferWrite
-});
-
-// Request shader read
-tracker.request(ImageState{
-    .image = texture->handle(),
-    .layout = vk::ImageLayout::eShaderReadOnlyOptimal,
-    .stage = vk::PipelineStageFlagBits2::eFragmentShader,
-    .access = vk::AccessFlagBits2::eShaderSampledRead
-});
-
-tracker.flush(cmd);
+// Now the image is ready for rendering.
+// The tracker internally updated its state to eColorAttachmentOptimal.
 ```
 
-### G-Buffer Transitions
+### Multiple Resources in One Flush
+
+You can track and request many resources before a single flush. The tracker
+batches all transitions into one `vkCmdPipelineBarrier2` call:
 
 ```cpp
-// After geometry pass (written as attachment)
-for (auto& gbufferImage : gbuffer) {
-    tracker.track(ImageState{
-        .image = gbufferImage->handle(),
-        .layout = vk::ImageLayout::eColorAttachmentOptimal,
-        .stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-        .access = vk::AccessFlagBits2::eColorAttachmentWrite
-    });
-
-    // Request for lighting pass (read as sampled)
-    tracker.request(ImageState{
-        .image = gbufferImage->handle(),
-        .layout = vk::ImageLayout::eShaderReadOnlyOptimal,
-        .stage = vk::PipelineStageFlagBits2::eFragmentShader,
-        .access = vk::AccessFlagBits2::eShaderSampledRead
+// Transition G-buffer images from attachment to shader-read
+for (auto &gbufferImage : gbufferImages) {
+    tracker.request(vw::Barrier::ImageState{
+        .image            = gbufferImage->handle(),
+        .subresourceRange = colorRange,
+        .layout           = vk::ImageLayout::eShaderReadOnlyOptimal,
+        .stage            = vk::PipelineStageFlagBits2::eFragmentShader,
+        .access           = vk::AccessFlagBits2::eShaderSampledRead
     });
 }
 
+// One flush for all transitions
 tracker.flush(cmd);
 ```
 
+### State Persistence
+
+After `flush()`, the tracker remembers the new state of every resource. You
+do not need to call `track()` again after a flush -- just call `request()`
+for the next transition:
+
+```cpp
+// Initial setup
+tracker.track(imageState_undefined);
+tracker.request(imageState_colorAttachment);
+tracker.flush(cmd);
+
+// Later in the same frame -- no need to re-track
+tracker.request(imageState_shaderRead);
+tracker.flush(cmd);
+```
+
+You only need `track()` when:
+- A resource is first created.
+- You know the resource's state has changed outside the tracker (e.g., by
+  another queue or an external library).
+
+## Common Transition Patterns
+
+### Texture Upload
+
+Upload pixel data from a staging buffer to a GPU image:
+
+```cpp
+// Image starts undefined
+tracker.track(vw::Barrier::ImageState{
+    .image = texture->handle(),
+    .subresourceRange = colorRange,
+    .layout = vk::ImageLayout::eUndefined,
+    .stage  = vk::PipelineStageFlagBits2::eTopOfPipe,
+    .access = vk::AccessFlagBits2::eNone
+});
+
+// Transition to transfer destination
+tracker.request(vw::Barrier::ImageState{
+    .image = texture->handle(),
+    .subresourceRange = colorRange,
+    .layout = vk::ImageLayout::eTransferDstOptimal,
+    .stage  = vk::PipelineStageFlagBits2::eTransfer,
+    .access = vk::AccessFlagBits2::eTransferWrite
+});
+tracker.flush(cmd);
+
+// Copy staging buffer -> image
+cmd.copyBufferToImage(/* ... */);
+
+// Transition to shader read
+tracker.request(vw::Barrier::ImageState{
+    .image = texture->handle(),
+    .subresourceRange = colorRange,
+    .layout = vk::ImageLayout::eShaderReadOnlyOptimal,
+    .stage  = vk::PipelineStageFlagBits2::eFragmentShader,
+    .access = vk::AccessFlagBits2::eShaderSampledRead
+});
+tracker.flush(cmd);
+```
+
+### Render Target to Shader Input
+
+A common pattern in deferred rendering -- write to G-buffer attachments,
+then read them in a lighting pass:
+
+```cpp
+// After geometry pass: images were written as color attachments.
+// The tracker already knows they are in eColorAttachmentOptimal
+// (from a previous track or request+flush).
+
+// Request shader read for the lighting pass
+tracker.request(vw::Barrier::ImageState{
+    .image = positionBuffer->handle(),
+    .subresourceRange = colorRange,
+    .layout = vk::ImageLayout::eShaderReadOnlyOptimal,
+    .stage  = vk::PipelineStageFlagBits2::eFragmentShader,
+    .access = vk::AccessFlagBits2::eShaderSampledRead
+});
+tracker.flush(cmd);
+```
+
+### Buffer Barriers
+
+Ensure a uniform buffer write is visible before the vertex shader reads it:
+
+```cpp
+tracker.track(vw::Barrier::BufferState{
+    .buffer = uniformBuffer->handle(),
+    .offset = 0,
+    .size   = sizeof(UBO),
+    .stage  = vk::PipelineStageFlagBits2::eHost,
+    .access = vk::AccessFlagBits2::eHostWrite
+});
+
+tracker.request(vw::Barrier::BufferState{
+    .buffer = uniformBuffer->handle(),
+    .offset = 0,
+    .size   = sizeof(UBO),
+    .stage  = vk::PipelineStageFlagBits2::eVertexShader,
+    .access = vk::AccessFlagBits2::eUniformRead
+});
+tracker.flush(cmd);
+```
+
+### Acceleration Structure Barriers
+
+After building a TLAS, barrier before tracing rays:
+
+```cpp
+tracker.track(vw::Barrier::AccelerationStructureState{
+    .handle = tlas.handle(),
+    .stage  = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR,
+    .access = vk::AccessFlagBits2::eAccelerationStructureWriteKHR
+});
+
+tracker.request(vw::Barrier::AccelerationStructureState{
+    .handle = tlas.handle(),
+    .stage  = vk::PipelineStageFlagBits2::eRayTracingShaderKHR,
+    .access = vk::AccessFlagBits2::eAccelerationStructureReadKHR
+});
+tracker.flush(cmd);
+```
+
+## Sub-resource Tracking with IntervalSet
+
+Internally, the tracker uses `ImageIntervalSet` and `BufferIntervalSet` to
+manage fine-grained state. This means:
+
+- **Different mip levels** of the same image can be in different layouts.
+  For example, mip 0 can be `eColorAttachmentOptimal` while mips 1-N are
+  `eTransferDstOptimal` during mipmap generation.
+- **Different byte ranges** of the same buffer can have different access
+  states.
+
+When you track or request a sub-resource range, the tracker automatically
+splits, merges, and updates intervals as needed. You do not interact with
+`IntervalSet` directly -- it is an implementation detail.
+
+### Example: Per-Mip Transitions
+
+```cpp
+// Generate mipmaps: blit from mip N to mip N+1
+for (uint32_t mip = 1; mip < mipLevels; ++mip) {
+    // Source mip: transition to transfer source
+    tracker.request(vw::Barrier::ImageState{
+        .image = texture->handle(),
+        .subresourceRange = {vk::ImageAspectFlagBits::eColor,
+                             mip - 1, 1, 0, 1},
+        .layout = vk::ImageLayout::eTransferSrcOptimal,
+        .stage  = vk::PipelineStageFlagBits2::eTransfer,
+        .access = vk::AccessFlagBits2::eTransferRead
+    });
+
+    // Destination mip: transition to transfer destination
+    tracker.request(vw::Barrier::ImageState{
+        .image = texture->handle(),
+        .subresourceRange = {vk::ImageAspectFlagBits::eColor,
+                             mip, 1, 0, 1},
+        .layout = vk::ImageLayout::eTransferDstOptimal,
+        .stage  = vk::PipelineStageFlagBits2::eTransfer,
+        .access = vk::AccessFlagBits2::eTransferWrite
+    });
+
+    tracker.flush(cmd);
+
+    // Blit from mip-1 to mip
+    cmd.blitImage(/* ... */);
+}
+```
+
+## Integration with Transfer
+
+The `Transfer` class (`VulkanWrapper/Memory/Transfer.h`) embeds its own
+`ResourceTracker` and manages barriers automatically for copy and blit
+operations:
+
+```cpp
+vw::Transfer transfer;
+
+// Blit with automatic barrier management
+transfer.blit(cmd, srcImage, dstImage);
+
+// Access the embedded tracker for additional manual transitions
+auto &tracker = transfer.resourceTracker();
+tracker.request(/* ... */);
+tracker.flush(cmd);
+```
+
+When using `Transfer`, you generally do not need a separate `ResourceTracker`
+for the resources it manages.
+
 ## Best Practices
 
-1. **Track after modifications** - call `track()` after each operation
-2. **Request before use** - call `request()` before needed state
-3. **Batch flushes** - group multiple transitions
-4. **Use subresource ranges** for partial updates
-5. **Let tracker optimize** - it merges compatible barriers
+1. **Call `track()` once** when a resource is first created or when its state
+   is unknown. After that, let `request()` + `flush()` maintain the state.
+2. **Batch transitions** -- request all needed transitions before a single
+   `flush()`. This produces fewer, wider barriers.
+3. **Use precise sub-resource ranges** -- tracking the exact mip level or
+   buffer range avoids unnecessary full-resource barriers.
+4. **Always use Synchronization2 types** -- `vk::PipelineStageFlagBits2` and
+   `vk::AccessFlags2`, never the legacy v1 enums.
+5. **Let Transfer handle copy barriers** -- prefer `Transfer::blit()`,
+   `Transfer::copyBufferToImage()`, etc. over manual track/request for
+   copy operations.

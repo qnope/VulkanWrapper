@@ -1,207 +1,233 @@
 ---
 sidebar_position: 2
+title: "Command Buffer"
 ---
 
 # Command Buffer
 
-Command buffers record GPU commands for later submission.
-
 ## Overview
 
+A **command buffer** is a recorded list of GPU instructions (draw calls,
+dispatches, copies, barriers, ...).  In VulkanWrapper the native
+`vk::CommandBuffer` is used directly for most operations, while
+`CommandBufferRecorder` adds safety through RAII.
+
+- **`CommandBufferRecorder`** -- an RAII guard that calls `begin()` on
+  construction and `end()` on destruction, making it impossible to forget
+  closing the recording scope.
+- The raw `vk::CommandBuffer` handles returned by `CommandPool::allocate()` give
+  you full access to every Vulkan command.
+
+### Where it lives in the library
+
+| Item | Header |
+|------|--------|
+| `CommandBufferRecorder` | `VulkanWrapper/Command/CommandBuffer.h` |
+| `CommandPool::allocate` | `VulkanWrapper/Command/CommandPool.h` |
+
+Both live in the `vw` namespace.
+
+---
+
+## API Reference
+
+### Obtaining a command buffer
+
+Command buffers are allocated from a `CommandPool`:
+
 ```cpp
-#include <VulkanWrapper/Command/CommandBuffer.h>
+auto pool = vw::CommandPoolBuilder(device).build();
 
-auto cmd = pool->allocate();
+// Allocate primary command buffers
+std::vector<vk::CommandBuffer> cmds = pool.allocate(3);
+```
 
-// Record commands
+The returned `vk::CommandBuffer` handles expose the entire vulkan.hpp command
+recording API -- `beginRendering`, `draw`, `dispatch`, `copyBuffer`,
+`pipelineBarrier2`, and so on.
+
+### CommandBufferRecorder
+
+| Method / Lifecycle | Description |
+|--------------------|-------------|
+| `CommandBufferRecorder(vk::CommandBuffer cmd)` | Calls `cmd.begin(...)`. The buffer must not already be in the recording state. |
+| Destructor `~CommandBufferRecorder()` | Calls `cmd.end()`. |
+| `traceRaysKHR(raygen, miss, hit, callable, width, height, depth)` | Convenience wrapper around `vkCmdTraceRaysKHR` for ray tracing dispatch. |
+
+`CommandBufferRecorder` is non-copyable and non-movable. It is designed to be
+used as a stack variable whose lifetime matches the recording scope.
+
+### Recording manually (without the recorder)
+
+You can also call `begin()` / `end()` yourself on the raw handle:
+
+```cpp
+auto cmd = pool.allocate(1)[0];
+
+std::ignore = cmd.begin(
+    vk::CommandBufferBeginInfo()
+        .setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
+
+// ... record commands ...
+
+std::ignore = cmd.end();
+```
+
+The `std::ignore =` pattern is used because VulkanWrapper is built with
+`VULKAN_HPP_NO_EXCEPTIONS`, so `begin()` and `end()` return a
+`vk::Result` that must be consumed.
+
+---
+
+## Usage Examples
+
+### RAII recording with CommandBufferRecorder
+
+```cpp
+auto cmd = pool.allocate(1)[0];
+
 {
-    CommandBufferRecorder recorder(cmd);
-    // Commands recorded here
-    recorder.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
-    recorder.draw(3, 1, 0, 0);
-}  // Recording ends automatically
+    vw::CommandBufferRecorder recorder(cmd);
+
+    cmd.beginRendering(renderingInfo);
+    cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->handle());
+    cmd.draw(4, 1, 0, 0);
+    cmd.endRendering();
+}
+// recorder destructor calls cmd.end() here
+
+queue.enqueue_command_buffer(cmd);
+auto fence = queue.submit({}, {}, {});
+fence.wait();
 ```
 
-## CommandBuffer Class
+### One-time transfer commands
 
-### Methods
-
-| Method | Return Type | Description |
-|--------|-------------|-------------|
-| `handle()` | `vk::CommandBuffer` | Get raw handle |
-| `reset()` | `void` | Reset for re-recording |
-
-### Resetting
+A very common pattern is to record a short-lived command buffer for a one-time
+upload or copy:
 
 ```cpp
-// Reset individual buffer (pool must have eResetCommandBuffer)
-cmd.reset();
+auto cmd = pool.allocate(1)[0];
+std::ignore = cmd.begin(
+    vk::CommandBufferBeginInfo()
+        .setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
 
-// Or reset entire pool
-pool->reset();
+vw::Transfer transfer;
+transfer.copyBufferToImage(cmd, stagingBuffer.handle(), image, 0);
+
+std::ignore = cmd.end();
+
+queue.enqueue_command_buffer(cmd);
+queue.submit({}, {}, {}).wait();
 ```
 
-## CommandBufferRecorder
+### Dynamic rendering (no VkRenderPass)
 
-RAII wrapper that handles begin/end automatically:
+VulkanWrapper uses Vulkan 1.3 dynamic rendering exclusively.  There are no
+`VkRenderPass` or `VkFramebuffer` objects.
 
 ```cpp
-{
-    CommandBufferRecorder recorder(cmd);
-    // vkBeginCommandBuffer called in constructor
+vk::RenderingAttachmentInfo colorAttachment =
+    vk::RenderingAttachmentInfo()
+        .setImageView(view->handle())
+        .setImageLayout(vk::ImageLayout::eColorAttachmentOptimal)
+        .setLoadOp(vk::AttachmentLoadOp::eClear)
+        .setStoreOp(vk::AttachmentStoreOp::eStore)
+        .setClearValue(vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f));
 
-    // Record commands...
-    recorder.bindPipeline(/*...*/);
+vk::RenderingInfo renderingInfo =
+    vk::RenderingInfo()
+        .setRenderArea(vk::Rect2D({0, 0}, extent))
+        .setLayerCount(1)
+        .setColorAttachments(colorAttachment);
 
-}  // vkEndCommandBuffer called in destructor
+cmd.beginRendering(renderingInfo);
+// bind pipeline, set viewport/scissor, draw ...
+cmd.endRendering();
 ```
 
-### With Usage Flags
+---
+
+## Integration Patterns
+
+### Command buffer lifecycle
+
+```
+allocate  -->  begin  -->  record commands  -->  end  -->  submit  -->  wait
+```
+
+After the fence signals, the buffer can be:
+- **Re-recorded** (if the pool was created with `with_reset_command_buffer()`) by
+  calling `cmd.reset()` followed by `begin()`.
+- **Discarded** by simply not using it again; its memory returns to the pool
+  when the pool is destroyed.
+
+### Submission via Queue
+
+VulkanWrapper's `Queue` class manages batching of command buffers:
 
 ```cpp
-// One-time submit
-CommandBufferRecorder recorder(cmd,
-    vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+// Enqueue one or more command buffers
+queue.enqueue_command_buffer(cmd);
 
-// Simultaneous use (can be pending on multiple queues)
-CommandBufferRecorder recorder(cmd,
-    vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+// Submit returns a Fence you can wait on
+auto fence = queue.submit(
+    {},    // waitStages  (span<const vk::PipelineStageFlags>)
+    {},    // waitSemaphores
+    {});   // signalSemaphores
+
+fence.wait();
 ```
 
-## Recording Commands
+### Pairing with ResourceTracker for barriers
 
-### Pipeline Binding
+Rather than manually calling `cmd.pipelineBarrier2()`, use the library's
+`ResourceTracker` to build optimal barriers:
 
 ```cpp
-recorder.bindPipeline(vk::PipelineBindPoint::eGraphics,
-                      pipeline->handle());
+vw::Barrier::ResourceTracker tracker;
+
+tracker.track(vw::Barrier::ImageState{
+    .image = image,
+    .subresourceRange = range,
+    .layout = vk::ImageLayout::eUndefined,
+    .stage  = vk::PipelineStageFlagBits2::eTopOfPipe,
+    .access = vk::AccessFlagBits2::eNone});
+
+tracker.request(vw::Barrier::ImageState{
+    .image = image,
+    .subresourceRange = range,
+    .layout = vk::ImageLayout::eColorAttachmentOptimal,
+    .stage  = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+    .access = vk::AccessFlagBits2::eColorAttachmentWrite});
+
+tracker.flush(cmd);  // emits a single vkCmdPipelineBarrier2
 ```
 
-### Descriptor Sets
+---
 
-```cpp
-recorder.bindDescriptorSets(
-    vk::PipelineBindPoint::eGraphics,
-    layout.handle(),
-    0,                    // First set
-    {descriptorSet},      // Sets
-    {dynamicOffset}       // Dynamic offsets
-);
-```
+## Common Pitfalls
 
-### Vertex/Index Buffers
+1. **Forgetting to call `end()` before submission.**
+   If you record commands but forget `cmd.end()`, submission will fail with a
+   validation error.  `CommandBufferRecorder` eliminates this class of bug.
 
-```cpp
-// Vertex buffer
-recorder.bindVertexBuffers(0, {vertexBuffer->handle()}, {0});
+2. **Recording into a buffer that is still in flight.**
+   The GPU reads command buffers asynchronously after `submit()`.  You must wait
+   for the submission fence before you reset or re-record the same buffer.
 
-// Index buffer
-recorder.bindIndexBuffer(indexBuffer->handle(), 0,
-                         vk::IndexType::eUint32);
-```
+3. **Using `cmd.beginRenderPass()` instead of `cmd.beginRendering()`.**
+   VulkanWrapper targets Vulkan 1.3 dynamic rendering.  The legacy
+   `VkRenderPass` / `VkFramebuffer` path is not used and will trigger assertion
+   failures in validation layers if mixed with dynamic rendering features.
 
-### Drawing
+4. **Using v1 synchronization (`vk::PipelineStageFlagBits`) instead of v2
+   (`vk::PipelineStageFlagBits2`).**
+   The library exclusively uses Synchronization2.  Mixing old and new types
+   leads to subtle bugs.  Always use `PipelineStageFlagBits2` and
+   `AccessFlags2`.
 
-```cpp
-// Non-indexed
-recorder.draw(vertexCount, instanceCount, firstVertex, firstInstance);
-
-// Indexed
-recorder.drawIndexed(indexCount, instanceCount, firstIndex,
-                     vertexOffset, firstInstance);
-```
-
-### Push Constants
-
-```cpp
-recorder.pushConstants(
-    layout.handle(),
-    vk::ShaderStageFlagBits::eVertex,
-    0,                     // Offset
-    sizeof(pushData),
-    &pushData
-);
-```
-
-### Viewport/Scissor
-
-```cpp
-vk::Viewport viewport{0, 0, width, height, 0, 1};
-recorder.setViewport(0, viewport);
-
-vk::Rect2D scissor{{0, 0}, {width, height}};
-recorder.setScissor(0, scissor);
-```
-
-## Dynamic Rendering
-
-Vulkan 1.3 dynamic rendering (no render pass objects):
-
-```cpp
-vk::RenderingAttachmentInfo colorAttachment{
-    .imageView = colorView->handle(),
-    .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-    .loadOp = vk::AttachmentLoadOp::eClear,
-    .storeOp = vk::AttachmentStoreOp::eStore,
-    .clearValue = {{0.0f, 0.0f, 0.0f, 1.0f}}
-};
-
-vk::RenderingInfo renderInfo{
-    .renderArea = {{0, 0}, {width, height}},
-    .layerCount = 1,
-    .colorAttachmentCount = 1,
-    .pColorAttachments = &colorAttachment,
-    .pDepthAttachment = &depthAttachment
-};
-
-cmd.handle().beginRendering(renderInfo);
-// Draw calls here
-cmd.handle().endRendering();
-```
-
-## Barriers
-
-Using Synchronization2:
-
-```cpp
-vk::ImageMemoryBarrier2 barrier{
-    .srcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-    .srcAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite,
-    .dstStageMask = vk::PipelineStageFlagBits2::eFragmentShader,
-    .dstAccessMask = vk::AccessFlagBits2::eShaderSampledRead,
-    .oldLayout = vk::ImageLayout::eColorAttachmentOptimal,
-    .newLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
-    .image = image->handle(),
-    .subresourceRange = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1}
-};
-
-vk::DependencyInfo depInfo{
-    .imageMemoryBarrierCount = 1,
-    .pImageMemoryBarriers = &barrier
-};
-
-cmd.handle().pipelineBarrier2(depInfo);
-```
-
-## Submission
-
-```cpp
-vk::CommandBufferSubmitInfo cmdInfo{
-    .commandBuffer = cmd.handle()
-};
-
-vk::SubmitInfo2 submitInfo{
-    .commandBufferInfoCount = 1,
-    .pCommandBufferInfos = &cmdInfo
-};
-
-device->graphics_queue().submit(submitInfo, fence.handle());
-```
-
-## Best Practices
-
-1. **Use RAII recorder** for automatic begin/end
-2. **Batch commands** to reduce submit overhead
-3. **Use secondary buffers** for reusable sequences
-4. **Minimize state changes** between draws
-5. **Use appropriate barriers** for synchronization
+5. **Ignoring the `vk::Result` return value.**
+   With `VULKAN_HPP_NO_EXCEPTIONS` enabled, `cmd.begin()` and `cmd.end()`
+   return `vk::Result` instead of throwing.  Use `std::ignore =` to suppress
+   the warning, or check the result explicitly in debug builds.
