@@ -1,215 +1,317 @@
 ---
 sidebar_position: 3
+title: "Shaders"
 ---
 
 # Shaders
 
-VulkanWrapper provides shader compilation and module management.
-
 ## Overview
 
-```cpp
-#include <VulkanWrapper/Shader/ShaderCompiler.h>
-#include <VulkanWrapper/Pipeline/ShaderModule.h>
+VulkanWrapper provides runtime GLSL-to-SPIR-V compilation through the
+`ShaderCompiler` class and a thin `ShaderModule` RAII wrapper.  This means you
+can write your shaders in plain GLSL, and the library will compile them at
+application startup -- no offline compilation step needed.
 
-// Compile from file
-auto shader = ShaderCompiler::compile(
-    device,
-    "shaders/mesh.vert",
-    vk::ShaderStageFlagBits::eVertex
-);
+Key capabilities:
+
+- All Vulkan shader stages: vertex, fragment, compute, geometry, tessellation,
+  and the full set of ray tracing stages.
+- `#include` directive support with configurable search paths and virtual
+  (in-memory) files.
+- Preprocessor macro injection.
+- Automatic stage detection from file extensions.
+- Compilation error messages with source locations.
+
+### Where it lives in the library
+
+| Item | Header |
+|------|--------|
+| `ShaderCompiler` | `VulkanWrapper/Shader/ShaderCompiler.h` |
+| `ShaderModule` | `VulkanWrapper/Pipeline/ShaderModule.h` |
+| `ShaderCompilationResult` | `VulkanWrapper/Shader/ShaderCompiler.h` |
+| `IncludeMap` | `VulkanWrapper/Shader/ShaderCompiler.h` |
+
+All types live in the `vw` namespace.
+
+---
+
+## API Reference
+
+### ShaderCompiler
+
+`ShaderCompiler` is non-copyable but movable.  It uses the pImpl pattern
+internally (backed by shaderc).
+
+#### Configuration (fluent, chainable)
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `ShaderCompiler()` | -- | Default constructor. |
+| `add_include_path(const std::filesystem::path& path)` | `ShaderCompiler&` | Add a directory to the include search path. Searched in order when resolving `#include "..."` directives. |
+| `add_include(std::string_view name, std::string_view content)` | `ShaderCompiler&` | Register a virtual include file. When the compiler encounters `#include "name"`, it uses `content` directly instead of reading from disk. |
+| `set_includes(IncludeMap includes)` | `ShaderCompiler&` | Replace all virtual includes at once. `IncludeMap` is `std::map<std::string, std::string>`. |
+| `add_macro(std::string_view name, std::string_view value = "")` | `ShaderCompiler&` | Add a preprocessor macro definition. Equivalent to `#define name value` at the top of every compiled shader. |
+| `set_target_vulkan_version(uint32_t version)` | `ShaderCompiler&` | Set the target Vulkan API version (e.g., `VK_API_VERSION_1_3`). Affects the SPIR-V version emitted. |
+| `set_generate_debug_info(bool enable)` | `ShaderCompiler&` | Enable debug info in the SPIR-V output (useful for shader debuggers). |
+| `set_optimize(bool enable)` | `ShaderCompiler&` | Enable SPIR-V optimization (reduces binary size, may improve GPU performance). |
+
+#### Compilation
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `compile(source, stage, sourceName = "<source>")` | `ShaderCompilationResult` | Compile GLSL source string to SPIR-V. Throws `ShaderCompilationException` on failure. |
+| `compile_from_file(path)` | `ShaderCompilationResult` | Compile a file. Stage is auto-detected from the extension. Throws `FileException` if the file cannot be read. |
+| `compile_from_file(path, stage)` | `ShaderCompilationResult` | Compile a file with an explicit stage (overrides extension detection). |
+| `compile_to_module(device, source, stage, sourceName = "<source>")` | `std::shared_ptr<const ShaderModule>` | Compile GLSL and create a `ShaderModule` in one step. |
+| `compile_file_to_module(device, path)` | `std::shared_ptr<const ShaderModule>` | Compile a file and create a `ShaderModule` in one step. Stage is auto-detected. |
+
+#### Utilities
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `static detect_stage_from_extension(path)` | `vk::ShaderStageFlagBits` | Detect the shader stage from a file path. Throws `ShaderCompilationException` if the extension is not recognized. |
+
+**Supported extensions and stages:**
+
+| Extension | Stage | Extension | Stage |
+|-----------|-------|-----------|-------|
+| `.vert` | `eVertex` | `.rgen` | `eRaygenKHR` |
+| `.frag` | `eFragment` | `.rchit` | `eClosestHitKHR` |
+| `.comp` | `eCompute` | `.rmiss` | `eMissKHR` |
+| `.geom` | `eGeometry` | `.rahit` | `eAnyHitKHR` |
+| `.tesc` | `eTessellationControl` | `.rcall` | `eCallableKHR` |
+| `.tese` | `eTessellationEvaluation` | | |
+
+Double extensions like `.vert.glsl` and `.frag.glsl` are also supported -- the
+stage is detected from the second-to-last extension.
+
+### ShaderCompilationResult
+
+```cpp
+struct ShaderCompilationResult {
+    std::vector<std::uint32_t> spirv;              // SPIR-V bytecode
+    std::set<std::filesystem::path> includedFiles; // All files that were read
+};
 ```
 
-## ShaderCompiler
+The `includedFiles` set contains every file that contributed to the compilation
+(the main file plus all `#include`d files).  This is useful for hot-reload
+systems that need to watch dependencies.
 
-### Compile from File
+### ShaderModule
+
+`ShaderModule` inherits `ObjectWithUniqueHandle<vk::UniqueShaderModule>`.
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `handle()` | `vk::ShaderModule` | The raw Vulkan handle (inherited). |
+| `static create_from_spirv(device, std::span<const uint32_t> spirv)` | `std::shared_ptr<const ShaderModule>` | Create a module from pre-compiled SPIR-V bytes. |
+| `static create_from_spirv_file(device, path)` | `std::shared_ptr<const ShaderModule>` | Load a `.spv` file from disk and create a module. |
+
+---
+
+## Usage Examples
+
+### Compile a file and create a module
 
 ```cpp
-auto shader = ShaderCompiler::compile(
-    device,
-    "path/to/shader.vert",
-    vk::ShaderStageFlagBits::eVertex
-);
+vw::ShaderCompiler compiler;
+auto vertModule = compiler.compile_file_to_module(device, "shaders/mesh.vert");
+auto fragModule = compiler.compile_file_to_module(device, "shaders/mesh.frag");
 ```
 
-### Compile from Source
+### Compile inline GLSL
 
 ```cpp
-std::string source = R"(
-    #version 450
-    layout(location = 0) out vec4 outColor;
-    void main() {
-        outColor = vec4(1.0, 0.0, 0.0, 1.0);
-    }
+const std::string fragSource = R"(
+#version 450
+layout(location = 0) out vec4 outColor;
+void main() {
+    outColor = vec4(1.0, 0.0, 0.0, 1.0);
+}
 )";
 
-auto shader = ShaderCompiler::compile(
-    device,
-    source,
-    "inline_shader",  // Name for error messages
-    vk::ShaderStageFlagBits::eFragment
-);
+vw::ShaderCompiler compiler;
+auto fragModule = compiler.compile_to_module(
+    device, fragSource, vk::ShaderStageFlagBits::eFragment);
 ```
 
-### With Include Paths
+### Include paths and virtual includes
 
 ```cpp
-auto shader = ShaderCompiler::compile(
-    device,
-    "shaders/main.vert",
-    vk::ShaderStageFlagBits::eVertex,
-    {"shaders/include", "common/glsl"}
-);
+vw::ShaderCompiler compiler;
+
+// Search for #include files in this directory
+compiler.add_include_path("Shaders/include");
+
+// Register a virtual include (not on disk)
+compiler.add_include("config.glsl", "#define MAX_LIGHTS 16\n");
+
+auto result = compiler.compile_from_file("Shaders/lighting.frag");
 ```
 
-## Shader Stages
-
-| Stage | Flag | Extension |
-|-------|------|-----------|
-| Vertex | `eVertex` | `.vert` |
-| Fragment | `eFragment` | `.frag` |
-| Compute | `eCompute` | `.comp` |
-| Geometry | `eGeometry` | `.geom` |
-| Tessellation Control | `eTessellationControl` | `.tesc` |
-| Tessellation Eval | `eTessellationEvaluation` | `.tese` |
-| Ray Gen | `eRaygenKHR` | `.rgen` |
-| Ray Miss | `eMissKHR` | `.rmiss` |
-| Ray Closest Hit | `eClosestHitKHR` | `.rchit` |
-| Ray Any Hit | `eAnyHitKHR` | `.rahit` |
-| Ray Intersection | `eIntersectionKHR` | `.rint` |
-
-## ShaderModule
-
-### Methods
-
-| Method | Return Type | Description |
-|--------|-------------|-------------|
-| `handle()` | `vk::ShaderModule` | Get raw handle |
-| `stage()` | `vk::ShaderStageFlagBits` | Get shader stage |
-
-### Usage with Pipeline
+### Using set_includes for multiple virtual files
 
 ```cpp
-auto pipeline = GraphicsPipelineBuilder(device, layout)
-    .add_shader(vk::ShaderStageFlagBits::eVertex, vertShader)
-    .add_shader(vk::ShaderStageFlagBits::eFragment, fragShader)
-    .build();
+vw::IncludeMap includes;
+includes["constants.glsl"] = "#define PI 3.14159265359\n";
+includes["utils.glsl"]     = "#define GREEN 0.5\n";
+
+vw::ShaderCompiler compiler;
+compiler.set_includes(std::move(includes));
+
+auto result = compiler.compile(shaderSource,
+                               vk::ShaderStageFlagBits::eFragment);
 ```
 
-## GLSL Conventions
+### Preprocessor macros
 
-### Vertex Shader
-
-```glsl
-#version 450
-
-layout(location = 0) in vec3 inPosition;
-layout(location = 1) in vec3 inNormal;
-layout(location = 2) in vec2 inTexCoord;
-
-layout(location = 0) out vec3 fragNormal;
-layout(location = 1) out vec2 fragTexCoord;
-
-layout(push_constant) uniform PushConstants {
-    mat4 model;
-    mat4 viewProj;
-} pc;
-
-void main() {
-    gl_Position = pc.viewProj * pc.model * vec4(inPosition, 1.0);
-    fragNormal = mat3(pc.model) * inNormal;
-    fragTexCoord = inTexCoord;
-}
-```
-
-### Fragment Shader
-
-```glsl
-#version 450
-
-layout(location = 0) in vec3 fragNormal;
-layout(location = 1) in vec2 fragTexCoord;
-
-layout(location = 0) out vec4 outColor;
-
-layout(set = 0, binding = 0) uniform sampler2D texSampler;
-
-void main() {
-    vec4 texColor = texture(texSampler, fragTexCoord);
-    vec3 normal = normalize(fragNormal);
-    outColor = texColor;
-}
-```
-
-## Include System
-
-VulkanWrapper shaders use includes for shared code:
-
-### Include Paths
-
-```
-VulkanWrapper/Shaders/include/
-├── atmosphere_params.glsl
-├── atmosphere_scattering.glsl
-├── sky_radiance.glsl
-└── random.glsl
-```
-
-### Using Includes
-
-```glsl
-#version 450
-#extension GL_GOOGLE_include_directive : require
-
-#include "atmosphere_params.glsl"
-#include "sky_radiance.glsl"
-
-void main() {
-    vec3 radiance = compute_sky_radiance(params, direction);
-}
-```
-
-## Fullscreen Shader
-
-Common fullscreen triangle vertex shader:
-
-```glsl
-// VulkanWrapper/Shaders/fullscreen.vert
-#version 450
-
-layout(location = 0) out vec2 texCoord;
-
-void main() {
-    texCoord = vec2((gl_VertexIndex << 1) & 2, gl_VertexIndex & 2);
-    gl_Position = vec4(texCoord * 2.0 - 1.0, 0.0, 1.0);
-}
-```
-
-Usage:
 ```cpp
-// Draw fullscreen without vertex buffer
-cmd.draw(3, 1, 0, 0);
+vw::ShaderCompiler compiler;
+compiler.add_macro("ENABLE_SHADOWS");
+compiler.add_macro("MAX_SAMPLES", "64");
+
+auto module = compiler.compile_file_to_module(device, "shaders/main.frag");
 ```
+
+### Full configuration chain
+
+```cpp
+auto result =
+    vw::ShaderCompiler()
+        .add_include_path("Shaders/include")
+        .set_target_vulkan_version(VK_API_VERSION_1_3)
+        .add_macro("VULKAN_1_3")
+        .set_generate_debug_info(true)
+        .set_optimize(false)
+        .compile_from_file("Shaders/deferred.frag");
+```
+
+### Loading pre-compiled SPIR-V
+
+If you prefer offline compilation (e.g., via `glslangValidator` or
+`glslc`), you can load `.spv` files directly:
+
+```cpp
+auto module = vw::ShaderModule::create_from_spirv_file(
+    device, "shaders/mesh.vert.spv");
+```
+
+Or from an in-memory SPIR-V vector:
+
+```cpp
+std::vector<uint32_t> spirvData = /* loaded from file or embedded */;
+auto module = vw::ShaderModule::create_from_spirv(device, spirvData);
+```
+
+---
+
+## Integration Patterns
+
+### Shader to Pipeline flow
+
+```
+ShaderCompiler  --->  ShaderModule  --->  GraphicsPipelineBuilder
+  (GLSL)              (SPIR-V)            (GPU state)
+```
+
+Typical code:
+
+```cpp
+vw::ShaderCompiler compiler;
+compiler.add_include_path("Shaders/include");
+
+auto vert = compiler.compile_file_to_module(device, "Shaders/mesh.vert");
+auto frag = compiler.compile_file_to_module(device, "Shaders/mesh.frag");
+
+auto pipeline =
+    vw::GraphicsPipelineBuilder(device, layout)
+        .add_shader(vk::ShaderStageFlagBits::eVertex, vert)
+        .add_shader(vk::ShaderStageFlagBits::eFragment, frag)
+        // ... other state ...
+        .build();
+```
+
+### Hot-reload using includedFiles
+
+```cpp
+auto result = compiler.compile_from_file("shaders/main.frag");
+
+// Watch all dependency files for changes
+for (const auto& dep : result.includedFiles) {
+    fileWatcher.watch(dep, [&] { recompile(); });
+}
+```
+
+### Screen-space pass shortcut
+
+For fullscreen post-processing passes, `create_screen_space_pipeline()` wires
+the vertex and fragment shaders into a ready-to-use pipeline:
+
+```cpp
+auto vert = compiler.compile_to_module(
+    device, fullscreenVertSrc, vk::ShaderStageFlagBits::eVertex);
+auto frag = compiler.compile_to_module(
+    device, tonemapFragSrc, vk::ShaderStageFlagBits::eFragment);
+
+auto pipeline = vw::create_screen_space_pipeline(
+    device, vert, frag, descriptorLayout,
+    vk::Format::eR8G8B8A8Unorm);
+```
+
+---
 
 ## Error Handling
 
-Compilation errors throw `ShaderCompilationException`:
+The compiler throws typed exceptions from the `vw::Exception` hierarchy:
+
+| Exception | When |
+|-----------|------|
+| `ShaderCompilationException` | GLSL syntax error, unresolved include, unsupported extension |
+| `FileException` | Source file does not exist or cannot be read |
+
+`ShaderCompilationException` provides additional context:
 
 ```cpp
 try {
-    auto shader = ShaderCompiler::compile(device, "bad.vert",
-                                          vk::ShaderStageFlagBits::eVertex);
-} catch (const ShaderCompilationException& e) {
-    std::cerr << "Shader error: " << e.what() << '\n';
-    // Includes line numbers and error details
+    compiler.compile(badGlsl, vk::ShaderStageFlagBits::eVertex);
+} catch (const vw::ShaderCompilationException& e) {
+    std::cerr << "Stage: " << vk::to_string(e.stage()) << "\n";
+    std::cerr << "Log:\n" << e.compilation_log() << "\n";
 }
 ```
 
-## Best Practices
+---
 
-1. **Use includes** for shared code
-2. **Match locations** between shader stages
-3. **Match descriptor bindings** with layout
-4. **Use push constants** for frequently changing data
-5. **Cache compiled shaders** for faster startup
-6. **Enable validation** to catch binding mismatches
+## Common Pitfalls
+
+1. **Missing `#version` directive.**
+   GLSL files must start with `#version 450` (or later).  Without it, shaderc
+   defaults to an older GLSL version and most Vulkan features will not compile.
+
+2. **Include path not set.**
+   If your shader uses `#include "foo.glsl"` but you did not call
+   `add_include_path()` with the directory containing `foo.glsl`, compilation
+   will throw `ShaderCompilationException`.
+
+3. **Extension mismatch.**
+   `compile_from_file()` (single-argument) detects the stage from the
+   extension.  If your file is named `shader.glsl` (ambiguous), you must use
+   the overload that takes an explicit `vk::ShaderStageFlagBits` stage, or
+   rename the file to use a recognized extension.
+
+4. **Forgetting to pass the `Device` for module creation.**
+   `compile()` and `compile_from_file()` return raw SPIR-V bytes, not a
+   `ShaderModule`.  To feed the result into `GraphicsPipelineBuilder`, use
+   `compile_to_module()` or `compile_file_to_module()` which create the
+   `VkShaderModule` handle for you.
+
+5. **Keeping the compiler alive unnecessarily.**
+   `ShaderModule` objects are independent of the `ShaderCompiler` that created
+   them.  You can destroy the compiler as soon as compilation is done.
+
+6. **Stage mismatch in `add_shader()`.**
+   The `vk::ShaderStageFlagBits` passed to
+   `GraphicsPipelineBuilder::add_shader()` must match the actual stage the
+   shader was compiled for.  If you compile as `eVertex` but add as
+   `eFragment`, you will get driver errors.

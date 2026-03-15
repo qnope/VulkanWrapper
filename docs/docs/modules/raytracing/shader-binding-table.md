@@ -4,215 +4,335 @@ sidebar_position: 3
 
 # Shader Binding Table
 
-The Shader Binding Table (SBT) defines which shaders are invoked during ray tracing.
+The Shader Binding Table (SBT) tells the GPU which shaders to invoke during
+ray tracing. When a ray hits geometry, misses all geometry, or is first
+generated, the SBT determines which shader runs. VulkanWrapper provides the
+`ShaderBindingTable` class (in namespace `vw::rt`) to construct and manage
+the SBT from `RayTracingPipeline` handles.
 
-## Overview
+## How the SBT Works
+
+The SBT is a GPU buffer organized into three regions:
+
+```
++------------------------------+
+|     Ray Generation (1)       |  <- One entry: the raygen shader
++------------------------------+
+|     Miss Shaders (N)         |  <- One entry per miss shader
++------------------------------+
+|     Hit Groups (M)           |  <- One entry per closest-hit shader
++------------------------------+
+```
+
+Each entry is a fixed-size **record** (256 bytes) containing the shader group
+handle and optional payload data. When you call `traceRaysKHR`, you pass the
+device address and stride of each region.
+
+### Key Constants
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `ShaderBindingTableHandleRecordSize` | 256 | Size of each SBT record in bytes |
+| `ShaderBindingTableHandleSizeAlignment` | 64 | Alignment of shader group handles |
+| `MaximumRecordInShaderBindingTable` | 4096 | Maximum records per region buffer |
+
+## Creating a ShaderBindingTable
+
+### Step 1: Build the RayTracingPipeline
+
+The SBT is populated from a `RayTracingPipeline`. First, build the pipeline
+using `RayTracingPipelineBuilder`:
 
 ```cpp
-#include <VulkanWrapper/RayTracing/ShaderBindingTable.h>
+auto pipelineLayout = /* ... */;
 
-// Create SBT from pipeline
-auto sbt = pipeline->create_sbt(allocator);
+auto pipeline = vw::rt::RayTracingPipelineBuilder(device, allocator, pipelineLayout)
+    .set_ray_generation_shader(raygenModule)
+    .add_miss_shader(missModule)
+    .add_closest_hit_shader(closestHitModule)
+    .build();
+```
 
-// Use in traceRaysKHR
+The pipeline stores the compiled shader group handles internally.
+
+### Step 2: Construct the SBT
+
+Pass the allocator and the raygen handle to the `ShaderBindingTable`
+constructor:
+
+```cpp
+auto sbt = vw::rt::ShaderBindingTable(
+    allocator, pipeline.ray_generation_handle());
+```
+
+The constructor writes the raygen record into the SBT buffer immediately.
+
+### Step 3: Add Miss and Hit Records
+
+Retrieve handles from the pipeline and add them to the SBT:
+
+```cpp
+// Add miss shader records
+for (const auto &handle : pipeline.miss_handles()) {
+    sbt.add_miss_record(handle);
+}
+
+// Add closest-hit shader records
+for (const auto &handle : pipeline.closest_hit_handles()) {
+    sbt.add_hit_record(handle);
+}
+```
+
+### Complete Example
+
+```cpp
+// Build pipeline
+auto pipeline = vw::rt::RayTracingPipelineBuilder(device, allocator, layout)
+    .set_ray_generation_shader(raygenModule)
+    .add_miss_shader(primaryMissModule)
+    .add_miss_shader(shadowMissModule)
+    .add_closest_hit_shader(opaqueHitModule)
+    .add_closest_hit_shader(transparentHitModule)
+    .build();
+
+// Build SBT
+auto sbt = vw::rt::ShaderBindingTable(
+    allocator, pipeline.ray_generation_handle());
+
+for (const auto &handle : pipeline.miss_handles()) {
+    sbt.add_miss_record(handle);
+}
+
+for (const auto &handle : pipeline.closest_hit_handles()) {
+    sbt.add_hit_record(handle);
+}
+```
+
+## SBT Record Payload
+
+Both `add_miss_record` and `add_hit_record` are variadic templates that
+accept optional payload data after the handle:
+
+```cpp
+void add_miss_record(const ShaderBindingTableHandle &handle,
+                     const auto &...object);
+
+void add_hit_record(const ShaderBindingTableHandle &handle,
+                    const auto &...object);
+```
+
+The payload is appended after the shader group handle within the 256-byte
+record. The payload must fit:
+`sizeof(payload) + ShaderBindingTableHandleSizeAlignment < ShaderBindingTableHandleRecordSize`.
+
+### Example: Embedding Material Data
+
+```cpp
+struct HitPayload {
+    uint64_t materialBufferAddress;
+    uint32_t materialIndex;
+};
+
+HitPayload payload{
+    .materialBufferAddress = materialBuffer.device_address(),
+    .materialIndex = 42
+};
+
+sbt.add_hit_record(hitHandle, payload);
+```
+
+In the shader, access the payload via `shaderRecordEXT`:
+
+```glsl
+layout(shaderRecordEXT) buffer SbtData {
+    uint64_t materialBufferAddress;
+    uint    materialIndex;
+} sbtData;
+```
+
+## Dispatching Rays
+
+Use the three region accessors to fill the `traceRaysKHR` call:
+
+```cpp
+// Each returns a vk::StridedDeviceAddressRegionKHR
+// with deviceAddress, stride, and size fields set.
+auto raygenRegion = sbt.raygen_region();
+auto missRegion   = sbt.miss_region();
+auto hitRegion    = sbt.hit_region();
+
+// An empty region for callable shaders (not used here)
+vk::StridedDeviceAddressRegionKHR callableRegion{};
+
+// Dispatch rays
+cmd.traceRaysKHR(
+    raygenRegion,
+    missRegion,
+    hitRegion,
+    callableRegion,
+    width, height, 1);
+```
+
+The library also provides `CommandBufferRecorder::traceRaysKHR` as a
+convenience wrapper:
+
+```cpp
+vw::CommandBufferRecorder recorder(cmd);
+recorder.traceRaysKHR(
+    sbt.raygen_region(),
+    sbt.miss_region(),
+    sbt.hit_region(),
+    vk::StridedDeviceAddressRegionKHR{},
+    width, height, 1);
+```
+
+## Integration with RayTracedScene
+
+`RayTracedScene` manages BLAS/TLAS construction and geometry registration.
+Each instance in the scene can have a per-instance SBT offset that selects
+which hit group to use:
+
+```cpp
+vw::rt::RayTracedScene scene(device, allocator);
+
+// Add mesh instances
+auto id = scene.add_instance(mesh, transform);
+
+// Set SBT offset for this instance (selects the hit group)
+scene.set_sbt_offset(id, 1); // Use hit group at index 1
+```
+
+### Material-to-SBT Mapping
+
+For scenes with multiple material types, `RayTracedScene` supports automatic
+SBT offset assignment based on material type:
+
+```cpp
+// Map material types to SBT hit group indices
+std::unordered_map<vw::Model::Material::MaterialTypeTag, uint32_t> mapping;
+mapping[texturedMaterialTag] = 0;   // Textured materials use hit group 0
+mapping[coloredMaterialTag]  = 1;   // Colored materials use hit group 1
+
+scene.set_material_sbt_mapping(mapping);
+```
+
+When instances are added, their SBT offset is automatically set based on
+their material type.
+
+### Complete Ray Tracing Setup
+
+Here is how the pieces fit together, following the pattern used in
+`IndirectLightPass`:
+
+```cpp
+// 1. Build ray tracing pipeline with shaders for each material type
+auto builder = vw::rt::RayTracingPipelineBuilder(device, allocator, layout);
+builder.set_ray_generation_shader(raygenModule);
+builder.add_miss_shader(missModule);
+
+// One closest-hit shader per material type
+for (const auto &handler : materialHandlers) {
+    auto hitModule = compiler.compile_to_module(
+        device, handler->shader_source(),
+        vk::ShaderStageFlagBits::eClosestHitKHR,
+        "material.rchit");
+    builder.add_closest_hit_shader(hitModule);
+}
+auto pipeline = builder.build();
+
+// 2. Build SBT from pipeline handles
+auto sbt = vw::rt::ShaderBindingTable(
+    allocator, pipeline.ray_generation_handle());
+
+auto missHandles = pipeline.miss_handles();
+for (const auto &handle : missHandles) {
+    sbt.add_miss_record(handle);
+}
+
+auto hitHandles = pipeline.closest_hit_handles();
+for (const auto &handle : hitHandles) {
+    sbt.add_hit_record(handle);
+}
+
+// 3. Build acceleration structures
+scene.build();
+
+// 4. Trace rays
 cmd.traceRaysKHR(
     sbt.raygen_region(),
     sbt.miss_region(),
     sbt.hit_region(),
-    sbt.callable_region(),
-    width, height, 1
-);
+    vk::StridedDeviceAddressRegionKHR{},
+    width, height, 1);
 ```
 
-## SBT Structure
+## SBT Indexing in Shaders
 
-The SBT is organized into regions:
+Understanding how `traceRayEXT` selects shaders is essential for
+multi-material and multi-ray-type setups.
 
-```
-┌─────────────────────┐
-│   Ray Generation    │  Single entry
-├─────────────────────┤
-│      Miss 0         │
-│      Miss 1         │  Miss shader entries
-│        ...          │
-├─────────────────────┤
-│    Hit Group 0      │
-│    Hit Group 1      │  Hit group entries
-│        ...          │
-├─────────────────────┤
-│    Callable 0       │  Optional callable
-│        ...          │  shader entries
-└─────────────────────┘
-```
+### Miss Shader Selection
 
-## ShaderBindingTable Class
-
-### Methods
-
-| Method | Return Type | Description |
-|--------|-------------|-------------|
-| `raygen_region()` | `vk::StridedDeviceAddressRegionKHR` | Ray gen shader region |
-| `miss_region()` | `vk::StridedDeviceAddressRegionKHR` | Miss shaders region |
-| `hit_region()` | `vk::StridedDeviceAddressRegionKHR` | Hit groups region |
-| `callable_region()` | `vk::StridedDeviceAddressRegionKHR` | Callable shaders region |
-
-### Region Structure
-
-```cpp
-struct vk::StridedDeviceAddressRegionKHR {
-    vk::DeviceAddress deviceAddress;  // Buffer address
-    vk::DeviceSize stride;            // Entry stride
-    vk::DeviceSize size;              // Total size
-};
-```
-
-## Creating the SBT
-
-### From Pipeline
-
-```cpp
-// Automatic creation
-auto sbt = pipeline->create_sbt(allocator);
-```
-
-### Manual Creation
-
-```cpp
-// Query shader group handles
-auto handleSize = rtProperties.shaderGroupHandleSize;
-auto handleAlignment = rtProperties.shaderGroupHandleAlignment;
-auto baseAlignment = rtProperties.shaderGroupBaseAlignment;
-
-// Calculate entry sizes (aligned)
-auto alignedHandleSize = align(handleSize, handleAlignment);
-auto raygenSize = align(alignedHandleSize, baseAlignment);
-auto missSize = align(alignedHandleSize * missCount, baseAlignment);
-auto hitSize = align(alignedHandleSize * hitGroupCount, baseAlignment);
-
-// Allocate buffer
-auto sbtBuffer = allocator->allocate<SBTBuffer>(
-    raygenSize + missSize + hitSize
-);
-
-// Write handles...
-```
-
-## Shader Group Indices
-
-When building the pipeline, shader groups are assigned indices:
-
-```cpp
-// Index 0: Ray generation
-builder.addRaygenShader(raygen);
-
-// Index 1, 2: Miss shaders
-builder.addMissShader(primaryMiss);   // Index 1
-builder.addMissShader(shadowMiss);    // Index 2
-
-// Index 3, 4: Hit groups
-builder.addHitGroup(triangleHit);     // Index 3
-builder.addHitGroup(proceduralHit);   // Index 4
-```
-
-## Using Multiple Miss Shaders
-
-Select miss shader in traceRayEXT:
+The `missIndex` parameter of `traceRayEXT` directly indexes into the miss
+region:
 
 ```glsl
-// Primary ray - use miss shader 0
-traceRayEXT(tlas, flags, 0xFF,
-            0,    // SBT offset
-            0,    // SBT stride
-            0,    // Miss index (uses miss shader 0)
-            origin, tMin, direction, tMax, 0);
-
-// Shadow ray - use miss shader 1
+// Use miss shader 0 for primary rays
 traceRayEXT(tlas, flags, 0xFF,
             0, 0,
-            1,    // Miss index (uses miss shader 1)
+            0,      // missIndex -> miss shader 0
+            origin, tMin, direction, tMax, 0);
+
+// Use miss shader 1 for shadow rays
+traceRayEXT(tlas, flags, 0xFF,
+            0, 0,
+            1,      // missIndex -> miss shader 1
             origin, tMin, direction, tMax, 1);
 ```
 
-## Using Multiple Hit Groups
+### Hit Group Selection
 
-Select hit group based on instance and geometry:
+The hit group index is computed as:
 
-```glsl
-// SBT offset = instanceOffset + geometryOffset
-// instanceOffset = instance.instanceShaderBindingTableRecordOffset
-// geometryOffset = geometryIndex * SBT record stride
-
-traceRayEXT(tlas, flags, 0xFF,
-            0,    // SBT offset (added to instance offset)
-            1,    // SBT stride (for multiple geometries)
-            0,    // Miss index
-            origin, tMin, direction, tMax, 0);
+```
+hitGroupIndex = instanceShaderBindingTableRecordOffset
+              + (sbtRecordOffset + geometryIndex * sbtRecordStride)
 ```
 
-### Instance Configuration
+- `instanceShaderBindingTableRecordOffset` is set per-instance via
+  `scene.set_sbt_offset(id, offset)` or through the material-to-SBT
+  mapping.
+- `sbtRecordOffset` and `sbtRecordStride` are parameters of
+  `traceRayEXT`.
+- `geometryIndex` is the index of the geometry within the BLAS.
 
-```cpp
-vk::AccelerationStructureInstanceKHR instance{
-    .transform = transform,
-    .instanceCustomIndex = 0,
-    .mask = 0xFF,
-    .instanceShaderBindingTableRecordOffset = 0,  // Hit group index
-    .accelerationStructureReference = blasAddress
-};
-```
+For a simple setup with one geometry per BLAS and material-based hit group
+selection, set the instance SBT offset to the desired hit group index.
 
-## Shader Record Data
+## Internal Buffer Layout
 
-Custom data can be embedded in SBT entries:
+The SBT uses two separate GPU buffers internally:
 
-```cpp
-struct HitShaderRecord {
-    uint8_t handle[32];  // Shader group handle
-    uint32_t materialId; // Custom data
-    uint32_t textureId;
-};
-```
+1. **Raygen + Miss buffer**: The raygen record is at offset 0, followed by
+   miss records. The `raygen_region()` points to offset 0 with size = 1
+   record. The `miss_region()` points to offset 256 (after raygen) with
+   size = N miss records.
 
-Access in shader:
-```glsl
-layout(shaderRecordEXT) buffer ShaderRecord {
-    uint materialId;
-    uint textureId;
-} record;
-```
+2. **Hit buffer**: A separate buffer holding all hit group records.
+   `hit_region()` points to the start of this buffer.
 
-## Example: Shadow Rays
-
-```cpp
-// Pipeline with two miss shaders
-builder.addMissShader(primaryMiss);  // Returns sky color
-builder.addMissShader(shadowMiss);   // Returns "not in shadow"
-
-// In closest hit shader:
-void main() {
-    // Compute lighting...
-
-    // Trace shadow ray
-    isShadowed = true;
-    traceRayEXT(tlas,
-                gl_RayFlagsTerminateOnFirstHitEXT |
-                gl_RayFlagsSkipClosestHitShaderEXT,
-                0xFF,
-                0, 0,
-                1,  // Shadow miss shader
-                hitPoint, 0.001, lightDir, lightDist,
-                1); // Shadow payload
-
-    if (!isShadowed) {
-        // Add light contribution
-    }
-}
-```
+Both buffers have `eShaderBindingTableKHR | eShaderDeviceAddress` usage flags
+and are host-visible for direct CPU writes.
 
 ## Best Practices
 
-1. **Order miss shaders** by frequency of use
-2. **Use instance offset** for per-instance hit groups
-3. **Minimize SBT size** by sharing hit groups
-4. **Consider shader record data** for material IDs
-5. **Align entries** to hardware requirements
+1. **Build the SBT after the pipeline** -- you need the pipeline's compiled
+   shader group handles.
+2. **Add miss records before hit records** -- while not strictly required by
+   the API, this matches the logical pipeline layout.
+3. **Use `set_material_sbt_mapping`** on `RayTracedScene` for automatic
+   per-material hit group assignment.
+4. **Keep payload small** -- each record is 256 bytes total including the
+   64-byte handle. Prefer GPU buffer addresses over inline data.
+5. **Match miss shader indices** in `traceRayEXT` to the order you called
+   `add_miss_shader` on the pipeline builder.
