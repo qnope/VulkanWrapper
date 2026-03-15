@@ -6,14 +6,13 @@ import Heading from '@theme/Heading';
 import styles from './index.module.css';
 
 function HomepageHeader() {
-  const { siteConfig } = useDocusaurusContext();
   return (
     <header className={clsx('hero hero--primary', styles.heroBanner)}>
       <div className="container">
         <Heading as="h1" className="hero__title">
-          {siteConfig.title}
+          VulkanWrapper
         </Heading>
-        <p className="hero__subtitle">{siteConfig.tagline}</p>
+        <p className="hero__subtitle">A Modern C++23 Vulkan Graphics Library</p>
         <div className={styles.buttons}>
           <Link
             className="button button--secondary button--lg"
@@ -37,10 +36,10 @@ const FeatureList = [
     title: 'Type-Safe C++23',
     description: (
       <>
-        Leverage modern C++23 features including concepts, ranges, and
-        <code>std::span</code> for compile-time type safety. Strong types like
-        <code>Width</code>, <code>Height</code>, and <code>MipLevel</code> prevent
-        common parameter mistakes.
+        Leverage modern C++23 features including concepts, ranges, and strong
+        types like <code>Width</code>, <code>Height</code>, and{' '}
+        <code>MipLevel</code> for compile-time type safety, preventing common
+        parameter mistakes.
       </>
     ),
   },
@@ -48,9 +47,10 @@ const FeatureList = [
     title: 'RAII Resource Management',
     description: (
       <>
-        All Vulkan resources are automatically managed through RAII wrappers.
-        No manual cleanup required - resources are freed when they go out of scope,
-        preventing leaks and use-after-free bugs.
+        All Vulkan resources are automatically managed through{' '}
+        <code>ObjectWithHandle</code> RAII wrappers. No manual cleanup
+        required - resources are freed when they go out of scope, preventing
+        leaks and use-after-free bugs.
       </>
     ),
   },
@@ -87,8 +87,9 @@ const FeatureList = [
     title: 'Physical-Based Rendering',
     description: (
       <>
-        Complete PBR pipeline with atmospheric scattering, ray-traced lighting,
-        and HDR tone mapping. Radiance-based calculations for physically accurate results.
+        Complete PBR pipeline with atmospheric scattering, ray-traced global
+        illumination, and HDR tone mapping. Radiance-based calculations for
+        physically accurate results.
       </>
     ),
   },
@@ -133,7 +134,8 @@ function CodeExample() {
               <code>{`auto instance = InstanceBuilder()
     .setDebug()
     .setApiVersion(ApiVersion::e13)
-    .addExtensions(window.vulkan_extensions())
+    .addExtensions(
+        Window::get_required_instance_extensions())
     .build();`}</code>
             </pre>
           </div>
@@ -141,12 +143,12 @@ function CodeExample() {
             <Heading as="h3">Type-Safe Buffers</Heading>
             <pre className={styles.codeBlock}>
               <code>{`// Compile-time validated buffer types
-using VertexBuffer = Buffer<Vertex,
-    false,           // GPU-only
-    VertexBufferUsage>;
+auto buffer =
+    create_buffer<float, true, UniformBufferUsage>(
+        *allocator, 100);
 
-auto buffer = allocator->allocate<VertexBuffer>(
-    vertices.size());`}</code>
+// Host-visible write
+buffer.write(data, 0);`}</code>
             </pre>
           </div>
         </div>
