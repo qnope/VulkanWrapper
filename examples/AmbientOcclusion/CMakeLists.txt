@@ -1,3 +1,3 @@
 add_executable(AmbientOcclusion main.cpp)
-target_link_libraries(AmbientOcclusion PRIVATE App ExamplesCommon)
+target_link_libraries(AmbientOcclusion PRIVATE ExamplesCommon)
 target_precompile_headers(AmbientOcclusion REUSE_FROM VulkanWrapperCoreLibrary)
