@@ -1,0 +1,3 @@
+add_executable(Triangle main.cpp)
+target_link_libraries(Triangle PRIVATE App)
+target_precompile_headers(Triangle REUSE_FROM VulkanWrapperCoreLibrary)
