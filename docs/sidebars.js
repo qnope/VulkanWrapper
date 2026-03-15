@@ -5,12 +5,29 @@ const sidebars = {
   tutorialSidebar: [
     'intro',
     'getting-started',
+    'vulkan-primer',
+    {
+      type: 'category',
+      label: 'Tutorial Series',
+      link: {
+        type: 'generated-index',
+        description:
+          'A progressive tutorial series that builds from a simple triangle to a full rendering pipeline with ray-traced global illumination.',
+      },
+      items: [
+        'tutorials/triangle',
+        'tutorials/cube-shadow',
+        'tutorials/ambient-occlusion',
+        'tutorials/emissive-cube',
+      ],
+    },
     {
       type: 'category',
       label: 'Core Concepts',
       link: {
         type: 'generated-index',
-        description: 'Learn the fundamental design principles and patterns used throughout VulkanWrapper.',
+        description:
+          'Learn the fundamental design principles and patterns used throughout VulkanWrapper.',
       },
       items: [
         'core-concepts/architecture',
@@ -22,10 +39,11 @@ const sidebars = {
     },
     {
       type: 'category',
-      label: 'Modules',
+      label: 'Module Reference',
       link: {
         type: 'generated-index',
-        description: 'Explore the various modules that make up VulkanWrapper.',
+        description:
+          'Comprehensive reference for every module in VulkanWrapper.',
       },
       items: [
         {
@@ -57,6 +75,14 @@ const sidebars = {
         },
         {
           type: 'category',
+          label: 'Command',
+          items: [
+            'modules/command/command-pool',
+            'modules/command/command-buffer',
+          ],
+        },
+        {
+          type: 'category',
           label: 'Pipeline',
           items: [
             'modules/pipeline/graphics-pipeline',
@@ -75,14 +101,6 @@ const sidebars = {
         },
         {
           type: 'category',
-          label: 'Command',
-          items: [
-            'modules/command/command-pool',
-            'modules/command/command-buffer',
-          ],
-        },
-        {
-          type: 'category',
           label: 'Synchronization',
           items: [
             'modules/synchronization/fences-semaphores',
@@ -93,19 +111,10 @@ const sidebars = {
           type: 'category',
           label: 'Render Pass',
           items: [
-            'modules/renderpass/subpass',
+            'modules/renderpass/render-pass',
             'modules/renderpass/screen-space-pass',
             'modules/renderpass/sky-system',
             'modules/renderpass/tone-mapping',
-          ],
-        },
-        {
-          type: 'category',
-          label: 'Ray Tracing',
-          items: [
-            'modules/raytracing/acceleration-structures',
-            'modules/raytracing/ray-tracing-pipeline',
-            'modules/raytracing/shader-binding-table',
           ],
         },
         {
@@ -117,19 +126,15 @@ const sidebars = {
             'modules/model/materials',
           ],
         },
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Tutorials',
-      link: {
-        type: 'generated-index',
-        description: 'Step-by-step tutorials for building applications with VulkanWrapper.',
-      },
-      items: [
-        'tutorials/hello-triangle',
-        'tutorials/deferred-rendering',
-        'tutorials/ray-traced-shadows',
+        {
+          type: 'category',
+          label: 'Ray Tracing',
+          items: [
+            'modules/raytracing/acceleration-structures',
+            'modules/raytracing/ray-tracing-pipeline',
+            'modules/raytracing/shader-binding-table',
+          ],
+        },
       ],
     },
     {
@@ -137,7 +142,7 @@ const sidebars = {
       label: 'API Reference',
       link: {
         type: 'generated-index',
-        description: 'Complete API reference for VulkanWrapper.',
+        description: 'Quick reference tables for all VulkanWrapper types.',
       },
       items: [
         'api-reference/namespaces',
