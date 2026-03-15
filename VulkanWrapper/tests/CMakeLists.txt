@@ -187,3 +187,18 @@ target_link_libraries(MeshManagerTests
 )
 
 gtest_discover_tests(MeshManagerTests)
+
+# Primitive tests
+add_executable(PrimitiveTests
+    Model/PrimitiveTests.cpp
+)
+
+target_link_libraries(PrimitiveTests
+    PRIVATE
+    TestUtils
+    VulkanWrapperCoreLibrary
+    GTest::gtest
+    GTest::gtest_main
+)
+
+gtest_discover_tests(PrimitiveTests)
