@@ -1,3 +1,3 @@
 add_executable(EmissiveCube main.cpp)
-target_link_libraries(EmissiveCube PRIVATE App ExamplesCommon)
+target_link_libraries(EmissiveCube PRIVATE ExamplesCommon)
 target_precompile_headers(EmissiveCube REUSE_FROM VulkanWrapperCoreLibrary)
