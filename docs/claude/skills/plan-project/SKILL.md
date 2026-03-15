@@ -21,5 +21,6 @@ If questions arise, ask the user for clarification using the AskUserQuestion too
   - Dependencies (internal and external)
   - Test plan (test file locations, test cases)
   - Any special notes or design considerations
-
 - One `Dependency.md` file summarizing all dependencies between tasks/modules.
+
+When the tasks are ready, write to the user `You can launch /execute-project <project_name> to execute the project now or later.`.

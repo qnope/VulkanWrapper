@@ -2,11 +2,14 @@
 
 ## Overview
 
-This skill guides the user through the process of creating a clear, actionable specification for a new feature "$ARGUMENTS". The name of this project is deduced from what the user said. You can ask the user if the name is correct, and if not, user can provide the correct name.
+This skill guides the user through the process of creating a clear, actionable specification for a new feature "$ARGUMENTS". The name of this project is deduced from what the user said. You can ask the user through the AskUserQuestion tool if the name is correct, and if not, user can provide the correct name.
 
 Specifications to be added are in `specs/projects/<project_name>/SPEC.md` and should follow one of the template below depending on which kind of specification it is.
 
-To ensure good result, the specification should be as detailed as possible. Then you can ask a lot of questions to the user to get more details about the feature, and update the specification accordingly. Questions are always asked in interactive mode using the AskUserQuestion tool - never as plain text. Questions are always asked in interractive mode. You can ask several questions and propose for each of them a set of answer or a custom one.
+To ensure good result, the specification should be as detailed as possible. 
+You can ask a lot of questions to the user to get more details about the feature, and update the specification accordingly. Questions are always asked in interactive mode using the AskUserQuestion tool - never as plain text.
+Always challenge the work to be sure it is really needed and correct.
+You can ask several questions and propose for each of them a set of answer or a custom one.
 
 It's very rare if no question is asked during the specification phase. 
 Before writing final spec, always ask the user if there is any detail they want to add.
@@ -40,3 +43,5 @@ Don't bother with implementation details, the specification should be focused on
 - Any specific tools or frameworks that will be used for testing.
 - Criteria for successful implementation and testing.
 ```
+
+When the specification is ready, write to the user `You can launch /plan-project <project_name> to plan the different tasks now or later.`.
